@@ -223,25 +223,33 @@ class CalendarDayWidget extends StatelessWidget {
           )
         ] else
           Expanded(
-            child: Column(
-              children: [
-                Padding(
-                  padding: const EdgeInsets.only(top: 32, bottom: 4),
-                  child: SizedBox(
-                    height: 75,
-                    width: 75,
-                    child: findHolidayIconForSeason(
-                      calendarDay.date,
-                      Theme.of(context).iconTheme.color!,
-                      holidayIconSize,
-                    ),
+            child: LayoutBuilder(
+              builder: (context, constraints) {
+                final availableHeight = constraints.maxHeight;
+                final iconSize =
+                    (availableHeight * 0.6).clamp(36.0, holidayIconSize);
+                return Center(
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      SizedBox(
+                        height: iconSize,
+                        width: iconSize,
+                        child: findHolidayIconForSeason(
+                          calendarDay.date,
+                          Theme.of(context).iconTheme.color!,
+                          iconSize,
+                        ),
+                      ),
+                      const SizedBox(height: 4),
+                      Text(
+                        "Frei",
+                        style: Theme.of(context).textTheme.titleMedium,
+                      ),
+                    ],
                   ),
-                ),
-                Text(
-                  "Frei",
-                  style: Theme.of(context).textTheme.titleMedium,
-                ),
-              ],
+                );
+              },
             ),
           ),
       ],
@@ -289,41 +297,44 @@ class HourWidget extends StatelessWidget {
               color: isSelected ? selectedBackgroundColor : backgroundColor,
             ),
             child: Center(
-              child: Column(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  Text(
-                    subjectNicks[hour.subject.toLowerCase()] ?? hour.subject,
-                    maxLines: 1,
-                    softWrap: false,
-                  ),
-                  if (hour.teachers.isNotEmpty)
-                    const SizedBox(
-                      height: 5,
-                    ),
-                  for (final teacher in hour.teachers)
+              child: FittedBox(
+                fit: BoxFit.scaleDown,
+                child: Column(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
                     Text(
-                      teacher.lastName,
+                      subjectNicks[hour.subject.toLowerCase()] ?? hour.subject,
                       maxLines: 1,
                       softWrap: false,
-                      style: DefaultTextStyle.of(context)
-                          .style
-                          .copyWith(fontSize: 11),
                     ),
-                  if (hour.rooms.isNotEmpty)
-                    const SizedBox(
-                      height: 5,
-                    ),
-                  for (final room in hour.rooms)
-                    Text(
-                      room,
-                      maxLines: 1,
-                      softWrap: false,
-                      style: DefaultTextStyle.of(context)
-                          .style
-                          .copyWith(fontSize: 11),
-                    ),
-                ],
+                    if (hour.teachers.isNotEmpty)
+                      const SizedBox(
+                        height: 5,
+                      ),
+                    for (final teacher in hour.teachers)
+                      Text(
+                        teacher.lastName,
+                        maxLines: 1,
+                        softWrap: false,
+                        style: DefaultTextStyle.of(context)
+                            .style
+                            .copyWith(fontSize: 11),
+                      ),
+                    if (hour.rooms.isNotEmpty)
+                      const SizedBox(
+                        height: 5,
+                      ),
+                    for (final room in hour.rooms)
+                      Text(
+                        room,
+                        maxLines: 1,
+                        softWrap: false,
+                        style: DefaultTextStyle.of(context)
+                            .style
+                            .copyWith(fontSize: 11),
+                      ),
+                  ],
+                ),
               ),
             ),
           ),
