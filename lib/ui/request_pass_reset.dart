@@ -69,8 +69,11 @@ class _RequestPassResetState extends State<RequestPassReset> {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final isDark = theme.brightness == Brightness.dark;
-    final accent = isDark ? const Color(0xFF8ABEEA) : const Color(0xFF3D79AF);
-    final accentBg = isDark ? const Color(0xFF14273A) : const Color(0xFFE8F1F8);
+    final accent = theme.colorScheme.primary;
+    final accentBg = Color.alphaBlend(
+      accent.withOpacity(isDark ? 0.24 : 0.14),
+      theme.colorScheme.surface,
+    );
     const fixedBackground = Color(0xFF1B2026);
 
     final pageTheme = theme.copyWith(

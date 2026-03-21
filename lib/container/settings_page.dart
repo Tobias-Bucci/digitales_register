@@ -18,6 +18,7 @@
 import 'package:built_collection/built_collection.dart';
 import 'package:dr/actions/app_actions.dart';
 import 'package:dr/app_state.dart';
+import 'package:dr/main.dart';
 import 'package:dr/ui/settings_page_widget.dart';
 import 'package:dynamic_theme/dynamic_theme.dart';
 import 'package:flutter/material.dart';
@@ -69,6 +70,9 @@ class SettingsPageContainer extends StatelessWidget {
           onSetDashboardColorTestsInRed:
               actions.settingsActions.dashboardColorTestsInRed.call,
           onSetSubjectTheme: actions.settingsActions.setSubjectTheme.call,
+          onSetContrastColor: (color) {
+            setGlobalContrastColor(color);
+          },
         );
       },
       connect: (state) {

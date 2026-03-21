@@ -54,6 +54,7 @@ class SettingsPageWidget extends StatefulWidget {
   final OnSettingChanged<bool> onSetDashboardColorBorders;
   final OnSettingChanged<bool> onSetCalenderColorBackground;
   final OnSettingChanged<bool> onSetDashboardColorTestsInRed;
+  final OnSettingChanged<Color> onSetContrastColor;
   final OnSettingChanged<MapEntry<String, SubjectTheme>> onSetSubjectTheme;
   final OnSettingChanged<Map<String, String>> onSetSubjectNicks;
   final OnSettingChanged<List<String>> onSetIgnoreForGradesAverage;
@@ -82,6 +83,7 @@ class SettingsPageWidget extends StatefulWidget {
     required this.onSetCalenderColorBackground,
     required this.onSetSubjectTheme,
     required this.onSetDashboardColorTestsInRed,
+    required this.onSetContrastColor,
   });
 
   @override
@@ -238,6 +240,32 @@ class _SettingsPageWidgetState extends State<SettingsPageWidget> {
             groupValue: currentTheme,
             onChanged: _selectTheme,
             title: const Text("Dunkel"),
+          ),
+          ListTile(
+            title: const Text("Kontrastfarbe"),
+            subtitle: const Text("Wird appweit als Akzentfarbe verwendet"),
+            trailing: Container(
+              width: 28,
+              height: 28,
+              decoration: BoxDecoration(
+                color: Theme.of(context).colorScheme.primary,
+                borderRadius: BorderRadius.circular(8),
+                border: Border.all(
+                  color: Theme.of(context).dividerColor.withOpacity(0.4),
+                ),
+              ),
+            ),
+            onTap: () async {
+              final color = await showDialog<Color>(
+                context: context,
+                builder: (context) => _ColorPicker(
+                  initialColor: Theme.of(context).colorScheme.primary,
+                ),
+              );
+              if (color != null) {
+                widget.onSetContrastColor(color);
+              }
+            },
           ),
           const Divider(
             indent: 15,
@@ -534,9 +562,9 @@ class _SettingsPageWidgetState extends State<SettingsPageWidget> {
           ),
           if (Platform.isAndroid)
             SwitchListTile.adaptive(
-              title: const Text("iOS Mode"),
+              title: const Text("Gay Mode"),
               subtitle: const Text(
-                  "Imitiere das Aussehen einer iOS-App (ein bisschen)"),
+                  "Imitiere das Aussehen einer iOS-App"),
               onChanged: (bool value) {
                 widget.onSetPlatformOverride(value);
               },
@@ -620,8 +648,11 @@ class _SettingsPageWidgetState extends State<SettingsPageWidget> {
   Future<void> _showAboutAppDialog(BuildContext context) async {
     final theme = Theme.of(context);
     final isDark = theme.brightness == Brightness.dark;
-    final accent = isDark ? const Color(0xFF8ABEEA) : const Color(0xFF3D79AF);
-    final accentBg = isDark ? const Color(0xFF14273A) : const Color(0xFFE8F1F8);
+    final accent = theme.colorScheme.primary;
+    final accentBg = Color.alphaBlend(
+      accent.withOpacity(isDark ? 0.24 : 0.14),
+      theme.colorScheme.surface,
+    );
 
     await showDialog<void>(
       context: context,
@@ -631,7 +662,7 @@ class _SettingsPageWidgetState extends State<SettingsPageWidget> {
           insetPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 24),
           child: DecoratedBox(
             decoration: BoxDecoration(
-              color: const Color(0xFF1B2026),
+              color: accentBg,
               borderRadius: BorderRadius.circular(22),
               border: Border.all(color: accent.withOpacity(0.35)),
             ),
@@ -646,7 +677,7 @@ class _SettingsPageWidgetState extends State<SettingsPageWidget> {
                     style: theme.textTheme.headlineSmall?.copyWith(
                       fontWeight: FontWeight.w700,
                       letterSpacing: 0.2,
-                      color: const Color(0xFFE7EDF3),
+                      color: theme.colorScheme.onSurface,
                     ),
                   ),
                   const SizedBox(height: 8),
@@ -1009,7 +1040,7 @@ class _ColorPickerState extends State<_ColorPicker> {
     return InfoDialog(
       title: const Text("Farbe auswählen"),
       content: SingleChildScrollView(
-        child: MaterialPicker(
+        child: ColorPicker(
           pickerColor: color!,
           onColorChanged: (pickedColor) {
             setState(() {

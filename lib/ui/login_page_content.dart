@@ -107,8 +107,11 @@ class _LoginPageContentState extends State<LoginPageContent> {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final isDark = theme.brightness == Brightness.dark;
-    final naturalBlue = isDark ? const Color(0xFF8ABEEA) : const Color(0xFF3D79AF);
-    final naturalBlueBg = isDark ? const Color(0xFF14273A) : const Color(0xFFE8F1F8);
+    final naturalBlue = theme.colorScheme.primary;
+    final naturalBlueBg = Color.alphaBlend(
+      naturalBlue.withOpacity(isDark ? 0.24 : 0.14),
+      theme.colorScheme.surface,
+    );
     const fixedBackground = Color(0xFF1B2026);
     final loginTheme = theme.copyWith(
       colorScheme: theme.colorScheme.copyWith(

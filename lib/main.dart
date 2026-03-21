@@ -41,12 +41,18 @@ import 'package:flutter_built_redux/flutter_built_redux.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:package_info_plus/package_info_plus.dart';
 import 'package:responsive_scaffold/responsive_scaffold.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import 'package:uni_links/uni_links.dart';
 
 GlobalKey<NavigatorState>? navigatorKey;
 GlobalKey<NavigatorState> nestedNavKey = GlobalKey();
 GlobalKey<ResponsiveScaffoldState<Pages>>? scaffoldKey;
 GlobalKey<ScaffoldMessengerState>? scaffoldMessengerKey;
+
+const _contrastColorPreferenceKey = "contrastColor";
+const _defaultContrastColor = Color(0xFF3D79AF);
+final ValueNotifier<Color> contrastColorNotifier =
+  ValueNotifier(_defaultContrastColor);
 
 typedef SingleArgumentVoidCallback<T> = void Function(T arg);
 
@@ -58,6 +64,11 @@ final AppActions actions = AppActions();
 Future<void> main() async {
   final binding = WidgetsFlutterBinding.ensureInitialized();
   binding.deferFirstFrame();
+  final prefs = await SharedPreferences.getInstance();
+  final persistedColor = prefs.getInt(_contrastColorPreferenceKey);
+  if (persistedColor != null) {
+    contrastColorNotifier.value = Color(persistedColor);
+  }
   try {
     packageInfo = await PackageInfo.fromPlatform();
   } catch (_) {
@@ -101,6 +112,12 @@ Future<void> main() async {
   );
 }
 
+Future<void> setGlobalContrastColor(Color color) async {
+  contrastColorNotifier.value = color;
+  final prefs = await SharedPreferences.getInstance();
+  await prefs.setInt(_contrastColorPreferenceKey, color.value);
+}
+
 class RegisterApp extends StatelessWidget {
   const RegisterApp({
     super.key,
@@ -115,94 +132,97 @@ class RegisterApp extends StatelessWidget {
       store: store,
       child: Listener(
         onPointerDown: (_) => store.actions.loginActions.updateLogout(),
-        child: DynamicTheme(
-          data: (brightness, overridePlatform) {
-            TargetPlatform? platform;
-            if (overridePlatform && Platform.isAndroid) {
-              platform = TargetPlatform.iOS;
-            }
-            return ThemeData(
-                    colorSchemeSeed: Colors.deepOrange,
-                    brightness: brightness,
-                    platform: platform,
-                  );
-          },
-          themedWidgetBuilder: (context, theme) => MaterialApp(
-            localizationsDelegates: const [
-              GlobalCupertinoLocalizations.delegate,
-              GlobalMaterialLocalizations.delegate,
-              GlobalWidgetsLocalizations.delegate,
-            ],
-            supportedLocales: const [
-              Locale("de"),
-            ],
-            navigatorKey: navigatorKey,
-            scaffoldMessengerKey: scaffoldMessengerKey,
-            initialRoute: "/",
-            onGenerateRoute: (RouteSettings settings) {
-              final List<String> pathElements = settings.name!.split("/");
-              if (pathElements[0] != "") return null;
-              switch (pathElements[1]) {
-                case "":
-                  return MaterialPageRoute<void>(
-                    settings: settings,
-                    builder: (_) => HomePage(),
-                  );
-                case "login":
-                  return MaterialPageRoute<void>(
-                    settings: settings,
-                    builder: (_) => LoginPage(),
-                  );
-                case "request_pass_reset":
-                  return MaterialPageRoute<void>(
-                    settings: settings,
-                    builder: (_) => RequestPassResetContainer(),
-                  );
-                case "pass_reset":
-                  return MaterialPageRoute<void>(
-                    settings: settings,
-                    builder: (_) => PassResetContainer(),
-                  );
-                case "change_email":
-                  return MaterialPageRoute<void>(
-                    settings: settings,
-                    builder: (_) => ChangeEmailContainer(),
-                  );
-                case "profile":
-                  return MaterialPageRoute<void>(
-                    settings: settings,
-                    builder: (_) => ProfileContainer(),
-                  );
-                case "notifications":
-                  return MaterialPageRoute<void>(
-                    settings: settings,
-                    builder: (_) => NotificationPageContainer(),
-                    fullscreenDialog: true,
-                  );
-                case "gradesChart":
-                  return MaterialPageRoute<void>(
-                    settings: settings,
-                    builder: (_) => const GradesChartPage(),
-                    fullscreenDialog: true,
-                  );
-                case "gradeCalculator":
-                  return MaterialPageRoute<void>(
-                    settings: settings,
-                    builder: (_) => const GradeCalculator(),
-                    fullscreenDialog: true,
-                  );
-                case "settings":
-                  return MaterialPageRoute<void>(
-                    settings: settings,
-                    builder: (_) => SettingsPageContainer(),
-                    fullscreenDialog: true,
-                  );
-                default:
-                  throw Exception("Unknown Route ${pathElements[1]}");
+        child: ValueListenableBuilder<Color>(
+          valueListenable: contrastColorNotifier,
+          builder: (context, contrastColor, _) => DynamicTheme(
+            data: (brightness, overridePlatform) {
+              TargetPlatform? platform;
+              if (overridePlatform && Platform.isAndroid) {
+                platform = TargetPlatform.iOS;
               }
+              return ThemeData(
+                colorSchemeSeed: contrastColor,
+                brightness: brightness,
+                platform: platform,
+              );
             },
-            theme: theme,
-            debugShowCheckedModeBanner: false,
+            themedWidgetBuilder: (context, theme) => MaterialApp(
+              localizationsDelegates: const [
+                GlobalCupertinoLocalizations.delegate,
+                GlobalMaterialLocalizations.delegate,
+                GlobalWidgetsLocalizations.delegate,
+              ],
+              supportedLocales: const [
+                Locale("de"),
+              ],
+              navigatorKey: navigatorKey,
+              scaffoldMessengerKey: scaffoldMessengerKey,
+              initialRoute: "/",
+              onGenerateRoute: (RouteSettings settings) {
+                final List<String> pathElements = settings.name!.split("/");
+                if (pathElements[0] != "") return null;
+                switch (pathElements[1]) {
+                  case "":
+                    return MaterialPageRoute<void>(
+                      settings: settings,
+                      builder: (_) => HomePage(),
+                    );
+                  case "login":
+                    return MaterialPageRoute<void>(
+                      settings: settings,
+                      builder: (_) => LoginPage(),
+                    );
+                  case "request_pass_reset":
+                    return MaterialPageRoute<void>(
+                      settings: settings,
+                      builder: (_) => RequestPassResetContainer(),
+                    );
+                  case "pass_reset":
+                    return MaterialPageRoute<void>(
+                      settings: settings,
+                      builder: (_) => PassResetContainer(),
+                    );
+                  case "change_email":
+                    return MaterialPageRoute<void>(
+                      settings: settings,
+                      builder: (_) => ChangeEmailContainer(),
+                    );
+                  case "profile":
+                    return MaterialPageRoute<void>(
+                      settings: settings,
+                      builder: (_) => ProfileContainer(),
+                    );
+                  case "notifications":
+                    return MaterialPageRoute<void>(
+                      settings: settings,
+                      builder: (_) => NotificationPageContainer(),
+                      fullscreenDialog: true,
+                    );
+                  case "gradesChart":
+                    return MaterialPageRoute<void>(
+                      settings: settings,
+                      builder: (_) => const GradesChartPage(),
+                      fullscreenDialog: true,
+                    );
+                  case "gradeCalculator":
+                    return MaterialPageRoute<void>(
+                      settings: settings,
+                      builder: (_) => const GradeCalculator(),
+                      fullscreenDialog: true,
+                    );
+                  case "settings":
+                    return MaterialPageRoute<void>(
+                      settings: settings,
+                      builder: (_) => SettingsPageContainer(),
+                      fullscreenDialog: true,
+                    );
+                  default:
+                    throw Exception("Unknown Route ${pathElements[1]}");
+                }
+              },
+              theme: theme,
+              debugShowCheckedModeBanner: false,
+            ),
           ),
         ),
       ),
