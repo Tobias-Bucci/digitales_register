@@ -142,13 +142,19 @@ abstract class DaysViewModel
 // would have been used with. Probably incomplete.
 const typesToTitles = {
   HomeworkType.grade: ["Bewertung"],
-  HomeworkType.gradeGroup: ["Testarbeit", "Schularbeit", "Prüfung"],
+  HomeworkType.gradeGroup: ["Testarbeit", "Schularbeit", "Prüfung", "Test"],
   HomeworkType.homework: ["Erinnerung"],
   HomeworkType.lessonHomework: ["Hausaufgabe"],
   HomeworkType.observation: ["Beobachtung"],
 };
 
 bool isBlacklisted(Homework homework, BuiltList<HomeworkType> blacklist) {
+  // Primary rule: rely on explicit server-provided item type.
+  if (blacklist.contains(homework.type)) {
+    return true;
+  }
+
+  // Fallback for legacy/misclassified items where title text is the only clue.
   return blacklist.any((blacklisted) {
     return typesToTitles[blacklisted]!
         .any((blacklistedTitle) => homework.title.contains(blacklistedTitle));

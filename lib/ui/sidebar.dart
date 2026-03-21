@@ -63,70 +63,87 @@ class Sidebar extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final scheme = theme.colorScheme;
     return CollapsibleSidebar(
       onExpansionChange: onDrawerExpansionChange,
       alwaysExpanded: !tabletMode,
       expanded: drawerExpanded,
-      iconSize: 30,
-      textStyle: Theme.of(context).textTheme.titleMedium,
+      iconSize: 26,
+      textStyle: theme.textTheme.titleMedium,
       fitItemsToBottom: true,
       borderRadius: 0,
-      minWidth: 70,
+      minWidth: 74,
       screenPadding: 0,
-      title: DropdownButtonHideUnderline(
-        child: DropdownButton(
-          isExpanded: true,
-          value: 0,
-          items: [
-            for (var index = 0; index < otherAccounts.length + 2; index++)
-              DropdownMenuItem(
-                value: index,
-                child: Text(
-                  index == 0
-                      ? (username ?? "?")
-                      : index <= otherAccounts.length
-                          ? otherAccounts[index - 1]
-                          : passwordSavingEnabled
-                              ? "Account hinzufügen"
-                              : "Account wechseln",
+      title: Container(
+        decoration: BoxDecoration(
+          color: scheme.primary.withOpacity(0.08),
+          borderRadius: BorderRadius.circular(12),
+        ),
+        padding: const EdgeInsets.symmetric(horizontal: 8),
+        child: DropdownButtonHideUnderline(
+          child: DropdownButton(
+            isExpanded: true,
+            icon: const Icon(Icons.keyboard_arrow_down_rounded),
+            value: 0,
+            items: [
+              for (var index = 0; index < otherAccounts.length + 2; index++)
+                DropdownMenuItem(
+                  value: index,
+                  child: Text(
+                    index == 0
+                        ? (username ?? "?")
+                        : index <= otherAccounts.length
+                            ? otherAccounts[index - 1]
+                            : passwordSavingEnabled
+                                ? "Account hinzufügen"
+                                : "Account wechseln",
+                    overflow: TextOverflow.ellipsis,
+                  ),
                 ),
-              ),
-          ],
-          onChanged: (int? value) {
-            if (value == 0) {
-              // selected the current account that is already selected
-              // no-op
-            } else {
-              scaffoldKey?.currentState?.closeDrawerIfOpen();
-              if (value == otherAccounts.length + 1) {
-                addAccount();
+            ],
+            onChanged: (int? value) {
+              if (value == 0) {
+                // selected the current account that is already selected
+                // no-op
               } else {
-                selectAccount(value! - 1);
+                scaffoldKey?.currentState?.closeDrawerIfOpen();
+                if (value == otherAccounts.length + 1) {
+                  addAccount();
+                } else {
+                  selectAccount(value! - 1);
+                }
               }
-            }
-          },
+            },
+          ),
         ),
       ),
       titleTooltip: username ?? "?",
       toggleTooltipCollapsed: "Ausklappen",
       toggleTooltipExpanded: "Einklappen",
       toggleTitle: const SizedBox(),
-      backgroundColor: Theme.of(context).scaffoldBackgroundColor,
+      backgroundColor: scheme.surface,
       avatar:
           //"https://vinzentinum.digitalesregister.it/v2/theme/icons/profile_empty.png" is the (ugly) default
           userIcon?.endsWith("/profile_empty.png") ?? true
-              ? const Icon(Icons.account_circle)
-              : Image.network(userIcon!),
-      unselectedIconColor: Theme.of(context).iconTheme.color!,
-      selectedIconColor: Theme.of(context).colorScheme.secondary,
-      unselectedTextColor: Theme.of(context).textTheme.titleMedium!.color!,
-      selectedTextColor: Theme.of(context).colorScheme.secondary,
-      selectedIconBox: Theme.of(context).colorScheme.secondary.withAlpha(20),
+              ? CircleAvatar(
+                  backgroundColor: scheme.primary.withOpacity(0.12),
+                  child: Icon(
+                    Icons.account_circle,
+                    color: scheme.primary,
+                  ),
+                )
+              : ClipOval(child: Image.network(userIcon!)),
+      unselectedIconColor: theme.iconTheme.color!,
+      selectedIconColor: scheme.primary,
+      unselectedTextColor: theme.textTheme.titleMedium!.color!,
+      selectedTextColor: scheme.primary,
+      selectedIconBox: scheme.primary.withOpacity(0.12),
       items: [
         if (tabletMode)
           CollapsibleItem(
             isSelected: currentSelected == Pages.homework,
-            icon: Icons.assignment,
+            icon: Icons.dashboard_outlined,
             text: "Hausaufgaben",
             onPressed: goHome,
           ),
@@ -134,42 +151,42 @@ class Sidebar extends StatelessWidget {
           onPressed: showGrades,
           isSelected: currentSelected == Pages.grades,
           text: "Noten",
-          icon: Icons.grade,
+          icon: Icons.auto_graph_outlined,
         ),
         CollapsibleItem(
             text: "Absenzen",
-            icon: Icons.hotel,
+            icon: Icons.event_busy_outlined,
             isSelected: currentSelected == Pages.absences,
             onPressed: showAbsences),
         CollapsibleItem(
           text: "Kalender",
-          icon: Icons.calendar_today,
+          icon: Icons.calendar_month_outlined,
           isSelected: currentSelected == Pages.calendar,
           onPressed: showCalendar,
         ),
         CollapsibleItem(
           text: "Zeugnis",
-          icon: Icons.list,
+          icon: Icons.description_outlined,
           isSelected: currentSelected == Pages.certificate,
           onPressed: showCertificate,
         ),
         CollapsibleItem(
           text: "Mitteilungen",
-          icon: Icons.message,
+          icon: Icons.mark_email_unread_outlined,
           isSelected: currentSelected == Pages.messages,
           onPressed: showMessages,
         ),
         CollapsibleItem(
           hasDivider: true,
           text: "Einstellungen",
-          icon: Icons.settings,
+          icon: Icons.tune,
           isSelected: currentSelected == Pages.settings,
           onPressed: showSettings,
         ),
         CollapsibleItem(
           hasDivider: true,
           text: "Abmelden",
-          icon: Icons.logout,
+          icon: Icons.logout_rounded,
           onPressed: logout,
         ),
       ],

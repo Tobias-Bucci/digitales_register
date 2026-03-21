@@ -330,7 +330,8 @@ class _DaysWidgetState extends State<DaysWidget> {
               }
             },
             child: FloatingActionButton(
-              backgroundColor: Theme.of(context).scaffoldBackgroundColor,
+              backgroundColor: Theme.of(context).colorScheme.surface,
+              foregroundColor: Theme.of(context).colorScheme.onSurface,
               heroTag: null,
               onPressed: () {
                 controller.animateTo(
@@ -340,17 +341,13 @@ class _DaysWidgetState extends State<DaysWidget> {
                 );
               },
               mini: true,
-              child: Icon(
-                Icons.arrow_drop_up,
-                color: Theme.of(context).brightness == Brightness.dark
-                    ? Colors.white
-                    : Colors.black,
-              ),
+              child: const Icon(Icons.arrow_upward_rounded),
             ),
           ),
           if (_targets.isNotEmpty || _focused.isNotEmpty)
             FloatingActionButton(
-              backgroundColor: Colors.red,
+              backgroundColor: Theme.of(context).colorScheme.errorContainer,
+              foregroundColor: Theme.of(context).colorScheme.onErrorContainer,
               heroTag: null,
               onPressed: () {
                 widget.markAllAsSeenCallback();
@@ -360,8 +357,11 @@ class _DaysWidgetState extends State<DaysWidget> {
             ),
           if (_targets.isNotEmpty && _afterFirstFrame)
             FloatingActionButton.extended(
-              backgroundColor: Colors.red,
-              icon: const Icon(Icons.arrow_drop_down),
+              backgroundColor:
+                  Theme.of(context).colorScheme.primaryContainer,
+              foregroundColor:
+                  Theme.of(context).colorScheme.onPrimaryContainer,
+              icon: const Icon(Icons.keyboard_double_arrow_down_rounded),
               label: const Text("Neue Einträge"),
               onPressed: () async {
                 await controller.scrollToIndex(
@@ -373,20 +373,29 @@ class _DaysWidgetState extends State<DaysWidget> {
         ],
       ),
       homeAppBar: ResponsiveAppBar(
-        title: const Text("Register"),
+        title: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: const [
+            Icon(Icons.dashboard_customize_outlined),
+            SizedBox(width: 8),
+            Text("Dashboard"),
+          ],
+        ),
         actions: <Widget>[
           if (widget.vm.noInternet)
-            TextButton(
-              style: TextButton.styleFrom(
-                foregroundColor: Theme.of(context).colorScheme.onPrimary,
-                padding: const EdgeInsets.symmetric(horizontal: 16),
-              ),
+            FilledButton.tonalIcon(
               onPressed: widget.refreshNoInternet,
-              child: Row(
-                children: [
+              style: FilledButton.styleFrom(
+                visualDensity: VisualDensity.compact,
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+              ),
+              icon: const Icon(Icons.wifi_off_rounded),
+              label: Row(
+                children: const [
                   Text("Keine Verbindung"),
-                  SizedBox(width: 8),
-                  Icon(Icons.refresh),
+                  SizedBox(width: 6),
+                  Icon(Icons.refresh_rounded),
                 ],
               ),
             ),
@@ -420,37 +429,65 @@ class DashboardHeader extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Stack(
-      children: [
-        HomeworkFilterContainer(),
-        Positioned(
-          top: 0,
-          bottom: 0,
-          left: 0,
-          right: 0,
+    final theme = Theme.of(context);
+    final scheme = theme.colorScheme;
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(12, 8, 12, 12),
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 240),
+        curve: Curves.easeOutCubic,
+        decoration: BoxDecoration(
+          color: scheme.surface,
+          borderRadius: BorderRadius.circular(16),
+          border: Border.all(
+            color: scheme.outline.withOpacity(
+              theme.brightness == Brightness.dark ? 0.45 : 0.2,
+            ),
+          ),
+          boxShadow: [
+            if (theme.brightness == Brightness.light)
+              BoxShadow(
+                color: Colors.black.withOpacity(0.04),
+                blurRadius: 16,
+                offset: const Offset(0, 6),
+              ),
+          ],
+        ),
+        child: Padding(
+          padding: const EdgeInsets.fromLTRB(8, 6, 8, 6),
           child: Row(
             children: [
-              Expanded(
-                child: AbsorbPointer(child: Container()),
-              ),
-              const SizedBox(
-                width: 60,
+              Expanded(child: HomeworkFilterContainer()),
+              const SizedBox(width: 8),
+              AnimatedSwitcher(
+                duration: const Duration(milliseconds: 220),
+                transitionBuilder: (child, animation) {
+                  return FadeTransition(
+                    opacity: animation,
+                    child: ScaleTransition(scale: animation, child: child),
+                  );
+                },
+                child: FilledButton.tonalIcon(
+                  key: ValueKey(future),
+                  onPressed: onSwitchFuture,
+                  icon: Icon(
+                    future ? Icons.history_toggle_off : Icons.upcoming_rounded,
+                  ),
+                  label: Text(future ? "Vergangenheit" : "Zukunft"),
+                  style: FilledButton.styleFrom(
+                    shape: const StadiumBorder(),
+                    visualDensity: VisualDensity.compact,
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 14,
+                      vertical: 12,
+                    ),
+                  ),
+                ),
               ),
             ],
           ),
         ),
-        Padding(
-          padding: const EdgeInsets.only(top: 5),
-          child: Center(
-            child: ElevatedButton(
-              onPressed: onSwitchFuture,
-              child: Text(
-                future ? "Vergangenheit" : "Zukunft",
-              ),
-            ),
-          ),
-        ),
-      ],
+      ),
     );
   }
 }
