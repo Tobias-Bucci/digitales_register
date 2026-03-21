@@ -50,3 +50,7 @@ app.*.map.json
 
 # Private requests & answers
 **/lib/requests/
+
+# Android signing secrets
+android/key.properties
+android/*.jks
