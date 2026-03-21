@@ -717,7 +717,7 @@ class _EditSubjectsNicksState extends State<EditSubjectsNicks> {
       title: Text("Kürzel ${forNewNick ? "hinzufügen" : "bearbeiten"}"),
       content: Row(
         children: [
-          const Column(
+          Column(
             mainAxisSize: MainAxisSize.min,
             children: [
               Text("Fach"),

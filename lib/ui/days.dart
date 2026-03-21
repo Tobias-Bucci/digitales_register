@@ -382,7 +382,7 @@ class _DaysWidgetState extends State<DaysWidget> {
                 padding: const EdgeInsets.symmetric(horizontal: 16),
               ),
               onPressed: widget.refreshNoInternet,
-              child: const Row(
+              child: Row(
                 children: [
                   Text("Keine Verbindung"),
                   SizedBox(width: 8),

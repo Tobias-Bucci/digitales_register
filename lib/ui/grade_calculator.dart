@@ -419,7 +419,7 @@ class Greeting extends StatelessWidget {
             padding: const EdgeInsets.all(16),
             child: ElevatedButton(
               onPressed: import,
-              child: const Row(
+              child: Row(
                 mainAxisSize: MainAxisSize.min,
                 children: [
                   Icon(Icons.save_alt),
@@ -435,7 +435,7 @@ class Greeting extends StatelessWidget {
             padding: const EdgeInsets.all(16),
             child: ElevatedButton(
               onPressed: add,
-              child: const Row(
+              child: Row(
                 mainAxisSize: MainAxisSize.min,
                 children: [
                   Icon(Icons.add),

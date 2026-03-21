@@ -26,7 +26,7 @@ class AbsenceGroupWidget extends StatelessWidget {
   const AbsenceGroupWidget({super.key, required this.vm});
   @override
   Widget build(BuildContext context) {
-    const divider = Row(
+    final divider = Row(
       children: [
         Spacer(),
         Flexible(
@@ -120,7 +120,7 @@ class FutureAbsenceWidget extends StatelessWidget {
         break;
     }
 
-    const divider = Row(
+    final divider = Row(
       children: [
         Spacer(),
         Flexible(
