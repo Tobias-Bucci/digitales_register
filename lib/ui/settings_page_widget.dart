@@ -26,7 +26,6 @@ import 'package:dr/ui/donations.dart';
 import 'package:dr/ui/network_protocol_page.dart';
 import 'package:dr/util.dart';
 import 'package:dynamic_theme/dynamic_theme.dart';
-import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_colorpicker/flutter_colorpicker.dart';
 import 'package:responsive_scaffold/responsive_scaffold.dart';
@@ -582,7 +581,15 @@ class _SettingsPageWidgetState extends State<SettingsPageWidget> {
           ListTile(
             leading: const Icon(Icons.code),
             trailing: const Icon(Icons.open_in_new),
-            title: const Text("Zum Quellcode"),
+            title: const Text("Zum Quellcode (Fork)"),
+            onTap: () => launchUrl(
+              Uri.parse("https://github.com/Tobias-Bucci/digitales_register"),
+            ),
+          ),
+          ListTile(
+            leading: const Icon(Icons.code),
+            trailing: const Icon(Icons.open_in_new),
+            title: const Text("Zum originalem Quellcode"),
             onTap: () => launchUrl(
               Uri.parse("https://github.com/miDeb/digitales_register"),
             ),
@@ -594,46 +601,30 @@ class _SettingsPageWidgetState extends State<SettingsPageWidget> {
               child: Image.asset("assets/transparent.png"),
             ),
             applicationLegalese:
-                "Copyright Michael Debertol und Simon Wachtler 2019-2022",
-            applicationName: "Digitales Register (Client)",
-            applicationVersion: appVersion,
+                "Original Copyright: Michael Debertol und Simon Wachtler 2019-2022\n"
+                "Diese Version Copyright: Tobias Bucci 2026",
+            applicationName: "Digitales Register (Client) - Tobias Bucci Fork",
+            applicationVersion: "v1.0",
             aboutBoxChildren: [
-              const Text("Ein Client für das Digitale Register."),
-              Text.rich(
-                TextSpan(children: [
-                  const TextSpan(text: "Entwickelt von "),
-                  TextSpan(
-                    text: "Michael Debertol",
-                    style: const TextStyle(color: Colors.blue),
-                    recognizer: TapGestureRecognizer()
-                      ..onTap = () {
-                        launchUrl(
-                          Uri.parse("https://blog.debertol.com"),
-                          mode: LaunchMode.externalApplication,
-                        );
-                      },
-                  ),
-                  const TextSpan(text: " @ "),
-                  TextSpan(
-                    text: "evvvolution.com",
-                    style: const TextStyle(color: Colors.blue),
-                    recognizer: TapGestureRecognizer()
-                      ..onTap = () {
-                        launchUrl(
-                          Uri.parse("https://evvvolution.com"),
-                          mode: LaunchMode.externalApplication,
-                        );
-                      },
-                  ),
-                ]),
+              const SizedBox(
+                height: 8,
+              ),
+              const Text(
+                "Ein Client für das Digitale Register. Diese Version wurde von Tobias Bucci angepasst und weiterentwickelt.",
               ),
               const SizedBox(
                 height: 8,
               ),
               const Text(
-                "This is free software, and you are welcome to redistribute it under certain conditions.\n"
+                "This is free software, and you are welcome to redistribute it under certain conditions (GPLv3).",
+              ),
+              const SizedBox(
+                height: 4,
+              ),
+              const Text(
                 "This program comes with ABSOLUTELY NO WARRANTY.",
               ),
+              const SizedBox(height: 4),
               Align(
                 alignment: Alignment.centerLeft,
                 child: InkWell(
@@ -648,7 +639,7 @@ class _SettingsPageWidgetState extends State<SettingsPageWidget> {
                     );
                   },
                 ),
-              )
+              ),
             ],
             child: const Text("Über diese App"),
           ),
@@ -719,7 +710,7 @@ class _EditSubjectsNicksState extends State<EditSubjectsNicks> {
         children: [
           Column(
             mainAxisSize: MainAxisSize.min,
-            children: [
+            children: const [
               Text("Fach"),
               SizedBox(
                 height: 27,
