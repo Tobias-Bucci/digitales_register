@@ -594,57 +594,144 @@ class _SettingsPageWidgetState extends State<SettingsPageWidget> {
               Uri.parse("https://github.com/miDeb/digitales_register"),
             ),
           ),
-          AboutListTile(
-            icon: const Icon(Icons.info_outline),
-            applicationIcon: SizedBox(
-              width: 100,
-              child: Image.asset("assets/transparent.png"),
-            ),
-            applicationLegalese:
-                "Original Copyright: Michael Debertol und Simon Wachtler 2019-2022\n"
-                "Diese Version Copyright: Tobias Bucci 2026",
-            applicationName: "Digitales Register (Client) - Tobias Bucci Fork",
-            applicationVersion: "v1.0",
-            aboutBoxChildren: [
-              const SizedBox(
-                height: 8,
-              ),
-              const Text(
-                "Ein Client für das Digitale Register. Diese Version wurde von Tobias Bucci angepasst und weiterentwickelt.",
-              ),
-              const SizedBox(
-                height: 8,
-              ),
-              const Text(
-                "This is free software, and you are welcome to redistribute it under certain conditions (GPLv3).",
-              ),
-              const SizedBox(
-                height: 4,
-              ),
-              const Text(
-                "This program comes with ABSOLUTELY NO WARRANTY.",
-              ),
-              const SizedBox(height: 4),
-              Align(
-                alignment: Alignment.centerLeft,
-                child: InkWell(
-                  child: const Text(
-                    "See the GNU General Public License for more details.",
-                    style: TextStyle(color: Colors.blue),
-                  ),
-                  onTap: () {
-                    launchUrl(
-                      Uri.parse("https://www.gnu.org/licenses/gpl-3.0.html"),
-                      mode: LaunchMode.externalApplication,
-                    );
-                  },
-                ),
-              ),
-            ],
-            child: const Text("Über diese App"),
+          ListTile(
+            leading: const Icon(Icons.info_outline),
+            trailing: const Icon(Icons.chevron_right),
+            title: const Text("Über diese App"),
+            onTap: () => _showAboutAppDialog(context),
+          ),
+          ListTile(
+            leading: const Icon(Icons.gavel_outlined),
+            trailing: const Icon(Icons.chevron_right),
+            title: const Text("Lizenzen"),
+            onTap: () {
+              showLicensePage(
+                context: context,
+                applicationName: "Digitales Register (Client) - Tobias Bucci Fork",
+                applicationVersion: "v1.0",
+              );
+            },
           ),
         ],
       ),
+    );
+  }
+
+  Future<void> _showAboutAppDialog(BuildContext context) async {
+    final theme = Theme.of(context);
+    final isDark = theme.brightness == Brightness.dark;
+    final accent = isDark ? const Color(0xFF8ABEEA) : const Color(0xFF3D79AF);
+    final accentBg = isDark ? const Color(0xFF14273A) : const Color(0xFFE8F1F8);
+
+    await showDialog<void>(
+      context: context,
+      builder: (context) {
+        return Dialog(
+          backgroundColor: Colors.transparent,
+          insetPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 24),
+          child: DecoratedBox(
+            decoration: BoxDecoration(
+              color: const Color(0xFF1B2026),
+              borderRadius: BorderRadius.circular(22),
+              border: Border.all(color: accent.withOpacity(0.35)),
+            ),
+            child: SingleChildScrollView(
+              padding: const EdgeInsets.fromLTRB(18, 18, 18, 16),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  Text(
+                    "Digitales Register",
+                    textAlign: TextAlign.center,
+                    style: theme.textTheme.headlineSmall?.copyWith(
+                      fontWeight: FontWeight.w700,
+                      letterSpacing: 0.2,
+                      color: const Color(0xFFE7EDF3),
+                    ),
+                  ),
+                  const SizedBox(height: 8),
+                  Center(
+                    child: Container(
+                      width: 68,
+                      height: 3,
+                      decoration: BoxDecoration(
+                        color: accent.withOpacity(0.9),
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                    ),
+                  ),
+                  const SizedBox(height: 14),
+                  Card(
+                    elevation: 0,
+                    color: theme.colorScheme.surface,
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(16),
+                      side: BorderSide(color: accent.withOpacity(0.25)),
+                    ),
+                    child: Padding(
+                      padding: const EdgeInsets.fromLTRB(14, 14, 14, 14),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            "Digitales Register (Client) - Tobias Bucci Fork",
+                            style: theme.textTheme.titleMedium?.copyWith(
+                              fontWeight: FontWeight.w700,
+                            ),
+                          ),
+                          const SizedBox(height: 4),
+                          const Text("v1.0"),
+                          const SizedBox(height: 12),
+                          const Text(
+                            "Original Copyright: Michael Debertol und Simon Wachtler 2019-2022\n"
+                            "Diese Version Copyright: Tobias Bucci 2026",
+                          ),
+                          const SizedBox(height: 12),
+                          const Text(
+                            "Ein Client für das Digitale Register. Diese Version wurde von Tobias Bucci angepasst und weiterentwickelt.",
+                          ),
+                          const SizedBox(height: 12),
+                          const Text(
+                            "This is free software, and you are welcome to redistribute it under certain conditions (GPLv3).",
+                          ),
+                          const SizedBox(height: 4),
+                          const Text(
+                            "This program comes with ABSOLUTELY NO WARRANTY.",
+                          ),
+                          const SizedBox(height: 8),
+                          InkWell(
+                            onTap: () {
+                              launchUrl(
+                                Uri.parse(
+                                  "https://www.gnu.org/licenses/gpl-3.0.html",
+                                ),
+                                mode: LaunchMode.externalApplication,
+                              );
+                            },
+                            child: Text(
+                              "See the GNU General Public License for more details.",
+                              style: TextStyle(color: accent),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                  const SizedBox(height: 12),
+                  FilledButton.tonal(
+                    style: FilledButton.styleFrom(
+                      backgroundColor: accentBg,
+                      foregroundColor: theme.colorScheme.onSurface,
+                    ),
+                    onPressed: () => Navigator.of(context).pop(),
+                    child: const Text("Schließen"),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        );
+      },
     );
   }
 
