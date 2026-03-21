@@ -31,8 +31,21 @@ if (keystorePropertiesFile.exists()) {
     keystoreProperties.load(new FileInputStream(keystorePropertiesFile))
 }
 
+def allowDebugSigningForRelease = (localProperties.getProperty('allowDebugSigningForRelease')
+        ?: System.getenv('ALLOW_DEBUG_SIGNING_FOR_RELEASE')
+        ?: 'false').toBoolean()
+
 android {
     compileSdkVersion 33
+
+    compileOptions {
+        sourceCompatibility JavaVersion.VERSION_11
+        targetCompatibility JavaVersion.VERSION_11
+    }
+
+    kotlinOptions {
+        jvmTarget = '11'
+    }
 
     sourceSets {
         main.java.srcDirs += 'src/main/kotlin'
@@ -56,8 +69,10 @@ android {
     }
     buildTypes {
         release {
-            // Allow local release APK builds without a private upload keystore.
-            signingConfig signingConfigs.release.storeFile != null ? signingConfigs.release : signingConfigs.debug
+            // Default: require the private release keystore.
+            // Local override (explicit): set allowDebugSigningForRelease=true in local.properties
+            // or ALLOW_DEBUG_SIGNING_FOR_RELEASE=true as environment variable.
+            signingConfig allowDebugSigningForRelease ? signingConfigs.debug : signingConfigs.release
             // this is my (michael) release key. Used for dev purposes only.
             if (signingConfigs.release.keyAlias == "myandroidkey") {
                 applicationIdSuffix ".irelease"

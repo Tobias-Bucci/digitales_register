@@ -21,6 +21,18 @@ Inoffizielle App für das Digitale Register (http://xxxxxx.digitalesregister.it)
 * First, run `flutter packages run build_runner build` in your terminal to generate the necessary files.
 * Launch the app with `flutter run`. This will launch a debug build of the app. For a release build (which is faster), run `flutter run --release` instead.
 
+## Android build notes (local development)
+This project is configured for a stable Android toolchain with Java 11.
+
+Local release APK builds are separated from production signing:
+* By default, `release` expects a real keystore in `android/key.properties`.
+* For local testing only, you can explicitly allow debug signing for release builds by setting one of:
+  * `allowDebugSigningForRelease=true` in `android/local.properties`
+  * Environment variable `ALLOW_DEBUG_SIGNING_FOR_RELEASE=true`
+
+Example:
+* `flutter build apk --release`
+
 ## Demo Mode
 If you want to use the app without having an actual account, select `Vinzentinum` as the school, `demo-user-6540` as the user and any password.
 You will be logged in to a (local) demo account that displays dummy data. Please note that some features
