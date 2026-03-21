@@ -37,48 +37,175 @@ typedef ResetPass = void Function(String username, String email);
 class _RequestPassResetState extends State<RequestPassReset> {
   final _usernameController = TextEditingController(),
       _emailController = TextEditingController();
+
+  InputDecoration _fieldDecoration(
+    BuildContext context,
+    String label,
+    IconData icon,
+    Color accent,
+  ) {
+    final theme = Theme.of(context);
+    return InputDecoration(
+      labelText: label,
+      prefixIcon: Icon(icon, color: accent),
+      filled: true,
+      fillColor: theme.colorScheme.surface,
+      border: OutlineInputBorder(
+        borderRadius: BorderRadius.circular(14),
+        borderSide: BorderSide(color: theme.dividerColor.withOpacity(0.25)),
+      ),
+      enabledBorder: OutlineInputBorder(
+        borderRadius: BorderRadius.circular(14),
+        borderSide: BorderSide(color: theme.dividerColor.withOpacity(0.25)),
+      ),
+      focusedBorder: OutlineInputBorder(
+        borderRadius: BorderRadius.circular(14),
+        borderSide: BorderSide(color: accent, width: 1.6),
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(
-        title: const Text("Passwort vergessen"),
+    final theme = Theme.of(context);
+    final isDark = theme.brightness == Brightness.dark;
+    final accent = isDark ? const Color(0xFF8ABEEA) : const Color(0xFF3D79AF);
+    final accentBg = isDark ? const Color(0xFF14273A) : const Color(0xFFE8F1F8);
+    const fixedBackground = Color(0xFF1B2026);
+
+    final pageTheme = theme.copyWith(
+      colorScheme: theme.colorScheme.copyWith(
+        primary: accent,
+        secondary: accent,
+        tertiary: accent,
+        error: accent,
+        errorContainer: accentBg,
+        onErrorContainer: theme.colorScheme.onSurface,
       ),
-      body: Padding(
-        padding: const EdgeInsets.all(8.0),
-        child: Center(
-          child: AutofillGroup(
-            child: ListView(
-              shrinkWrap: true,
-              children: <Widget>[
-                TextField(
-                  autofillHints: const [AutofillHints.username],
-                  controller: _usernameController,
-                  decoration: const InputDecoration(labelText: 'Benutzername'),
-                ),
-                TextField(
-                  autofillHints: const [AutofillHints.email],
-                  keyboardType: TextInputType.emailAddress,
-                  controller: _emailController,
-                  decoration: const InputDecoration(labelText: 'Email-Adresse'),
-                ),
-                const SizedBox(height: 16),
-                ElevatedButton(
-                  onPressed: () => widget.resetPass(
-                    _usernameController.text,
-                    _emailController.text,
-                  ),
-                  child: const Text("Anfrage zum Zurücksetzen senden"),
-                ),
-                const SizedBox(height: 16),
-                if (widget.message != null)
-                  Center(
-                    child: Text(
-                      widget.message!,
-                      style: Theme.of(context).textTheme.bodyMedium!.copyWith(
-                          color: widget.failure ? Colors.red : Colors.green),
+    );
+
+    return Theme(
+      data: pageTheme,
+      child: Scaffold(
+        backgroundColor: fixedBackground,
+        appBar: AppBar(
+          title: const Text("Passwort vergessen"),
+          elevation: 0,
+          backgroundColor: Colors.transparent,
+          foregroundColor: theme.colorScheme.onSurface,
+        ),
+        body: SafeArea(
+          child: Center(
+            child: ConstrainedBox(
+              constraints: const BoxConstraints(maxWidth: 560),
+              child: ListView(
+                padding: const EdgeInsets.fromLTRB(16, 36, 16, 24),
+                children: [
+                  Padding(
+                    padding: const EdgeInsets.only(bottom: 18),
+                    child: Column(
+                      children: [
+                        Text(
+                          "Digitales Register",
+                          textAlign: TextAlign.center,
+                          style: theme.textTheme.headlineSmall?.copyWith(
+                            fontWeight: FontWeight.w700,
+                            letterSpacing: 0.2,
+                            color: isDark
+                                ? const Color(0xFFE7EDF3)
+                                : const Color(0xFF1A2733),
+                          ),
+                        ),
+                        const SizedBox(height: 8),
+                        Container(
+                          width: 68,
+                          height: 3,
+                          decoration: BoxDecoration(
+                            color: accent.withOpacity(0.85),
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                        ),
+                      ],
                     ),
-                  )
-              ],
+                  ),
+                  Card(
+                    elevation: isDark ? 0 : 1,
+                    color: theme.colorScheme.surface,
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(22),
+                      side: BorderSide(
+                        color: accent.withOpacity(isDark ? 0.28 : 0.16),
+                      ),
+                    ),
+                    child: Padding(
+                      padding: const EdgeInsets.fromLTRB(16, 16, 16, 16),
+                      child: AutofillGroup(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.stretch,
+                          children: <Widget>[
+                            TextField(
+                              autofillHints: const [AutofillHints.username],
+                              controller: _usernameController,
+                              decoration: _fieldDecoration(
+                                context,
+                                'Benutzername',
+                                Icons.person_outline_rounded,
+                                accent,
+                              ),
+                            ),
+                            const SizedBox(height: 12),
+                            TextField(
+                              autofillHints: const [AutofillHints.email],
+                              keyboardType: TextInputType.emailAddress,
+                              controller: _emailController,
+                              decoration: _fieldDecoration(
+                                context,
+                                'Email-Adresse',
+                                Icons.alternate_email_rounded,
+                                accent,
+                              ),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton.icon(
+                              style: ElevatedButton.styleFrom(
+                                backgroundColor: accent,
+                                foregroundColor: Colors.white,
+                                padding:
+                                    const EdgeInsets.symmetric(vertical: 14),
+                                shape: RoundedRectangleBorder(
+                                  borderRadius: BorderRadius.circular(14),
+                                ),
+                              ),
+                              onPressed: () => widget.resetPass(
+                                _usernameController.text,
+                                _emailController.text,
+                              ),
+                              icon: const Icon(Icons.send_rounded),
+                              label:
+                                  const Text("Anfrage zum Zurücksetzen senden"),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
+                  ),
+                  if (widget.message != null)
+                    Container(
+                      margin: const EdgeInsets.only(top: 14),
+                      decoration: BoxDecoration(
+                        color: accentBg.withOpacity(isDark ? 0.5 : 0.7),
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                      padding: const EdgeInsets.all(12),
+                      child: Text(
+                        widget.message!,
+                        style: theme.textTheme.bodyMedium?.copyWith(
+                          color: theme.colorScheme.onErrorContainer,
+                        ),
+                      ),
+                    ),
+                ],
+              ),
             ),
           ),
         ),
