@@ -320,19 +320,6 @@ class HourWidget extends StatelessWidget {
                             .style
                             .copyWith(fontSize: 11),
                       ),
-                    if (hour.rooms.isNotEmpty)
-                      const SizedBox(
-                        height: 5,
-                      ),
-                    for (final room in hour.rooms)
-                      Text(
-                        room,
-                        maxLines: 1,
-                        softWrap: false,
-                        style: DefaultTextStyle.of(context)
-                            .style
-                            .copyWith(fontSize: 11),
-                      ),
                   ],
                 ),
               ),
