@@ -357,10 +357,8 @@ class _DaysWidgetState extends State<DaysWidget> {
             ),
           if (_targets.isNotEmpty && _afterFirstFrame)
             FloatingActionButton.extended(
-              backgroundColor:
-                  Theme.of(context).colorScheme.primaryContainer,
-              foregroundColor:
-                  Theme.of(context).colorScheme.onPrimaryContainer,
+              backgroundColor: Theme.of(context).colorScheme.primaryContainer,
+              foregroundColor: Theme.of(context).colorScheme.onPrimaryContainer,
               icon: const Icon(Icons.keyboard_double_arrow_down_rounded),
               label: const Text("Neue Einträge"),
               onPressed: () async {
@@ -383,20 +381,16 @@ class _DaysWidgetState extends State<DaysWidget> {
         ),
         actions: <Widget>[
           if (widget.vm.noInternet)
-            FilledButton.tonalIcon(
-              onPressed: widget.refreshNoInternet,
-              style: FilledButton.styleFrom(
-                visualDensity: VisualDensity.compact,
-                padding:
-                    const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
-              ),
-              icon: const Icon(Icons.wifi_off_rounded),
-              label: Row(
-                children: const [
-                  Text("Keine Verbindung"),
-                  SizedBox(width: 6),
-                  Icon(Icons.refresh_rounded),
-                ],
+            Tooltip(
+              message: "Keine Verbindung - Neu laden",
+              child: IconButton(
+                onPressed: widget.refreshNoInternet,
+                icon: const Icon(Icons.wifi_off_rounded),
+                style: IconButton.styleFrom(
+                  backgroundColor: Theme.of(context).colorScheme.secondaryContainer,
+                  foregroundColor:
+                      Theme.of(context).colorScheme.onSecondaryContainer,
+                ),
               ),
             ),
           if (widget.vm.showNotifications) NotificationIconContainer(),
