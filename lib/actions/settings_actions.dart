@@ -46,4 +46,5 @@ abstract class SettingsActions extends ReduxActions {
   abstract final ActionDispatcher<bool> dashboardColorBorders;
   abstract final ActionDispatcher<bool> calendarColorBackground;
   abstract final ActionDispatcher<bool> dashboardColorTestsInRed;
+  abstract final ActionDispatcher<bool> amoledMode;
 }

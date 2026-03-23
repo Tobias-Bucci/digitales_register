@@ -303,6 +303,7 @@ abstract class SettingsState
   // whether to color the background of widgets in the calendar in the color specified by subjectThemes
   bool get calendarColorBackground;
   bool get dashboardColorTestsInRed;
+  bool get amoledMode;
   BuiltMap<String, SubjectTheme> get subjectThemes;
   BuiltList<String> get ignoreForGradesAverage;
 
@@ -347,6 +348,7 @@ abstract class SettingsState
       ..dashboardColorBorders = false
       ..calendarColorBackground = false
       ..dashboardColorTestsInRed = true
+      ..amoledMode = false
       ..scrollToGrades = false
       ..scrollToSubjectNicks = false;
   }

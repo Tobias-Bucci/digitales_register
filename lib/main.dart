@@ -132,21 +132,71 @@ class RegisterApp extends StatelessWidget {
       store: store,
       child: Listener(
         onPointerDown: (_) => store.actions.loginActions.updateLogout(),
-        child: ValueListenableBuilder<Color>(
-          valueListenable: contrastColorNotifier,
-          builder: (context, contrastColor, _) => DynamicTheme(
-            data: (brightness, overridePlatform) {
-              TargetPlatform? platform;
-              if (overridePlatform && Platform.isAndroid) {
-                platform = TargetPlatform.iOS;
-              }
-              return ThemeData(
-                colorSchemeSeed: contrastColor,
-                brightness: brightness,
-                platform: platform,
-              );
-            },
-            themedWidgetBuilder: (context, theme) => MaterialApp(
+        child: StoreConnection<AppState, AppActions, bool>(
+          connect: (state) => state.settingsState.amoledMode,
+          builder: (context, amoledMode, actions) => ValueListenableBuilder<Color>(
+            valueListenable: contrastColorNotifier,
+            builder: (context, contrastColor, _) => DynamicTheme(
+              data: (brightness, overridePlatform) {
+                TargetPlatform? platform;
+                if (overridePlatform && Platform.isAndroid) {
+                  platform = TargetPlatform.iOS;
+                }
+                final baseTheme = ThemeData(
+                  colorSchemeSeed: contrastColor,
+                  brightness: brightness,
+                  platform: platform,
+                );
+                if (amoledMode && brightness == Brightness.dark) {
+                  final amoledScheme = baseTheme.colorScheme.copyWith(
+                    surface: Colors.black,
+                    surfaceVariant: Colors.black,
+                    primaryContainer: Colors.black,
+                    secondaryContainer: Colors.black,
+                    tertiaryContainer: Colors.black,
+                    errorContainer: Colors.black,
+                    background: Colors.black,
+                  );
+                  return baseTheme.copyWith(
+                    scaffoldBackgroundColor: Colors.black,
+                    canvasColor: Colors.black,
+                    cardColor: Colors.black,
+                    dialogBackgroundColor: Colors.black,
+                    dividerColor: Colors.black,
+                    shadowColor: Colors.black,
+                    colorScheme: amoledScheme,
+                    appBarTheme: baseTheme.appBarTheme.copyWith(
+                      backgroundColor: Colors.black,
+                      surfaceTintColor: Colors.black,
+                      shadowColor: Colors.black,
+                    ),
+                    cardTheme: baseTheme.cardTheme.copyWith(
+                      color: Colors.black,
+                      surfaceTintColor: Colors.black,
+                      shadowColor: Colors.black,
+                    ),
+                    drawerTheme: baseTheme.drawerTheme.copyWith(
+                      backgroundColor: Colors.black,
+                    ),
+                    dialogTheme: baseTheme.dialogTheme.copyWith(
+                      backgroundColor: Colors.black,
+                      surfaceTintColor: Colors.black,
+                    ),
+                    bottomSheetTheme: baseTheme.bottomSheetTheme.copyWith(
+                      backgroundColor: Colors.black,
+                      modalBackgroundColor: Colors.black,
+                    ),
+                    popupMenuTheme: baseTheme.popupMenuTheme.copyWith(
+                      color: Colors.black,
+                    ),
+                    listTileTheme: baseTheme.listTileTheme.copyWith(
+                      tileColor: Colors.black,
+                    ),
+                  );
+                }
+                return baseTheme;
+              },
+              themedWidgetBuilder: (context, theme) => MaterialApp(
               localizationsDelegates: const [
                 GlobalCupertinoLocalizations.delegate,
                 GlobalMaterialLocalizations.delegate,
@@ -220,8 +270,9 @@ class RegisterApp extends StatelessWidget {
                     throw Exception("Unknown Route ${pathElements[1]}");
                 }
               },
-              theme: theme,
-              debugShowCheckedModeBanner: false,
+                theme: theme,
+                debugShowCheckedModeBanner: false,
+              ),
             ),
           ),
         ),

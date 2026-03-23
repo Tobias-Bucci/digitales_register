@@ -785,6 +785,9 @@ class ItemWidget extends StatelessWidget {
   }
 
   Tuple2<Color, double> _getBorderConfig() {
+    if (item.checked) {
+      return const Tuple2(Colors.green, 1.5);
+    }
     if (item.warning && colorTestsInRed) {
       return const Tuple2(Colors.red, 1.5);
     }
@@ -793,7 +796,7 @@ class ItemWidget extends StatelessWidget {
         subjectThemes.containsKey(item.label!)) {
       return Tuple2(Color(subjectThemes[item.label]!.color), 1.5);
     }
-    if (item.type == HomeworkType.grade || item.checked) {
+    if (item.type == HomeworkType.grade) {
       return const Tuple2(Colors.green, 0);
     }
     return const Tuple2(Colors.grey, 0);
@@ -801,6 +804,7 @@ class ItemWidget extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final isCompleted = item.checked && !isHistory && !isDeletedView;
     Widget child = Deleteable(
       // this is a new entry or a reminder the user has just entered
       showEntryAnimation:
@@ -867,10 +871,23 @@ class ItemWidget extends StatelessWidget {
                             ),
                           ListTile(
                             contentPadding: EdgeInsets.zero,
-                            title: Text(item.title),
+                            title: Text(
+                              item.title,
+                              style: TextStyle(
+                                decoration:
+                                    isCompleted ? TextDecoration.lineThrough : null,
+                              ),
+                            ),
                             subtitle: item.subtitle.isNullOrEmpty
                                 ? null
-                                : SelectableText(item.subtitle),
+                              : SelectableText(
+                                item.subtitle,
+                                style: TextStyle(
+                                  decoration: isCompleted
+                                    ? TextDecoration.lineThrough
+                                    : null,
+                                ),
+                                ),
                             leading:
                                 !isHistory && !isDeletedView && item.deleteable
                                     ? IconButton(

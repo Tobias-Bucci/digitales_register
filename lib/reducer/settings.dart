@@ -53,6 +53,7 @@ final settingsReducerBuilder = NestedReducerBuilder<AppState, AppStateBuilder,
   ..add(SettingsActionsNames.drawerExpandedChange, _drawerFullyExpanded)
   ..add(SettingsActionsNames.dashboardColorBorders, _dashboardColorBorders)
   ..add(SettingsActionsNames.calendarColorBackground, _calendarColorBackground)
+  ..add(SettingsActionsNames.amoledMode, _amoledMode)
   ..add(
       SettingsActionsNames.dashboardColorTestsInRed, _dashboardColorTestsInRed);
 
@@ -167,6 +168,11 @@ void _calendarColorBackground(
 void _dashboardColorTestsInRed(
     SettingsState state, Action<bool> action, SettingsStateBuilder builder) {
   builder.dashboardColorTestsInRed = action.payload;
+}
+
+void _amoledMode(
+    SettingsState state, Action<bool> action, SettingsStateBuilder builder) {
+  builder.amoledMode = action.payload;
 }
 
 void _updateSubjectThemes(SettingsState? state, Action<List<String>> action,

@@ -54,6 +54,7 @@ class SettingsPageWidget extends StatefulWidget {
   final OnSettingChanged<bool> onSetDashboardColorBorders;
   final OnSettingChanged<bool> onSetCalenderColorBackground;
   final OnSettingChanged<bool> onSetDashboardColorTestsInRed;
+  final OnSettingChanged<bool> onSetAmoledMode;
   final OnSettingChanged<Color> onSetContrastColor;
   final OnSettingChanged<MapEntry<String, SubjectTheme>> onSetSubjectTheme;
   final OnSettingChanged<Map<String, String>> onSetSubjectNicks;
@@ -83,6 +84,7 @@ class SettingsPageWidget extends StatefulWidget {
     required this.onSetCalenderColorBackground,
     required this.onSetSubjectTheme,
     required this.onSetDashboardColorTestsInRed,
+    required this.onSetAmoledMode,
     required this.onSetContrastColor,
   });
 
@@ -240,6 +242,12 @@ class _SettingsPageWidgetState extends State<SettingsPageWidget> {
             groupValue: currentTheme,
             onChanged: _selectTheme,
             title: const Text("Dunkel"),
+          ),
+          SwitchListTile.adaptive(
+            title: const Text("AMOLED-Modus"),
+            subtitle: const Text("Graue Flächen in Dunkelmodus auf Schwarz setzen"),
+            value: widget.vm.amoledMode,
+            onChanged: widget.onSetAmoledMode,
           ),
           ListTile(
             title: const Text("Kontrastfarbe"),
