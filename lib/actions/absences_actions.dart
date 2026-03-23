@@ -16,6 +16,7 @@
 // along with digitales_register.  If not, see <http://www.gnu.org/licenses/>.
 
 import 'package:built_redux/built_redux.dart';
+import 'package:dr/data.dart';
 
 part 'absences_actions.g.dart';
 
@@ -25,4 +26,6 @@ abstract class AbsencesActions extends ReduxActions {
 
   abstract final VoidActionDispatcher load;
   abstract final ActionDispatcher<dynamic> loaded;
+  abstract final ActionDispatcher<Map<String, dynamic>> addFutureAbsence;
+  abstract final ActionDispatcher<FutureAbsence> removeFutureAbsence;
 }

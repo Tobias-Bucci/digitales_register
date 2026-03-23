@@ -376,6 +376,7 @@ abstract class AbsencesState
   static Serializer<AbsencesState> get serializer => _$absencesStateSerializer;
 
   AbsenceStatistic? get statistic;
+  bool get canEdit;
   BuiltList<AbsenceGroup> get absences;
   BuiltList<FutureAbsence> get futureAbsences;
 
@@ -383,6 +384,7 @@ abstract class AbsencesState
 
   static void _initializeBuilder(AbsencesStateBuilder builder) {
     builder
+      ..canEdit = false
       ..absences = ListBuilder<AbsenceGroup>()
       ..futureAbsences = ListBuilder<FutureAbsence>();
   }

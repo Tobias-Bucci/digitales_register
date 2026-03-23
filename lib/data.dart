@@ -456,6 +456,9 @@ abstract class AbsenceGroup
 
 abstract class FutureAbsence
     implements Built<FutureAbsence, FutureAbsenceBuilder> {
+  int? get id;
+  int? get studentId;
+  int? get reasonUser;
   AbsenceJustified get justified;
   String? get reason;
   String? get note;

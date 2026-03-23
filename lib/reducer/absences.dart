@@ -28,7 +28,8 @@ final absencesReducerBuilder = NestedReducerBuilder<AppState, AppStateBuilder,
     AbsencesState, AbsencesStateBuilder>(
   (s) => s.absencesState,
   (b) => b.absencesState,
-)..add<dynamic>(AbsencesActionsNames.loaded, _loaded);
+)
+  ..add<dynamic>(AbsencesActionsNames.loaded, _loaded);
 
 void _loaded(
     AbsencesState state, Action<dynamic> action, AbsencesStateBuilder builder) {
@@ -61,6 +62,7 @@ AbsencesState _parseAbsences(Map json) {
   return AbsencesState(
     (b) => b
       ..statistic = stats
+      ..canEdit = getBool(json["canEdit"]) ?? false
       ..absences = ListBuilder(absences)
       ..futureAbsences = ListBuilder(futureAbsences)
       ..lastFetched = UtcDateTime.now(),
@@ -113,6 +115,9 @@ AbsenceGroup _parseAbsence(dynamic g) {
 FutureAbsence _parseFutureAbsence(dynamic absence) {
   return FutureAbsence(
     (b) => b
+      ..id = getInt(absence["id"])
+      ..studentId = getInt(absence["studentId"])
+      ..reasonUser = getInt(absence["reason_user"])
       ..note = getString(absence["note"])
       ..startDate = UtcDateTime.parse(
         getString(absence["startDate"])!.replaceFirst(" ", "T"),

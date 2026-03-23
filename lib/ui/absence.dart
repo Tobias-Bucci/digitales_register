@@ -27,7 +27,7 @@ class AbsenceGroupWidget extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final divider = Row(
-      children: [
+      children: const [
         Spacer(),
         Flexible(
           flex: 48,
@@ -83,9 +83,11 @@ class AbsenceGroupWidget extends StatelessWidget {
 
 class FutureAbsenceWidget extends StatelessWidget {
   final FutureAbsence absence;
+  final VoidCallback? onRemove;
   const FutureAbsenceWidget({
     super.key,
     required this.absence,
+    this.onRemove,
   });
 
   @override
@@ -121,7 +123,7 @@ class FutureAbsenceWidget extends StatelessWidget {
     }
 
     final divider = Row(
-      children: [
+      children: const [
         Spacer(),
         Flexible(
           flex: 48,
@@ -144,29 +146,54 @@ class FutureAbsenceWidget extends StatelessWidget {
       color: Colors.transparent,
       elevation: 0,
       child: Padding(
-        padding: const EdgeInsets.all(8.0),
-        child: Column(
-          children: <Widget>[
-            if (absence.note != null) ...[
-              Text(absence.note!),
-              divider,
-            ],
-            if (absence.reason != null) ...[
-              Text(absence.reason!),
-              divider,
-            ],
-            Text(
-              fromTo,
-              style: Theme.of(context).textTheme.titleMedium,
-            ),
-            divider,
-            if (absence.reasonTimestamp != null &&
-                absence.reasonSignature != null)
-              Text(
-                "${DateFormat("EE d.M.yyyy 'um' HH:mm", "de").format(absence.reasonTimestamp!)} als „${absence.reasonSignature}“ eingetragen",
+        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
+        child: Stack(
+          children: [
+            Padding(
+              padding: EdgeInsets.only(
+                right: onRemove != null && absence.id != null ? 30 : 0,
               ),
-            divider,
-            Text(justifiedString),
+              child: Column(
+                children: <Widget>[
+                  if (absence.note != null) ...[
+                    Text(absence.note!),
+                    divider,
+                  ],
+                  if (absence.reason != null) ...[
+                    Text(absence.reason!),
+                    divider,
+                  ],
+                  Text(
+                    fromTo,
+                    style: Theme.of(context).textTheme.titleMedium,
+                  ),
+                  divider,
+                  if (absence.reasonTimestamp != null &&
+                      absence.reasonSignature != null)
+                    Text(
+                      "${DateFormat("EE d.M.yyyy 'um' HH:mm", "de").format(absence.reasonTimestamp!)} als „${absence.reasonSignature}“ eingetragen",
+                    ),
+                  divider,
+                  Text(justifiedString),
+                ],
+              ),
+            ),
+            if (onRemove != null && absence.id != null)
+              Positioned(
+                right: 0,
+                top: 0,
+                child: IconButton(
+                  icon: const Icon(Icons.delete_outline, size: 20),
+                  tooltip: 'Voraus-Absenz löschen',
+                  onPressed: onRemove,
+                  padding: EdgeInsets.zero,
+                  constraints: const BoxConstraints(
+                    minWidth: 28,
+                    minHeight: 28,
+                  ),
+                  visualDensity: VisualDensity.compact,
+                ),
+              ),
           ],
         ),
       ),

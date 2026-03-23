@@ -30,6 +30,12 @@ class AbsencesPageContainer extends StatelessWidget {
         return AbsencesPage(
           state: vm.item1,
           noInternet: vm.item2,
+          onAddFutureAbsence: (payload) {
+            actions.absencesActions.addFutureAbsence(payload);
+          },
+          onRemoveFutureAbsence: (absence) {
+            actions.absencesActions.removeFutureAbsence(absence);
+          },
         );
       },
       connect: (state) {
