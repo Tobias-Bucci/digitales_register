@@ -46,7 +46,16 @@ AbsencesState _parseAbsences(Map json) {
     ..percentage = rawStats["percentage"]?.toString().isNotEmpty == true
         ? rawStats["percentage"].toString()
         : null;
-  final absences = (json["absences"] as List).map(_parseAbsence);
+  final absences = (json["absences"] as List)
+      .map(_parseAbsence)
+      .toList()
+    ..sort((a, b) {
+      final latestA =
+          a.absences.reduce((x, y) => x.date.isAfter(y.date) ? x : y).date;
+      final latestB =
+          b.absences.reduce((x, y) => x.date.isAfter(y.date) ? x : y).date;
+      return latestB.compareTo(latestA);
+    });
   final futureAbsences =
       (json["futureAbsences"] as List).map(_parseFutureAbsence);
   return AbsencesState(
@@ -64,7 +73,9 @@ AbsenceGroup _parseAbsence(dynamic g) {
       ..justified = AbsenceJustified.fromInt(getInt(g["justified"])!)
       ..reasonSignature = getString(g["reason_signature"])
       ..reasonTimestamp = g["reason_timestamp"] is String
-          ? UtcDateTime.tryParse(g["reason_timestamp"] as String)
+          ? UtcDateTime.tryParse(
+              (g["reason_timestamp"] as String).replaceFirst(" ", "T"),
+            )
           : null
       ..reason = getString(g["reason"])
       ..note = getString(g["note"])
@@ -74,7 +85,9 @@ AbsenceGroup _parseAbsence(dynamic g) {
             return Absence(
               (b) => b
                 ..minutes = getInt(a["minutes"])
-                ..date = UtcDateTime.parse(getString(a["date"])!)
+                ..date = UtcDateTime.parse(
+                  getString(a["date"])!.replaceFirst(" ", "T"),
+                )
                 ..hour = getInt(a["hour"])
                 ..minutesCameTooLate = getInt(a["minutes_begin"])
                 ..minutesLeftTooEarly = getInt(a["minutes_end"]),
@@ -101,15 +114,21 @@ FutureAbsence _parseFutureAbsence(dynamic absence) {
   return FutureAbsence(
     (b) => b
       ..note = getString(absence["note"])
-      ..startDate = UtcDateTime.parse(getString(absence["startDate"])!)
-      ..endDate = UtcDateTime.parse(getString(absence["endDate"])!)
+      ..startDate = UtcDateTime.parse(
+        getString(absence["startDate"])!.replaceFirst(" ", "T"),
+      )
+      ..endDate = UtcDateTime.parse(
+        getString(absence["endDate"])!.replaceFirst(" ", "T"),
+      )
       ..startHour = getInt(absence["startTime"])
       ..endHour = getInt(absence["endTime"])
       ..justified = AbsenceJustified.fromInt(getInt(absence["justified"])!)
       ..reason = getString(absence["reason"])
       ..reasonSignature = getString(absence["reason_signature"])
       ..reasonTimestamp = absence["reason_timestamp"] is String
-          ? UtcDateTime.tryParse(absence["reason_timestamp"] as String)
+          ? UtcDateTime.tryParse(
+              (absence["reason_timestamp"] as String).replaceFirst(" ", "T"),
+            )
           : null,
   );
 }

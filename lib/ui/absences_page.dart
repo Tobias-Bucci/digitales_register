@@ -95,7 +95,7 @@ class AbsencesBody extends StatelessWidget {
                 ...List.generate(
                   state.absences.length,
                   (n) => AbsenceGroupContainer(
-                    group: state.absences.length - n - 1,
+                    group: n,
                   ),
                 ),
               ])
