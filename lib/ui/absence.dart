@@ -151,6 +151,7 @@ class FutureAbsenceWidget extends StatelessWidget {
           children: [
             Padding(
               padding: EdgeInsets.only(
+                left: onRemove != null && absence.id != null ? 30 : 0,
                 right: onRemove != null && absence.id != null ? 30 : 0,
               ),
               child: Column(
@@ -172,6 +173,7 @@ class FutureAbsenceWidget extends StatelessWidget {
                       absence.reasonSignature != null)
                     Text(
                       "${DateFormat("EE d.M.yyyy 'um' HH:mm", "de").format(absence.reasonTimestamp!)} als „${absence.reasonSignature}“ eingetragen",
+                      textAlign: TextAlign.center,
                     ),
                   divider,
                   Text(justifiedString),

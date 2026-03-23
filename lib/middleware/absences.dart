@@ -76,6 +76,9 @@ Future<void> _addFutureAbsence(
   if (response != null && response['success'] == true) {
     _absencesDebug('add -> success, reloading absences');
     await api.actions.absencesActions.load();
+    if (!wrapper.noInternet) {
+      showSnackBar('Voraus-Absenz wurde eingetragen');
+    }
   } else if (!wrapper.noInternet) {
     _absencesDebug('add -> failed');
     final message = _responseMessage(response);
