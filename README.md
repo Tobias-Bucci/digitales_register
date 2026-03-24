@@ -38,3 +38,34 @@ If you want to use the app without having an actual account, select `Vinzentinum
 You will be logged in to a (local) demo account that displays dummy data. Please note that some features
 may not work as usual and data might not be consistent. This feature was implemented to enable reviews from countries where `digitalesregister.it`
 is not accessible, allowing it to be made available in mobile app stores.
+
+## Hintergrund-Notifications
+
+Die App kann neue ungelesene Notifications im Hintergrund pollen und als lokale Push-Notification anzeigen.
+
+Wichtig:
+* Aktivierung erfolgt in den App-Einstellungen ueber den Toggle `Push Notifications aktivieren`.
+* Es werden nur neue Notifications beruecksichtigt. Bereits bekannte ungelesene Eintraege werden nicht erneut gepusht.
+* Auf Android ist das Intervall durch das OS eingeschraenkt (typisch mindestens ca. 15 Minuten bei WorkManager).
+
+### Teststrategie ohne echten Sender
+
+1. Mock-API / Fake-Server
+* Starte lokal einen Test-Endpunkt fuer `api/notification/unread`.
+* Liefere zuerst eine feste Liste aus und erweitere sie spaeter um neue IDs.
+* Erwartung: nur die neu hinzugefuegte ID erzeugt eine weitere lokale Push-Notification.
+
+2. Manuelle Testdaten
+* Hinterlege testweise JSON-Antworten fuer den Unread-Endpunkt.
+* Simuliere Szenarien wie gleiche ungelesene Liste, neue ID, geaenderter Titel bei gleicher ID.
+
+3. Debug-Endpunkt zum Erzeugen neuer Notifications
+* Falls serverseitig moeglich: baue einen internen Debug-Endpunkt, der gezielt neue Notification-Objekte erstellt.
+* So kann das Verhalten reproduzierbar geprueft werden, ohne manuelle Eingriffe in Produktivdaten.
+
+4. Logging zur Verifikation
+* Pruefe die gespeicherten Background-Logs (Polling-Zeitpunkte, erkannte neue IDs, Fehlerfaelle).
+* Kontrolliere insbesondere:
+  * wann Polling lief,
+  * welche IDs als neu erkannt wurden,
+  * ob bei identischer Liste keine Doppel-Pushes entstanden sind.

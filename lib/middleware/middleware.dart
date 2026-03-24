@@ -44,6 +44,7 @@ import 'package:dr/container/messages_container.dart';
 import 'package:dr/container/settings_page.dart';
 import 'package:dr/data.dart';
 import 'package:dr/main.dart';
+import 'package:dr/notification_background_service.dart';
 import 'package:dr/serializers.dart';
 import 'package:dr/ui/dialog.dart';
 import 'package:dr/utc_date_time.dart';
@@ -367,6 +368,11 @@ Future<void> _loggedIn(MiddlewareApi<AppState, AppStateBuilder, AppActions> api,
   } else {
     await next(action);
   }
+
+  await NotificationBackgroundService.setEnabled(
+    enabled: api.state.settingsState.pushNotificationsEnabled,
+  );
+
   for (final callback in api.state.loginState.callAfterLogin) {
     callback();
   }

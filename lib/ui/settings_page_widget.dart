@@ -54,6 +54,7 @@ class SettingsPageWidget extends StatefulWidget {
   final OnSettingChanged<bool> onSetDashboardColorBorders;
   final OnSettingChanged<bool> onSetCalenderColorBackground;
   final OnSettingChanged<bool> onSetDashboardColorTestsInRed;
+  final OnSettingChanged<bool> onSetPushNotificationsEnabled;
   final OnSettingChanged<bool> onSetAmoledMode;
   final OnSettingChanged<Color> onSetContrastColor;
   final OnSettingChanged<MapEntry<String, SubjectTheme>> onSetSubjectTheme;
@@ -84,6 +85,7 @@ class SettingsPageWidget extends StatefulWidget {
     required this.onSetCalenderColorBackground,
     required this.onSetSubjectTheme,
     required this.onSetDashboardColorTestsInRed,
+    required this.onSetPushNotificationsEnabled,
     required this.onSetAmoledMode,
     required this.onSetContrastColor,
   });
@@ -349,6 +351,14 @@ class _SettingsPageWidgetState extends State<SettingsPageWidget> {
               ),
             ),
           ),
+            SwitchListTile.adaptive(
+              title: const Text("Push Notifications aktivieren"),
+              subtitle: const Text(
+                "Prueft neue Notifications periodisch im Hintergrund (OS-abhaengig, ca. 10-15 Min.)",
+              ),
+              onChanged: widget.onSetPushNotificationsEnabled,
+              value: widget.vm.pushNotificationsEnabled,
+            ),
           SwitchListTile.adaptive(
             title: const Text("Neue oder geänderte Einträge markieren"),
             onChanged: (bool value) {

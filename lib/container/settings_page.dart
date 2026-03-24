@@ -69,6 +69,8 @@ class SettingsPageContainer extends StatelessWidget {
               actions.settingsActions.calendarColorBackground.call,
           onSetDashboardColorTestsInRed:
               actions.settingsActions.dashboardColorTestsInRed.call,
+            onSetPushNotificationsEnabled:
+              actions.settingsActions.pushNotificationsEnabled.call,
           onSetAmoledMode: actions.settingsActions.amoledMode.call,
           onSetSubjectTheme: actions.settingsActions.setSubjectTheme.call,
           onSetContrastColor: (color) {
@@ -101,6 +103,7 @@ class SettingsViewModel {
   final bool dashboardColorBorders;
   final bool calendarColorBackground;
   final bool dashboardColorTestsInRed;
+  final bool pushNotificationsEnabled;
   final bool amoledMode;
   final bool demoMode;
   final List<String> allSubjects;
@@ -124,6 +127,7 @@ class SettingsViewModel {
         dashboardColorBorders = state.settingsState.dashboardColorBorders,
         calendarColorBackground = state.settingsState.calendarColorBackground,
         dashboardColorTestsInRed = state.settingsState.dashboardColorTestsInRed,
+        pushNotificationsEnabled = state.settingsState.pushNotificationsEnabled,
         amoledMode = state.settingsState.amoledMode,
         allSubjects = state.extractAllSubjects(),
         ignoreForGradesAverage =

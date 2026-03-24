@@ -31,6 +31,7 @@ import 'package:dr/container/request_pass_reset_container.dart';
 import 'package:dr/container/settings_page.dart';
 import 'package:dr/desktop.dart';
 import 'package:dr/middleware/middleware.dart';
+import 'package:dr/notification_background_service.dart';
 import 'package:dr/reducer/reducer.dart';
 import 'package:dr/ui/grade_calculator.dart';
 import 'package:dr/ui/grades_chart_page.dart';
@@ -83,6 +84,7 @@ Future<void> main() async {
   scaffoldKey = GlobalKey();
   scaffoldMessengerKey = GlobalKey();
   secureStorage = getFlutterSecureStorage();
+  await NotificationBackgroundService.initialize();
   final store = Store<AppState, AppStateBuilder, AppActions>(
     appReducerBuilder.build(),
     AppState(),

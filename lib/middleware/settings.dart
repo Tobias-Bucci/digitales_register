@@ -21,7 +21,9 @@ final _settingsMiddleware =
     MiddlewareBuilder<AppState, AppStateBuilder, AppActions>()
       ..add(GradesActionsNames.loaded, _updateSubjectThemes)
       ..add(DashboardActionsNames.loaded, _updateSubjectThemes)
-      ..add(CalendarActionsNames.loaded, _updateSubjectThemes);
+      ..add(CalendarActionsNames.loaded, _updateSubjectThemes)
+      ..add(SettingsActionsNames.pushNotificationsEnabled,
+          _setPushNotificationsEnabled);
 
 Future<void> _updateSubjectThemes(
     MiddlewareApi<AppState, AppStateBuilder, AppActions> api,
@@ -30,4 +32,12 @@ Future<void> _updateSubjectThemes(
   await next(action);
   final allSubjects = api.state.extractAllSubjects();
   await api.actions.settingsActions.updateSubjectThemes(allSubjects);
+}
+
+Future<void> _setPushNotificationsEnabled(
+    MiddlewareApi<AppState, AppStateBuilder, AppActions> api,
+    ActionHandler next,
+    Action<bool> action) async {
+  await next(action);
+  await NotificationBackgroundService.setEnabled(enabled: action.payload);
 }
