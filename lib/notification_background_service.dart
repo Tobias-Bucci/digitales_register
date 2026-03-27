@@ -15,6 +15,8 @@ const _backgroundTaskUniqueName = "dr_notification_polling_unique";
 const _backgroundTaskName = "dr_notification_polling_task";
 const _pushEnabledKey = "pushNotificationsEnabled";
 const _knownNotificationIdsKey = "knownBackgroundNotificationIds";
+const _knownNotificationIdsInitializedKey =
+  "knownBackgroundNotificationIdsInitialized";
 const _backgroundLogsKey = "backgroundNotificationLogs";
 const _backgroundLogLimit = 200;
 
@@ -94,6 +96,7 @@ class NotificationBackgroundService {
     await ensureLocalNotificationsInitialized();
     if (enabled) {
       await _requestNotificationPermission();
+      await _seedKnownNotificationIds();
     }
 
     await _syncBackgroundTask(enabled: enabled);
@@ -178,6 +181,8 @@ class NotificationBackgroundService {
   static Future<void> pollAndNotify({required String trigger}) async {
     final unread = await _fetchUnreadNotifications();
     final prefs = await SharedPreferences.getInstance();
+    final idsInitialized =
+        prefs.getBool(_knownNotificationIdsInitializedKey) ?? false;
 
     final knownIds = prefs.getStringList(_knownNotificationIdsKey) ?? <String>[];
     final knownSet = knownIds.toSet();
@@ -185,11 +190,12 @@ class NotificationBackgroundService {
     final normalized = unread.map(_toNotificationCandidate).toList();
     final allCurrentIds = normalized.map((n) => n.key).toSet();
 
-    if (knownSet.isEmpty && allCurrentIds.isNotEmpty) {
+    if (!idsInitialized) {
       await prefs.setStringList(
         _knownNotificationIdsKey,
         allCurrentIds.toList(),
       );
+      await prefs.setBool(_knownNotificationIdsInitializedKey, true);
       await appendLog(
         "[$trigger] Initialer Seed: ${allCurrentIds.length} IDs gespeichert, keine Pushes gesendet",
       );
@@ -221,6 +227,26 @@ class NotificationBackgroundService {
     await appendLog(
       "[$trigger] ${newNotifications.length} neue Notifications: ${newNotifications.map((e) => e.key).join(",")}",
     );
+  }
+
+  static Future<void> _seedKnownNotificationIds() async {
+    try {
+      final unread = await _fetchUnreadNotifications();
+      final prefs = await SharedPreferences.getInstance();
+      final ids = unread.map(_toNotificationCandidate).map((n) => n.key).toSet();
+      await prefs.setStringList(_knownNotificationIdsKey, ids.toList());
+      await prefs.setBool(_knownNotificationIdsInitializedKey, true);
+      await appendLog(
+        "Seed bei Aktivierung: ${ids.length} bekannte IDs gespeichert",
+      );
+    } catch (e, trace) {
+      await appendLog("Seed bei Aktivierung fehlgeschlagen: $e");
+      log(
+        "Failed to seed known notification IDs",
+        error: e,
+        stackTrace: trace,
+      );
+    }
   }
 
   static Future<List<Map<String, dynamic>>> _fetchUnreadNotifications() async {
