@@ -3,6 +3,13 @@ include: package:lint/analysis_options.yaml
 analyzer:
   exclude:
     - "**.g.dart"
+    - "ios/Flutter/ephemeral/**"
+    - "packages/built_redux/**"
+    - "packages/charts_repo/**"
+    - "packages/collapsible_sidebar/**"
+    - "packages/flutter_built_redux/**"
+    - "packages/quill_delta_viewer/**"
+    - "packages/responsive_scaffold/**"
   errors:
     # This lint is not helpful in combination with implicit-dynamic: false.
     avoid_dynamic_calls: ignore

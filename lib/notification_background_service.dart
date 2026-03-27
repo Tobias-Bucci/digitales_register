@@ -16,14 +16,13 @@ const _backgroundTaskName = "dr_notification_polling_task";
 const _pushEnabledKey = "pushNotificationsEnabled";
 const _knownNotificationIdsKey = "knownBackgroundNotificationIds";
 const _knownNotificationIdsInitializedKey =
-  "knownBackgroundNotificationIdsInitialized";
+    "knownBackgroundNotificationIdsInitialized";
 const _backgroundLogsKey = "backgroundNotificationLogs";
 const _backgroundLogLimit = 200;
 
 const _channelId = "dr_background_notifications";
 const _channelName = "Digitales Register Benachrichtigungen";
-const _channelDescription =
-    "Lokale Benachrichtigungen fuer neue Mitteilungen";
+const _channelDescription = "Lokale Benachrichtigungen fuer neue Mitteilungen";
 
 @pragma("vm:entry-point")
 void notificationBackgroundDispatcher() {
@@ -122,7 +121,7 @@ class NotificationBackgroundService {
       _backgroundTaskName,
       frequency: const Duration(minutes: 15),
       initialDelay: const Duration(minutes: 1),
-      existingWorkPolicy: ExistingWorkPolicy.replace,
+      existingWorkPolicy: ExistingPeriodicWorkPolicy.replace,
       constraints: Constraints(
         networkType: NetworkType.connected,
       ),
@@ -166,7 +165,7 @@ class NotificationBackgroundService {
     await _notificationsPlugin
         .resolvePlatformSpecificImplementation<
             AndroidFlutterLocalNotificationsPlugin>()
-        ?.requestPermission();
+        ?.requestNotificationsPermission();
 
     await _notificationsPlugin
         .resolvePlatformSpecificImplementation<
@@ -184,7 +183,8 @@ class NotificationBackgroundService {
     final idsInitialized =
         prefs.getBool(_knownNotificationIdsInitializedKey) ?? false;
 
-    final knownIds = prefs.getStringList(_knownNotificationIdsKey) ?? <String>[];
+    final knownIds =
+        prefs.getStringList(_knownNotificationIdsKey) ?? <String>[];
     final knownSet = knownIds.toSet();
 
     final normalized = unread.map(_toNotificationCandidate).toList();
@@ -233,7 +233,8 @@ class NotificationBackgroundService {
     try {
       final unread = await _fetchUnreadNotifications();
       final prefs = await SharedPreferences.getInstance();
-      final ids = unread.map(_toNotificationCandidate).map((n) => n.key).toSet();
+      final ids =
+          unread.map(_toNotificationCandidate).map((n) => n.key).toSet();
       await prefs.setStringList(_knownNotificationIdsKey, ids.toList());
       await prefs.setBool(_knownNotificationIdsInitializedKey, true);
       await appendLog(
@@ -277,8 +278,8 @@ class NotificationBackgroundService {
     final baseUrl = "${fixupUrl(rawUrl)}/v2";
     final dio = Dio(
       BaseOptions(
-        connectTimeout: 15000,
-        receiveTimeout: 15000,
+        connectTimeout: const Duration(seconds: 15),
+        receiveTimeout: const Duration(seconds: 15),
       ),
     );
     dio.interceptors.add(CookieManager(DefaultCookieJar()));
@@ -318,7 +319,8 @@ class NotificationBackgroundService {
     }).toList();
   }
 
-  static _NotificationCandidate _toNotificationCandidate(Map<String, dynamic> n) {
+  static _NotificationCandidate _toNotificationCandidate(
+      Map<String, dynamic> n) {
     final id = getInt(n["id"]);
     final title = getString(n["title"]) ?? "";
     final subTitle = getString(n["subTitle"]);

@@ -23,7 +23,6 @@ import 'package:dr/container/settings_page.dart';
 import 'package:dr/data.dart';
 import 'package:dr/reducer/reducer.dart';
 import 'package:dr/ui/dialog.dart';
-import 'package:dynamic_theme/dynamic_theme.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_built_redux/flutter_built_redux.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -67,17 +66,7 @@ void main() {
           home: SettingsPageContainer(),
         ),
       );
-      await tester.pumpWidget(
-        DynamicTheme(
-          data: (brightness, overridePlatform) {
-            return ThemeData(
-              primarySwatch: Colors.deepOrange,
-              brightness: brightness,
-            );
-          },
-          themedWidgetBuilder: (context, data) => widget,
-        ),
-      );
+      await tester.pumpWidget(widget);
       await tester.pumpAndSettle();
 
       await expectLater(
@@ -102,17 +91,7 @@ void main() {
             home: SettingsPageContainer(),
           ),
         );
-        await tester.pumpWidget(
-          DynamicTheme(
-            data: (brightness, overridePlatform) {
-              return ThemeData(
-                primarySwatch: Colors.deepOrange,
-                brightness: brightness,
-              );
-            },
-            themedWidgetBuilder: (context, data) => widget,
-          ),
-        );
+        await tester.pumpWidget(widget);
         await tester.pumpAndSettle();
 
         // a dialog should be opened
@@ -153,17 +132,7 @@ void main() {
             home: SettingsPageContainer(),
           ),
         );
-        await tester.pumpWidget(
-          DynamicTheme(
-            data: (brightness, overridePlatform) {
-              return ThemeData(
-                primarySwatch: Colors.deepOrange,
-                brightness: brightness,
-              );
-            },
-            themedWidgetBuilder: (context, data) => widget,
-          ),
-        );
+        await tester.pumpWidget(widget);
         await tester.pumpAndSettle();
         await tester.scrollUntilVisible(find.text("Fächerkürzel"), 200);
         final subjectNicksHeader = find.widgetWithText(
@@ -226,17 +195,7 @@ void main() {
             home: SettingsPageContainer(),
           ),
         );
-        await tester.pumpWidget(
-          DynamicTheme(
-            data: (brightness, overridePlatform) {
-              return ThemeData(
-                primarySwatch: Colors.deepOrange,
-                brightness: brightness,
-              );
-            },
-            themedWidgetBuilder: (context, data) => widget,
-          ),
-        );
+        await tester.pumpWidget(widget);
         await tester.pumpAndSettle();
         await tester.scrollUntilVisible(find.text("Fächerkürzel"), 200);
         final subjectNicksHeader = find.widgetWithText(
@@ -303,17 +262,7 @@ void main() {
             home: SettingsPageContainer(),
           ),
         );
-        await tester.pumpWidget(
-          DynamicTheme(
-            data: (brightness, overridePlatform) {
-              return ThemeData(
-                primarySwatch: Colors.deepOrange,
-                brightness: brightness,
-              );
-            },
-            themedWidgetBuilder: (context, data) => widget,
-          ),
-        );
+        await tester.pumpWidget(widget);
         await tester.pumpAndSettle();
         await tester.scrollUntilVisible(find.text("Fächerkürzel"), 200);
         final subjectNicksHeader = find.widgetWithText(
@@ -421,17 +370,7 @@ void main() {
             home: SettingsPageContainer(),
           ),
         );
-        await tester.pumpWidget(
-          DynamicTheme(
-            data: (brightness, overridePlatform) {
-              return ThemeData(
-                primarySwatch: Colors.deepOrange,
-                brightness: brightness,
-              );
-            },
-            themedWidgetBuilder: (context, data) => widget,
-          ),
-        );
+        await tester.pumpWidget(widget);
         await tester.pumpAndSettle();
         await tester.scrollUntilVisible(
           find.text("Fächer aus dem Notendurchschnitt ausschließen"),
@@ -482,17 +421,7 @@ void main() {
             home: SettingsPageContainer(),
           ),
         );
-        await tester.pumpWidget(
-          DynamicTheme(
-            data: (brightness, overridePlatform) {
-              return ThemeData(
-                primarySwatch: Colors.deepOrange,
-                brightness: brightness,
-              );
-            },
-            themedWidgetBuilder: (context, data) => widget,
-          ),
-        );
+        await tester.pumpWidget(widget);
         await tester.pumpAndSettle();
         await tester.scrollUntilVisible(
           find.text("Fächer aus dem Notendurchschnitt ausschließen"),
@@ -531,17 +460,7 @@ void main() {
             home: SettingsPageContainer(),
           ),
         );
-        await tester.pumpWidget(
-          DynamicTheme(
-            data: (brightness, overridePlatform) {
-              return ThemeData(
-                primarySwatch: Colors.deepOrange,
-                brightness: brightness,
-              );
-            },
-            themedWidgetBuilder: (context, data) => widget,
-          ),
-        );
+        await tester.pumpWidget(widget);
         await tester.pumpAndSettle();
         await tester.scrollUntilVisible(
           find.text("Fokusfächer verwalten"),
@@ -587,17 +506,7 @@ void main() {
             home: SettingsPageContainer(),
           ),
         );
-        await tester.pumpWidget(
-          DynamicTheme(
-            data: (brightness, overridePlatform) {
-              return ThemeData(
-                primarySwatch: Colors.deepOrange,
-                brightness: brightness,
-              );
-            },
-            themedWidgetBuilder: (context, data) => widget,
-          ),
-        );
+        await tester.pumpWidget(widget);
         await tester.pumpAndSettle();
         await tester.scrollUntilVisible(
           find.text("Fokusfächer verwalten"),
@@ -632,17 +541,7 @@ void main() {
             home: SettingsPageContainer(),
           ),
         );
-        await tester.pumpWidget(
-          DynamicTheme(
-            data: (brightness, overridePlatform) {
-              return ThemeData(
-                primarySwatch: Colors.deepOrange,
-                brightness: brightness,
-              );
-            },
-            themedWidgetBuilder: (context, data) => widget,
-          ),
-        );
+        await tester.pumpWidget(widget);
         await tester.pumpAndSettle();
         await tester.scrollUntilVisible(
           find.text("Fokusfächer verwalten"),

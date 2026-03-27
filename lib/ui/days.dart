@@ -242,7 +242,8 @@ class _DaysWidgetState extends State<DaysWidget> {
   @override
   void didUpdateWidget(DaysWidget oldWidget) {
     final availableFavoriteSubjects = _availableFavoriteSubjects();
-    updateValues(_filteredDays(_resolvedFavoriteSubject(availableFavoriteSubjects)));
+    updateValues(
+        _filteredDays(_resolvedFavoriteSubject(availableFavoriteSubjects)));
     update();
 
     super.didUpdateWidget(oldWidget);
@@ -490,7 +491,8 @@ class _DaysWidgetState extends State<DaysWidget> {
                 onPressed: widget.refreshNoInternet,
                 icon: const Icon(Icons.wifi_off_rounded),
                 style: IconButton.styleFrom(
-                  backgroundColor: Theme.of(context).colorScheme.secondaryContainer,
+                  backgroundColor:
+                      Theme.of(context).colorScheme.secondaryContainer,
                   foregroundColor:
                       Theme.of(context).colorScheme.onSecondaryContainer,
                 ),
@@ -730,13 +732,17 @@ class DayWidget extends StatelessWidget {
                             ? Colors.white
                             : null,
                       ),
-                      badgeColor: day.deletedHomework.any((h) => h.isChanged)
-                          ? Colors.red
-                          : Theme.of(context).scaffoldBackgroundColor,
-                      toAnimate: day.deletedHomework.any((h) => h.isChanged),
-                      padding: EdgeInsets.zero,
+                      badgeStyle: badge.BadgeStyle(
+                        badgeColor: day.deletedHomework.any((h) => h.isChanged)
+                            ? Colors.red
+                            : Theme.of(context).scaffoldBackgroundColor,
+                        padding: EdgeInsets.zero,
+                        elevation: 0,
+                      ),
+                      badgeAnimation: badge.BadgeAnimation.scale(
+                        toAnimate: day.deletedHomework.any((h) => h.isChanged),
+                      ),
                       position: badge.BadgePosition.topStart(),
-                      elevation: 0,
                       child: const Icon(Icons.info_outline),
                     ),
                     onPressed: () {
@@ -979,8 +985,10 @@ class ItemWidget extends StatelessWidget {
                                   Positioned(
                                     right: 0,
                                     child: badge.Badge(
-                                      shape: badge.BadgeShape.square,
-                                      borderRadius: BorderRadius.circular(20),
+                                      badgeStyle: badge.BadgeStyle(
+                                        shape: badge.BadgeShape.square,
+                                        borderRadius: BorderRadius.circular(20),
+                                      ),
                                       badgeContent: Text(
                                         isHistory && isCurrent
                                             ? "aktuell"
@@ -1001,20 +1009,21 @@ class ItemWidget extends StatelessWidget {
                             title: Text(
                               item.title,
                               style: TextStyle(
-                                decoration:
-                                    isCompleted ? TextDecoration.lineThrough : null,
+                                decoration: isCompleted
+                                    ? TextDecoration.lineThrough
+                                    : null,
                               ),
                             ),
                             subtitle: item.subtitle.isNullOrEmpty
                                 ? null
-                              : SelectableText(
-                                item.subtitle,
-                                style: TextStyle(
-                                  decoration: isCompleted
-                                    ? TextDecoration.lineThrough
-                                    : null,
-                                ),
-                                ),
+                                : SelectableText(
+                                    item.subtitle,
+                                    style: TextStyle(
+                                      decoration: isCompleted
+                                          ? TextDecoration.lineThrough
+                                          : null,
+                                    ),
+                                  ),
                             leading:
                                 !isHistory && !isDeletedView && item.deleteable
                                     ? IconButton(
@@ -1061,13 +1070,20 @@ class ItemWidget extends StatelessWidget {
                               ? badge.Badge(
                                   badgeContent:
                                       const Icon(Icons.edit, size: 15),
-                                  padding: EdgeInsets.zero,
-                                  badgeColor: isDeletedView
-                                      ? Theme.of(context).dialogBackgroundColor
-                                      : Theme.of(context)
-                                          .scaffoldBackgroundColor,
-                                  toAnimate: false,
-                                  elevation: 0,
+                                  badgeStyle: badge.BadgeStyle(
+                                    padding: EdgeInsets.zero,
+                                    badgeColor: isDeletedView
+                                        ? Theme.of(context)
+                                                .dialogTheme
+                                                .backgroundColor ??
+                                            Theme.of(context).canvasColor
+                                        : Theme.of(context)
+                                            .scaffoldBackgroundColor,
+                                    elevation: 0,
+                                  ),
+                                  badgeAnimation:
+                                      const badge.BadgeAnimation.scale(
+                                          toAnimate: false),
                                   child: const Icon(
                                     Icons.info_outline,
                                   ),

@@ -1,0 +1,21 @@
+plugins {
+    id "com.android.library"
+}
+
+android {
+    namespace "com.crazecoder.openfile"
+    compileSdk 36
+
+    defaultConfig {
+        minSdk 16
+        testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
+    }
+
+    lint {
+        disable 'InvalidPackage'
+    }
+}
+
+dependencies {
+    implementation 'androidx.legacy:legacy-support-v4:1.0.0'
+}

@@ -153,459 +153,475 @@ class _LoginPageContentState extends State<LoginPageContent> {
 
     return Theme(
       data: loginTheme,
-      child: WillPopScope(
-        onWillPop: () async {
-          if (widget.vm.changePass && !widget.vm.mustChangePass) {
-            return true;
+      child: PopScope<void>(
+        canPop: widget.vm.changePass && !widget.vm.mustChangePass,
+        onPopInvokedWithResult: (didPop, result) async {
+          if (didPop || (widget.vm.changePass && !widget.vm.mustChangePass)) {
+            return;
           }
           await SystemNavigator.pop();
-          return false;
         },
         child: Scaffold(
-        backgroundColor: fixedBackground,
-        appBar: widget.vm.changePass
-            ? AppBar(
-                elevation: 0,
-                backgroundColor: Colors.transparent,
-                foregroundColor: theme.colorScheme.onSurface,
-                title: const Text('Passwort ändern'),
-                automaticallyImplyLeading: !widget.vm.mustChangePass,
-              )
-            : null,
-        body: Stack(
-          children: [
-            SafeArea(
-              child: Center(
-                child: ConstrainedBox(
-                  constraints: const BoxConstraints(maxWidth: 560),
-                  child: ListView(
-                    padding: EdgeInsets.fromLTRB(
-                      16,
-                      widget.vm.changePass ? 20 : 54,
-                      16,
-                      24,
-                    ),
-                    children: <Widget>[
-                      if (!widget.vm.changePass)
-                        Padding(
-                          padding: const EdgeInsets.only(bottom: 18),
-                          child: Column(
-                            children: [
-                              Text(
-                                "Digitales Register",
-                                textAlign: TextAlign.center,
-                                style: theme.textTheme.headlineSmall?.copyWith(
-                                  fontWeight: FontWeight.w700,
-                                  letterSpacing: 0.2,
-                                  color: isDark
-                                      ? const Color(0xFFE7EDF3)
-                                      : const Color(0xFF1A2733),
-                                ),
-                              ),
-                              const SizedBox(height: 8),
-                              Container(
-                                width: 68,
-                                height: 3,
-                                decoration: BoxDecoration(
-                                  color: naturalBlue.withOpacity(0.85),
-                                  borderRadius: BorderRadius.circular(12),
-                                ),
-                              ),
-                            ],
-                          ),
-                        ),
-                      Card(
-                        elevation: isDark ? 0 : 1,
-                        color: theme.colorScheme.surface,
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(22),
-                          side: BorderSide(
-                            color: naturalBlue.withOpacity(isDark ? 0.28 : 0.16),
-                          ),
-                        ),
-                        child: Padding(
-                          padding: const EdgeInsets.fromLTRB(16, 16, 16, 14),
-                          child: AutofillGroup(
+          backgroundColor: fixedBackground,
+          appBar: widget.vm.changePass
+              ? AppBar(
+                  elevation: 0,
+                  backgroundColor: Colors.transparent,
+                  foregroundColor: theme.colorScheme.onSurface,
+                  title: const Text('Passwort ändern'),
+                  automaticallyImplyLeading: !widget.vm.mustChangePass,
+                )
+              : null,
+          body: Stack(
+            children: [
+              SafeArea(
+                child: Center(
+                  child: ConstrainedBox(
+                    constraints: const BoxConstraints(maxWidth: 560),
+                    child: ListView(
+                      padding: EdgeInsets.fromLTRB(
+                        16,
+                        widget.vm.changePass ? 20 : 54,
+                        16,
+                        24,
+                      ),
+                      children: <Widget>[
+                        if (!widget.vm.changePass)
+                          Padding(
+                            padding: const EdgeInsets.only(bottom: 18),
                             child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.stretch,
                               children: [
-                                if (!widget.vm.changePass) ...[
-                                  LayoutBuilder(builder: (context, constraints) {
-                                    return RawAutocomplete<String>(
-                                      focusNode: _schoolFocusNode,
-                                      textEditingController: _schoolController,
-                                      optionsViewBuilder:
-                                          (context, onSelected, options) {
-                                        return AutocompleteOptions(
-                                          displayStringForOption: RawAutocomplete
-                                              .defaultStringForOption,
-                                          onSelected: onSelected,
-                                          options: options,
-                                          maxOptionsHeight: 220,
-                                          width: constraints.maxWidth,
-                                        );
-                                      },
-                                      fieldViewBuilder: (context,
-                                          textEditingController,
-                                          focusNode,
-                                          onFieldSubmitted) {
-                                        return TextFormField(
-                                          controller: textEditingController,
-                                          focusNode: focusNode,
-                                          onFieldSubmitted: (String value) {
-                                            onFieldSubmitted();
-                                          },
-                                          autofocus:
-                                              _schoolController.text.isEmpty,
-                                          enabled: !widget.vm.loading,
-                                          onChanged: (value) {
-                                            setState(() {
-                                              if (widget.vm.servers[value] ==
-                                                  null) {
-                                                selectedPresetServer = null;
-                                              } else {
-                                                selectedPresetServer = Tuple2(
-                                                  value,
-                                                  widget.vm.servers[value],
-                                                );
-                                                _urlController.text =
-                                                    selectedPresetServer!.item2!;
-                                              }
-                                            });
-                                          },
-                                          decoration: fieldDecoration(
-                                            "Schule",
-                                            icon: Icons.school_outlined,
-                                            errorText: !_schoolFocusNode.hasFocus &&
-                                                    _schoolController.text !=
-                                                        "Andere Schule" &&
-                                                    _schoolController
-                                                        .text.isNotEmpty &&
-                                                    selectedPresetServer == null
-                                                ? "Schule nicht gefunden"
-                                                : null,
-                                          ),
-                                        );
-                                      },
-                                      optionsBuilder: (textEditingValue) {
-                                        if (textEditingValue.text
-                                                .trim()
-                                                .length <
-                                            3) {
-                                          return [];
-                                        }
-                                        if (widget.vm.servers
-                                            .containsKey(textEditingValue.text)) {
-                                          return [
-                                            textEditingValue.text,
-                                          ];
-                                        }
-                                        return [
-                                          ...Fuzzy(
-                                            widget.vm.servers.keys.toList(),
-                                            options: FuzzyOptions<String>(
-                                              maxPatternLength: 256,
-                                              tokenize: true,
-                                            ),
-                                          )
-                                              .search(textEditingValue.text)
-                                              .take(15)
-                                              .map((e) => e.item),
-                                          "Andere Schule",
-                                        ];
-                                      },
-                                      onSelected: (option) {
-                                        _schoolFocusNode.unfocus();
-                                        setState(() {
-                                          selectedPresetServer = Tuple2(
-                                            option,
-                                            widget.vm.servers[option],
+                                Text(
+                                  "Digitales Register",
+                                  textAlign: TextAlign.center,
+                                  style:
+                                      theme.textTheme.headlineSmall?.copyWith(
+                                    fontWeight: FontWeight.w700,
+                                    letterSpacing: 0.2,
+                                    color: isDark
+                                        ? const Color(0xFFE7EDF3)
+                                        : const Color(0xFF1A2733),
+                                  ),
+                                ),
+                                const SizedBox(height: 8),
+                                Container(
+                                  width: 68,
+                                  height: 3,
+                                  decoration: BoxDecoration(
+                                    color: naturalBlue.withOpacity(0.85),
+                                    borderRadius: BorderRadius.circular(12),
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                        Card(
+                          elevation: isDark ? 0 : 1,
+                          color: theme.colorScheme.surface,
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(22),
+                            side: BorderSide(
+                              color:
+                                  naturalBlue.withOpacity(isDark ? 0.28 : 0.16),
+                            ),
+                          ),
+                          child: Padding(
+                            padding: const EdgeInsets.fromLTRB(16, 16, 16, 14),
+                            child: AutofillGroup(
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.stretch,
+                                children: [
+                                  if (!widget.vm.changePass) ...[
+                                    LayoutBuilder(
+                                        builder: (context, constraints) {
+                                      return RawAutocomplete<String>(
+                                        focusNode: _schoolFocusNode,
+                                        textEditingController:
+                                            _schoolController,
+                                        optionsViewBuilder:
+                                            (context, onSelected, options) {
+                                          return AutocompleteOptions(
+                                            displayStringForOption:
+                                                RawAutocomplete
+                                                    .defaultStringForOption,
+                                            onSelected: onSelected,
+                                            options: options,
+                                            maxOptionsHeight: 220,
+                                            width: constraints.maxWidth,
                                           );
-                                          if (option == "Andere Schule") {
-                                            selectedPresetServer = null;
-                                            _urlController.text =
-                                                ".digitalesregister.it";
-                                            _urlController.selection =
-                                                TextSelection.fromPosition(
-                                              const TextPosition(offset: 0),
-                                            );
-                                          } else {
-                                            _urlController.text =
-                                                selectedPresetServer!.item2!;
+                                        },
+                                        fieldViewBuilder: (context,
+                                            textEditingController,
+                                            focusNode,
+                                            onFieldSubmitted) {
+                                          return TextFormField(
+                                            controller: textEditingController,
+                                            focusNode: focusNode,
+                                            onFieldSubmitted: (String value) {
+                                              onFieldSubmitted();
+                                            },
+                                            autofocus:
+                                                _schoolController.text.isEmpty,
+                                            enabled: !widget.vm.loading,
+                                            onChanged: (value) {
+                                              setState(() {
+                                                if (widget.vm.servers[value] ==
+                                                    null) {
+                                                  selectedPresetServer = null;
+                                                } else {
+                                                  selectedPresetServer = Tuple2(
+                                                    value,
+                                                    widget.vm.servers[value],
+                                                  );
+                                                  _urlController.text =
+                                                      selectedPresetServer!
+                                                          .item2!;
+                                                }
+                                              });
+                                            },
+                                            decoration: fieldDecoration(
+                                              "Schule",
+                                              icon: Icons.school_outlined,
+                                              errorText: !_schoolFocusNode
+                                                          .hasFocus &&
+                                                      _schoolController.text !=
+                                                          "Andere Schule" &&
+                                                      _schoolController
+                                                          .text.isNotEmpty &&
+                                                      selectedPresetServer ==
+                                                          null
+                                                  ? "Schule nicht gefunden"
+                                                  : null,
+                                            ),
+                                          );
+                                        },
+                                        optionsBuilder: (textEditingValue) {
+                                          if (textEditingValue.text
+                                                  .trim()
+                                                  .length <
+                                              3) {
+                                            return [];
                                           }
-                                        });
-                                      },
-                                    );
-                                  }),
+                                          if (widget.vm.servers.containsKey(
+                                              textEditingValue.text)) {
+                                            return [
+                                              textEditingValue.text,
+                                            ];
+                                          }
+                                          return [
+                                            ...Fuzzy(
+                                              widget.vm.servers.keys.toList(),
+                                              options: FuzzyOptions<String>(
+                                                maxPatternLength: 256,
+                                                tokenize: true,
+                                              ),
+                                            )
+                                                .search(textEditingValue.text)
+                                                .take(15)
+                                                .map((e) => e.item),
+                                            "Andere Schule",
+                                          ];
+                                        },
+                                        onSelected: (option) {
+                                          _schoolFocusNode.unfocus();
+                                          setState(() {
+                                            selectedPresetServer = Tuple2(
+                                              option,
+                                              widget.vm.servers[option],
+                                            );
+                                            if (option == "Andere Schule") {
+                                              selectedPresetServer = null;
+                                              _urlController.text =
+                                                  ".digitalesregister.it";
+                                              _urlController.selection =
+                                                  TextSelection.fromPosition(
+                                                const TextPosition(offset: 0),
+                                              );
+                                            } else {
+                                              _urlController.text =
+                                                  selectedPresetServer!.item2!;
+                                            }
+                                          });
+                                        },
+                                      );
+                                    }),
+                                    const SizedBox(height: 12),
+                                    TextField(
+                                      decoration: fieldDecoration(
+                                        'Adresse',
+                                        icon: Icons.language_rounded,
+                                      ),
+                                      controller: _urlController,
+                                      enabled: !widget.vm.loading,
+                                      keyboardType: TextInputType.url,
+                                    ),
+                                    const SizedBox(height: 12),
+                                  ],
+                                  TextField(
+                                    autofillHints: widget.vm.loading
+                                        ? null
+                                        : [AutofillHints.username],
+                                    decoration: fieldDecoration(
+                                      'Benutzername',
+                                      icon: Icons.person_outline_rounded,
+                                    ),
+                                    controller: _usernameController,
+                                    enabled: !widget.vm.loading,
+                                  ),
                                   const SizedBox(height: 12),
                                   TextField(
+                                    autofillHints: widget.vm.loading
+                                        ? null
+                                        : [AutofillHints.password],
                                     decoration: fieldDecoration(
-                                      'Adresse',
-                                      icon: Icons.language_rounded,
+                                      widget.vm.changePass
+                                          ? 'Altes Passwort'
+                                          : 'Passwort',
+                                      icon: Icons.lock_outline_rounded,
                                     ),
-                                    controller: _urlController,
+                                    controller: _passwordController,
+                                    obscureText: true,
                                     enabled: !widget.vm.loading,
-                                    keyboardType: TextInputType.url,
                                   ),
-                                  const SizedBox(height: 12),
-                                ],
-                                TextField(
-                                  autofillHints: widget.vm.loading
-                                      ? null
-                                      : [AutofillHints.username],
-                                  decoration: fieldDecoration(
-                                    'Benutzername',
-                                    icon: Icons.person_outline_rounded,
-                                  ),
-                                  controller: _usernameController,
-                                  enabled: !widget.vm.loading,
-                                ),
-                                const SizedBox(height: 12),
-                                TextField(
-                                  autofillHints: widget.vm.loading
-                                      ? null
-                                      : [AutofillHints.password],
-                                  decoration: fieldDecoration(
-                                    widget.vm.changePass
-                                        ? 'Altes Passwort'
-                                        : 'Passwort',
-                                    icon: Icons.lock_outline_rounded,
-                                  ),
-                                  controller: _passwordController,
-                                  obscureText: true,
-                                  enabled: !widget.vm.loading,
-                                ),
-                                Align(
-                                  alignment: Alignment.centerLeft,
-                                  child: TextButton(
-                                    style: TextButton.styleFrom(
-                                      foregroundColor: naturalBlue,
+                                  Align(
+                                    alignment: Alignment.centerLeft,
+                                    child: TextButton(
+                                      style: TextButton.styleFrom(
+                                        foregroundColor: naturalBlue,
+                                      ),
+                                      onPressed: () =>
+                                          widget.onRequestPassReset(url),
+                                      child: const Text("Passwort vergessen"),
                                     ),
-                                    onPressed: () =>
-                                        widget.onRequestPassReset(url),
-                                    child: const Text("Passwort vergessen"),
                                   ),
-                                ),
-                                if (widget.vm.changePass) ...[
-                                  if (widget.vm.mustChangePass)
+                                  if (widget.vm.changePass) ...[
+                                    if (widget.vm.mustChangePass)
+                                      Container(
+                                        decoration: BoxDecoration(
+                                          color:
+                                              naturalBlueBg.withOpacity(0.35),
+                                          borderRadius:
+                                              BorderRadius.circular(12),
+                                        ),
+                                        padding: const EdgeInsets.all(12),
+                                        child: const Text(
+                                          "Du musst dein Passwort ändern.",
+                                        ),
+                                      ),
+                                    const SizedBox(height: 10),
                                     Container(
                                       decoration: BoxDecoration(
-                                        color: naturalBlueBg.withOpacity(0.35),
+                                        color: theme.colorScheme.surfaceVariant
+                                            .withOpacity(isDark ? 0.35 : 0.55),
                                         borderRadius: BorderRadius.circular(12),
                                       ),
                                       padding: const EdgeInsets.all(12),
                                       child: const Text(
-                                        "Du musst dein Passwort ändern.",
+                                        "Das neue Passwort muss:\n"
+                                        "- mindestens 10 Zeichen lang sein\n"
+                                        "- mindestens einen Großbuchstaben enthalten\n"
+                                        "- mindestens einen Kleinbuchstaben enthalten\n"
+                                        "- mindestens eine Zahl enthalten\n"
+                                        "- mindestens ein Sonderzeichen enthalten\n"
+                                        "- nicht mit dem alten Passwort übereinstimmen",
                                       ),
                                     ),
-                                  const SizedBox(height: 10),
-                                  Container(
-                                    decoration: BoxDecoration(
-                                      color: theme.colorScheme.surfaceVariant
-                                          .withOpacity(isDark ? 0.35 : 0.55),
-                                      borderRadius: BorderRadius.circular(12),
-                                    ),
-                                    padding: const EdgeInsets.all(12),
-                                    child: const Text(
-                                      "Das neue Passwort muss:\n"
-                                      "- mindestens 10 Zeichen lang sein\n"
-                                      "- mindestens einen Großbuchstaben enthalten\n"
-                                      "- mindestens einen Kleinbuchstaben enthalten\n"
-                                      "- mindestens eine Zahl enthalten\n"
-                                      "- mindestens ein Sonderzeichen enthalten\n"
-                                      "- nicht mit dem alten Passwort übereinstimmen",
-                                    ),
-                                  ),
-                                  const SizedBox(height: 12),
-                                  TextField(
-                                    autofillHints: widget.vm.loading
-                                        ? null
-                                        : [AutofillHints.newPassword],
-                                    decoration: fieldDecoration(
-                                      'Neues Passwort',
-                                      icon: Icons.enhanced_encryption_outlined,
-                                    ),
-                                    controller: _newPassword1Controller,
-                                    obscureText: true,
-                                    enabled: !widget.vm.loading,
-                                    onChanged: (_) {
-                                      setState(() {
-                                        newPasswordsMatch =
-                                            _newPassword1Controller.text ==
-                                                _newPassword2Controller.text;
-                                      });
-                                    },
-                                  ),
-                                  const SizedBox(height: 12),
-                                  TextField(
-                                    autofillHints: widget.vm.loading
-                                        ? null
-                                        : [AutofillHints.newPassword],
-                                    decoration: fieldDecoration(
-                                      'Neues Passwort wiederholen',
-                                      icon: Icons.check_circle_outline,
-                                      errorText: newPasswordsMatch
+                                    const SizedBox(height: 12),
+                                    TextField(
+                                      autofillHints: widget.vm.loading
                                           ? null
-                                          : "Die neuen Passwörter stimmen nicht überein",
-                                    ),
-                                    controller: _newPassword2Controller,
-                                    obscureText: true,
-                                    enabled: !widget.vm.loading,
-                                    onChanged: (_) {
-                                      setState(() {
-                                        newPasswordsMatch =
-                                            _newPassword1Controller.text ==
-                                                _newPassword2Controller.text;
-                                      });
-                                    },
-                                  ),
-                                ],
-                                const SizedBox(height: 14),
-                                ElevatedButton.icon(
-                                  style: ElevatedButton.styleFrom(
-                                    backgroundColor: naturalBlue,
-                                    foregroundColor: Colors.white,
-                                    padding: const EdgeInsets.symmetric(
-                                      vertical: 14,
-                                    ),
-                                    shape: RoundedRectangleBorder(
-                                      borderRadius: BorderRadius.circular(14),
-                                    ),
-                                  ),
-                                  onPressed:
-                                      widget.vm.loading || !newPasswordsMatch
-                                          ? null
-                                          : () {
-                                              widget.setSaveNoPass(safeMode);
-                                              if (widget.vm.changePass) {
-                                                widget.onChangePass(
-                                                  _usernameController.text,
-                                                  _passwordController.text,
-                                                  _newPassword1Controller.text,
-                                                  url,
-                                                );
-                                              } else {
-                                                widget.onLogin(
-                                                  _usernameController.value.text,
-                                                  _passwordController.value.text,
-                                                  url,
-                                                );
-                                              }
-                                            },
-                                  icon: Icon(widget.vm.changePass
-                                      ? Icons.key_rounded
-                                      : Icons.login_rounded),
-                                  label: Text(widget.vm.changePass
-                                      ? 'Passwort ändern'
-                                      : 'Login'),
-                                ),
-                                const SizedBox(height: 8),
-                                SwitchListTile.adaptive(
-                                  title: const Text("Angemeldet bleiben"),
-                                  subtitle: const Text(
-                                    "Deine Zugangsdaten werden lokal gespeichert",
-                                  ),
-                                  contentPadding: EdgeInsets.zero,
-                                  activeColor: naturalBlue,
-                                  activeTrackColor: naturalBlue.withOpacity(0.42),
-                                  value: !safeMode,
-                                  onChanged: widget.vm.loading
-                                      ? null
-                                      : (bool value) {
-                                          setState(() {
-                                            safeMode = !value;
-                                          });
-                                        },
-                                ),
-                                if (!widget.vm.changePass)
-                                  Align(
-                                    alignment: Alignment.centerLeft,
-                                    child: TextButton.icon(
-                                      style: TextButton.styleFrom(
-                                        foregroundColor: naturalBlue,
+                                          : [AutofillHints.newPassword],
+                                      decoration: fieldDecoration(
+                                        'Neues Passwort',
+                                        icon:
+                                            Icons.enhanced_encryption_outlined,
                                       ),
-                                      onPressed: () async {
-                                        await launchUrl(
-                                          Uri.https(
-                                            "docs.google.com",
-                                            "forms/d/e/1FAIpQLSe3BLgrC74kUiAnCGSfZ_P0HYXw0yPl3OWVatNTJv8Yh3ZN0A/viewform?usp=sf_link",
-                                            <String, String>{
-                                              "usp": "pp_url",
-                                              "entry.1581750442": appVersion,
-                                            },
-                                          ),
-                                        );
+                                      controller: _newPassword1Controller,
+                                      obscureText: true,
+                                      enabled: !widget.vm.loading,
+                                      onChanged: (_) {
+                                        setState(() {
+                                          newPasswordsMatch =
+                                              _newPassword1Controller.text ==
+                                                  _newPassword2Controller.text;
+                                        });
                                       },
-                                      icon: const Icon(Icons.feedback_outlined),
-                                      label: const Text("Feedback senden"),
+                                    ),
+                                    const SizedBox(height: 12),
+                                    TextField(
+                                      autofillHints: widget.vm.loading
+                                          ? null
+                                          : [AutofillHints.newPassword],
+                                      decoration: fieldDecoration(
+                                        'Neues Passwort wiederholen',
+                                        icon: Icons.check_circle_outline,
+                                        errorText: newPasswordsMatch
+                                            ? null
+                                            : "Die neuen Passwörter stimmen nicht überein",
+                                      ),
+                                      controller: _newPassword2Controller,
+                                      obscureText: true,
+                                      enabled: !widget.vm.loading,
+                                      onChanged: (_) {
+                                        setState(() {
+                                          newPasswordsMatch =
+                                              _newPassword1Controller.text ==
+                                                  _newPassword2Controller.text;
+                                        });
+                                      },
+                                    ),
+                                  ],
+                                  const SizedBox(height: 14),
+                                  ElevatedButton.icon(
+                                    style: ElevatedButton.styleFrom(
+                                      backgroundColor: naturalBlue,
+                                      foregroundColor: Colors.white,
+                                      padding: const EdgeInsets.symmetric(
+                                        vertical: 14,
+                                      ),
+                                      shape: RoundedRectangleBorder(
+                                        borderRadius: BorderRadius.circular(14),
+                                      ),
+                                    ),
+                                    onPressed: widget.vm.loading ||
+                                            !newPasswordsMatch
+                                        ? null
+                                        : () {
+                                            widget.setSaveNoPass(safeMode);
+                                            if (widget.vm.changePass) {
+                                              widget.onChangePass(
+                                                _usernameController.text,
+                                                _passwordController.text,
+                                                _newPassword1Controller.text,
+                                                url,
+                                              );
+                                            } else {
+                                              widget.onLogin(
+                                                _usernameController.value.text,
+                                                _passwordController.value.text,
+                                                url,
+                                              );
+                                            }
+                                          },
+                                    icon: Icon(widget.vm.changePass
+                                        ? Icons.key_rounded
+                                        : Icons.login_rounded),
+                                    label: Text(widget.vm.changePass
+                                        ? 'Passwort ändern'
+                                        : 'Login'),
+                                  ),
+                                  const SizedBox(height: 8),
+                                  SwitchListTile.adaptive(
+                                    title: const Text("Angemeldet bleiben"),
+                                    subtitle: const Text(
+                                      "Deine Zugangsdaten werden lokal gespeichert",
+                                    ),
+                                    contentPadding: EdgeInsets.zero,
+                                    activeColor: naturalBlue,
+                                    activeTrackColor:
+                                        naturalBlue.withOpacity(0.42),
+                                    value: !safeMode,
+                                    onChanged: widget.vm.loading
+                                        ? null
+                                        : (bool value) {
+                                            setState(() {
+                                              safeMode = !value;
+                                            });
+                                          },
+                                  ),
+                                  if (!widget.vm.changePass)
+                                    Align(
+                                      alignment: Alignment.centerLeft,
+                                      child: TextButton.icon(
+                                        style: TextButton.styleFrom(
+                                          foregroundColor: naturalBlue,
+                                        ),
+                                        onPressed: () async {
+                                          await launchUrl(
+                                            Uri.https(
+                                              "docs.google.com",
+                                              "forms/d/e/1FAIpQLSe3BLgrC74kUiAnCGSfZ_P0HYXw0yPl3OWVatNTJv8Yh3ZN0A/viewform?usp=sf_link",
+                                              <String, String>{
+                                                "usp": "pp_url",
+                                                "entry.1581750442": appVersion,
+                                              },
+                                            ),
+                                          );
+                                        },
+                                        icon:
+                                            const Icon(Icons.feedback_outlined),
+                                        label: const Text("Feedback senden"),
+                                      ),
+                                    ),
+                                ],
+                              ),
+                            ),
+                          ),
+                        ),
+                        if (!widget.vm.changePass &&
+                            widget.vm.otherAccounts.isNotEmpty)
+                          Card(
+                            margin: const EdgeInsets.only(top: 14),
+                            elevation: 0,
+                            color: theme.colorScheme.surface,
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(18),
+                              side: BorderSide(
+                                color: theme.dividerColor.withOpacity(0.2),
+                              ),
+                            ),
+                            child: Padding(
+                              padding: const EdgeInsets.symmetric(vertical: 6),
+                              child: Column(
+                                children: [
+                                  ListTile(
+                                    title: Text(
+                                      "Andere Accounts",
+                                      style: theme.textTheme.titleMedium,
                                     ),
                                   ),
-                              ],
+                                  for (var index = 0;
+                                      index < widget.vm.otherAccounts.length;
+                                      index++)
+                                    ListTile(
+                                      leading: const Icon(Icons.person_outline),
+                                      title:
+                                          Text(widget.vm.otherAccounts[index]),
+                                      onTap: () =>
+                                          widget.onSelectAccount(index),
+                                    ),
+                                ],
+                              ),
                             ),
                           ),
-                        ),
-                      ),
-                      if (!widget.vm.changePass &&
-                          widget.vm.otherAccounts.isNotEmpty)
-                        Card(
-                          margin: const EdgeInsets.only(top: 14),
-                          elevation: 0,
-                          color: theme.colorScheme.surface,
-                          shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(18),
-                            side: BorderSide(
-                              color: theme.dividerColor.withOpacity(0.2),
+                        if (widget.vm.error?.isNotEmpty == true)
+                          Container(
+                            margin: const EdgeInsets.only(top: 14),
+                            decoration: BoxDecoration(
+                              color:
+                                  naturalBlueBg.withOpacity(isDark ? 0.5 : 0.7),
+                              borderRadius: BorderRadius.circular(12),
+                            ),
+                            padding: const EdgeInsets.all(12),
+                            child: Text(
+                              widget.vm.noInternet
+                                  ? 'Keine Verbindung mit "${widget.vm.url}" möglich. Bitte überprüfe deine Internetverbindung.\nWenn du "Andere Schule" ausgewählt hast, musst du eine gültige Adresse eingeben.'
+                                  : widget.vm.error!,
+                              style: theme.textTheme.bodyMedium?.copyWith(
+                                color: theme.colorScheme.onErrorContainer,
+                              ),
                             ),
                           ),
-                          child: Padding(
-                            padding: const EdgeInsets.symmetric(vertical: 6),
-                            child: Column(
-                              children: [
-                                ListTile(
-                                  title: Text(
-                                    "Andere Accounts",
-                                    style: theme.textTheme.titleMedium,
-                                  ),
-                                ),
-                                for (var index = 0;
-                                    index < widget.vm.otherAccounts.length;
-                                    index++)
-                                  ListTile(
-                                    leading: const Icon(Icons.person_outline),
-                                    title: Text(widget.vm.otherAccounts[index]),
-                                    onTap: () => widget.onSelectAccount(index),
-                                  ),
-                              ],
-                            ),
-                          ),
-                        ),
-                      if (widget.vm.error?.isNotEmpty == true)
-                        Container(
-                          margin: const EdgeInsets.only(top: 14),
-                          decoration: BoxDecoration(
-                            color: naturalBlueBg
-                                .withOpacity(isDark ? 0.5 : 0.7),
-                            borderRadius: BorderRadius.circular(12),
-                          ),
-                          padding: const EdgeInsets.all(12),
-                          child: Text(
-                            widget.vm.noInternet
-                                ? 'Keine Verbindung mit "${widget.vm.url}" möglich. Bitte überprüfe deine Internetverbindung.\nWenn du "Andere Schule" ausgewählt hast, musst du eine gültige Adresse eingeben.'
-                                : widget.vm.error!,
-                            style: theme.textTheme.bodyMedium?.copyWith(
-                              color: theme.colorScheme.onErrorContainer,
-                            ),
-                          ),
-                        ),
-                    ],
+                      ],
+                    ),
                   ),
                 ),
               ),
-            ),
-            AnimatedLinearProgressIndicator(show: widget.vm.loading),
-          ],
+              AnimatedLinearProgressIndicator(show: widget.vm.loading),
+            ],
+          ),
         ),
-      )),
+      ),
     );
   }
 }

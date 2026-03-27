@@ -33,27 +33,21 @@ import 'package:dr/desktop.dart';
 import 'package:dr/middleware/middleware.dart';
 import 'package:dr/notification_background_service.dart';
 import 'package:dr/reducer/reducer.dart';
+import 'package:dr/theme_controller.dart';
 import 'package:dr/ui/grade_calculator.dart';
 import 'package:dr/ui/grades_chart_page.dart';
 import 'package:dr/util.dart';
-import 'package:dynamic_theme/dynamic_theme.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_built_redux/flutter_built_redux.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:package_info_plus/package_info_plus.dart';
 import 'package:responsive_scaffold/responsive_scaffold.dart';
-import 'package:shared_preferences/shared_preferences.dart';
 import 'package:uni_links/uni_links.dart';
 
 GlobalKey<NavigatorState>? navigatorKey;
 GlobalKey<NavigatorState> nestedNavKey = GlobalKey();
 GlobalKey<ResponsiveScaffoldState<Pages>>? scaffoldKey;
 GlobalKey<ScaffoldMessengerState>? scaffoldMessengerKey;
-
-const _contrastColorPreferenceKey = "contrastColor";
-const _defaultContrastColor = Color(0xFF3D79AF);
-final ValueNotifier<Color> contrastColorNotifier =
-  ValueNotifier(_defaultContrastColor);
 
 typedef SingleArgumentVoidCallback<T> = void Function(T arg);
 
@@ -65,11 +59,7 @@ final AppActions actions = AppActions();
 Future<void> main() async {
   final binding = WidgetsFlutterBinding.ensureInitialized();
   binding.deferFirstFrame();
-  final prefs = await SharedPreferences.getInstance();
-  final persistedColor = prefs.getInt(_contrastColorPreferenceKey);
-  if (persistedColor != null) {
-    contrastColorNotifier.value = Color(persistedColor);
-  }
+  await themeController.load();
   try {
     packageInfo = await PackageInfo.fromPlatform();
   } catch (_) {
@@ -115,9 +105,7 @@ Future<void> main() async {
 }
 
 Future<void> setGlobalContrastColor(Color color) async {
-  contrastColorNotifier.value = color;
-  final prefs = await SharedPreferences.getInstance();
-  await prefs.setInt(_contrastColorPreferenceKey, color.value);
+  await themeController.setContrastColor(color);
 }
 
 class RegisterApp extends StatelessWidget {
@@ -136,69 +124,9 @@ class RegisterApp extends StatelessWidget {
         onPointerDown: (_) => store.actions.loginActions.updateLogout(),
         child: StoreConnection<AppState, AppActions, bool>(
           connect: (state) => state.settingsState.amoledMode,
-          builder: (context, amoledMode, actions) => ValueListenableBuilder<Color>(
-            valueListenable: contrastColorNotifier,
-            builder: (context, contrastColor, _) => DynamicTheme(
-              data: (brightness, overridePlatform) {
-                TargetPlatform? platform;
-                if (overridePlatform && Platform.isAndroid) {
-                  platform = TargetPlatform.iOS;
-                }
-                final baseTheme = ThemeData(
-                  colorSchemeSeed: contrastColor,
-                  brightness: brightness,
-                  platform: platform,
-                );
-                if (amoledMode && brightness == Brightness.dark) {
-                  final amoledScheme = baseTheme.colorScheme.copyWith(
-                    surface: Colors.black,
-                    surfaceVariant: Colors.black,
-                    primaryContainer: Colors.black,
-                    secondaryContainer: Colors.black,
-                    tertiaryContainer: Colors.black,
-                    errorContainer: Colors.black,
-                    background: Colors.black,
-                  );
-                  return baseTheme.copyWith(
-                    scaffoldBackgroundColor: Colors.black,
-                    canvasColor: Colors.black,
-                    cardColor: Colors.black,
-                    dialogBackgroundColor: Colors.black,
-                    dividerColor: Colors.black,
-                    shadowColor: Colors.black,
-                    colorScheme: amoledScheme,
-                    appBarTheme: baseTheme.appBarTheme.copyWith(
-                      backgroundColor: Colors.black,
-                      surfaceTintColor: Colors.black,
-                      shadowColor: Colors.black,
-                    ),
-                    cardTheme: baseTheme.cardTheme.copyWith(
-                      color: Colors.black,
-                      surfaceTintColor: Colors.black,
-                      shadowColor: Colors.black,
-                    ),
-                    drawerTheme: baseTheme.drawerTheme.copyWith(
-                      backgroundColor: Colors.black,
-                    ),
-                    dialogTheme: baseTheme.dialogTheme.copyWith(
-                      backgroundColor: Colors.black,
-                      surfaceTintColor: Colors.black,
-                    ),
-                    bottomSheetTheme: baseTheme.bottomSheetTheme.copyWith(
-                      backgroundColor: Colors.black,
-                      modalBackgroundColor: Colors.black,
-                    ),
-                    popupMenuTheme: baseTheme.popupMenuTheme.copyWith(
-                      color: Colors.black,
-                    ),
-                    listTileTheme: baseTheme.listTileTheme.copyWith(
-                      tileColor: Colors.black,
-                    ),
-                  );
-                }
-                return baseTheme;
-              },
-              themedWidgetBuilder: (context, theme) => MaterialApp(
+          builder: (context, amoledMode, actions) => AnimatedBuilder(
+            animation: themeController,
+            builder: (context, _) => MaterialApp(
               localizationsDelegates: const [
                 GlobalCupertinoLocalizations.delegate,
                 GlobalMaterialLocalizations.delegate,
@@ -272,9 +200,16 @@ class RegisterApp extends StatelessWidget {
                     throw Exception("Unknown Route ${pathElements[1]}");
                 }
               },
-                theme: theme,
-                debugShowCheckedModeBanner: false,
+              themeMode: themeController.themeMode,
+              theme: themeController.buildTheme(
+                brightness: Brightness.light,
+                amoledMode: false,
               ),
+              darkTheme: themeController.buildTheme(
+                brightness: Brightness.dark,
+                amoledMode: amoledMode,
+              ),
+              debugShowCheckedModeBanner: false,
             ),
           ),
         ),

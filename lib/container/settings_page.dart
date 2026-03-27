@@ -15,12 +15,14 @@
 // You should have received a copy of the GNU General Public License
 // along with digitales_register.  If not, see <http://www.gnu.org/licenses/>.
 
+import 'dart:async';
+
 import 'package:built_collection/built_collection.dart';
 import 'package:dr/actions/app_actions.dart';
 import 'package:dr/app_state.dart';
 import 'package:dr/main.dart';
+import 'package:dr/theme_controller.dart';
 import 'package:dr/ui/settings_page_widget.dart';
-import 'package:dynamic_theme/dynamic_theme.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_built_redux/flutter_built_redux.dart';
 
@@ -31,17 +33,10 @@ class SettingsPageContainer extends StatelessWidget {
       builder: (context, vm, actions) {
         return SettingsPageWidget(
           vm: vm,
-          onSetDarkMode: (dm) {
-            DynamicTheme.of(context)!.setBrightness(
-              dm ? Brightness.dark : Brightness.light,
-            );
-          },
-          onSetFollowDeviceDarkMode: (dm) {
-            DynamicTheme.of(context)!.setFollowDevice(dm);
-          },
-          onSetPlatformOverride: (o) {
-            DynamicTheme.of(context)!.setPlatformOverride(o);
-          },
+          currentThemePreference: themeController.themePreference,
+          platformOverride: themeController.platformOverride,
+          onSetThemePreference: themeController.setThemePreference,
+          onSetPlatformOverride: themeController.setPlatformOverride,
           onSetNoPassSaving: actions.settingsActions.saveNoPass.call,
           onSetNoDataSaving: actions.settingsActions.saveNoData.call,
           onSetAskWhenDelete:
@@ -76,7 +71,7 @@ class SettingsPageContainer extends StatelessWidget {
           onSetAmoledMode: actions.settingsActions.amoledMode.call,
           onSetSubjectTheme: actions.settingsActions.setSubjectTheme.call,
           onSetContrastColor: (color) {
-            setGlobalContrastColor(color);
+            unawaited(setGlobalContrastColor(color));
           },
         );
       },

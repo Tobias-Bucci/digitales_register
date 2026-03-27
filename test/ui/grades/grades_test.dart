@@ -20,9 +20,9 @@ import 'package:built_redux/built_redux.dart';
 import 'package:dr/actions/app_actions.dart';
 import 'package:dr/app_state.dart';
 import 'package:dr/container/grades_page_container.dart';
-import 'package:dr/ui/favorite_subject_filter.dart';
 import 'package:dr/data.dart';
 import 'package:dr/reducer/reducer.dart';
+import 'package:dr/ui/favorite_subject_filter.dart';
 import 'package:dr/ui/sorted_grades_widget.dart';
 import 'package:dr/utc_date_time.dart';
 import 'package:flutter/material.dart';
@@ -163,12 +163,12 @@ AppState _getGradesState({
         {
           "Fach1": SubjectTheme(
             (b) => b
-              ..color = Colors.red.value
+              ..color = Colors.red.toARGB32()
               ..thick = 5,
           ),
           "Fach2": SubjectTheme(
             (b) => b
-              ..color = Colors.green.value
+              ..color = Colors.green.toARGB32()
               ..thick = 4,
           ),
         },

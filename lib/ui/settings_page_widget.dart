@@ -20,12 +20,12 @@ import 'dart:io';
 import 'package:deleteable_tile/deleteable_tile.dart';
 import 'package:dr/app_state.dart';
 import 'package:dr/container/settings_page.dart';
+import 'package:dr/theme_controller.dart';
 import 'package:dr/ui/autocomplete_options.dart';
 import 'package:dr/ui/dialog.dart';
 import 'package:dr/ui/donations.dart';
 import 'package:dr/ui/network_protocol_page.dart';
 import 'package:dr/util.dart';
-import 'package:dynamic_theme/dynamic_theme.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_colorpicker/flutter_colorpicker.dart';
 import 'package:responsive_scaffold/responsive_scaffold.dart';
@@ -48,8 +48,7 @@ class SettingsPageWidget extends StatefulWidget {
   final OnSettingChanged<bool> onSetShowAllSubjectsAverage;
   final OnSettingChanged<bool> onSetDashboardMarkNewOrChangedEntries;
   final OnSettingChanged<bool> onSetDashboardDeduplicateEntries;
-  final OnSettingChanged<bool> onSetDarkMode;
-  final OnSettingChanged<bool> onSetFollowDeviceDarkMode;
+  final OnSettingChanged<AppThemePreference> onSetThemePreference;
   final OnSettingChanged<bool> onSetPlatformOverride;
   final OnSettingChanged<bool> onSetDashboardColorBorders;
   final OnSettingChanged<bool> onSetCalenderColorBackground;
@@ -63,6 +62,8 @@ class SettingsPageWidget extends StatefulWidget {
   final OnSettingChanged<List<String>> onSetFavoriteSubjects;
   final VoidCallback onShowProfile;
   final SettingsViewModel vm;
+  final AppThemePreference currentThemePreference;
+  final bool platformOverride;
 
   const SettingsPageWidget({
     super.key,
@@ -75,11 +76,10 @@ class SettingsPageWidget extends StatefulWidget {
     required this.onSetShowAllSubjectsAverage,
     required this.onSetDashboardMarkNewOrChangedEntries,
     required this.onSetDashboardDeduplicateEntries,
-    required this.onSetDarkMode,
+    required this.onSetThemePreference,
     required this.onSetSubjectNicks,
     required this.vm,
     required this.onSetPlatformOverride,
-    required this.onSetFollowDeviceDarkMode,
     required this.onShowProfile,
     required this.onSetIgnoreForGradesAverage,
     required this.onSetDashboardColorBorders,
@@ -90,6 +90,8 @@ class SettingsPageWidget extends StatefulWidget {
     required this.onSetAmoledMode,
     required this.onSetContrastColor,
     required this.onSetFavoriteSubjects,
+    required this.currentThemePreference,
+    required this.platformOverride,
   });
 
   @override
@@ -138,21 +140,17 @@ class _SettingsPageWidgetState extends State<SettingsPageWidget> {
   }
 
   void _selectTheme(_Theme? theme) {
-    setState(() {
-      switch (theme!) {
-        case _Theme.light:
-          widget.onSetFollowDeviceDarkMode(false);
-          widget.onSetDarkMode(false);
-          break;
-        case _Theme.dark:
-          widget.onSetFollowDeviceDarkMode(false);
-          widget.onSetDarkMode(true);
-          break;
-        case _Theme.followDevice:
-          widget.onSetFollowDeviceDarkMode(true);
-          break;
-      }
-    });
+    switch (theme!) {
+      case _Theme.light:
+        widget.onSetThemePreference(AppThemePreference.light);
+        break;
+      case _Theme.dark:
+        widget.onSetThemePreference(AppThemePreference.dark);
+        break;
+      case _Theme.followDevice:
+        widget.onSetThemePreference(AppThemePreference.system);
+        break;
+    }
   }
 
   @override
@@ -163,11 +161,11 @@ class _SettingsPageWidgetState extends State<SettingsPageWidget> {
             preferPosition: AutoScrollPosition.begin);
       });
     }
-    final currentTheme = DynamicTheme.of(context)!.followDevice
-        ? _Theme.followDevice
-        : DynamicTheme.of(context)!.customBrightness == Brightness.dark
-            ? _Theme.dark
-            : _Theme.light;
+    final currentTheme = switch (widget.currentThemePreference) {
+      AppThemePreference.light => _Theme.light,
+      AppThemePreference.dark => _Theme.dark,
+      AppThemePreference.system => _Theme.followDevice,
+    };
     return Scaffold(
       appBar: const ResponsiveAppBar(
         title: Text("Einstellungen"),
@@ -677,7 +675,7 @@ class _SettingsPageWidgetState extends State<SettingsPageWidget> {
               onChanged: (bool value) {
                 widget.onSetPlatformOverride(value);
               },
-              value: DynamicTheme.of(context)!.platformOverride,
+              value: widget.platformOverride,
             ),
           ListTile(
             title: const Text("Netzwerkprotokoll"),

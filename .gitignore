@@ -28,6 +28,9 @@
 .pub-cache/
 .pub/
 /build/
+/build/native_assets/
+/build/test_cache/
+/build/unit_test_assets/
 
 # Web related
 lib/generated_plugin_registrant.dart
@@ -47,6 +50,8 @@ app.*.map.json
 
 # Temporary test files
 **/test/linux
+/test/**/failures/
+/flutter_*.log
 
 # Private requests & answers
 **/lib/requests/
@@ -54,3 +59,4 @@ app.*.map.json
 # Android signing secrets
 android/key.properties
 android/*.jks
+ios/Flutter/ephemeral/

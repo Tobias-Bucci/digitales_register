@@ -17,10 +17,11 @@
 
 import 'dart:async';
 import 'dart:developer';
+import 'dart:io';
 
 import 'package:cookie_jar/cookie_jar.dart';
-import 'package:dio/adapter.dart';
 import 'package:dio/dio.dart';
+import 'package:dio/io.dart';
 import 'package:dio_cookie_manager/dio_cookie_manager.dart';
 import 'package:dr/app_state.dart';
 import 'package:dr/demo.dart';
@@ -52,7 +53,7 @@ class DebugInterceptor extends Interceptor {
   }
 
   @override
-  Future onError(DioError err) async => err;
+  Future onError(DioException err) async => err;
 }
 */
 typedef AddNetworkProtocolItem = void Function(NetworkProtocolItem item);
@@ -69,11 +70,11 @@ class Wrapper {
 
   Wrapper() {
     dio.interceptors.add(CookieManager(cookieJar));
-    (dio.httpClientAdapter as DefaultHttpClientAdapter).onHttpClientCreate =
-        (client) {
+    (dio.httpClientAdapter as IOHttpClientAdapter).createHttpClient = () {
+      final client = HttpClient();
       client.userAgent =
           "Digitales-Register-App $appVersion; https://github.com/miDeb/digitales_register";
-      return null;
+      return client;
     };
     //dio.interceptors.add(DebugInterceptor());
   }

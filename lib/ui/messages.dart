@@ -140,8 +140,10 @@ class _MessageWidgetState extends State<MessageWidget> {
           ),
           if (widget.message.isNew || initiallyExpanded)
             badge.Badge(
-              shape: badge.BadgeShape.square,
-              borderRadius: BorderRadius.circular(20),
+              badgeStyle: badge.BadgeStyle(
+                shape: badge.BadgeShape.square,
+                borderRadius: BorderRadius.circular(20),
+              ),
               badgeContent: const Text(
                 "neu",
                 style: TextStyle(color: Colors.white),

@@ -32,7 +32,10 @@ void main() {
     );
 
     final serialized = serializers.serialize(state);
-    final deserialized = serializers.deserialize(serialized!) as AppState;
+    final deserialized = serializers.deserialize(serialized);
+    if (deserialized is! AppState) {
+      fail('Expected AppState after serialization roundtrip');
+    }
 
     expect(
       deserialized.settingsState.favoriteSubjects,

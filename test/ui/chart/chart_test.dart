@@ -99,12 +99,12 @@ AppState get _gradesState {
         {
           "Fach1": SubjectTheme(
             (b) => b
-              ..color = Colors.red.value
+              ..color = Colors.red.toARGB32()
               ..thick = 5,
           ),
           "Fach2": SubjectTheme(
             (b) => b
-              ..color = Colors.green.value
+              ..color = Colors.green.toARGB32()
               ..thick = 4,
           ),
         },

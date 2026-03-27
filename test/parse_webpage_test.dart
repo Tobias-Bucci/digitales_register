@@ -29,8 +29,6 @@ void main() {
   });
 }
 
-String headers =
-    "PHPSESSID=88e7ae2e1ae0aa0154e239c76e0c38ce; path=/; domain=vinzentinum.digitalesregister.it; secure; HttpOnly,registerSession=deleted; expires=Thu, 01-Jan-1970 00:00:01 GMT; Max-Age=0; registerSession=510397aa6e20160559685f88507805e035f92d5e; path=/; domain=vinzentinum.digitalesregister.it; secure; HttpOnly";
 String source = r"""
 <!DOCTYPE html>
 

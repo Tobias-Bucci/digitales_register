@@ -47,10 +47,11 @@ class _PassResetState extends State<PassReset> {
 
   @override
   Widget build(BuildContext context) {
-    return WillPopScope(
-      onWillPop: () async {
-        widget.onClose();
-        return true;
+    return PopScope<void>(
+      onPopInvokedWithResult: (didPop, result) {
+        if (!didPop) {
+          widget.onClose();
+        }
       },
       child: Scaffold(
         appBar: AppBar(

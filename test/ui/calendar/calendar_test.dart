@@ -28,7 +28,6 @@ import 'package:dr/reducer/reducer.dart';
 import 'package:dr/ui/dialog.dart';
 import 'package:dr/utc_date_time.dart';
 import 'package:dr/util.dart';
-import 'package:dynamic_theme/dynamic_theme.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_built_redux/flutter_built_redux.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
@@ -199,17 +198,7 @@ Future<void> main() async {
   testWidgets("tapping the bar opens settings", (WidgetTester tester) async {
     final widget =
         getCalendar(nicksBarEnabled: true, hasSubjctWithoutNick: true);
-    await tester.pumpWidget(
-      DynamicTheme(
-        data: (brightness, overridePlatform) {
-          return ThemeData(
-            primarySwatch: Colors.deepOrange,
-            brightness: brightness,
-          );
-        },
-        themedWidgetBuilder: (context, data) => widget,
-      ),
-    );
+    await tester.pumpWidget(widget);
     await tester.tap(find.textContaining("Kürzel"));
     await tester.pumpAndSettle();
     // a dialog should be opened
@@ -282,12 +271,12 @@ Future<void> main() async {
               {
                 "Fach1": SubjectTheme(
                   (b) => b
-                    ..color = Colors.red.value
+                    ..color = Colors.red.toARGB32()
                     ..thick = 2,
                 ),
                 "Fach2": SubjectTheme(
                   (b) => b
-                    ..color = Colors.blue.value
+                    ..color = Colors.blue.toARGB32()
                     ..thick = 2,
                 ),
               },
