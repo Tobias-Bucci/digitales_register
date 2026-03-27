@@ -27,6 +27,7 @@ import 'package:dr/main.dart';
 import 'package:dr/middleware/middleware.dart';
 import 'package:dr/reducer/reducer.dart';
 import 'package:dr/ui/days.dart';
+import 'package:dr/ui/favorite_subject_filter.dart';
 import 'package:dr/ui/no_internet.dart';
 import 'package:dr/ui/sidebar.dart';
 import 'package:dr/utc_date_time.dart';
@@ -84,7 +85,7 @@ Future<void> main() async {
       child: MaterialApp(home: DaysContainer()),
     );
     await tester.pumpWidget(widget);
-    expect(find.text("Keine Verbindung"), findsNWidgets(2));
+    expect(find.text("Keine Verbindung"), findsOneWidget);
     expect(find.byType(NoInternet), findsOneWidget);
     expect(find.text("Vergangenheit"), findsOneWidget);
     expect(find.text("Zukunft"), findsNothing);
@@ -200,7 +201,7 @@ Future<void> main() async {
                           ..isChanged = false
                           ..isNew = false
                           ..type = HomeworkType.lessonHomework
-                          ..warningServerSaid = true
+                          ..warning = true
                           ..title = "Test"
                           ..subtitle = "Subtitle"
                           ..gradeFormatted = "7/9",
@@ -231,7 +232,7 @@ Future<void> main() async {
                             ..isChanged = false
                             ..isNew = false
                             ..type = HomeworkType.lessonHomework
-                            ..warningServerSaid = false
+                            ..warning = false
                             ..title = "Titel"
                             ..subtitle = "Subtitle",
                         ),
@@ -250,7 +251,7 @@ Future<void> main() async {
                             ..isChanged = false
                             ..isNew = false
                             ..type = HomeworkType.lessonHomework
-                            ..warningServerSaid = false
+                            ..warning = false
                             ..title = "Title"
                             ..subtitle = "Subtitle",
                         ),
@@ -265,7 +266,7 @@ Future<void> main() async {
                             ..isChanged = false
                             ..isNew = false
                             ..type = HomeworkType.lessonHomework
-                            ..warningServerSaid = true
+                            ..warning = true
                             ..title = "Test"
                             ..subtitle = "Subtitle",
                         ),
@@ -408,7 +409,7 @@ Future<void> main() async {
                           ..isChanged = false
                           ..isNew = false
                           ..type = HomeworkType.lessonHomework
-                          ..warningServerSaid = false
+                          ..warning = false
                           ..title = "Title"
                           ..subtitle = "Subtitle",
                       ),
@@ -469,7 +470,7 @@ Future<void> main() async {
                           ..isChanged = false
                           ..isNew = false
                           ..type = HomeworkType.homework
-                          ..warningServerSaid = false
+                          ..warning = false
                           ..title = "Title"
                           ..subtitle = "Subtitle",
                       ),
@@ -530,7 +531,7 @@ Future<void> main() async {
                           ..isChanged = false
                           ..isNew = false
                           ..type = HomeworkType.homework
-                          ..warningServerSaid = false
+                          ..warning = false
                           ..title = "Title"
                           ..subtitle = "Subtitle",
                       ),
@@ -589,7 +590,7 @@ Future<void> main() async {
                         ..isChanged = false
                         ..isNew = false
                         ..type = HomeworkType.homework
-                        ..warningServerSaid = false
+                        ..warning = false
                         ..title = "Title"
                         ..subtitle = "Subtitle",
                     ),
@@ -630,5 +631,104 @@ Future<void> main() async {
     await store.actions.refreshNoInternet();
     await tester.pumpAndSettle();
     expect(tester.widget<Checkbox>(find.byType(Checkbox)).onChanged, isNull);
+  });
+
+  testWidgets('favorite subject filter hides unrelated dashboard entries',
+      (WidgetTester tester) async {
+    final now = UtcDateTime(2050);
+    final widget = ReduxProvider(
+      store: Store<AppState, AppStateBuilder, AppActions>(
+        appReducerBuilder.build(),
+        AppState(
+          (b) {
+            b.settingsState.favoriteSubjects = ListBuilder(
+              const ["Fach1", "Fach3"],
+            );
+            b.dashboardState.allDays = ListBuilder(
+              <Day>[
+                Day(
+                  (b) => b
+                    ..date = now
+                    ..deletedHomework = ListBuilder()
+                    ..homework = ListBuilder(
+                      <Homework>[
+                        Homework(
+                          (b) => b
+                            ..checkable = false
+                            ..checked = false
+                            ..deleteable = false
+                            ..deleted = false
+                            ..firstSeen = now
+                            ..id = 1
+                            ..isChanged = false
+                            ..isNew = false
+                            ..type = HomeworkType.lessonHomework
+                            ..warning = false
+                            ..title = "Titel Fach1"
+                            ..subtitle = "Untertitel"
+                            ..label = "Fach1",
+                        ),
+                        Homework(
+                          (b) => b
+                            ..checkable = false
+                            ..checked = false
+                            ..deleteable = false
+                            ..deleted = false
+                            ..firstSeen = now
+                            ..id = 2
+                            ..isChanged = false
+                            ..isNew = false
+                            ..type = HomeworkType.lessonHomework
+                            ..warning = false
+                            ..title = "Titel Fach2"
+                            ..subtitle = "Untertitel"
+                            ..label = "Fach2",
+                        ),
+                        Homework(
+                          (b) => b
+                            ..checkable = false
+                            ..checked = false
+                            ..deleteable = false
+                            ..deleted = false
+                            ..firstSeen = now
+                            ..id = 3
+                            ..isChanged = false
+                            ..isNew = false
+                            ..type = HomeworkType.lessonHomework
+                            ..warning = false
+                            ..title = "Ohne Fach"
+                            ..subtitle = "Untertitel",
+                        ),
+                      ],
+                    )
+                    ..lastRequested = now,
+                ),
+              ],
+            );
+          },
+        ),
+        AppActions(),
+      ),
+      child: MaterialApp(
+        home: DaysContainer(),
+        theme: ThemeData(primarySwatch: Colors.deepOrange),
+      ),
+    );
+
+    await tester.pumpWidget(widget);
+    await tester.pumpAndSettle();
+
+    expect(find.byType(FavoriteSubjectFilter), findsOneWidget);
+    expect(find.widgetWithText(ChoiceChip, "Fach1"), findsOneWidget);
+    expect(find.text("Titel Fach2"), findsOneWidget);
+    expect(find.text("Ohne Fach"), findsOneWidget);
+    expect(find.widgetWithText(ChoiceChip, "Fach3"), findsNothing);
+
+    await tester.tap(find.widgetWithText(ChoiceChip, "Fach1"));
+    await tester.pumpAndSettle();
+
+    expect(find.text("Titel Fach1"), findsOneWidget);
+    expect(find.text("Titel Fach2"), findsNothing);
+    expect(find.text("Ohne Fach"), findsNothing);
   });
 }

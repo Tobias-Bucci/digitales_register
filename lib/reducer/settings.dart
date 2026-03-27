@@ -44,6 +44,7 @@ final settingsReducerBuilder = NestedReducerBuilder<AppState, AppStateBuilder,
   ..add(SettingsActionsNames.showAllSubjectsAverage, _allSubjectsAverage)
   ..add(
       SettingsActionsNames.ignoreSubjectsForAverage, _ignoreSubjectsForAverage)
+  ..add(SettingsActionsNames.favoriteSubjects, _favoriteSubjects)
   ..add(SettingsActionsNames.markNotSeenDashboardEntries,
       _markNotSeenDashboardEntries)
   ..add(SettingsActionsNames.deduplicateDashboardEntries,
@@ -133,6 +134,11 @@ void _allSubjectsAverage(
 void _ignoreSubjectsForAverage(SettingsState? state,
     Action<BuiltList<String>> action, SettingsStateBuilder builder) {
   builder.ignoreForGradesAverage.replace(action.payload);
+}
+
+void _favoriteSubjects(SettingsState? state, Action<BuiltList<String>> action,
+    SettingsStateBuilder builder) {
+  builder.favoriteSubjects.replace(action.payload);
 }
 
 void _setSubjectTheme(

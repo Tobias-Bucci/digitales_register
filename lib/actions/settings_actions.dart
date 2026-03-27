@@ -31,6 +31,7 @@ abstract class SettingsActions extends ReduxActions {
   abstract final ActionDispatcher<bool> deleteDataOnLogout;
   abstract final ActionDispatcher<BuiltMap<String, String>> subjectNicks;
   abstract final ActionDispatcher<BuiltList<String>> ignoreSubjectsForAverage;
+  abstract final ActionDispatcher<BuiltList<String>> favoriteSubjects;
   abstract final ActionDispatcher<MapEntry<String, SubjectTheme>>
       setSubjectTheme;
   abstract final ActionDispatcher<List<String>> updateSubjectThemes;

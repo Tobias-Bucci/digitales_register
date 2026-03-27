@@ -54,7 +54,7 @@ void main() {
                           ..subtitle = "Untertitel"
                           ..title = "Titel"
                           ..type = HomeworkType.lessonHomework
-                          ..warningServerSaid = false,
+                          ..warning = false,
                       ),
                     ),
                 ),
@@ -106,7 +106,7 @@ void main() {
           ..subtitle = "Neuer Untertitel"
           ..title = "Neuer Titel"
           ..type = HomeworkType.lessonHomework
-          ..warningServerSaid = false
+          ..warning = false
           ..previousVersion = (HomeworkBuilder()
             ..checkable = true
             ..checked = false
@@ -121,7 +121,7 @@ void main() {
             ..subtitle = "Untertitel"
             ..title = "Titel"
             ..type = HomeworkType.lessonHomework
-            ..warningServerSaid = false),
+            ..warning = false),
       ),
     );
   });

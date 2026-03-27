@@ -20,6 +20,7 @@ import 'package:dr/container/grades_page_container.dart';
 import 'package:dr/container/sorted_grades_container.dart';
 import 'package:dr/data.dart';
 import 'package:dr/ui/animated_linear_progress_indicator.dart';
+import 'package:dr/ui/favorite_subject_filter.dart';
 import 'package:dr/util.dart';
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
@@ -27,7 +28,7 @@ import 'package:intl/intl.dart';
 typedef ViewSubjectDetailCallback = void Function(Subject s);
 typedef SetBoolCallback = void Function(bool byType);
 
-class SortedGradesWidget extends StatelessWidget {
+class SortedGradesWidget extends StatefulWidget {
   final SortedGradesViewModel vm;
   final ViewSubjectDetailCallback viewSubjectDetail;
   final SetBoolCallback sortByTypeCallback, showCancelledCallback;
@@ -41,38 +42,74 @@ class SortedGradesWidget extends StatelessWidget {
     required this.showCancelledCallback,
     required this.showGradeCalculator,
   });
+
+  @override
+  State<SortedGradesWidget> createState() => _SortedGradesWidgetState();
+}
+
+class _SortedGradesWidgetState extends State<SortedGradesWidget> {
+  String? _favoriteSubject;
+
   @override
   Widget build(BuildContext context) {
+    final availableFavoriteSubjects = filterAvailableFavoriteSubjects(
+      widget.vm.favoriteSubjects,
+      widget.vm.subjects.map((subject) => subject.name),
+    );
+    final selectedFavoriteSubject = _favoriteSubject == null
+        ? null
+        : findSubjectIgnoreCase(availableFavoriteSubjects, _favoriteSubject!);
+    final visibleSubjects = selectedFavoriteSubject == null
+        ? widget.vm.subjects
+        : widget.vm.subjects
+            .where(
+              (subject) =>
+                  matchesFavoriteSubject(subject.name, selectedFavoriteSubject),
+            )
+            .toList();
+
     return Column(
-      key: ValueKey(vm.semester),
+      key: ValueKey(widget.vm.semester),
       children: <Widget>[
+        if (availableFavoriteSubjects.isNotEmpty)
+          FavoriteSubjectFilter(
+            subjects: availableFavoriteSubjects,
+            selectedSubject: selectedFavoriteSubject,
+            onSelected: (favoriteSubject) {
+              setState(() {
+                _favoriteSubject = favoriteSubject;
+              });
+            },
+            subjectThemes: widget.vm.subjectThemes,
+            padding: const EdgeInsets.fromLTRB(16, 12, 16, 4),
+          ),
         SwitchListTile.adaptive(
           title: const Text("Noten nach Art sortieren"),
-          onChanged: sortByTypeCallback,
-          value: vm.sortByType,
+          onChanged: widget.sortByTypeCallback,
+          value: widget.vm.sortByType,
         ),
         SwitchListTile.adaptive(
           title: const Text("Gelöschte Noten anzeigen"),
-          onChanged: showCancelledCallback,
-          value: vm.showCancelled!,
+          onChanged: widget.showCancelledCallback,
+          value: widget.vm.showCancelled!,
         ),
         const Divider(
           height: 0,
         ),
-        for (final s in vm.subjects)
+        for (final s in visibleSubjects)
           SubjectWidget(
             subject: s,
-            sortByType: vm.sortByType,
-            viewSubjectDetail: () => viewSubjectDetail(s),
-            showCancelled: vm.showCancelled!,
-            semester: vm.semester,
-            noInternet: vm.noInternet,
-            ignoredForAverage: vm.ignoredSubjectsForAverage.any(
+            sortByType: widget.vm.sortByType,
+            viewSubjectDetail: () => widget.viewSubjectDetail(s),
+            showCancelled: widget.vm.showCancelled!,
+            semester: widget.vm.semester,
+            noInternet: widget.vm.noInternet,
+            ignoredForAverage: widget.vm.ignoredSubjectsForAverage.any(
               (element) => element.toLowerCase() == s.name.toLowerCase(),
             ),
           ),
-        if (vm.subjects.any(
-          (s) => vm.ignoredSubjectsForAverage.any(
+        if (widget.vm.subjects.any(
+          (s) => widget.vm.ignoredSubjectsForAverage.any(
             (element) => element.toLowerCase() == s.name.toLowerCase(),
           ),
         ))
@@ -92,11 +129,27 @@ class SortedGradesWidget extends StatelessWidget {
             ),
             subtitle:
                 const Text("Berechne den Durchschnitt von beliebigen Noten"),
-            onTap: showGradeCalculator,
+            onTap: widget.showGradeCalculator,
           ),
         ),
       ],
     );
+  }
+
+  @override
+  void didUpdateWidget(covariant SortedGradesWidget oldWidget) {
+    if (_favoriteSubject != null &&
+        findSubjectIgnoreCase(
+              filterAvailableFavoriteSubjects(
+                widget.vm.favoriteSubjects,
+                widget.vm.subjects.map((subject) => subject.name),
+              ),
+              _favoriteSubject!,
+            ) ==
+            null) {
+      _favoriteSubject = null;
+    }
+    super.didUpdateWidget(oldWidget);
   }
 }
 

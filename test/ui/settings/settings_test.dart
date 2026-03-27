@@ -20,6 +20,7 @@ import 'package:built_redux/built_redux.dart';
 import 'package:dr/actions/app_actions.dart';
 import 'package:dr/app_state.dart';
 import 'package:dr/container/settings_page.dart';
+import 'package:dr/data.dart';
 import 'package:dr/reducer/reducer.dart';
 import 'package:dr/ui/dialog.dart';
 import 'package:dynamic_theme/dynamic_theme.dart';
@@ -27,6 +28,30 @@ import 'package:flutter/material.dart';
 import 'package:flutter_built_redux/flutter_built_redux.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:golden_toolkit/golden_toolkit.dart';
+
+AppState _settingsStateWithSubjects({
+  List<String> subjects = const ["Fach1"],
+  List<String> favoriteSubjects = const [],
+}) {
+  return AppState(
+    (b) {
+      b.gradesState.subjects = ListBuilder(
+        subjects
+            .map(
+              (subject) => Subject(
+                (b) => b
+                  ..name = subject
+                  ..gradesAll = MapBuilder()
+                  ..grades = MapBuilder()
+                  ..observations = MapBuilder(),
+              ),
+            )
+            .toList(),
+      );
+      b.settingsState.favoriteSubjects = ListBuilder(favoriteSubjects);
+    },
+  );
+}
 
 void main() {
   testGoldens(
@@ -140,20 +165,20 @@ void main() {
           ),
         );
         await tester.pumpAndSettle();
-        await tester.scrollUntilVisible(
-          find.text("Fächerkürzel"),
-          200,
+        await tester.scrollUntilVisible(find.text("Fächerkürzel"), 200);
+        final subjectNicksHeader = find.widgetWithText(
+          ListTile,
+          "Fächerkürzel",
         );
-        await tester.tap(find.text("Fächerkürzel"));
+        tester.widget<ListTile>(subjectNicksHeader).onTap!();
         await tester.pumpAndSettle();
-        await tester.tap(
-          find.descendant(
-            of: find.ancestor(
-                of: find.text("Fächerkürzel"),
-                matching: find.byType(ExpansionTile)),
-            matching: find.byIcon(Icons.add),
-          ),
+        final addButton = find.ancestor(
+          of: find.byIcon(Icons.add).last,
+          matching: find.byType(IconButton),
         );
+        await tester.ensureVisible(addButton);
+        tester.widget<IconButton>(addButton).onPressed!();
+        await tester.pumpAndSettle();
         await tester.pumpAndSettle();
 
         // a dialog should be opened
@@ -185,11 +210,13 @@ void main() {
         final store = Store<AppState, AppStateBuilder, AppActions>(
           appReducerBuilder.build(),
           AppState(
-            (b) => b.settingsState.subjectNicks = MapBuilder(
-              {
-                "Fach1": "f1",
-              },
-            ),
+            (b) {
+              b.settingsState.subjectNicks = MapBuilder(
+                {
+                  "Fach1": "f1",
+                },
+              );
+            },
           ),
           AppActions(),
         );
@@ -211,12 +238,14 @@ void main() {
           ),
         );
         await tester.pumpAndSettle();
-        await tester.scrollUntilVisible(
-          find.text("Fächerkürzel"),
-          200,
+        await tester.scrollUntilVisible(find.text("Fächerkürzel"), 200);
+        final subjectNicksHeader = find.widgetWithText(
+          ListTile,
+          "Fächerkürzel",
         );
-        await tester.tap(find.text("Fächerkürzel"));
+        tester.widget<ListTile>(subjectNicksHeader).onTap!();
         await tester.pumpAndSettle();
+        await tester.ensureVisible(find.text("Fach1"));
         final nickTile = find.ancestor(
           of: find.text("Fach1"),
           matching: find.byType(ListTile),
@@ -238,12 +267,16 @@ void main() {
           ),
           findsOneWidget,
         );
-        await tester.tap(
-          find.descendant(
+        final deleteButton = find.ancestor(
+          of: find.descendant(
             of: nickTile,
             matching: find.byIcon(Icons.delete),
           ),
+          matching: find.byType(IconButton),
         );
+        await tester.ensureVisible(deleteButton);
+        tester.widget<IconButton>(deleteButton).onPressed!();
+        await tester.pumpAndSettle();
         await tester.pumpAndSettle();
         expect(store.state.settingsState.subjectNicks["Fach1"], null);
       },
@@ -254,11 +287,13 @@ void main() {
         final store = Store<AppState, AppStateBuilder, AppActions>(
           appReducerBuilder.build(),
           AppState(
-            (b) => b.settingsState.subjectNicks = MapBuilder(
-              {
-                "Fach1": "f1",
-              },
-            ),
+            (b) {
+              b.settingsState.subjectNicks = MapBuilder(
+                {
+                  "Fach1": "f1",
+                },
+              );
+            },
           ),
           AppActions(),
         );
@@ -280,12 +315,14 @@ void main() {
           ),
         );
         await tester.pumpAndSettle();
-        await tester.scrollUntilVisible(
-          find.text("Fächerkürzel"),
-          200,
+        await tester.scrollUntilVisible(find.text("Fächerkürzel"), 200);
+        final subjectNicksHeader = find.widgetWithText(
+          ListTile,
+          "Fächerkürzel",
         );
-        await tester.tap(find.text("Fächerkürzel"));
+        tester.widget<ListTile>(subjectNicksHeader).onTap!();
         await tester.pumpAndSettle();
+        await tester.ensureVisible(find.text("Fach1"));
         final nickTile = find.ancestor(
           of: find.text("Fach1"),
           matching: find.byType(ListTile),
@@ -307,12 +344,16 @@ void main() {
           ),
           findsOneWidget,
         );
-        await tester.tap(
-          find.descendant(
+        final editButton = find.ancestor(
+          of: find.descendant(
             of: nickTile,
             matching: find.byIcon(Icons.edit),
           ),
+          matching: find.byType(IconButton),
         );
+        await tester.ensureVisible(editButton);
+        tester.widget<IconButton>(editButton).onPressed!();
+        await tester.pumpAndSettle();
         await tester.pumpAndSettle();
         final dialog = find.byType(InfoDialog);
         expect(dialog, findsOneWidget);
@@ -469,6 +510,162 @@ void main() {
 
         expect(
           store.state.settingsState.ignoreForGradesAverage,
+          <String>[].toBuiltList(),
+        );
+      },
+    );
+  });
+
+  group("favorite subjects", () {
+    testWidgets(
+      'adds a favorite subject',
+      (tester) async {
+        final store = Store<AppState, AppStateBuilder, AppActions>(
+          appReducerBuilder.build(),
+          _settingsStateWithSubjects(),
+          AppActions(),
+        );
+        final widget = ReduxProvider(
+          store: store,
+          child: MaterialApp(
+            home: SettingsPageContainer(),
+          ),
+        );
+        await tester.pumpWidget(
+          DynamicTheme(
+            data: (brightness, overridePlatform) {
+              return ThemeData(
+                primarySwatch: Colors.deepOrange,
+                brightness: brightness,
+              );
+            },
+            themedWidgetBuilder: (context, data) => widget,
+          ),
+        );
+        await tester.pumpAndSettle();
+        await tester.scrollUntilVisible(
+          find.text("Fokusfächer verwalten"),
+          150,
+        );
+        await tester.tap(
+          find.descendant(
+            of: find.ancestor(
+              of: find.text("Fokusfächer verwalten"),
+              matching: find.byType(ListTile),
+            ),
+            matching: find.byIcon(Icons.add),
+          ),
+        );
+        await tester.pumpAndSettle();
+
+        expect(find.byType(InfoDialog), findsOneWidget);
+        expect(find.text("Fokusfach hinzufügen"), findsOneWidget);
+
+        tester.testTextInput.enterText("Fach1");
+        await tester.pumpAndSettle();
+        await tester.tap(find.text("Fertig"));
+        await tester.pumpAndSettle();
+
+        expect(
+          store.state.settingsState.favoriteSubjects,
+          ["Fach1"].toBuiltList(),
+        );
+      },
+    );
+
+    testWidgets(
+      'blocks duplicate favorite subjects by disabling add',
+      (tester) async {
+        final store = Store<AppState, AppStateBuilder, AppActions>(
+          appReducerBuilder.build(),
+          _settingsStateWithSubjects(favoriteSubjects: const ["Fach1"]),
+          AppActions(),
+        );
+        final widget = ReduxProvider(
+          store: store,
+          child: MaterialApp(
+            home: SettingsPageContainer(),
+          ),
+        );
+        await tester.pumpWidget(
+          DynamicTheme(
+            data: (brightness, overridePlatform) {
+              return ThemeData(
+                primarySwatch: Colors.deepOrange,
+                brightness: brightness,
+              );
+            },
+            themedWidgetBuilder: (context, data) => widget,
+          ),
+        );
+        await tester.pumpAndSettle();
+        await tester.scrollUntilVisible(
+          find.text("Fokusfächer verwalten"),
+          150,
+        );
+
+        final addButton = tester.widget<IconButton>(
+          find.descendant(
+            of: find.ancestor(
+              of: find.text("Fokusfächer verwalten"),
+              matching: find.byType(ListTile),
+            ),
+            matching: find.byType(IconButton),
+          ),
+        );
+
+        expect(addButton.onPressed, isNull);
+      },
+    );
+
+    testWidgets(
+      'removes a favorite subject',
+      (tester) async {
+        final store = Store<AppState, AppStateBuilder, AppActions>(
+          appReducerBuilder.build(),
+          _settingsStateWithSubjects(favoriteSubjects: const ["Fach1"]),
+          AppActions(),
+        );
+        final widget = ReduxProvider(
+          store: store,
+          child: MaterialApp(
+            home: SettingsPageContainer(),
+          ),
+        );
+        await tester.pumpWidget(
+          DynamicTheme(
+            data: (brightness, overridePlatform) {
+              return ThemeData(
+                primarySwatch: Colors.deepOrange,
+                brightness: brightness,
+              );
+            },
+            themedWidgetBuilder: (context, data) => widget,
+          ),
+        );
+        await tester.pumpAndSettle();
+        await tester.scrollUntilVisible(
+          find.text("Fokusfächer verwalten"),
+          150,
+        );
+        await tester.scrollUntilVisible(
+          find.text("Fach1"),
+          100,
+        );
+        final subjectTile = find.ancestor(
+          of: find.text("Fach1").last,
+          matching: find.byType(ListTile),
+        );
+        await tester.tap(
+          find.descendant(
+            of: subjectTile,
+            matching: find.byType(IconButton),
+          ),
+        );
+        await tester.pumpAndSettle();
+
+        expect(
+          store.state.settingsState.favoriteSubjects,
           <String>[].toBuiltList(),
         );
       },

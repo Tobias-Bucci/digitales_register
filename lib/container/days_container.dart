@@ -96,6 +96,7 @@ abstract class DaysViewModel
 
   bool get showNotifications;
   BuiltList<Day> get days;
+  BuiltList<String> get favoriteSubjects;
 
   factory DaysViewModel([void Function(DaysViewModelBuilder)? updates]) =
       _$DaysViewModel;
@@ -131,6 +132,7 @@ abstract class DaysViewModel
             !state.dashboardState.blacklist!.contains(HomeworkType.homework)
         ..showNotifications =
             (state.notificationState.notifications?.length ?? 0) > 0
+        ..favoriteSubjects = state.settingsState.favoriteSubjects.toBuilder()
         ..colorBorders = state.settingsState.dashboardColorBorders
         ..colorTestsInRed = state.settingsState.dashboardColorTestsInRed
         ..subjectThemes = state.settingsState.subjectThemes.toBuilder(),

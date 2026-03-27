@@ -60,6 +60,7 @@ class SettingsPageWidget extends StatefulWidget {
   final OnSettingChanged<MapEntry<String, SubjectTheme>> onSetSubjectTheme;
   final OnSettingChanged<Map<String, String>> onSetSubjectNicks;
   final OnSettingChanged<List<String>> onSetIgnoreForGradesAverage;
+  final OnSettingChanged<List<String>> onSetFavoriteSubjects;
   final VoidCallback onShowProfile;
   final SettingsViewModel vm;
 
@@ -88,6 +89,7 @@ class SettingsPageWidget extends StatefulWidget {
     required this.onSetPushNotificationsEnabled,
     required this.onSetAmoledMode,
     required this.onSetContrastColor,
+    required this.onSetFavoriteSubjects,
   });
 
   @override
@@ -102,6 +104,12 @@ class _SettingsPageWidgetState extends State<SettingsPageWidget> {
       .toList();
   List<String> get notYetIgnoredForAverageSubjects => widget.vm.allSubjects
       .where((element) => !widget.vm.ignoreForGradesAverage.contains(element))
+      .toList();
+  List<String> get notYetFavoriteSubjects => widget.vm.allSubjects
+      .where(
+        (element) =>
+            !containsSubjectIgnoreCase(widget.vm.favoriteSubjects, element),
+      )
       .toList();
 
   @override
@@ -573,6 +581,89 @@ class _SettingsPageWidgetState extends State<SettingsPageWidget> {
             key: const ObjectKey(5),
             child: ListTile(
               title: Text(
+                "Fokusfächer",
+                style: Theme.of(context).textTheme.headlineSmall,
+              ),
+            ),
+          ),
+          ListTile(
+            title: const Text("Fokusfächer verwalten"),
+            subtitle: const Text(
+              "Schnellfilter in Dashboard, Kalender und Noten",
+            ),
+            trailing: IconButton(
+              icon: const Icon(Icons.add),
+              onPressed: notYetFavoriteSubjects.isEmpty
+                  ? null
+                  : () async {
+                      final newSubject = await showDialog<String>(
+                        context: context,
+                        builder: (context) => AddSubject(
+                          availableSubjects: notYetFavoriteSubjects,
+                          title: "Fokusfach hinzufügen",
+                          requireSuggestionMatch: true,
+                        ),
+                      );
+                      if (newSubject != null &&
+                          !containsSubjectIgnoreCase(
+                            widget.vm.favoriteSubjects,
+                            newSubject,
+                          )) {
+                        widget.onSetFavoriteSubjects(
+                          widget.vm.favoriteSubjects..add(newSubject),
+                        );
+                      }
+                    },
+            ),
+          ),
+          AnimatedCrossFade(
+            duration: const Duration(milliseconds: 250),
+            crossFadeState: widget.vm.favoriteSubjects.isEmpty
+                ? CrossFadeState.showFirst
+                : CrossFadeState.showSecond,
+            firstChild: const Padding(
+              padding: EdgeInsets.only(left: 16),
+              child: ListTile(
+                title: Text(
+                  "Kein Fokusfach ausgewählt",
+                  style: TextStyle(color: Colors.grey),
+                ),
+              ),
+            ),
+            secondChild: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                for (final subject in widget.vm.favoriteSubjects)
+                  Deleteable(
+                    showExitAnimation: widget.vm.favoriteSubjects.length != 1,
+                    showEntryAnimation: widget.vm.favoriteSubjects.length != 1,
+                    key: ValueKey(subject),
+                    builder: (context, delete) => Padding(
+                      padding: const EdgeInsets.only(left: 16),
+                      child: ListTile(
+                        title: Text(subject),
+                        trailing: IconButton(
+                          icon: const Icon(Icons.close),
+                          onPressed: () async {
+                            await delete();
+                            widget.onSetFavoriteSubjects(
+                              widget.vm.favoriteSubjects..remove(subject),
+                            );
+                          },
+                        ),
+                      ),
+                    ),
+                  ),
+              ],
+            ),
+          ),
+          const Divider(),
+          AutoScrollTag(
+            controller: controller,
+            index: 6,
+            key: const ObjectKey(6),
+            child: ListTile(
+              title: Text(
                 "Erweitert",
                 style: Theme.of(context).textTheme.headlineSmall,
               ),
@@ -947,8 +1038,15 @@ class _EditSubjectsNicksState extends State<EditSubjectsNicks> {
 
 class AddSubject extends StatefulWidget {
   final List<String>? availableSubjects;
+  final String title;
+  final bool requireSuggestionMatch;
 
-  const AddSubject({super.key, this.availableSubjects});
+  const AddSubject({
+    super.key,
+    this.availableSubjects,
+    this.title = "Fach hinzufügen",
+    this.requireSuggestionMatch = false,
+  });
   @override
   _AddSubjectState createState() => _AddSubjectState();
 }
@@ -956,6 +1054,20 @@ class AddSubject extends StatefulWidget {
 class _AddSubjectState extends State<AddSubject> {
   late TextEditingController subjectNameController;
   late FocusNode focusNode;
+
+  String? get _selectedSubject {
+    if (widget.requireSuggestionMatch) {
+      return findSubjectIgnoreCase(
+        widget.availableSubjects ?? const [],
+        subjectNameController.text,
+      );
+    }
+    final trimmed = subjectNameController.text.trim();
+    if (trimmed.isEmpty) {
+      return null;
+    }
+    return trimmed;
+  }
 
   @override
   void initState() {
@@ -979,7 +1091,7 @@ class _AddSubjectState extends State<AddSubject> {
   @override
   Widget build(BuildContext context) {
     return InfoDialog(
-      title: const Text("Fach hinzufügen"),
+      title: Text(widget.title),
       content: RawAutocomplete<String>(
         focusNode: focusNode,
         textEditingController: subjectNameController,
@@ -1025,9 +1137,9 @@ class _AddSubjectState extends State<AddSubject> {
           child: const Text("Abbrechen"),
         ),
         ElevatedButton(
-          onPressed: subjectNameController.text != ""
+          onPressed: _selectedSubject != null
               ? () {
-                  Navigator.of(context).pop(subjectNameController.text);
+                  Navigator.of(context).pop(_selectedSubject);
                 }
               : null,
           child: const Text("Fertig"),

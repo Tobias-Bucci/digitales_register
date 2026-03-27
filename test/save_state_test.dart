@@ -17,6 +17,7 @@
 
 import 'dart:collection';
 import 'dart:convert';
+import 'dart:io';
 
 import 'package:built_redux/built_redux.dart';
 import 'package:dr/actions/app_actions.dart';
@@ -28,6 +29,7 @@ import 'package:dr/reducer/reducer.dart';
 import 'package:dr/serializers.dart';
 import 'package:flutter/widgets.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:quiver/testing/src/async/fake_async.dart';
 
@@ -141,7 +143,9 @@ class StorageHelper {
   }
 
   Future<String?> read(String user) async {
-    return secureStorage.read(key: getStorageKey(user, serverUrl));
+    return secureStorage.read(
+      key: escapeKey(getStorageKey(user, serverUrl)),
+    );
   }
 
   Future<void> cleanup() async {
@@ -150,12 +154,39 @@ class StorageHelper {
 }
 
 void main() {
+  final binding = TestWidgetsFlutterBinding.ensureInitialized();
   secureStorage = FakeSecureStorage();
   final storageHelper = StorageHelper();
+  final pathProviderChannel = const MethodChannel('plugins.flutter.io/path_provider');
+  final appDir = Directory.systemTemp.createTempSync('dr_save_state_test');
+
+  setUp(() {
+    final alertMarker = File('${appDir.path}\\unmaintainedAlertShown');
+    if (!alertMarker.existsSync()) {
+      alertMarker.createSync(recursive: true);
+    }
+    binding.defaultBinaryMessenger
+        .setMockMethodCallHandler(pathProviderChannel, (call) async {
+      switch (call.method) {
+        case 'getApplicationSupportDirectory':
+        case 'getApplicationDocumentsDirectory':
+          return appDir.path;
+      }
+      return null;
+    });
+  });
 
   tearDown(() {
     deletedData = false;
     storageHelper.cleanup();
+  });
+
+  tearDownAll(() {
+    binding.defaultBinaryMessenger
+        .setMockMethodCallHandler(pathProviderChannel, null);
+    if (appDir.existsSync()) {
+      appDir.deleteSync(recursive: true);
+    }
   });
 
   test('save state occurs after five seconds', () {

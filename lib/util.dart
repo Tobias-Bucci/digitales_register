@@ -19,6 +19,7 @@ import 'dart:convert';
 import 'dart:developer';
 import 'dart:io';
 
+import 'package:collection/collection.dart';
 import 'package:dr/utc_date_time.dart';
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
@@ -62,6 +63,47 @@ extension StringUtils on String? {
     if (this == null) return true;
     return this!.isEmpty;
   }
+}
+
+bool equalsIgnoreCase(String a, String b) {
+  return equalsIgnoreAsciiCase(a.trim(), b.trim());
+}
+
+bool matchesFavoriteSubject(String? subject, String favoriteSubject) {
+  if (subject == null) return false;
+  return equalsIgnoreCase(subject, favoriteSubject);
+}
+
+bool containsSubjectIgnoreCase(Iterable<String> subjects, String subject) {
+  return subjects.any((item) => equalsIgnoreCase(item, subject));
+}
+
+String? findSubjectIgnoreCase(Iterable<String> subjects, String subject) {
+  for (final item in subjects) {
+    if (equalsIgnoreCase(item, subject)) {
+      return item;
+    }
+  }
+  return null;
+}
+
+List<String> filterAvailableFavoriteSubjects(
+  Iterable<String> favoriteSubjects,
+  Iterable<String?> visibleSubjects,
+) {
+  final availableSubjects = <String>[];
+  for (final favoriteSubject in favoriteSubjects) {
+    if (containsSubjectIgnoreCase(availableSubjects, favoriteSubject)) {
+      continue;
+    }
+    if (visibleSubjects.any((subject) => matchesFavoriteSubject(
+          subject,
+          favoriteSubject,
+        ))) {
+      availableSubjects.add(favoriteSubject);
+    }
+  }
+  return availableSubjects;
 }
 
 UtcDateTime toMonday(UtcDateTime date) {

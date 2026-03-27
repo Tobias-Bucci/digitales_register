@@ -23,6 +23,7 @@ import 'package:dr/main.dart';
 import 'package:dr/ui/last_fetched_overlay.dart';
 import 'package:dr/ui/no_internet.dart';
 import 'package:dr/utc_date_time.dart';
+import 'package:dr/util.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 import 'package:intl/intl.dart';
@@ -31,16 +32,41 @@ const holidayIconSize = 65.0;
 
 class CalendarWeek extends StatelessWidget {
   final CalendarWeekViewModel vm;
+  final String? favoriteSubject;
 
   const CalendarWeek({
     super.key,
     required this.vm,
+    required this.favoriteSubject,
   });
 
   @override
   Widget build(BuildContext context) {
     final latestHour =
         vm.days.fold<int>(0, (a, b) => a < b.toHour ? b.toHour : a);
+    final displayedDays = vm.days
+        .map(
+          (day) {
+            final filteredHours = favoriteSubject == null
+                ? day.hours
+                : BuiltList<CalendarHour>(
+                    day.hours.where(
+                      (hour) =>
+                          matchesFavoriteSubject(hour.subject, favoriteSubject!),
+                    ),
+                  );
+            return _DisplayedCalendarDay(
+              day: day.rebuild(
+                (b) => b.hours.replace(filteredHours),
+              ),
+              showNoFavoriteSubject:
+                  favoriteSubject != null &&
+                  day.hours.isNotEmpty &&
+                  filteredHours.isEmpty,
+            );
+          },
+        )
+        .toList();
     return vm.days.isEmpty
         ? vm.noInternet
             ? const NoInternet()
@@ -54,19 +80,23 @@ class CalendarWeek extends StatelessWidget {
               children: <Widget>[
                 Expanded(
                   child: Row(
-                    children: vm.days
+                    children: displayedDays
                         .map(
-                          (d) => Expanded(
+                          (displayedDay) => Expanded(
                             child: CalendarDayWidget(
-                              calendarDay: d,
+                              calendarDay: displayedDay.day,
                               max: latestHour,
                               subjectNicks: vm.subjectNicks,
-                              isSelected: vm.selection?.date == d.date,
-                              selectedHour: vm.selection?.date == d.date
+                              isSelected:
+                                  vm.selection?.date == displayedDay.day.date,
+                              selectedHour:
+                                  vm.selection?.date == displayedDay.day.date
                                   ? vm.selection?.hour
                                   : null,
                               colorBackground: vm.colorBackground,
                               subjectThemes: vm.subjectThemes,
+                              showNoFavoriteSubject:
+                                  displayedDay.showNoFavoriteSubject,
                             ),
                           ),
                         )
@@ -77,6 +107,16 @@ class CalendarWeek extends StatelessWidget {
             ),
           );
   }
+}
+
+class _DisplayedCalendarDay {
+  final CalendarDay day;
+  final bool showNoFavoriteSubject;
+
+  const _DisplayedCalendarDay({
+    required this.day,
+    required this.showNoFavoriteSubject,
+  });
 }
 
 class _HoursChunk extends StatelessWidget {
@@ -163,6 +203,7 @@ class CalendarDayWidget extends StatelessWidget {
   final int? selectedHour;
   final bool colorBackground;
   final BuiltMap<String, SubjectTheme> subjectThemes;
+  final bool showNoFavoriteSubject;
 
   const CalendarDayWidget({
     super.key,
@@ -173,6 +214,7 @@ class CalendarDayWidget extends StatelessWidget {
     required this.selectedHour,
     required this.colorBackground,
     required this.subjectThemes,
+    required this.showNoFavoriteSubject,
   });
   @override
   Widget build(BuildContext context) {
@@ -228,6 +270,26 @@ class CalendarDayWidget extends StatelessWidget {
                 final availableHeight = constraints.maxHeight;
                 final iconSize =
                     (availableHeight * 0.6).clamp(36.0, holidayIconSize);
+                if (showNoFavoriteSubject) {
+                  return Center(
+                    child: Column(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Icon(
+                          Icons.filter_alt_off_rounded,
+                          size: iconSize,
+                          color: Theme.of(context).iconTheme.color,
+                        ),
+                        const SizedBox(height: 4),
+                        Text(
+                          "Kein Fokusfach",
+                          style: Theme.of(context).textTheme.titleMedium,
+                          textAlign: TextAlign.center,
+                        ),
+                      ],
+                    ),
+                  );
+                }
                 return Center(
                   child: Column(
                     mainAxisSize: MainAxisSize.min,

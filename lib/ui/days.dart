@@ -28,6 +28,7 @@ import 'package:dr/main.dart';
 import 'package:dr/middleware/middleware.dart';
 import 'package:dr/ui/animated_linear_progress_indicator.dart';
 import 'package:dr/ui/dialog.dart';
+import 'package:dr/ui/favorite_subject_filter.dart';
 import 'package:dr/ui/last_fetched_overlay.dart';
 import 'package:dr/ui/no_internet.dart';
 import 'package:dr/utc_date_time.dart';
@@ -81,6 +82,7 @@ class DaysWidget extends StatefulWidget {
 
 class _DaysWidgetState extends State<DaysWidget> {
   final controller = AutoScrollController(suggestedRowHeight: 100);
+  String? _favoriteSubject;
 
   bool _afterFirstFrame = false;
 
@@ -149,12 +151,63 @@ class _DaysWidgetState extends State<DaysWidget> {
     _updateReachedHomeworks();
   }
 
-  void updateValues() {
+  List<String> _availableFavoriteSubjects() {
+    return filterAvailableFavoriteSubjects(
+      widget.vm.favoriteSubjects,
+      widget.vm.days.expand(
+        (day) => [
+          ...day.homework.map((homework) => homework.label),
+          ...day.deletedHomework.map((homework) => homework.label),
+        ],
+      ),
+    );
+  }
+
+  String? _resolvedFavoriteSubject(List<String> availableFavoriteSubjects) {
+    final favoriteSubject = _favoriteSubject;
+    if (favoriteSubject == null) {
+      return null;
+    }
+    return findSubjectIgnoreCase(availableFavoriteSubjects, favoriteSubject);
+  }
+
+  List<Day> _filteredDays(String? favoriteSubject) {
+    if (favoriteSubject == null) {
+      return widget.vm.days.toList();
+    }
+    return widget.vm.days
+        .map(
+          (day) => day.rebuild(
+            (b) => b
+              ..homework.replace(
+                day.homework.where(
+                  (homework) =>
+                      matchesFavoriteSubject(homework.label, favoriteSubject),
+                ),
+              )
+              ..deletedHomework.replace(
+                day.deletedHomework.where(
+                  (homework) =>
+                      matchesFavoriteSubject(homework.label, favoriteSubject),
+                ),
+              ),
+          ),
+        )
+        .where(
+          (day) => day.homework.isNotEmpty || day.deletedHomework.isNotEmpty,
+        )
+        .toList();
+  }
+
+  void updateValues(List<Day> visibleDays) {
     _targets.clear();
     _focused.clear();
+    _dayStartIndices.clear();
+    _homeworkIndexes.clear();
+    _dayIndexes.clear();
     var index = 0;
     var dayIndex = 0;
-    for (final day in widget.vm.days) {
+    for (final day in visibleDays) {
       _dayStartIndices[dayIndex] = index;
       if (day.deletedHomework.any((h) => h.isChanged)) {
         _targets.add(index);
@@ -174,7 +227,7 @@ class _DaysWidgetState extends State<DaysWidget> {
 
   @override
   void initState() {
-    updateValues();
+    updateValues(widget.vm.days.toList());
     controller.addListener(() {
       update();
     });
@@ -188,13 +241,15 @@ class _DaysWidgetState extends State<DaysWidget> {
 
   @override
   void didUpdateWidget(DaysWidget oldWidget) {
-    updateValues();
+    final availableFavoriteSubjects = _availableFavoriteSubjects();
+    updateValues(_filteredDays(_resolvedFavoriteSubject(availableFavoriteSubjects)));
     update();
 
     super.didUpdateWidget(oldWidget);
   }
 
   Widget getItem(
+    List<Day> visibleDays,
     int n, {
     required bool isLast,
     required bool showLastFetched,
@@ -203,6 +258,18 @@ class _DaysWidgetState extends State<DaysWidget> {
       return DashboardHeader(
         future: widget.vm.future,
         onSwitchFuture: widget.onSwitchFuture,
+        favoriteSubjects: _availableFavoriteSubjects(),
+        selectedFavoriteSubject: _resolvedFavoriteSubject(
+          _availableFavoriteSubjects(),
+        ),
+        onFavoriteSubjectChanged: (favoriteSubject) {
+          setState(() {
+            _favoriteSubject = favoriteSubject;
+            updateValues(_filteredDays(favoriteSubject));
+            update();
+          });
+        },
+        subjectThemes: widget.vm.subjectThemes,
       );
     }
     if (isLast) {
@@ -217,7 +284,7 @@ class _DaysWidgetState extends State<DaysWidget> {
     }
     final itemIndex = (n - 1) ~/ 2;
     return DayWidget(
-      day: widget.vm.days[itemIndex],
+      day: visibleDays[itemIndex],
       vm: widget.vm,
       controller: controller,
       index: _dayStartIndices[itemIndex]!,
@@ -233,15 +300,41 @@ class _DaysWidgetState extends State<DaysWidget> {
     );
   }
 
+  void _markVisibleAsSeen(List<Day> visibleDays) {
+    for (final day in visibleDays) {
+      if (day.deletedHomework.any((homework) => homework.isChanged)) {
+        widget.markDeletedHomeworkAsSeenCallback(day);
+      }
+      for (final homework in day.homework) {
+        if (homework.isNew || homework.isChanged) {
+          widget.markAsSeenCallback(homework);
+        }
+      }
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
+    final availableFavoriteSubjects = _availableFavoriteSubjects();
+    final activeFavoriteSubject =
+        _resolvedFavoriteSubject(availableFavoriteSubjects);
+    final visibleDays = _filteredDays(activeFavoriteSubject);
     final noInternet = widget.vm.noInternet;
-    final noEntries = widget.vm.days.isEmpty;
+    final noEntries = visibleDays.isEmpty;
     Widget body;
     if (noEntries) {
       Widget fullScreenBody;
-      if (widget.vm.loading) {
+      if (widget.vm.loading && widget.vm.days.isEmpty) {
         fullScreenBody = const CircularProgressIndicator();
+      } else if (activeFavoriteSubject != null && widget.vm.days.isNotEmpty) {
+        fullScreenBody = Padding(
+          padding: const EdgeInsets.all(32),
+          child: Text(
+            "Keine Einträge für dieses Fokusfach",
+            style: Theme.of(context).textTheme.headlineMedium,
+            textAlign: TextAlign.center,
+          ),
+        );
       } else if (noInternet) {
         fullScreenBody = const NoInternet();
       } else {
@@ -259,6 +352,16 @@ class _DaysWidgetState extends State<DaysWidget> {
           DashboardHeader(
             future: widget.vm.future,
             onSwitchFuture: widget.onSwitchFuture,
+            favoriteSubjects: availableFavoriteSubjects,
+            selectedFavoriteSubject: activeFavoriteSubject,
+            onFavoriteSubjectChanged: (favoriteSubject) {
+              setState(() {
+                _favoriteSubject = favoriteSubject;
+                updateValues(_filteredDays(favoriteSubject));
+                update();
+              });
+            },
+            subjectThemes: widget.vm.subjectThemes,
           ),
           Expanded(
             child: Center(child: fullScreenBody),
@@ -270,9 +373,8 @@ class _DaysWidgetState extends State<DaysWidget> {
       // If not all days were fetched at the same time we want to show a string
       // for each day individually.
       bool daysShouldShowLastFetched = false;
-      if (widget.vm.days.first.lastRequested ==
-          widget.vm.days.last.lastRequested) {
-        lastFetched = widget.vm.days.first.lastRequested;
+      if (visibleDays.first.lastRequested == visibleDays.last.lastRequested) {
+        lastFetched = visibleDays.first.lastRequested;
       } else {
         daysShouldShowLastFetched = true;
       }
@@ -284,11 +386,12 @@ class _DaysWidgetState extends State<DaysWidget> {
           controller: controller,
           // Times two for the divider, minus one because there's no divider after the last item.
           // The first item is the DashboardHeader, the last one a SizedBox (a spacer).
-          itemCount: (widget.vm.days.length * 2 - 1) + 2,
+          itemCount: (visibleDays.length * 2 - 1) + 2,
           itemBuilder: (context, n) {
             return getItem(
+              visibleDays,
               n,
-              isLast: n == (widget.vm.days.length * 2 - 1) + 1,
+              isLast: n == (visibleDays.length * 2 - 1) + 1,
               showLastFetched:
                   widget.vm.noInternet && daysShouldShowLastFetched,
             );
@@ -350,7 +453,7 @@ class _DaysWidgetState extends State<DaysWidget> {
               foregroundColor: Theme.of(context).colorScheme.onErrorContainer,
               heroTag: null,
               onPressed: () {
-                widget.markAllAsSeenCallback();
+                _markVisibleAsSeen(visibleDays);
               },
               mini: true,
               child: const Icon(Icons.close),
@@ -414,11 +517,19 @@ class _DaysWidgetState extends State<DaysWidget> {
 
 class DashboardHeader extends StatelessWidget {
   final VoidCallback onSwitchFuture;
+  final List<String> favoriteSubjects;
+  final String? selectedFavoriteSubject;
+  final ValueChanged<String?> onFavoriteSubjectChanged;
+  final BuiltMap<String, SubjectTheme> subjectThemes;
   final bool future;
   const DashboardHeader({
     super.key,
     required this.future,
     required this.onSwitchFuture,
+    required this.favoriteSubjects,
+    required this.selectedFavoriteSubject,
+    required this.onFavoriteSubjectChanged,
+    required this.subjectThemes,
   });
 
   @override
@@ -449,35 +560,51 @@ class DashboardHeader extends StatelessWidget {
         ),
         child: Padding(
           padding: const EdgeInsets.fromLTRB(8, 6, 8, 6),
-          child: Row(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Expanded(child: HomeworkFilterContainer()),
-              const SizedBox(width: 8),
-              AnimatedSwitcher(
-                duration: const Duration(milliseconds: 220),
-                transitionBuilder: (child, animation) {
-                  return FadeTransition(
-                    opacity: animation,
-                    child: ScaleTransition(scale: animation, child: child),
-                  );
-                },
-                child: FilledButton.tonalIcon(
-                  key: ValueKey(future),
-                  onPressed: onSwitchFuture,
-                  icon: Icon(
-                    future ? Icons.history_toggle_off : Icons.upcoming_rounded,
-                  ),
-                  label: Text(future ? "Vergangenheit" : "Zukunft"),
-                  style: FilledButton.styleFrom(
-                    shape: const StadiumBorder(),
-                    visualDensity: VisualDensity.compact,
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 14,
-                      vertical: 12,
+              Row(
+                children: [
+                  Expanded(child: HomeworkFilterContainer()),
+                  const SizedBox(width: 8),
+                  AnimatedSwitcher(
+                    duration: const Duration(milliseconds: 220),
+                    transitionBuilder: (child, animation) {
+                      return FadeTransition(
+                        opacity: animation,
+                        child: ScaleTransition(scale: animation, child: child),
+                      );
+                    },
+                    child: FilledButton.tonalIcon(
+                      key: ValueKey(future),
+                      onPressed: onSwitchFuture,
+                      icon: Icon(
+                        future
+                            ? Icons.history_toggle_off
+                            : Icons.upcoming_rounded,
+                      ),
+                      label: Text(future ? "Vergangenheit" : "Zukunft"),
+                      style: FilledButton.styleFrom(
+                        shape: const StadiumBorder(),
+                        visualDensity: VisualDensity.compact,
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 14,
+                          vertical: 12,
+                        ),
+                      ),
                     ),
                   ),
-                ),
+                ],
               ),
+              if (favoriteSubjects.isNotEmpty) ...[
+                const SizedBox(height: 8),
+                FavoriteSubjectFilter(
+                  subjects: favoriteSubjects,
+                  selectedSubject: selectedFavoriteSubject,
+                  onSelected: onFavoriteSubjectChanged,
+                  subjectThemes: subjectThemes,
+                ),
+              ],
             ],
           ),
         ),

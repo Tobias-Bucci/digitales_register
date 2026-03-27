@@ -307,6 +307,7 @@ abstract class SettingsState
   bool get amoledMode;
   BuiltMap<String, SubjectTheme> get subjectThemes;
   BuiltList<String> get ignoreForGradesAverage;
+  BuiltList<String> get favoriteSubjects;
 
   // Whether to fully expand the drawer if in tablet mode
   // if not, only the icons are shown
@@ -346,6 +347,7 @@ abstract class SettingsState
       ..subjectThemes = MapBuilder<String, SubjectTheme>()
       ..drawerFullyExpanded = true
       ..ignoreForGradesAverage = ListBuilder()
+      ..favoriteSubjects = ListBuilder()
       ..dashboardColorBorders = false
       ..calendarColorBackground = false
       ..pushNotificationsEnabled = false

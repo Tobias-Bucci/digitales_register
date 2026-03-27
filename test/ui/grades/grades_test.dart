@@ -20,6 +20,7 @@ import 'package:built_redux/built_redux.dart';
 import 'package:dr/actions/app_actions.dart';
 import 'package:dr/app_state.dart';
 import 'package:dr/container/grades_page_container.dart';
+import 'package:dr/ui/favorite_subject_filter.dart';
 import 'package:dr/data.dart';
 import 'package:dr/reducer/reducer.dart';
 import 'package:dr/ui/sorted_grades_widget.dart';
@@ -29,7 +30,10 @@ import 'package:flutter_built_redux/flutter_built_redux.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:golden_toolkit/golden_toolkit.dart';
 
-AppState _getGradesState({bool loading = false}) {
+AppState _getGradesState({
+  bool loading = false,
+  List<String> favoriteSubjects = const [],
+}) {
   return AppState(
     (b) {
       b.gradesState
@@ -169,6 +173,7 @@ AppState _getGradesState({bool loading = false}) {
           ),
         },
       );
+      b.settingsState.favoriteSubjects = ListBuilder(favoriteSubjects);
     },
   );
 }
@@ -266,5 +271,30 @@ void main() {
     await tester.pumpAndSettle();
     expect(find.byIcon(Icons.star), findsNWidgets(3));
     expect(find.byIcon(Icons.star_border), findsNWidgets(2));
+  });
+
+  testWidgets('favorite subject filter shows only matching subjects',
+      (tester) async {
+    final widget = ReduxProvider(
+      store: Store<AppState, AppStateBuilder, AppActions>(
+        appReducerBuilder.build(),
+        _getGradesState(favoriteSubjects: const ["Fach1"]),
+        AppActions(),
+      ),
+      child: MaterialApp(
+        home: const GradesPageContainer(),
+        theme: ThemeData(primarySwatch: Colors.deepOrange),
+      ),
+    );
+    await tester.pumpWidget(widget);
+
+    expect(find.byType(FavoriteSubjectFilter), findsOneWidget);
+    expect(find.text("Fach2"), findsOneWidget);
+
+    await tester.tap(find.widgetWithText(ChoiceChip, "Fach1"));
+    await tester.pumpAndSettle();
+
+    expect(find.text("Fach1"), findsWidgets);
+    expect(find.text("Fach2"), findsNothing);
   });
 }

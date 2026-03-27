@@ -76,7 +76,8 @@ Future<void> main() async {
                                       ..name = "Foo"
                                       ..online = false
                                       ..typeId = 500
-                                      ..typeName = "Hausaufgabe",
+                                      ..typeName = "Hausaufgabe"
+                                      ..warning = false,
                                   )
                                 ],
                               ),
@@ -221,5 +222,106 @@ Future<void> main() async {
       findsOneWidget,
     );
     expect(find.text("Fach1"), findsOneWidget);
+  });
+
+  testWidgets('favorite subject filter clears hidden selection',
+      (WidgetTester tester) async {
+    navigatorKey = GlobalKey();
+    final store = Store<AppState, AppStateBuilder, AppActions>(
+      appReducerBuilder.build(),
+      AppState(
+        (b) {
+          b.calendarState
+            ..currentMonday = UtcDateTime(2021, 2, 20)
+            ..selection = CalendarSelection(
+              (b) => b
+                ..date = UtcDateTime(2021, 2, 21)
+                ..hour = 1,
+            ).toBuilder()
+            ..days = MapBuilder(
+              <UtcDateTime, CalendarDay>{
+                UtcDateTime(2021, 2, 20): CalendarDay(
+                  (b) => b
+                    ..date = UtcDateTime(2021, 2, 20)
+                    ..hours = ListBuilder(
+                      <CalendarHour>[
+                        CalendarHour(
+                          (b) => b
+                            ..subject = "Fach1"
+                            ..fromHour = 1
+                            ..toHour = 1
+                            ..rooms = ListBuilder()
+                            ..timeSpans = ListBuilder()
+                            ..homeworkExams = ListBuilder(),
+                        ),
+                      ],
+                    ),
+                ),
+                UtcDateTime(2021, 2, 21): CalendarDay(
+                  (b) => b
+                    ..date = UtcDateTime(2021, 2, 21)
+                    ..hours = ListBuilder(
+                      <CalendarHour>[
+                        CalendarHour(
+                          (b) => b
+                            ..subject = "Fach2"
+                            ..fromHour = 1
+                            ..toHour = 1
+                            ..rooms = ListBuilder()
+                            ..timeSpans = ListBuilder()
+                            ..homeworkExams = ListBuilder(),
+                        ),
+                      ],
+                    ),
+                ),
+              },
+            );
+          b.settingsState
+            ..favoriteSubjects = ListBuilder(const ["Fach1", "Fach2"])
+            ..subjectThemes = MapBuilder(
+              {
+                "Fach1": SubjectTheme(
+                  (b) => b
+                    ..color = Colors.red.value
+                    ..thick = 2,
+                ),
+                "Fach2": SubjectTheme(
+                  (b) => b
+                    ..color = Colors.blue.value
+                    ..thick = 2,
+                ),
+              },
+            );
+        },
+      ),
+      actions,
+    );
+    final widget = ReduxProvider(
+      store: store,
+      child: MaterialApp(
+        navigatorKey: navigatorKey,
+        home: CalendarContainer(),
+        theme: ThemeData(primarySwatch: Colors.deepOrange),
+        localizationsDelegates: const [
+          GlobalCupertinoLocalizations.delegate,
+          GlobalMaterialLocalizations.delegate,
+          GlobalWidgetsLocalizations.delegate,
+        ],
+        supportedLocales: const [
+          Locale("de"),
+        ],
+      ),
+    );
+
+    await tester.pumpWidget(widget);
+    await tester.pumpAndSettle();
+
+    expect(store.state.calendarState.selection, isNotNull);
+
+    await tester.tap(find.widgetWithText(ChoiceChip, "Fach1"));
+    await tester.pumpAndSettle();
+
+    expect(find.text("Kein Fokusfach"), findsOneWidget);
+    expect(store.state.calendarState.selection, isNull);
   });
 }

@@ -63,6 +63,8 @@ class SettingsPageContainer extends StatelessWidget {
           onShowProfile: actions.routingActions.showProfile.call,
           onSetIgnoreForGradesAverage: (list) =>
               actions.settingsActions.ignoreSubjectsForAverage(BuiltList(list)),
+          onSetFavoriteSubjects: (list) =>
+              actions.settingsActions.favoriteSubjects(BuiltList(list)),
           onSetDashboardColorBorders:
               actions.settingsActions.dashboardColorBorders.call,
           onSetCalenderColorBackground:
@@ -108,6 +110,7 @@ class SettingsViewModel {
   final bool demoMode;
   final List<String> allSubjects;
   final List<String> ignoreForGradesAverage;
+  final List<String> favoriteSubjects;
   final BuiltMap<String, SubjectTheme> subjectThemes;
   SettingsViewModel(AppState state)
       : noPassSaving = state.settingsState.noPasswordSaving,
@@ -132,6 +135,7 @@ class SettingsViewModel {
         allSubjects = state.extractAllSubjects(),
         ignoreForGradesAverage =
             state.settingsState.ignoreForGradesAverage.toList(),
+        favoriteSubjects = state.settingsState.favoriteSubjects.toList(),
         subjectThemes = state.settingsState.subjectThemes,
         demoMode = state.isDemo;
 }

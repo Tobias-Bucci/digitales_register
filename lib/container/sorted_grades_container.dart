@@ -61,10 +61,12 @@ abstract class SortedGradesViewModel
     implements Built<SortedGradesViewModel, SortedGradesViewModelBuilder> {
   BuiltList<Subject> get subjects;
   BuiltList<String> get ignoredSubjectsForAverage;
+  BuiltList<String> get favoriteSubjects;
   Semester get semester;
   bool get sortByType;
   bool? get showCancelled;
   bool get noInternet;
+  BuiltMap<String, SubjectTheme> get subjectThemes;
 
   factory SortedGradesViewModel(
           [void Function(SortedGradesViewModelBuilder)? updates]) =
@@ -79,6 +81,8 @@ abstract class SortedGradesViewModel
         ..semester = state.gradesState.semester.toBuilder()
         ..showCancelled = state.settingsState.showCancelled
         ..noInternet = state.noInternet
+        ..favoriteSubjects = state.settingsState.favoriteSubjects.toBuilder()
+        ..subjectThemes = state.settingsState.subjectThemes.toBuilder()
         ..ignoredSubjectsForAverage =
             state.settingsState.ignoreForGradesAverage.toBuilder(),
     );

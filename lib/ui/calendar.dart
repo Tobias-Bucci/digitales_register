@@ -18,7 +18,9 @@
 import 'package:dr/container/calendar_container.dart';
 import 'package:dr/container/calendar_detail_container.dart';
 import 'package:dr/container/calendar_week_container.dart';
+import 'package:dr/data.dart';
 import 'package:dr/main.dart';
+import 'package:dr/ui/favorite_subject_filter.dart';
 import 'package:dr/utc_date_time.dart';
 import 'package:dr/util.dart';
 import 'package:flutter/material.dart';
@@ -59,13 +61,8 @@ class _CalendarState extends State<Calendar> with TickerProviderStateMixin {
   final DateFormat _dateFormat = DateFormat("dd.MM.yy");
   final Curve _animatePageCurve = Curves.ease;
   final Duration _animatePageDuration = const Duration(milliseconds: 200);
-
-  // This page view is created in initState and reused in the build method.
-  // While this might not be best practice otherwise, it prevents rebuilds of
-  // every currently shown page when the calendar rebuilds. Such rebuilds happen
-  // when changing the current page, and would lead to animation janks.
-  late PageView _pageView;
   late bool tabletMode;
+  String? _favoriteSubject;
 
   static final Animatable<double> _chevronOpacityTween =
       Tween<double>(begin: 1.0, end: 0.0)
@@ -97,16 +94,6 @@ class _CalendarState extends State<Calendar> with TickerProviderStateMixin {
         _dateRangeOpacityController.drive(_dateRangeOpacityTween);
 
     widget.dayCallback(widget.vm.currentMonday);
-
-    _pageView = PageView.builder(
-      itemBuilder: (BuildContext context, int index) {
-        return CalendarWeekContainer(
-          monday: mondayOf(index),
-        );
-      },
-      controller: _controller,
-      onPageChanged: _handlePageChanged,
-    );
 
     super.initState();
   }
@@ -140,6 +127,9 @@ class _CalendarState extends State<Calendar> with TickerProviderStateMixin {
 
   @override
   void didUpdateWidget(covariant Calendar oldWidget) {
+    _ensureSelectionVisible(
+      _resolvedFavoriteSubject(_availableFavoriteSubjects()),
+    );
     final page = pageOf(widget.vm.currentMonday);
     if (page != _controller.page?.round()) {
       _controller.animateToPage(
@@ -168,10 +158,75 @@ class _CalendarState extends State<Calendar> with TickerProviderStateMixin {
     super.didUpdateWidget(oldWidget);
   }
 
+  List<String> _availableFavoriteSubjects() {
+    return filterAvailableFavoriteSubjects(
+      widget.vm.favoriteSubjects,
+      widget.vm.currentDays.expand((day) => day.hours.map((hour) => hour.subject)),
+    );
+  }
+
+  String? _resolvedFavoriteSubject(List<String> availableFavoriteSubjects) {
+    final favoriteSubject = _favoriteSubject;
+    if (favoriteSubject == null) {
+      return null;
+    }
+    return findSubjectIgnoreCase(availableFavoriteSubjects, favoriteSubject);
+  }
+
+  bool _selectionIsVisible(String? favoriteSubject) {
+    if (favoriteSubject == null || widget.vm.selection == null) {
+      return true;
+    }
+    final selection = widget.vm.selection!;
+    CalendarDay? selectedDay;
+    for (final day in widget.vm.currentDays) {
+      if (day.date == selection.date) {
+        selectedDay = day;
+        break;
+      }
+    }
+    if (selectedDay == null) {
+      return true;
+    }
+    if (selection.hour == null) {
+      return selectedDay.hours.any(
+        (hour) => matchesFavoriteSubject(hour.subject, favoriteSubject),
+      );
+    }
+    return selectedDay.hours.any(
+      (hour) =>
+          hour.fromHour == selection.hour &&
+          matchesFavoriteSubject(hour.subject, favoriteSubject),
+    );
+  }
+
+  void _ensureSelectionVisible(String? favoriteSubject) {
+    if (!_selectionIsVisible(favoriteSubject)) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (mounted && widget.vm.selection != null) {
+          actions.calendarActions.select(null);
+        }
+      });
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     return LayoutBuilder(builder: (context, constraints) {
       tabletMode = constraints.maxWidth >= tabletLayoutBreakPoint;
+      final availableFavoriteSubjects = _availableFavoriteSubjects();
+      final selectedFavoriteSubject =
+          _resolvedFavoriteSubject(availableFavoriteSubjects);
+      final pageView = PageView.builder(
+        itemBuilder: (BuildContext context, int index) {
+          return CalendarWeekContainer(
+            monday: mondayOf(index),
+            favoriteSubject: selectedFavoriteSubject,
+          );
+        },
+        controller: _controller,
+        onPageChanged: _handlePageChanged,
+      );
       return Row(
         children: [
           Expanded(
@@ -275,6 +330,19 @@ class _CalendarState extends State<Calendar> with TickerProviderStateMixin {
                           ],
                         ),
                       ),
+                      if (availableFavoriteSubjects.isNotEmpty)
+                        FavoriteSubjectFilter(
+                          subjects: availableFavoriteSubjects,
+                          selectedSubject: selectedFavoriteSubject,
+                          onSelected: (favoriteSubject) {
+                            setState(() {
+                              _favoriteSubject = favoriteSubject;
+                            });
+                            _ensureSelectionVisible(favoriteSubject);
+                          },
+                          subjectThemes: widget.vm.subjectThemes,
+                          padding: const EdgeInsets.fromLTRB(12, 12, 12, 0),
+                        ),
                       const SizedBox(
                         height: 8,
                       ),
@@ -291,7 +359,7 @@ class _CalendarState extends State<Calendar> with TickerProviderStateMixin {
                               _dateRangeOpacityController.reverse();
                               return false;
                             },
-                            child: _pageView,
+                            child: pageView,
                           ),
                         ),
                       ),
