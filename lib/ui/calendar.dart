@@ -161,7 +161,8 @@ class _CalendarState extends State<Calendar> with TickerProviderStateMixin {
   List<String> _availableFavoriteSubjects() {
     return filterAvailableFavoriteSubjects(
       widget.vm.favoriteSubjects,
-      widget.vm.currentDays.expand((day) => day.hours.map((hour) => hour.subject)),
+      widget.vm.currentDays
+          .expand((day) => day.hours.map((hour) => hour.subject)),
     );
   }
 
@@ -239,8 +240,7 @@ class _CalendarState extends State<Calendar> with TickerProviderStateMixin {
                       if (toMonday(now) != widget.vm.currentMonday)
                         TextButton(
                           style: TextButton.styleFrom(
-                            foregroundColor:
-                                Theme.of(context).colorScheme.onPrimary,
+                            foregroundColor: Colors.white,
                             padding: const EdgeInsets.symmetric(horizontal: 16),
                           ),
                           onPressed: () {

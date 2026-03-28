@@ -1,0 +1,10 @@
+.dart_tool/
+.packages
+.dart_tool
+pubspec.lock
+
+example/.packages
+example/.dart_tool
+
+# IntelliJ IDEA
+.idea/

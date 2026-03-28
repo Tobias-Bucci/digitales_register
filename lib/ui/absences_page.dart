@@ -124,7 +124,7 @@ class AbsencesBody extends StatelessWidget {
                     absence: futureAbsence,
                     onRemove: state.canEdit &&
                             futureAbsence.justified ==
-                            AbsenceJustified.notYetJustified
+                                AbsenceJustified.notYetJustified
                         ? () => onRemoveFutureAbsence(futureAbsence)
                         : null,
                   ),
@@ -363,6 +363,10 @@ class AbsencesStatisticWidget extends StatelessWidget {
   final AbsenceStatistic stat;
 
   const AbsencesStatisticWidget({super.key, required this.stat});
+
+  TextStyle? _valueStyle(BuildContext context) =>
+      Theme.of(context).textTheme.titleMedium;
+
   @override
   Widget build(BuildContext context) {
     return ExpansionTile(
@@ -371,32 +375,50 @@ class AbsencesStatisticWidget extends StatelessWidget {
         if (stat.counter != null)
           ListTile(
             title: const Text("Absenzen"),
-            trailing: Text(stat.counter.toString()),
+            trailing: Text(
+              stat.counter.toString(),
+              style: _valueStyle(context),
+            ),
           ),
         if (stat.counterForSchool != null)
           ListTile(
             title: const Text("Absenzen im Auftrag der Schule"),
-            trailing: Text(stat.counterForSchool.toString()),
+            trailing: Text(
+              stat.counterForSchool.toString(),
+              style: _valueStyle(context),
+            ),
           ),
         if (stat.delayed != null)
           ListTile(
             title: const Text("Verspätungen"),
-            trailing: Text(stat.delayed.toString()),
+            trailing: Text(
+              stat.delayed.toString(),
+              style: _valueStyle(context),
+            ),
           ),
         if (stat.justified != null)
           ListTile(
             title: const Text("Entschuldigte Absenzen"),
-            trailing: Text(stat.justified.toString()),
+            trailing: Text(
+              stat.justified.toString(),
+              style: _valueStyle(context),
+            ),
           ),
         if (stat.notJustified != null)
           ListTile(
             title: const Text("Nicht entschuldigte Absenzen"),
-            trailing: Text(stat.notJustified.toString()),
+            trailing: Text(
+              stat.notJustified.toString(),
+              style: _valueStyle(context),
+            ),
           ),
         if (stat.percentage != null)
           ListTile(
             title: const Text("Abwesenheit"),
-            trailing: Text("${stat.percentage} %"),
+            trailing: Text(
+              "${stat.percentage} %",
+              style: _valueStyle(context),
+            ),
           ),
       ],
     );

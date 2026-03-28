@@ -26,6 +26,7 @@ class AbsenceGroupWidget extends StatelessWidget {
   const AbsenceGroupWidget({super.key, required this.vm});
   @override
   Widget build(BuildContext context) {
+    final bodyStyle = Theme.of(context).textTheme.bodyMedium;
     final divider = Row(
       children: const [
         Spacer(),
@@ -54,11 +55,11 @@ class AbsenceGroupWidget extends StatelessWidget {
         child: Column(
           children: <Widget>[
             if (vm.reason != null) ...[
-              Text(vm.reason!),
+              Text(vm.reason!, style: bodyStyle),
               divider,
             ],
             if (vm.note != null) ...[
-              Text(vm.note!),
+              Text(vm.note!, style: bodyStyle),
               divider,
             ],
             Text(
@@ -72,6 +73,7 @@ class AbsenceGroupWidget extends StatelessWidget {
             divider,
             Text(
               vm.justifiedString,
+              style: bodyStyle,
               textAlign: TextAlign.center,
             ),
           ],
@@ -92,6 +94,7 @@ class FutureAbsenceWidget extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final bodyStyle = Theme.of(context).textTheme.bodyMedium;
     var fromTo = "";
     if (absence.startDate == absence.endDate) {
       fromTo +=
@@ -157,11 +160,11 @@ class FutureAbsenceWidget extends StatelessWidget {
               child: Column(
                 children: <Widget>[
                   if (absence.note != null) ...[
-                    Text(absence.note!),
+                    Text(absence.note!, style: bodyStyle),
                     divider,
                   ],
                   if (absence.reason != null) ...[
-                    Text(absence.reason!),
+                    Text(absence.reason!, style: bodyStyle),
                     divider,
                   ],
                   Text(
@@ -173,10 +176,11 @@ class FutureAbsenceWidget extends StatelessWidget {
                       absence.reasonSignature != null)
                     Text(
                       "${DateFormat("EE d.M.yyyy 'um' HH:mm", "de").format(absence.reasonTimestamp!)} als „${absence.reasonSignature}“ eingetragen",
+                      style: bodyStyle,
                       textAlign: TextAlign.center,
                     ),
                   divider,
-                  Text(justifiedString),
+                  Text(justifiedString, style: bodyStyle),
                 ],
               ),
             ),

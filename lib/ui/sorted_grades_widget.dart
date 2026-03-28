@@ -28,6 +28,14 @@ import 'package:intl/intl.dart';
 typedef ViewSubjectDetailCallback = void Function(Subject s);
 typedef SetBoolCallback = void Function(bool byType);
 
+TextStyle? _cancelledStyle(TextStyle? baseStyle, bool cancelled) {
+  if (!cancelled) {
+    return baseStyle;
+  }
+  return baseStyle?.copyWith(decoration: TextDecoration.lineThrough) ??
+      const TextStyle(decoration: TextDecoration.lineThrough);
+}
+
 class SortedGradesWidget extends StatefulWidget {
   final SortedGradesViewModel vm;
   final ViewSubjectDetailCallback viewSubjectDetail;
@@ -202,6 +210,7 @@ class _SubjectWidgetState extends State<SubjectWidget> {
   @override
   Widget build(BuildContext context) {
     final entries = widget.subject.detailEntries(widget.semester);
+    final averageStyle = Theme.of(context).textTheme.titleMedium;
     return AbsorbPointer(
       absorbing: widget.noInternet && entries == null,
       child: ExpansionTile(
@@ -222,9 +231,11 @@ class _SubjectWidgetState extends State<SubjectWidget> {
         leading: Text.rich(
           TextSpan(
             text: 'Ø ',
+            style: averageStyle,
             children: <TextSpan>[
               TextSpan(
                 text: widget.subject.averageFormatted(widget.semester),
+                style: averageStyle,
               ),
             ],
           ),
@@ -302,20 +313,19 @@ class _SubjectWidgetState extends State<SubjectWidget> {
   }
 }
 
-const lineThrough = TextStyle(decoration: TextDecoration.lineThrough);
-
 class GradeWidget extends StatelessWidget {
   final GradeDetail grade;
 
   const GradeWidget({super.key, required this.grade});
   @override
   Widget build(BuildContext context) {
+    final theme = Theme.of(context).textTheme;
     return Column(
       children: <Widget>[
         ListTile(
           title: Text(
             grade.name,
-            style: grade.cancelled ? lineThrough : null,
+            style: _cancelledStyle(theme.bodyLarge, grade.cancelled),
           ),
           subtitle: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
@@ -323,26 +333,26 @@ class GradeWidget extends StatelessWidget {
               if (!grade.description.isNullOrEmpty)
                 Text(
                   grade.description!,
-                  style: Theme.of(context).textTheme.bodyMedium,
+                  style: _cancelledStyle(theme.bodyMedium, grade.cancelled),
                 ),
               Text(
                 "${DateFormat("dd.MM.yy").format(grade.date)}: ${grade.type} - ${grade.weightPercentage}%",
-                style: grade.cancelled ? lineThrough : null,
+                style: _cancelledStyle(theme.bodyMedium, grade.cancelled),
               ),
               Text(
                 grade.created,
-                style: Theme.of(context).textTheme.bodySmall,
+                style: _cancelledStyle(theme.bodySmall, grade.cancelled),
               ),
               if (!grade.cancelledDescription.isNullOrEmpty)
                 Text(
                   grade.cancelledDescription!,
-                  style: Theme.of(context).textTheme.bodySmall,
+                  style: _cancelledStyle(theme.bodySmall, grade.cancelled),
                 ),
             ],
           ),
           trailing: Text(
             grade.gradeFormatted,
-            style: grade.cancelled ? lineThrough : null,
+            style: _cancelledStyle(theme.titleMedium, grade.cancelled),
           ),
           isThreeLine: true,
         ),
@@ -363,14 +373,15 @@ class ObservationWidget extends StatelessWidget {
   const ObservationWidget({super.key, required this.observation});
   @override
   Widget build(BuildContext context) {
+    final theme = Theme.of(context).textTheme;
     return ListTile(
       title: Text(
         observation.typeName,
-        style: observation.cancelled ? lineThrough : null,
+        style: _cancelledStyle(theme.bodyLarge, observation.cancelled),
       ),
       subtitle: Text(
         "${DateFormat("dd.MM.yy").format(observation.date)}${observation.note.isNullOrEmpty ? "" : ": ${observation.note}"}\n${observation.created}",
-        style: observation.cancelled ? lineThrough : null,
+        style: _cancelledStyle(theme.bodyMedium, observation.cancelled),
       ),
     );
   }
@@ -384,13 +395,14 @@ class CompetenceWidget extends StatelessWidget {
       {super.key, required this.competence, required this.cancelled});
   @override
   Widget build(BuildContext context) {
+    final theme = Theme.of(context).textTheme;
     return Padding(
       padding: const EdgeInsets.only(left: 32, bottom: 16, right: 8),
       child: Wrap(
         children: <Widget>[
           Text(
             competence.typeName,
-            style: cancelled ? lineThrough : null,
+            style: _cancelledStyle(theme.bodyMedium, cancelled),
           ),
           Row(
             children: List.generate(

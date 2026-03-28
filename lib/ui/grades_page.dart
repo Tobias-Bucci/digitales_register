@@ -39,6 +39,8 @@ class GradesPage extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final semesterStyle = Theme.of(context).textTheme.titleMedium;
+    final averageStyle = Theme.of(context).textTheme.titleMedium;
     return Scaffold(
       appBar: ResponsiveAppBar(
         title: const Text("Noten"),
@@ -46,12 +48,14 @@ class GradesPage extends StatelessWidget {
           DropdownButtonHideUnderline(
             child: DropdownButton<Semester>(
               value: vm.showSemester,
+              style: semesterStyle,
               items: Semester.values
                   .map(
                     (s) => DropdownMenuItem(
                       value: s,
                       child: Text(
                         s.name,
+                        style: semesterStyle,
                       ),
                     ),
                   )
@@ -93,7 +97,10 @@ class GradesPage extends StatelessWidget {
                                   ),
                                 ],
                               ),
-                              trailing: Text(vm.allSubjectsAverage),
+                              trailing: Text(
+                                vm.allSubjectsAverage,
+                                style: averageStyle,
+                              ),
                             ),
                             const Divider(
                               height: 0,
