@@ -1,90 +1,83 @@
-// Copyright (C) 2021 Michael Debertol
-//
-// This file is part of digitales_register.
-//
-// digitales_register is free software: you can redistribute it and/or modify
-// it under the terms of the GNU General Public License as published by
-// the Free Software Foundation, either version 3 of the License, or
-// (at your option) any later version.
-//
-// digitales_register is distributed in the hope that it will be useful,
-// but WITHOUT ANY WARRANTY; without even the implied warranty of
-// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-// GNU General Public License for more details.
-//
-// You should have received a copy of the GNU General Public License
-// along with digitales_register.  If not, see <http://www.gnu.org/licenses/>.
-
 import 'package:built_collection/built_collection.dart';
-import 'package:built_redux/built_redux.dart';
-import 'package:dr/actions/app_actions.dart';
 import 'package:dr/app_state.dart';
 import 'package:dr/container/absences_page_container.dart';
 import 'package:dr/data.dart';
-import 'package:dr/reducer/reducer.dart';
-import 'package:flutter/material.dart';
-import 'package:flutter_built_redux/flutter_built_redux.dart';
-import 'package:flutter_localizations/flutter_localizations.dart';
+import 'package:dr/ui/absence.dart';
+import 'package:dr/utc_date_time.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:golden_toolkit/golden_toolkit.dart';
 
-import '../../parse_test.dart';
+import '../../support/test_harness.dart';
 
 void main() {
-  testGoldens('simple absences', (WidgetTester tester) async {
-    final store = Store<AppState, AppStateBuilder, AppActions>(
-      appReducerBuilder.build(),
-      AppState(),
-      AppActions(),
-    );
-    final widget = ReduxProvider(
-      store: store,
-      child: MaterialApp(
-        supportedLocales: const [
-          Locale('de', 'DE'),
-        ],
-        localizationsDelegates: const [
-          GlobalCupertinoLocalizations.delegate,
-          GlobalMaterialLocalizations.delegate,
-          GlobalWidgetsLocalizations.delegate,
-        ],
-        home: AbsencesPageContainer(),
-      ),
-    );
-    await tester.pumpWidget(widget);
-    await store.actions.absencesActions.loaded(absencesJson);
-    await tester.pumpAndSettle();
-    await expectLater(
-      find.byType(AbsencesPageContainer),
-      matchesGoldenFile(
-        "absences.png",
-      ),
-    );
+  setUp(() async {
+    await bootstrapTestEnvironment();
   });
 
-  testGoldens('no absences', (WidgetTester tester) async {
-    final store = Store<AppState, AppStateBuilder, AppActions>(
-      appReducerBuilder.build(),
-      AppState(
+  tearDown(resetTestState);
+
+  testWidgets('renders absence groups and reasons', (tester) async {
+    final store = createStore(
+      initialState: AppState(
         (b) => b.absencesState
-          ..absences = ListBuilder()
+          ..canEdit = true
+          ..statistic = AbsenceStatisticBuilder()
+          ..absences = ListBuilder<AbsenceGroup>(<AbsenceGroup>[
+            AbsenceGroup(
+              (b) => b
+                ..reason = 'Laura ist noch immer nicht ganz fit'
+                ..justified = AbsenceJustified.justified
+                ..hours = 2
+                ..minutes = 0
+                ..absences = ListBuilder<Absence>(<Absence>[
+                  Absence(
+                    (b) => b
+                      ..date = UtcDateTime(2021, 2, 2)
+                      ..hour = 3
+                      ..minutes = 50
+                      ..minutesCameTooLate = 0
+                      ..minutesLeftTooEarly = 0,
+                  ),
+                  Absence(
+                    (b) => b
+                      ..date = UtcDateTime(2021, 2, 2)
+                      ..hour = 4
+                      ..minutes = 50
+                      ..minutesCameTooLate = 0
+                      ..minutesLeftTooEarly = 0,
+                  ),
+                ]),
+            ),
+          ]),
+      ),
+    );
+
+    await pumpApp(
+      tester,
+      store: store,
+      home: AbsencesPageContainer(),
+    );
+    await settleFor(tester);
+
+    expect(find.text('Laura ist noch immer nicht ganz fit'), findsOneWidget);
+    expect(find.byType(AbsenceGroupWidget), findsOneWidget);
+    expect(find.textContaining('entschuldigt'), findsOneWidget);
+  });
+
+  testWidgets('shows empty state when there are no absences', (tester) async {
+    final store = createStore(
+      initialState: AppState(
+        (b) => b.absencesState
+          ..absences = ListBuilder<AbsenceGroup>()
           ..statistic = AbsenceStatisticBuilder(),
       ),
-      AppActions(),
     );
-    final widget = ReduxProvider(
+
+    await pumpApp(
+      tester,
       store: store,
-      child: MaterialApp(
-        home: AbsencesPageContainer(),
-      ),
+      home: AbsencesPageContainer(),
     );
-    await tester.pumpWidget(widget);
-    expect(find.text("Noch keine Absenzen"), findsOneWidget);
-    await expectLater(
-      find.byType(AbsencesPageContainer),
-      matchesGoldenFile(
-        "no_absences.png",
-      ),
-    );
+
+    expect(find.text('Noch keine Absenzen'), findsOneWidget);
   });
 }

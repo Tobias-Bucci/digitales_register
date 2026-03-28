@@ -15,31 +15,29 @@ void main() {
     );
 
     await store.actions.settingsActions.favoriteSubjects(
-      BuiltList<String>(const ["Fach1", "Fach2"]),
+      BuiltList<String>(const <String>['Fach1', 'Fach2']),
     );
 
     expect(
       store.state.settingsState.favoriteSubjects,
-      BuiltList<String>(const ["Fach1", "Fach2"]),
+      BuiltList<String>(const <String>['Fach1', 'Fach2']),
     );
   });
 
-  test('favorite subjects survive serialization roundtrip', () {
+  test('favorite subjects survive a serialization roundtrip', () {
     final state = AppState(
-      (b) => b.settingsState.favoriteSubjects = ListBuilder(
-        const ["Fach1", "Fach2"],
+      (b) => b.settingsState.favoriteSubjects = ListBuilder<String>(
+        const <String>['Fach1', 'Fach2'],
       ),
     );
 
     final serialized = serializers.serialize(state);
     final deserialized = serializers.deserialize(serialized);
-    if (deserialized is! AppState) {
-      fail('Expected AppState after serialization roundtrip');
-    }
 
+    expect(deserialized, isA<AppState>());
     expect(
-      deserialized.settingsState.favoriteSubjects,
-      BuiltList<String>(const ["Fach1", "Fach2"]),
+      (deserialized! as AppState).settingsState.favoriteSubjects,
+      BuiltList<String>(const <String>['Fach1', 'Fach2']),
     );
   });
 }

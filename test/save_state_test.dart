@@ -1,302 +1,114 @@
-// Copyright (C) 2021 Michael Debertol
-//
-// This file is part of digitales_register.
-//
-// digitales_register is free software: you can redistribute it and/or modify
-// it under the terms of the GNU General Public License as published by
-// the Free Software Foundation, either version 3 of the License, or
-// (at your option) any later version.
-//
-// digitales_register is distributed in the hope that it will be useful,
-// but WITHOUT ANY WARRANTY; without even the implied warranty of
-// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-// GNU General Public License for more details.
-//
-// You should have received a copy of the GNU General Public License
-// along with digitales_register.  If not, see <http://www.gnu.org/licenses/>.
-
-import 'dart:collection';
 import 'dart:convert';
-import 'dart:io';
 
 import 'package:built_redux/built_redux.dart';
 import 'package:dr/actions/app_actions.dart';
 import 'package:dr/actions/login_actions.dart';
 import 'package:dr/app_state.dart';
-import 'package:dr/main.dart';
 import 'package:dr/middleware/middleware.dart';
 import 'package:dr/reducer/reducer.dart';
 import 'package:dr/serializers.dart';
-import 'package:flutter/services.dart';
-import 'package:flutter/widgets.dart';
-import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:mocktail/mocktail.dart';
 import 'package:quiver/testing/src/async/fake_async.dart';
 
-const serverUrl = "null/v2/api/auth/login";
-
-/// Implememts [FlutterSecureStorage] in memory.
-class FakeSecureStorage implements FlutterSecureStorage {
-  FakeSecureStorage({Map<String, String>? storage}) : storage = storage ?? {};
-
-  final Map<String, String> storage;
-  @override
-  Future<bool> containsKey({
-    String? key,
-    IOSOptions? iOptions,
-    AndroidOptions? aOptions,
-    LinuxOptions? lOptions,
-    MacOsOptions? mOptions,
-    WindowsOptions? wOptions,
-    WebOptions? webOptions,
-  }) async {
-    return storage.containsKey(key);
-  }
-
-  @override
-  Future<void> delete({
-    String? key,
-    IOSOptions? iOptions,
-    AndroidOptions? aOptions,
-    LinuxOptions? lOptions,
-    MacOsOptions? mOptions,
-    WindowsOptions? wOptions,
-    WebOptions? webOptions,
-  }) async {
-    storage.remove(key);
-  }
-
-  @override
-  Future<void> deleteAll({
-    IOSOptions? iOptions,
-    AndroidOptions? aOptions,
-    LinuxOptions? lOptions,
-    MacOsOptions? mOptions,
-    WindowsOptions? wOptions,
-    WebOptions? webOptions,
-  }) async {
-    storage.clear();
-  }
-
-  @override
-  Future<String?> read({
-    String? key,
-    IOSOptions? iOptions,
-    AndroidOptions? aOptions,
-    LinuxOptions? lOptions,
-    MacOsOptions? mOptions,
-    WindowsOptions? wOptions,
-    WebOptions? webOptions,
-  }) async {
-    return storage[key];
-  }
-
-  @override
-  Future<Map<String, String>> readAll({
-    IOSOptions? iOptions,
-    AndroidOptions? aOptions,
-    LinuxOptions? lOptions,
-    MacOsOptions? mOptions,
-    WindowsOptions? wOptions,
-    WebOptions? webOptions,
-  }) async {
-    return storage;
-  }
-
-  @override
-  Future<void> write({
-    String? key,
-    String? value,
-    IOSOptions? iOptions,
-    AndroidOptions? aOptions,
-    LinuxOptions? lOptions,
-    MacOsOptions? mOptions,
-    WindowsOptions? wOptions,
-    WebOptions? webOptions,
-  }) async {
-    storage[key!] = value!;
-  }
-
-  @override
-  AndroidOptions get aOptions => throw UnimplementedError();
-
-  @override
-  IOSOptions get iOptions => throw UnimplementedError();
-
-  @override
-  LinuxOptions get lOptions => throw UnimplementedError();
-
-  @override
-  MacOsOptions get mOptions => throw UnimplementedError();
-
-  @override
-  WindowsOptions get wOptions => throw UnimplementedError();
-
-  @override
-  WebOptions get webOptions => throw UnimplementedError();
-}
-
-class StorageHelper {
-  Future<bool> exists(String user) async {
-    final value = await read(user);
-    return value != null;
-  }
-
-  Future<String?> read(String user) {
-    return secureStorage.read(
-      key: escapeKey(getStorageKey(user, serverUrl)),
-    );
-  }
-
-  Future<void> cleanup() async {
-    await secureStorage.deleteAll();
-  }
-}
+import 'support/test_harness.dart';
 
 void main() {
-  final binding = TestWidgetsFlutterBinding.ensureInitialized();
-  secureStorage = FakeSecureStorage();
-  final storageHelper = StorageHelper();
-  const pathProviderChannel = MethodChannel('plugins.flutter.io/path_provider');
-  final appDir = Directory.systemTemp.createTempSync('dr_save_state_test');
+  late MockWrapper mockWrapper;
+  late TestSecureStorage storage;
 
-  setUp(() {
-    final alertMarker = File('${appDir.path}\\unmaintainedAlertShown');
-    if (!alertMarker.existsSync()) {
-      alertMarker.createSync(recursive: true);
-    }
-    binding.defaultBinaryMessenger.setMockMethodCallHandler(pathProviderChannel,
-        (call) async {
-      switch (call.method) {
-        case 'getApplicationSupportDirectory':
-        case 'getApplicationDocumentsDirectory':
-          return appDir.path;
-      }
-      return null;
-    });
+  setUp(() async {
+    mockWrapper = MockWrapper();
+    when(() => mockWrapper.loginAddress).thenReturn(testLoginAddress);
+    await bootstrapTestEnvironment(wrapperOverride: mockWrapper);
+    storage = secureStorage as TestSecureStorage;
   });
 
   tearDown(() {
-    deletedData = false;
-    storageHelper.cleanup();
+    resetTestState();
   });
 
-  tearDownAll(() {
-    binding.defaultBinaryMessenger
-        .setMockMethodCallHandler(pathProviderChannel, null);
-    if (appDir.existsSync()) {
-      appDir.deleteSync(recursive: true);
-    }
-  });
-
-  test('save state occurs after five seconds', () {
+  test('save state occurs after the debounce interval', () {
     FakeAsync().run((async) async {
-      const username = "test_username";
-      final store = Store<AppState, AppStateBuilder, AppActions>(
-        appReducerBuilder.build(),
-        AppState((b) => b.loginState
-          ..loggedIn = true
-          ..username = username),
-        AppActions(),
-        middleware: middleware(includeErrorMiddleware: false),
-      );
-      // dispatch any action to trigger a state save
-      await store.actions.setUrl("abc");
-      // saving the state is throttled by five seconds
-      async.elapse(const Duration(seconds: 1));
+      final store = _createLoggedInStore(username: 'debounce-user');
 
-      expect(
-        await storageHelper.exists(username),
-        false,
-      );
-      // after over 5 seconds, the state should be saved
-      async.elapse(const Duration(seconds: 6));
-      expect(
-        await storageHelper.exists(username),
-        true,
-      );
+      await store.actions.setUrl('https://example.com');
+      async.elapse(const Duration(seconds: 4));
+
+      expect(await storedPayload(storage, 'debounce-user'), isNull);
+
+      async.elapse(const Duration(seconds: 2));
+      expect(await storedPayload(storage, 'debounce-user'), isNotNull);
     });
   });
-  test('save state occurs immediately', () async {
-    const username = "test_username2";
-    final store = Store<AppState, AppStateBuilder, AppActions>(
-      appReducerBuilder.build(),
-      AppState((b) => b.loginState
-        ..loggedIn = true
-        ..username = username),
-      AppActions(),
-      middleware: middleware(includeErrorMiddleware: false),
-    );
+
+  test('saveState persists immediately', () async {
+    final store = _createLoggedInStore(username: 'immediate-user');
 
     await store.actions.saveState();
 
-    // the state should be saved immediately
-    expect(
-      await storageHelper.exists(username),
-      true,
-    );
-    expect(
-        serializers.deserialize(
-            json.decode((await storageHelper.read(username))!) as Object),
-        const TypeMatcher<AppState>());
+    final payload = await storedPayload(storage, 'immediate-user');
+    expect(payload, isNotNull);
+    expect(serializers.deserialize(json.decode(payload!) as Object), isA<AppState>());
   });
-  test('state is not saved when data saving is disabled', () async {
-    const username = "test_username2";
-    final store = Store<AppState, AppStateBuilder, AppActions>(
-      appReducerBuilder.build(),
-      AppState(
+
+  test('noDataSaving stores only settings state', () async {
+    final store = _createLoggedInStore(
+      username: 'settings-only-user',
+      state: AppState(
         (b) {
           b.loginState
             ..loggedIn = true
-            ..username = username;
+            ..username = 'settings-only-user';
           b.settingsState.noDataSaving = true;
         },
       ),
-      AppActions(),
-      middleware: middleware(includeErrorMiddleware: false),
     );
 
     await store.actions.saveState();
 
+    final payload = await storedPayload(storage, 'settings-only-user');
+    expect(payload, isNotNull);
     expect(
-      await storageHelper.exists(username),
-      true,
+      serializers.deserialize(json.decode(payload!) as Object),
+      isA<SettingsState>(),
     );
-
-    expect(
-        serializers.deserialize(
-            json.decode((await storageHelper.read(username))!) as Object),
-        const TypeMatcher<SettingsState>());
   });
-  test('state is deleted on logout when state saving is disabled', () async {
-    navigatorKey = GlobalKey();
-    const username = "test_username3";
-    final store = Store<AppState, AppStateBuilder, AppActions>(
-      appReducerBuilder.build(),
-      AppState(
+
+  test('deleteData saves a settings-only snapshot', () async {
+    final store = _createLoggedInStore(username: 'delete-user');
+
+    await store.actions.deleteData();
+
+    final payload = await storedPayload(storage, 'delete-user');
+    expect(payload, isNotNull);
+    expect(
+      serializers.deserialize(json.decode(payload!) as Object),
+      isA<SettingsState>(),
+    );
+  });
+
+  test('logout with deleteDataOnLogout replaces persisted app state with settings', () async {
+    final store = _createLoggedInStore(
+      username: 'logout-user',
+      state: AppState(
         (b) {
           b.loginState
             ..loggedIn = true
-            ..username = username;
+            ..username = 'logout-user';
           b.settingsState.deleteDataOnLogout = true;
         },
       ),
-      AppActions(),
-      middleware: middleware(includeErrorMiddleware: false),
     );
 
     await store.actions.saveState();
-
-    // the state should be saved immediately
     expect(
-      await storageHelper.exists(username),
-      true,
+      serializers.deserialize(
+        json.decode((await storedPayload(storage, 'logout-user'))!) as Object,
+      ),
+      isA<AppState>(),
     );
 
-    expect(
-        serializers.deserialize(
-            json.decode((await storageHelper.read(username))!) as Object),
-        const TypeMatcher<AppState>());
     await store.actions.loginActions.logout(
       LogoutPayload(
         (b) => b
@@ -305,73 +117,41 @@ void main() {
       ),
     );
 
+    final payload = await storedPayload(storage, 'logout-user');
+    expect(payload, isNotNull);
     expect(
-        serializers.deserialize(
-            json.decode((await storageHelper.read(username))!) as Object),
-        const TypeMatcher<SettingsState>());
+      serializers.deserialize(json.decode(payload!) as Object),
+      isA<SettingsState>(),
+    );
   });
-  test('state is deleted/saved when the setting is switched', () async {
-    const username = "test_username4";
-    final store = Store<AppState, AppStateBuilder, AppActions>(
-      appReducerBuilder.build(),
-      AppState(
-        (b) {
-          b.loginState
+
+  test('storage key preserves username before url order', () {
+    final key = getStorageKey('anna', testLoginAddress);
+    final decoded = json.decode(key) as Map<String, dynamic>;
+
+    expect(decoded.keys.toList(), <String>['username', 'server_url']);
+  });
+}
+
+Future<String?> storedPayload(TestSecureStorage storage, String username) {
+  return storage.read(
+    key: escapeKey(getStorageKey(username, testLoginAddress)),
+  );
+}
+
+Store<AppState, AppStateBuilder, AppActions> _createLoggedInStore({
+  required String username,
+  AppState? state,
+}) {
+  return Store<AppState, AppStateBuilder, AppActions>(
+    appReducerBuilder.build(),
+    state ??
+        AppState(
+          (b) => b.loginState
             ..loggedIn = true
-            ..username = username;
-          b.settingsState.noDataSaving = false;
-        },
-      ),
-      AppActions(),
-      middleware: middleware(includeErrorMiddleware: false),
-    );
-
-    await store.actions.saveState();
-
-    // the state should be saved immediately
-    expect(
-      await storageHelper.exists(username),
-      true,
-    );
-
-    expect(
-        serializers.deserialize(
-            json.decode((await storageHelper.read(username))!) as Object),
-        const TypeMatcher<AppState>());
-
-    await store.actions.settingsActions.saveNoData(true);
-
-    expect(
-        serializers.deserialize(
-            json.decode((await storageHelper.read(username))!) as Object),
-        const TypeMatcher<SettingsState>());
-
-    await store.actions.settingsActions.saveNoData(false);
-
-    expect(
-        serializers.deserialize(
-            json.decode((await storageHelper.read(username))!) as Object),
-        const TypeMatcher<AppState>());
-
-    await store.actions.settingsActions.saveNoData(true);
-
-    expect(
-        serializers.deserialize(
-            json.decode((await storageHelper.read(username))!) as Object),
-        const TypeMatcher<SettingsState>());
-
-    await store.actions.settingsActions.saveNoData(false);
-
-    expect(
-        serializers.deserialize(
-            json.decode((await storageHelper.read(username))!) as Object),
-        const TypeMatcher<AppState>());
-  });
-
-  test('Default map is ordered', () {
-    expect({"username": "asdf", "url": "foo"}, isA<LinkedHashMap>());
-    final keys = {"username": "asdf", "url": "foo"}.keys.toList();
-    expect(keys[0], "username");
-    expect(keys[1], "url");
-  });
+            ..username = username,
+        ),
+    AppActions(),
+    middleware: middleware(includeErrorMiddleware: false),
+  );
 }

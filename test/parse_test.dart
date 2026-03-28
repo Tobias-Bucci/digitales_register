@@ -1,457 +1,323 @@
-// Copyright (C) 2021 Michael Debertol
-//
-// This file is part of digitales_register.
-//
-// digitales_register is free software: you can redistribute it and/or modify
-// it under the terms of the GNU General Public License as published by
-// the Free Software Foundation, either version 3 of the License, or
-// (at your option) any later version.
-//
-// digitales_register is distributed in the hope that it will be useful,
-// but WITHOUT ANY WARRANTY; without even the implied warranty of
-// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-// GNU General Public License for more details.
-//
-// You should have received a copy of the GNU General Public License
-// along with digitales_register.  If not, see <http://www.gnu.org/licenses/>.
-
-// ignore_for_file: implicit_dynamic_list_literal
-
 import 'dart:convert';
 
 import 'package:built_redux/built_redux.dart';
 import 'package:dr/actions/app_actions.dart';
+import 'package:dr/actions/grades_actions.dart';
 import 'package:dr/app_state.dart';
 import 'package:dr/middleware/middleware.dart';
 import 'package:dr/reducer/reducer.dart';
+import 'package:dr/utc_date_time.dart';
 import 'package:flutter_test/flutter_test.dart';
 
-// customer-submitted (name changed)
-const absencesJson = {
-  "absences": [
-    {
-      "group": [
-        {
-          "id": 3044,
-          "minutes": 50,
-          "minutes_begin": 0,
-          "minutes_end": 0,
-          "justified": 1,
-          "note": null,
-          "date": "2021-02-02",
-          "hour": 5,
-          "reason": "Laura ist noch immer nicht ganz fit",
-          "reason_signature": null,
-          "reason_timestamp": null,
-          "reason_user": 1768,
-          "selfdecl_id": null,
-          "selfdecl_input": null
-        },
-        {
-          "id": 3032,
-          "minutes": 50,
-          "minutes_begin": 0,
-          "minutes_end": 0,
-          "justified": 1,
-          "note": null,
-          "date": "2021-02-02",
-          "hour": 4,
-          "reason": "Laura ist noch immer nicht ganz fit",
-          "reason_signature": null,
-          "reason_timestamp": null,
-          "reason_user": 1768,
-          "selfdecl_id": null,
-          "selfdecl_input": null
-        },
-        {
-          "id": 3026,
-          "minutes": 50,
-          "minutes_begin": 0,
-          "minutes_end": 0,
-          "justified": 1,
-          "note": null,
-          "date": "2021-02-02",
-          "hour": 3,
-          "reason": "Laura ist noch immer nicht ganz fit",
-          "reason_signature": null,
-          "reason_timestamp": null,
-          "reason_user": 1768,
-          "selfdecl_id": null,
-          "selfdecl_input": null
-        },
-        {
-          "id": 3012,
-          "minutes": 50,
-          "minutes_begin": 0,
-          "minutes_end": 0,
-          "justified": 1,
-          "note": null,
-          "date": "2021-02-02",
-          "hour": 2,
-          "reason": "Laura ist noch immer nicht ganz fit",
-          "reason_signature": null,
-          "reason_timestamp": null,
-          "reason_user": 1768,
-          "selfdecl_id": null,
-          "selfdecl_input": null
-        }
-      ],
-      "date": "2021-02-02",
-      "note": null,
-      "reason": "Laura ist noch immer nicht ganz fit",
-      "reason_signature": null,
-      "reason_timestamp": null,
-      "reason_user": 1768,
-      "justified": 1,
-      "selfdecl_id": null,
-      "selfdecl_input": null
-    },
-    {
-      "group": [
-        {
-          "id": 2985,
-          "minutes": 50,
-          "minutes_begin": 0,
-          "minutes_end": 0,
-          "justified": 1,
-          "note": null,
-          "date": "2021-02-01",
-          "hour": 5,
-          "reason":
-              "Laura fühlt sich nicht ganz wohl, sie bleibt sicherheitshalber zu Hause",
-          "reason_signature": null,
-          "reason_timestamp": null,
-          "reason_user": 1768,
-          "selfdecl_id": null,
-          "selfdecl_input": null
-        },
-        {
-          "id": 3002,
-          "minutes": 50,
-          "minutes_begin": 0,
-          "minutes_end": 0,
-          "justified": 1,
-          "note": null,
-          "date": "2021-02-01",
-          "hour": 4,
-          "reason":
-              "Laura fühlt sich nicht ganz wohl, sie bleibt sicherheitshalber zu Hause",
-          "reason_signature": null,
-          "reason_timestamp": null,
-          "reason_user": 1768,
-          "selfdecl_id": null,
-          "selfdecl_input": null
-        }
-      ],
-      "date": "2021-02-01",
-      "note": null,
-      "reason":
-          "Laura fühlt sich nicht ganz wohl, sie bleibt sicherheitshalber zu Hause",
-      "reason_signature": null,
-      "reason_timestamp": null,
-      "reason_user": 1768,
-      "justified": 1,
-      "selfdecl_id": null,
-      "selfdecl_input": null
-    }
-  ],
-  "futureAbsences": <dynamic>[],
-  "canEdit": true,
-  "statistics": {
-    "counter": "",
-    "counterForSchool": "",
-    "percentage": "",
-    "justified": 0,
-    "notJustified": 0,
-    "delayed": 0
-  },
-  "selfDeclarationsList": [
-    {
-      "id": 1,
-      "title": "Familiäre Gründe",
-      "text":
-          "<strong>Erklärung für die Wiederaufnahme in die Schulgemeinschaft nach Abwesenheit aus NICHT gesundheitlichen Gründen</strong><br>\r\nDer/die Unterfertigte ERKLÄRT im Bewusstsein aller zivil- und strafrechtlichen Folgen im Falle einer Falscherklärung und im vollen Bewusstsein der Wichtigkeit einer uneingeschränkten Befolgung der Maßnahmen zur Verhinderung der Ausbreitung der SARS-CoV-2-Infektion und folglich zum Schutz der kollektiven Gesundheit, dass diese Abwesenheit <strong>nicht im Zusammenhang mit Gesundheitsproblemen steht, sondern auf andere Gründe zurückzuführen ist.</strong>\r\n",
-      "version": "MOD 1 05.10.2020",
-      "active": 1,
-      "inputmandatory": 0,
-      "inputexplain": null,
-      "isSelfDeclarationUsed": 1
-    },
-    {
-      "id": 2,
-      "title": "Krankheit bis zu 3 Tagen - mögliche Infektion mit SARS-CoV2",
-      "text":
-          "<strong>Formblatt 2A/3A: Erklärung  für die Wiederaufnahme in die Schulgemeinschaft nach einer bis zu 3-tägigen Abwesenheit <u>aus gesundheitlichen Gründen, die in Verbindung mit einer möglichen SARS-CoV-2- Infektion stehen</u></strong><br><br>\r\n\r\nDer/die Unterfertigte ERKLÄRT<br>\r\n<ul>\r\n<li>im Bewusstsein aller zivil- und strafrechtlichen Folgen im Falle einer Falscherklärung und im vollen Bewusstsein der Wichtigkeit einer uneingeschränkten Befolgung der Maßnahmen zur Verhinderung der Ausbreitung der SARS-CoV-2-Infektion und folglich zum Schutz der kollektiven Gesundheit\r\n<li>in Bezug auf die obige Abwesenheit\r\n<li>und zum Zwecke der Wiederaufnahme in die Schulgemeinschaft, den untenstehenden Kinderarzt der freien Wahl/den Allgemeinmediziner kontaktiert und die erhaltenen Hinweise befolgt zu haben.\r\n</ul>",
-      "version": "MOD 2A/3A 05.10.2020",
-      "active": 1,
-      "inputmandatory": 1,
-      "inputexplain": "Name Arzt/Ärztin",
-      "isSelfDeclarationUsed": 1
-    },
-    {
-      "id": 3,
-      "title": "Krankheit bis zu 3 Tagen - nicht im Zusammenhang mit SARS-CoV2",
-      "text":
-          "<strong>Formblatt 2B/3B: Erklärung des Elternteils/Vormundes für die Wiederaufnahme in die Schulgemeinschaft nach einer bis zu 3-tägigen Abwesenheit <u> aus gesundheitlichen Gründen, die NICHT in Verbindung mit einer möglichen SARS-CoV-2- Infektion stehen</u></strong><br>\r\nDer/die Unterfertigte ERKLÄRT<br>\r\n<ul>\r\n<li>im Bewusstsein aller zivil- und strafrechtlichen Folgen im Falle einer Falscherklärung und im vollen Bewusstsein der Wichtigkeit einer uneingeschränkten Befolgung der Maßnahmen zur Verhinderung der Ausbreitung der SARS-CoV-2-Infektion und folglich zum Schutz der kollektiven Gesundheit\r\n\r\n<li>in Bezug auf obige Abwesenheit\r\n\r\n<li>und zum Zwecke der Wiederaufnahme in den Kindergarten/in die Schulgemeinschaft, dass die Abwesenheit nicht durch Symptome begründet war, die auf eine mögliche Infektion mit SARS-CoV-2 hinweisen, sondern dass die Abwesenheit durch eine Krankheit begründet war, die keinen Covid-19-Verdacht aufkommen lässt.\r\n</ul>",
-      "version": "MOD 2B/3B 05.10.2020",
-      "active": 1,
-      "inputmandatory": 0,
-      "inputexplain": null,
-      "isSelfDeclarationUsed": 1
-    },
-    {
-      "id": 4,
-      "title": "Krankheit ab 4 Tagen",
-      "text":
-          "<strong>Formblatt 4: Abwesenheit von mehr als 3 Tagen aus gesundheitlichen Gründen</strong>\r\n\r\nDer/die Unterfertigte ERKLÄRT,\r\n<ul>\r\n<li>im Bewusstsein aller zivil- und strafrechtlichen Folgen im Falle einer Falscherklärung und im vollen Bewusstsein der Wichtigkeit einer uneingeschränkten Befolgung der Maßnahmen zur Verhinderung der Ausbreitung der SARS-CoV-2-Infektion und folglich zum Schutz der kollektiven Gesundheit\r\n<li>in Bezug auf obige Abwesenheit\r\nund zum Zwecke der Wiederaufnahme in die Schulgemeinschaft\r\n<li>der Schule eine schriftliche Bestätigung eines Kinderarztes freier Wahl/eines Arztes für Allgemeinmedizin mit Datum und Stempel/Unterschrift des Arztes/der Ärztin in digitaler oder in Papierform übermittelt zu haben, aus der hervorgeht, dass der Schüler/die Schülerin wieder in die Schule zurückkehren kann, da die diagnostisch-therapeutischen und präventiven Maßnahmen für Covid-19, wie von den Bestimmungen auf Staats- und Landesebene vorgesehen, vorgenommen wurden.\r\n</ul>",
-      "version": "MOD 4 05.10.2020",
-      "active": 1,
-      "inputmandatory": 1,
-      "inputexplain": "Name Arzt/Ärztin",
-      "isSelfDeclarationUsed": 1
-    }
-  ],
-  "selfDeclarationsActiveList": [
-    {
-      "id": 1,
-      "title": "Familiäre Gründe",
-      "text":
-          "<strong>Erklärung für die Wiederaufnahme in die Schulgemeinschaft nach Abwesenheit aus NICHT gesundheitlichen Gründen</strong><br>\r\nDer/die Unterfertigte ERKLÄRT im Bewusstsein aller zivil- und strafrechtlichen Folgen im Falle einer Falscherklärung und im vollen Bewusstsein der Wichtigkeit einer uneingeschränkten Befolgung der Maßnahmen zur Verhinderung der Ausbreitung der SARS-CoV-2-Infektion und folglich zum Schutz der kollektiven Gesundheit, dass diese Abwesenheit <strong>nicht im Zusammenhang mit Gesundheitsproblemen steht, sondern auf andere Gründe zurückzuführen ist.</strong>\r\n",
-      "inputmandatory": 0,
-      "inputexplain": null
-    },
-    {
-      "id": 2,
-      "title": "Krankheit bis zu 3 Tagen - mögliche Infektion mit SARS-CoV2",
-      "text":
-          "<strong>Formblatt 2A/3A: Erklärung  für die Wiederaufnahme in die Schulgemeinschaft nach einer bis zu 3-tägigen Abwesenheit <u>aus gesundheitlichen Gründen, die in Verbindung mit einer möglichen SARS-CoV-2- Infektion stehen</u></strong><br><br>\r\n\r\nDer/die Unterfertigte ERKLÄRT<br>\r\n<ul>\r\n<li>im Bewusstsein aller zivil- und strafrechtlichen Folgen im Falle einer Falscherklärung und im vollen Bewusstsein der Wichtigkeit einer uneingeschränkten Befolgung der Maßnahmen zur Verhinderung der Ausbreitung der SARS-CoV-2-Infektion und folglich zum Schutz der kollektiven Gesundheit\r\n<li>in Bezug auf die obige Abwesenheit\r\n<li>und zum Zwecke der Wiederaufnahme in die Schulgemeinschaft, den untenstehenden Kinderarzt der freien Wahl/den Allgemeinmediziner kontaktiert und die erhaltenen Hinweise befolgt zu haben.\r\n</ul>",
-      "inputmandatory": 1,
-      "inputexplain": "Name Arzt/Ärztin"
-    },
-    {
-      "id": 3,
-      "title": "Krankheit bis zu 3 Tagen - nicht im Zusammenhang mit SARS-CoV2",
-      "text":
-          "<strong>Formblatt 2B/3B: Erklärung des Elternteils/Vormundes für die Wiederaufnahme in die Schulgemeinschaft nach einer bis zu 3-tägigen Abwesenheit <u> aus gesundheitlichen Gründen, die NICHT in Verbindung mit einer möglichen SARS-CoV-2- Infektion stehen</u></strong><br>\r\nDer/die Unterfertigte ERKLÄRT<br>\r\n<ul>\r\n<li>im Bewusstsein aller zivil- und strafrechtlichen Folgen im Falle einer Falscherklärung und im vollen Bewusstsein der Wichtigkeit einer uneingeschränkten Befolgung der Maßnahmen zur Verhinderung der Ausbreitung der SARS-CoV-2-Infektion und folglich zum Schutz der kollektiven Gesundheit\r\n\r\n<li>in Bezug auf obige Abwesenheit\r\n\r\n<li>und zum Zwecke der Wiederaufnahme in den Kindergarten/in die Schulgemeinschaft, dass die Abwesenheit nicht durch Symptome begründet war, die auf eine mögliche Infektion mit SARS-CoV-2 hinweisen, sondern dass die Abwesenheit durch eine Krankheit begründet war, die keinen Covid-19-Verdacht aufkommen lässt.\r\n</ul>",
-      "inputmandatory": 0,
-      "inputexplain": null
-    },
-    {
-      "id": 4,
-      "title": "Krankheit ab 4 Tagen",
-      "text":
-          "<strong>Formblatt 4: Abwesenheit von mehr als 3 Tagen aus gesundheitlichen Gründen</strong>\r\n\r\nDer/die Unterfertigte ERKLÄRT,\r\n<ul>\r\n<li>im Bewusstsein aller zivil- und strafrechtlichen Folgen im Falle einer Falscherklärung und im vollen Bewusstsein der Wichtigkeit einer uneingeschränkten Befolgung der Maßnahmen zur Verhinderung der Ausbreitung der SARS-CoV-2-Infektion und folglich zum Schutz der kollektiven Gesundheit\r\n<li>in Bezug auf obige Abwesenheit\r\nund zum Zwecke der Wiederaufnahme in die Schulgemeinschaft\r\n<li>der Schule eine schriftliche Bestätigung eines Kinderarztes freier Wahl/eines Arztes für Allgemeinmedizin mit Datum und Stempel/Unterschrift des Arztes/der Ärztin in digitaler oder in Papierform übermittelt zu haben, aus der hervorgeht, dass der Schüler/die Schülerin wieder in die Schule zurückkehren kann, da die diagnostisch-therapeutischen und präventiven Maßnahmen für Covid-19, wie von den Bestimmungen auf Staats- und Landesebene vorgesehen, vorgenommen wurden.\r\n</ul>",
-      "inputmandatory": 1,
-      "inputexplain": "Name Arzt/Ärztin"
-    }
-  ],
-  "isAbsencesSelfDeclarationActive": true,
-  "isAbsencesSelfDeclarationMandatory": true
-};
-
-// customer-submitted (names changed)
-final calendarJson = {
-  "2022-09-27": {
-    "1": {
-      "1": {
-        "1": {
-          "isLesson": 1,
-          "lesson": {
-            "id": null,
-            "date": "2022-09-28",
-            "hour": 1,
-            "toHour": 10,
-            "timeStart": 24000,
-            "timeEnd": 27300,
-            "timeToEnd": 55800,
-            "timeStartObject": {
-              "h": "07",
-              "m": "40",
-              "ts": 24000,
-              "text": "07:40",
-              "html": "07<sup>40</sup>"
-            },
-            "timeEndObject": {
-              "h": "08",
-              "m": "35",
-              "ts": 27300,
-              "text": "08:35",
-              "html": "08<sup>35</sup>"
-            },
-            "timeToEndObject": {
-              "h": "16",
-              "m": "30",
-              "ts": 55800,
-              "text": "16:30",
-              "html": "16<sup>30</sup>"
-            },
-            "timeShowEnabled": true,
-            "classId": 337,
-            "className": "1D",
-            "classComment": "",
-            "description": "",
-            "note": "",
-            "lessonShow": true,
-            "teachers": [
-              {"id": 6597, "firstName": "Tom", "lastName": "Smith"},
-              {"id": 6607, "firstName": "Jonathan", "lastName": "Xi"}
-            ],
-            "teachersToNotify": <dynamic>[],
-            "teacherMyself": null,
-            "isAutoNotify": false,
-            "isLessonTypeNotifyOn": false,
-            "exp_lt_default": false,
-            "isSecretary": false,
-            "subject": {
-              "id": 158,
-              "name": "Projekttag \"Einstieg in die Mittelschule\"",
-              "lernfeld": 0,
-              "defaultLessonContent": "",
-              "defaultLessonContentType": 0
-            },
-            "homeworkExams": <dynamic>[],
-            "lessonContents": <dynamic>[],
-            "rooms": <dynamic>[],
-            "readOnly": true,
-            "isSubstitute": 0,
-            "linkToPreviousHour": 0,
-            "linkedHours": <dynamic>[
-              {
-                "id": null,
-                "date": "2022-09-28",
-                "hour": 2,
-                "toHour": 2,
-                "timeStart": 27300,
-                "timeEnd": 30300,
-                "timeToEnd": 30300,
-                "timeStartObject": {
-                  "h": "08",
-                  "m": "35",
-                  "ts": 27300,
-                  "text": "08:35",
-                  "html": "08<sup>35</sup>"
-                },
-                "timeEndObject": {
-                  "h": "09",
-                  "m": "25",
-                  "ts": 30300,
-                  "text": "09:25",
-                  "html": "09<sup>25</sup>"
-                },
-                "timeToEndObject": {
-                  "h": "09",
-                  "m": "25",
-                  "ts": 30300,
-                  "text": "09:25",
-                  "html": "09<sup>25</sup>"
-                },
-                "timeShowEnabled": true,
-                "classId": 337,
-                "className": "1D",
-                "classComment": "",
-                "description": "",
-                "note": "",
-                "lessonShow": true,
-                "teachers": [
-                  {"id": 6597, "firstName": "Tom", "lastName": "Smith"},
-                  {"id": 6607, "firstName": "Jonathan", "lastName": "Xi"}
-                ],
-                "teachersToNotify": [],
-                "teacherMyself": null,
-                "isAutoNotify": false,
-                "isLessonTypeNotifyOn": false,
-                "exp_lt_default": false,
-                "isSecretary": false,
-                "subject": {
-                  "id": 158,
-                  "name": "Projekttag \"Einstieg in die Mittelschule\"",
-                  "lernfeld": 0,
-                  "defaultLessonContent": "",
-                  "defaultLessonContentType": 0
-                },
-                "homeworkExams": [],
-                "lessonContents": [],
-                "rooms": [],
-                "readOnly": true,
-                "isSubstitute": 0,
-                "linkToPreviousHour": 1,
-                "linkedHours": [],
-                "criticalObservations": [],
-                "missingStudents": [],
-                "students": [],
-                "grades": [],
-                "observations": [],
-                "absenceOpenAbsencesStudents": []
-              },
-              {
-                "id": null,
-                "date": "2022-09-28",
-                "hour": 3,
-                "toHour": 3,
-                "timeStart": 30300,
-                "timeEnd": 33300,
-                "timeToEnd": 33300,
-                "timeStartObject": {
-                  "h": "09",
-                  "m": "25",
-                  "ts": 30300,
-                  "text": "09:25",
-                  "html": "09<sup>25</sup>"
-                },
-                "timeEndObject": {
-                  "h": "10",
-                  "m": "15",
-                  "ts": 33300,
-                  "text": "10:15",
-                  "html": "10<sup>15</sup>"
-                },
-                "timeToEndObject": {
-                  "h": "10",
-                  "m": "15",
-                  "ts": 33300,
-                  "text": "10:15",
-                  "html": "10<sup>15</sup>"
-                },
-                "timeShowEnabled": true,
-                "classId": 337,
-                "className": "1D",
-                "classComment": "",
-                "description": "",
-                "note": "",
-                "lessonShow": true,
-                "teachers": [
-                  {"id": 6597, "firstName": "Tom", "lastName": "Smith"},
-                  {"id": 6607, "firstName": "Jonathan", "lastName": "Xi"}
-                ]
-              }
-            ]
-          }
-        }
-      }
-    }
-  }
-};
-
 void main() {
-  final store = Store<AppState, AppStateBuilder, AppActions>(
-    appReducerBuilder.build(),
-    AppState(),
-    AppActions(),
-    middleware: middleware(includeErrorMiddleware: false),
-  );
+  late Store<AppState, AppStateBuilder, AppActions> store;
 
-  test('parse absences', () {
-    // should not throw
+  setUp(() {
+    store = Store<AppState, AppStateBuilder, AppActions>(
+      appReducerBuilder.build(),
+      AppState(),
+      AppActions(),
+      middleware: middleware(includeErrorMiddleware: false),
+    );
+  });
+
+  test('parse absences from maps and encoded json', () {
     store.actions.absencesActions.loaded(absencesJson);
     store.actions.absencesActions.loaded(json.encode(absencesJson));
     store.actions.absencesActions
-        .loaded(json.decode(json.encode(absencesJson)));
+        .loaded(json.decode(json.encode(absencesJson)) as Map<String, dynamic>);
+
+    expect(store.state.absencesState.absences, hasLength(2));
+    expect(store.state.absencesState.absences.first.absences, hasLength(4));
+    expect(store.state.absencesState.absences.first.reason, contains('fit'));
+    expect(store.state.absencesState.statistic!.delayed, 0);
+    expect(store.state.absencesState.canEdit, isTrue);
   });
 
-  test('parse calendar', () {
-    // should not throw
-    store.actions.calendarActions.loaded(calendarJson);
-    store.actions.calendarActions
-        .loaded(json.decode(json.encode(calendarJson)) as Map<String, dynamic>);
+  test('parse calendar days and merge additional pages', () {
+    store.actions.calendarActions.loaded(calendarPageOne);
+    store.actions.calendarActions.loaded(calendarPageTwo);
+
+    expect(store.state.calendarState.days, hasLength(2));
+
+    final firstDay = store.state.calendarState.days[UtcDateTime(2022, 9, 28)]!;
+    expect(firstDay.hours, hasLength(1));
+    expect(firstDay.hours.single.subject, 'Projekttag');
+    expect(firstDay.hours.single.timeSpans, hasLength(2));
+    expect(firstDay.hours.single.homeworkExams.single.name, 'Arbeitsblatt');
+
+    final secondDay =
+        store.state.calendarState.days[UtcDateTime(2022, 9, 29)]!;
+    expect(secondDay.hours.single.subject, 'Mathematik');
+  });
+
+  test('parse grades list, details, and observations', () {
+    store.actions.gradesActions.loaded(
+      SubjectsLoadedPayload(
+        (b) => b
+          ..data = subjectsPayload
+          ..semester = Semester.first.toBuilder(),
+      ),
+    );
+
+    expect(store.state.gradesState.subjects, hasLength(2));
+    expect(store.state.gradesState.hasGrades, isTrue);
+    expect(
+      store.state.gradesState.subjects.first.basicGrades(Semester.first),
+      hasLength(1),
+    );
+
+    store.actions.gradesActions.detailsLoaded(
+      SubjectDetailLoadedPayload(
+        (b) => b
+          ..data = subjectDetailsPayload
+          ..subject = store.state.gradesState.subjects.first.toBuilder()
+          ..semester = Semester.first.toBuilder(),
+      ),
+    );
+
+    final subject = store.state.gradesState.subjects.first;
+    expect(subject.detailEntries(Semester.first), hasLength(2));
+    expect(subject.grades[Semester.first]!.single.name, 'Schularbeit 1');
+    expect(subject.observations[Semester.first], hasLength(1));
+    expect(subject.observations[Semester.first]!.single.note, 'Gut vorbereitet');
+  });
+
+  test('parse profile', () {
+    store.actions.profileActions.loaded(profilePayload);
+
+    expect(
+      store.state.profileState,
+      ProfileState(
+        (b) => b
+          ..name = 'Debertol Michael'
+          ..email = 'st-debmic-03@vinzentinum.it'
+          ..username = 'st-debmic-03'
+          ..roleName = 'Schüler/in'
+          ..sendNotificationEmails = false,
+      ),
+    );
   });
 }
+
+final Map<String, Object?> absencesJson = <String, Object?>{
+  'absences': <Object>[
+    <String, Object?>{
+      'group': <Object>[
+        <String, Object?>{
+          'id': 3044,
+          'minutes': 50,
+          'minutes_begin': 0,
+          'minutes_end': 0,
+          'date': '2021-02-02',
+          'hour': 5,
+        },
+        <String, Object?>{
+          'id': 3032,
+          'minutes': 50,
+          'minutes_begin': 0,
+          'minutes_end': 0,
+          'date': '2021-02-02',
+          'hour': 4,
+        },
+        <String, Object?>{
+          'id': 3026,
+          'minutes': 50,
+          'minutes_begin': 0,
+          'minutes_end': 0,
+          'date': '2021-02-02',
+          'hour': 3,
+        },
+        <String, Object?>{
+          'id': 3012,
+          'minutes': 50,
+          'minutes_begin': 0,
+          'minutes_end': 0,
+          'date': '2021-02-02',
+          'hour': 2,
+        },
+      ],
+      'date': '2021-02-02',
+      'note': null,
+      'reason': 'Laura ist noch immer nicht ganz fit',
+      'reason_signature': null,
+      'reason_timestamp': null,
+      'reason_user': 1768,
+      'justified': 1,
+    },
+    <String, Object?>{
+      'group': <Object>[
+        <String, Object?>{
+          'id': 2985,
+          'minutes': 50,
+          'minutes_begin': 0,
+          'minutes_end': 0,
+          'date': '2021-02-01',
+          'hour': 5,
+        },
+        <String, Object?>{
+          'id': 3002,
+          'minutes': 50,
+          'minutes_begin': 0,
+          'minutes_end': 0,
+          'date': '2021-02-01',
+          'hour': 4,
+        },
+      ],
+      'date': '2021-02-01',
+      'note': null,
+      'reason':
+          'Laura fühlt sich nicht ganz wohl, sie bleibt sicherheitshalber zu Hause',
+      'reason_signature': null,
+      'reason_timestamp': null,
+      'reason_user': 1768,
+      'justified': 1,
+    },
+  ],
+  'futureAbsences': <Object>[],
+  'canEdit': true,
+  'statistics': <String, Object?>{
+    'counter': '',
+    'counterForSchool': '',
+    'percentage': '',
+    'justified': 0,
+    'notJustified': 0,
+    'delayed': 0,
+  },
+};
+
+final Map<String, dynamic> calendarPageOne = <String, dynamic>{
+  '2022-09-28': <String, Object?>{
+    '1': <String, Object?>{
+      '1': <String, Object?>{
+        '1': <String, Object?>{
+          'isLesson': 1,
+          'hour': 1,
+          'lesson': <String, Object?>{
+            'hour': 1,
+            'toHour': 2,
+            'date': '2022-09-28',
+            'subject': <String, Object?>{'name': 'Projekttag'},
+            'teachers': <Object>[
+              <String, Object?>{'firstName': 'Tom', 'lastName': 'Smith'},
+            ],
+            'rooms': <Object>[],
+            'homeworkExams': <Object>[
+              <String, Object?>{
+                'deadline': '2022-09-28',
+                'hasGradeGroupSubmissions': false,
+                'hasGrades': false,
+                'homework': 1,
+                'id': 5,
+                'name': 'Arbeitsblatt',
+                'online': false,
+                'typeId': 500,
+                'typeName': 'Hausaufgabe',
+              },
+            ],
+            'lessonContents': <Object>[],
+            'timeStartObject': <String, Object?>{'h': '07', 'm': '40'},
+            'timeEndObject': <String, Object?>{'h': '08', 'm': '35'},
+            'linkedHours': <Object>[
+              <String, Object?>{
+                'date': '2022-09-28',
+                'timeStartObject': <String, Object?>{'h': '08', 'm': '35'},
+                'timeEndObject': <String, Object?>{'h': '09', 'm': '25'},
+              },
+            ],
+          },
+        },
+      },
+    },
+  },
+};
+
+final Map<String, dynamic> calendarPageTwo = <String, dynamic>{
+  '2022-09-29': <String, Object?>{
+    '1': <String, Object?>{
+      '1': <String, Object?>{
+        '1': <String, Object?>{
+          'isLesson': 1,
+          'hour': 3,
+          'lesson': <String, Object?>{
+            'hour': 3,
+            'toHour': 3,
+            'date': '2022-09-29',
+            'subject': <String, Object?>{'name': 'Mathematik'},
+            'teachers': <Object>[
+              <String, Object?>{'firstName': 'Anna', 'lastName': 'Rossi'},
+            ],
+            'rooms': <Object>[
+              <String, Object?>{'name': 'Raum 2'},
+            ],
+            'homeworkExams': <Object>[],
+            'lessonContents': <Object>[],
+            'timeStartObject': <String, Object?>{'h': '10', 'm': '15'},
+            'timeEndObject': <String, Object?>{'h': '11', 'm': '05'},
+            'linkedHours': <Object>[],
+          },
+        },
+      },
+    },
+  },
+};
+
+final Map<String, Object?> subjectsPayload = <String, Object?>{
+  'subjects': <Object>[
+    <String, Object?>{
+      'subject': <String, Object?>{'id': 1, 'name': 'Deutsch'},
+      'grades': <Object>[
+        <String, Object?>{
+          'grade': '7.50',
+          'weight': 100,
+          'date': '2021-02-03',
+          'cancelled': 0,
+          'type': 'Schularbeit',
+        },
+      ],
+    },
+    <String, Object?>{
+      'subject': <String, Object?>{'id': 2, 'name': 'Mathematik'},
+      'grades': <Object>[],
+    },
+  ],
+};
+
+final Map<String, Object?> subjectDetailsPayload = <String, Object?>{
+  'grades': <Object>[
+    <String, Object?>{
+      'id': 12,
+      'grade': '7.50',
+      'weight': 100,
+      'date': '2021-02-03',
+      'cancelled': false,
+      'typeName': 'Schularbeit',
+      'created': 'am 4. 2. erstellt',
+      'name': 'Schularbeit 1',
+      'description': 'Kapitel 1',
+      'competences': <Object>[
+        <String, Object?>{
+          'typeName': 'Textverständnis',
+          'grade': '4',
+        },
+      ],
+    },
+  ],
+  'observations': <Object>[
+    <String, Object?>{
+      'typeName': 'Beobachtung',
+      'cancelled': 0,
+      'created': 'Am 5. März 2021',
+      'note': 'Gut vorbereitet',
+      'date': '2021-03-05',
+    },
+  ],
+};
+
+final Map<String, Object?> profilePayload = <String, Object?>{
+  'name': 'Debertol Michael',
+  'email': 'st-debmic-03@vinzentinum.it',
+  'username': 'st-debmic-03',
+  'roleName': 'Schüler/in',
+  'notificationsEnabled': false,
+};
