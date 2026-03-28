@@ -919,22 +919,19 @@ class ItemWidget extends StatelessWidget {
     );
   }
 
-  Tuple2<Color, double> _getBorderConfig() {
+  Color _getBorderColor(BuildContext context) {
     if (item.checked) {
-      return const Tuple2(Colors.green, 1.5);
+      return Colors.green;
     }
     if (item.warning && colorTestsInRed) {
-      return const Tuple2(Colors.red, 1.5);
+      return Colors.red;
     }
     if (colorBorder &&
         item.label != null &&
         subjectThemes.containsKey(item.label!)) {
-      return Tuple2(Color(subjectThemes[item.label]!.color), 1.5);
+      return Color(subjectThemes[item.label]!.color);
     }
-    if (item.type == HomeworkType.grade) {
-      return const Tuple2(Colors.green, 0);
-    }
-    return const Tuple2(Colors.grey, 0);
+    return Theme.of(context).dividerColor.withValues(alpha: 0.3);
   }
 
   @override
@@ -949,8 +946,8 @@ class ItemWidget extends StatelessWidget {
         elevation: 0,
         shape: RoundedRectangleBorder(
           side: BorderSide(
-            color: _getBorderConfig().item1,
-            width: _getBorderConfig().item2,
+            color: _getBorderColor(context),
+            width: 1.5,
           ),
           borderRadius: BorderRadius.circular(16),
         ),
@@ -1053,7 +1050,8 @@ class ItemWidget extends StatelessWidget {
                                                   removeThis!();
                                                 }
                                               },
-                                        padding: EdgeInsets.zero)
+                                        padding: EdgeInsets.zero,
+                                      )
                                     : null,
                           ),
                         ],
