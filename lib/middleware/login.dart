@@ -31,6 +31,17 @@ final _loginMiddleware =
 
 Future<void> _logout(MiddlewareApi<AppState, AppStateBuilder, AppActions> api,
     ActionHandler next, Action<LogoutPayload> action) async {
+  if (action.payload.hard &&
+      api.state.loginState.loggedIn &&
+      api.state.loginState.username != null) {
+    await statePersistenceService.flush(
+      state: api.state,
+      deletedData: deletedData,
+      server: wrapper.loginAddress,
+      writer: _writeToStorage,
+      keyFactory: getStorageKey,
+    );
+  }
   if (!api.state.settingsState.noPasswordSaving && action.payload.hard) {
     await secureStorage.write(
       key: "login",
@@ -53,6 +64,7 @@ Future<void> _logout(MiddlewareApi<AppState, AppStateBuilder, AppActions> api,
   }
   await next(action);
   if (action.payload.hard) {
+    statePersistenceService.clear();
     wrapper = Wrapper();
     await api.actions.mountAppState(AppState());
     await api.actions.load();

@@ -26,6 +26,18 @@ import 'package:dr/util.dart';
 
 part 'data.g.dart';
 
+final Expando<Map<Semester, List<GradeAll>?>> _basicGradesCache =
+    Expando<Map<Semester, List<GradeAll>?>>('basicGradesCache');
+final Expando<Map<Semester, List<DetailEntry>?>> _detailEntriesCache =
+    Expando<Map<Semester, List<DetailEntry>?>>('detailEntriesCache');
+final Expando<Map<Semester, int?>> _averageCache =
+    Expando<Map<Semester, int?>>('averageCache');
+final Expando<Map<Semester, Map<String, List<DetailEntry>>>>
+    _detailEntriesByTypeCache =
+    Expando<Map<Semester, Map<String, List<DetailEntry>>>>(
+  'detailEntriesByTypeCache',
+);
+
 abstract class Day implements Built<Day, DayBuilder> {
   factory Day([void Function(DayBuilder)? updates]) = _$Day;
   Day._();
@@ -267,6 +279,16 @@ abstract class Subject implements Built<Subject, SubjectBuilder> {
   BuiltMap<Semester, UtcDateTime>? get lastFetchedDetailed;
 
   List<GradeAll>? basicGrades(Semester semester) {
+    final cache = _basicGradesCache[this] ??= <Semester, List<GradeAll>?>{};
+    if (cache.containsKey(semester)) {
+      return cache[semester];
+    }
+    final result = _computeBasicGrades(semester);
+    cache[semester] = result;
+    return result;
+  }
+
+  List<GradeAll>? _computeBasicGrades(Semester semester) {
     if (semester == Semester.all) {
       final entries = (List.of(Semester.values)..remove(Semester.all))
           .map((s) => basicGrades(s))
@@ -283,6 +305,17 @@ abstract class Subject implements Built<Subject, SubjectBuilder> {
   }
 
   List<DetailEntry>? detailEntries(Semester semester) {
+    final cache =
+        _detailEntriesCache[this] ??= <Semester, List<DetailEntry>?>{};
+    if (cache.containsKey(semester)) {
+      return cache[semester];
+    }
+    final result = _computeDetailEntries(semester);
+    cache[semester] = result;
+    return result;
+  }
+
+  List<DetailEntry>? _computeDetailEntries(Semester semester) {
     if (semester == Semester.all) {
       final entries = (List.of(Semester.values)..remove(Semester.all))
           .map((s) => detailEntries(s))
@@ -301,8 +334,15 @@ abstract class Subject implements Built<Subject, SubjectBuilder> {
   }
 
   int? average(Semester semester) {
+    final cache = _averageCache[this] ??= <Semester, int?>{};
+    if (cache.containsKey(semester)) {
+      return cache[semester];
+    }
     final grades = basicGrades(semester);
-    if (grades == null) return null;
+    if (grades == null) {
+      cache[semester] = null;
+      return null;
+    }
     var sum = 0;
     var n = 0;
     for (final grade in grades) {
@@ -310,8 +350,13 @@ abstract class Subject implements Built<Subject, SubjectBuilder> {
       sum += grade.grade! * grade.weightPercentage;
       n += grade.weightPercentage;
     }
-    if (n == 0) return null;
-    return (sum / n).round();
+    if (n == 0) {
+      cache[semester] = null;
+      return null;
+    }
+    final result = (sum / n).round();
+    cache[semester] = result;
+    return result;
   }
 
   String averageFormatted(Semester semester) {
@@ -344,6 +389,19 @@ abstract class Subject implements Built<Subject, SubjectBuilder> {
       }
     }
     return m;
+  }
+
+  Map<String, List<DetailEntry>> detailEntriesByType(Semester semester) {
+    final cache = _detailEntriesByTypeCache[this] ??=
+        <Semester, Map<String, List<DetailEntry>>>{};
+    if (cache.containsKey(semester)) {
+      return cache[semester]!;
+    }
+    final entries = detailEntries(semester);
+    final grouped =
+        entries == null ? <String, List<DetailEntry>>{} : sortByType(entries);
+    cache[semester] = grouped;
+    return grouped;
   }
 }
 

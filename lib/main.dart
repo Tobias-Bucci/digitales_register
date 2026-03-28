@@ -57,24 +57,12 @@ typedef SingleArgumentVoidCallback<T> = void Function(T arg);
 final AppActions actions = AppActions();
 
 Future<void> main() async {
-  final binding = WidgetsFlutterBinding.ensureInitialized();
-  binding.deferFirstFrame();
-  await themeController.load();
-  try {
-    packageInfo = await PackageInfo.fromPlatform();
-  } catch (_) {
-    packageInfo = PackageInfo(
-      appName: "Unknown",
-      packageName: "Unknown",
-      version: "Unknown",
-      buildNumber: "Unknown",
-    );
-  }
+  final startupStopwatch = Stopwatch()..start();
+  WidgetsFlutterBinding.ensureInitialized();
   navigatorKey = GlobalKey();
   scaffoldKey = GlobalKey();
   scaffoldMessengerKey = GlobalKey();
   secureStorage = getFlutterSecureStorage();
-  await NotificationBackgroundService.initialize();
   final store = Store<AppState, AppStateBuilder, AppActions>(
     appReducerBuilder.build(),
     AppState(),
@@ -82,9 +70,17 @@ Future<void> main() async {
     middleware: middleware(),
   );
   runApp(RegisterApp(store: store));
+  unawaited(_loadThemeController());
+  unawaited(_loadPackageInfo());
+  unawaited(_initializeNotificationBackgroundService());
   WidgetsBinding.instance.addPostFrameCallback(
     (_) async {
-      binding.allowFirstFrame();
+      logPerformanceEvent(
+        "app_first_frame",
+        <String, Object?>{
+          "elapsedMs": startupStopwatch.elapsedMilliseconds,
+        },
+      );
       Uri? uri;
       if (Platform.isAndroid) {
         uri = await getInitialUri();
@@ -100,6 +96,38 @@ Future<void> main() async {
           store.actions.saveState.call,
         ),
       );
+    },
+  );
+}
+
+Future<void> _loadThemeController() async {
+  final stopwatch = Stopwatch()..start();
+  await themeController.load();
+  stopwatch.stop();
+  logPerformanceEvent(
+    "theme_loaded",
+    <String, Object?>{
+      "elapsedMs": stopwatch.elapsedMilliseconds,
+    },
+  );
+}
+
+Future<void> _loadPackageInfo() async {
+  try {
+    setPackageInfo(await PackageInfo.fromPlatform());
+  } catch (_) {
+    // Keep the default placeholder values when platform package info is unavailable.
+  }
+}
+
+Future<void> _initializeNotificationBackgroundService() async {
+  final stopwatch = Stopwatch()..start();
+  await NotificationBackgroundService.initialize();
+  stopwatch.stop();
+  logPerformanceEvent(
+    "notification_service_initialized",
+    <String, Object?>{
+      "elapsedMs": stopwatch.elapsedMilliseconds,
     },
   );
 }

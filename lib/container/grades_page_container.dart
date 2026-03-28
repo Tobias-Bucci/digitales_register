@@ -18,11 +18,11 @@
 import 'package:built_collection/built_collection.dart';
 import 'package:built_value/built_value.dart';
 import 'package:dr/actions/app_actions.dart';
+import 'package:dr/app_selectors.dart';
 import 'package:dr/app_state.dart';
 import 'package:dr/ui/grades_page.dart';
 import 'package:dr/ui/last_fetched_overlay.dart';
 import 'package:dr/utc_date_time.dart';
-import 'package:dr/util.dart';
 import 'package:flutter/material.dart' hide Builder;
 import 'package:flutter_built_redux/flutter_built_redux.dart';
 
@@ -71,37 +71,13 @@ abstract class GradesPageViewModel
       (b) => b
         ..showSemester = state.gradesState.semester.toBuilder()
         ..loading = state.gradesState.loading
-        ..allSubjectsAverage = calculateAllSubjectsAverage(state)
-        ..hasData = state.gradesState.subjects.any(
-          (s) => state.gradesState.semester != Semester.all
-              ? s.gradesAll.containsKey(state.gradesState.semester)
-              : s.gradesAll.isNotEmpty,
-        )
+        ..allSubjectsAverage = appSelectors.allSubjectsAverage(state)
+        ..hasData = appSelectors.hasGradesData(state)
         ..noInternet = state.noInternet
         ..showGradesDiagram = state.settingsState.showGradesDiagram
         ..showAllSubjectsAverage = state.settingsState.showAllSubjectsAverage
         ..lastFetchedMessage = _lastFetchedMessage(state),
     );
-  }
-}
-
-String calculateAllSubjectsAverage(AppState state) {
-  var sum = 0;
-  var n = 0;
-  for (final subject in state.gradesState.subjects) {
-    final average = subject.average(state.gradesState.semester);
-    if (average != null &&
-        !state.settingsState.ignoreForGradesAverage.any(
-          (element) => element.toLowerCase() == subject.name.toLowerCase(),
-        )) {
-      sum += average;
-      n++;
-    }
-  }
-  if (n == 0) {
-    return "/";
-  } else {
-    return gradeAverageFormat.format(sum / n / 100);
   }
 }
 

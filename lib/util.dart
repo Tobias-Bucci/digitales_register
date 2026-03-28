@@ -27,13 +27,41 @@ import 'package:intl/intl.dart';
 import 'package:package_info_plus/package_info_plus.dart';
 import 'package:tuple/tuple.dart';
 
-late final PackageInfo packageInfo;
+PackageInfo packageInfo = PackageInfo(
+  appName: "Unknown",
+  packageName: "Unknown",
+  version: "Unknown",
+  buildNumber: "Unknown",
+);
 
 String get appVersion {
   if (Platform.environment.containsKey('FLUTTER_TEST')) {
     return "1.0";
   }
   return packageInfo.version;
+}
+
+void setPackageInfo(PackageInfo info) {
+  packageInfo = info;
+  logPerformanceEvent(
+    "package_info_loaded",
+    <String, Object?>{
+      "version": info.version,
+      "buildNumber": info.buildNumber,
+    },
+  );
+}
+
+void logPerformanceEvent(
+  String event, [
+  Map<String, Object?> details = const <String, Object?>{},
+]) {
+  final payload =
+      details.entries.map((entry) => "${entry.key}=${entry.value}").join(", ");
+  log(
+    payload.isEmpty ? event : "$event [$payload]",
+    name: "dr.performance",
+  );
 }
 
 Widget maybeWrap(Widget widget, Widget Function(Widget w) wrapWidget,
@@ -278,7 +306,8 @@ String fixupUrl(String enteredUrl) {
 Future<bool> cannotConnectTo(String url) async {
   var noInternet = false;
   try {
-    final result = await http.get(Uri.parse(url));
+    final result =
+        await http.get(Uri.parse(url)).timeout(const Duration(seconds: 10));
     noInternet = result.statusCode != 200;
   } catch (e) {
     noInternet = true;

@@ -69,7 +69,6 @@ dependency_overrides:
   file: ^6.1.4
 
 dev_dependencies:
-  flutter_native_splash: ^2.4.7
   flutter_test:
     sdk: flutter
   golden_toolkit: ^0.15.0

@@ -19,6 +19,7 @@ import 'package:built_collection/built_collection.dart';
 import 'package:built_value/built_value.dart';
 import 'package:dr/actions/app_actions.dart';
 import 'package:dr/actions/dashboard_actions.dart';
+import 'package:dr/app_selectors.dart';
 import 'package:dr/app_state.dart';
 import 'package:dr/data.dart';
 import 'package:dr/ui/days.dart';
@@ -103,27 +104,9 @@ abstract class DaysViewModel
   DaysViewModel._();
 
   factory DaysViewModel.from(AppState state) {
-    final unorderedDays = state.dashboardState.allDays
-            ?.where((day) => day.future == state.dashboardState.future)
-            .map(
-              (day) => day.rebuild(
-                (b) => b
-                  ..deletedHomework.where(
-                    (hw) => !isBlacklisted(hw, state.dashboardState.blacklist!),
-                  )
-                  ..homework.where(
-                    (hw) => !isBlacklisted(hw, state.dashboardState.blacklist!),
-                  ),
-              ),
-            )
-            .toList() ??
-        [];
-
     return DaysViewModel(
       (b) => b
-        ..days = ListBuilder(
-          !state.dashboardState.future ? unorderedDays.reversed : unorderedDays,
-        )
+        ..days = appSelectors.dashboardDays(state).toBuilder()
         ..noInternet = state.noInternet
         ..future = state.dashboardState.future
         ..loading = state.dashboardState.loading || state.loginState.loading

@@ -46,6 +46,7 @@ import 'package:dr/data.dart';
 import 'package:dr/main.dart';
 import 'package:dr/notification_background_service.dart';
 import 'package:dr/serializers.dart';
+import 'package:dr/state_persistence_service.dart';
 import 'package:dr/ui/dialog.dart';
 import 'package:dr/utc_date_time.dart';
 import 'package:dr/util.dart';
@@ -74,6 +75,8 @@ part 'routing.dart';
 part 'settings.dart';
 
 late FlutterSecureStorage secureStorage;
+final AppStatePersistenceService statePersistenceService =
+    AppStatePersistenceService();
 
 @visibleForTesting
 Wrapper wrapper = Wrapper();
@@ -239,6 +242,7 @@ Future<void> _load(MiddlewareApi<AppState, AppStateBuilder, AppActions> api,
   if (wrapper is! Mock) {
     wrapper = Wrapper();
   }
+  statePersistenceService.clear();
   wrapper.noInternet = api.state.noInternet;
   await next(action);
   if (!api.state.noInternet) _popAll();
@@ -299,6 +303,9 @@ Future<void> _refresh(MiddlewareApi<AppState, AppStateBuilder, AppActions> api,
 
 Future<void> _loggedIn(MiddlewareApi<AppState, AppStateBuilder, AppActions> api,
     ActionHandler next, Action<LoggedInPayload> action) async {
+  if (!api.state.loginState.loggedIn && !action.payload.secondaryOnlineLogin) {
+    statePersistenceService.clear();
+  }
   if (action.payload.fromStorage) {
     // If we logged in with saved credentials password saving must be enabled.
     wrapper.safeMode = false;
@@ -382,11 +389,6 @@ Future<void> _loggedIn(MiddlewareApi<AppState, AppStateBuilder, AppActions> api,
   }
 }
 
-var _saveUnderway = false;
-
-var _lastSave = "";
-String? _lastUsernameSaved;
-late AppState _stateToSave;
 // This is to avoid saving data in an action right after deleting data,
 // which would restore it.
 @visibleForTesting
@@ -398,45 +400,23 @@ NextActionHandler _saveStateMiddleware(
           await next(action);
           if (api.state.loginState.loggedIn &&
               api.state.loginState.username != null) {
-            _stateToSave = api.state;
-            final bool immediately =
-                action.name == AppActionsNames.saveState.name;
-            if (_saveUnderway && !immediately) {
-              return;
-            }
-
-            _saveUnderway = true;
-
-            Future<void> save() async {
-              final state = _stateToSave;
-              final user = getStorageKey(
-                state.loginState.username,
-                wrapper.loginAddress,
-              );
-              _saveUnderway = false;
-              String toSave;
-              if (!state.settingsState.noDataSaving && !deletedData) {
-                toSave = json.encode(
-                  serializers.serialize(state),
-                );
-              } else {
-                toSave = json.encode(
-                  serializers.serialize(state.settingsState),
-                );
-              }
-              if (_lastSave == toSave && _lastUsernameSaved == user) return;
-              _lastSave = toSave;
-              _lastUsernameSaved = user;
-              await _writeToStorage(
-                user,
-                toSave,
-              );
-            }
-
+            final immediately = action.name == AppActionsNames.saveState.name;
             if (immediately) {
-              await save();
+              await statePersistenceService.flush(
+                state: api.state,
+                deletedData: deletedData,
+                server: wrapper.loginAddress,
+                writer: _writeToStorage,
+                keyFactory: getStorageKey,
+              );
             } else {
-              Future.delayed(const Duration(seconds: 5), save);
+              statePersistenceService.schedule(
+                state: api.state,
+                deletedData: deletedData,
+                server: wrapper.loginAddress,
+                writer: _writeToStorage,
+                keyFactory: getStorageKey,
+              );
             }
           }
         };
@@ -609,17 +589,30 @@ bool _popAll() {
   return poppedAnything;
 }
 
-Future<String> _getAttachmentDownloadDirectory() async {
-  // TODO: this remains to be tested on all platforms
-  try {
-    return (await getExternalStorageDirectories(
-            type: StorageDirectory.downloads))!
-        .first
-        .path;
-  } catch (_) {
-    log("failed to get download directory, falling back to application storage");
-    return (await getApplicationDocumentsDirectory()).path;
+Future<String>? _attachmentDownloadDirectoryFuture;
+
+Future<String> _getAttachmentDownloadDirectory() {
+  final cached = _attachmentDownloadDirectoryFuture;
+  if (cached != null) {
+    return cached;
   }
+
+  // TODO: this remains to be tested on all platforms
+  final future = () async {
+    try {
+      return (await getExternalStorageDirectories(
+              type: StorageDirectory.downloads))!
+          .first
+          .path;
+    } catch (_) {
+      log(
+        "failed to get download directory, falling back to application storage",
+      );
+      return (await getApplicationDocumentsDirectory()).path;
+    }
+  }();
+  _attachmentDownloadDirectoryFuture = future;
+  return future;
 }
 
 /// Downloads a file.
@@ -636,7 +629,7 @@ Future<bool> downloadFile(
     "${await _getAttachmentDownloadDirectory()}/$fileName",
   );
   var success = true;
-  if (saveFile.existsSync()) {
+  if (await saveFile.exists()) {
     final shouldOverwrite = await askShouldOverwriteFile(fileName);
     if (shouldOverwrite == null) {
       return false;
@@ -650,6 +643,7 @@ Future<bool> downloadFile(
       queryParameters: parameters,
       options: dio.Options(responseType: dio.ResponseType.stream),
     );
+    await saveFile.parent.create(recursive: true);
     final sink = saveFile.openWrite();
     await sink.addStream((result.data as dio.ResponseBody).stream);
     await sink.flush();
@@ -660,9 +654,9 @@ Future<bool> downloadFile(
     success = false;
   }
 
-  if (!success && saveFile.existsSync()) {
+  if (!success && await saveFile.exists()) {
     // The download was not successful, we should not keep the empty file or whatever was downloaded.
-    saveFile.deleteSync();
+    await saveFile.delete();
   }
 
   return success;
@@ -671,7 +665,7 @@ Future<bool> downloadFile(
 Future<bool> canOpenFile(String fileName) async {
   return File(
     "${await _getAttachmentDownloadDirectory()}/$fileName",
-  ).existsSync();
+  ).exists();
 }
 
 Future<void> openFile(String fileName) async {
@@ -711,7 +705,7 @@ Future<bool?> askShouldOverwriteFile(String fileName) {
 Future<void> _checkShowUnmaintainedAlert() async {
   final appDirectory = await getApplicationSupportDirectory();
   final file = File("${appDirectory.path}/unmaintainedAlertShown");
-  if (file.existsSync()) {
+  if (await file.exists()) {
     return;
   }
 
@@ -720,9 +714,9 @@ Future<void> _checkShowUnmaintainedAlert() async {
   // still check for the file in the old location.
   final legacyFile = File(
       "${(await getApplicationDocumentsDirectory()).path}/unmaintainedAlertShown");
-  if (legacyFile.existsSync()) {
+  if (await legacyFile.exists()) {
     // create the file in the correct location
-    file.createSync();
+    await file.create(recursive: true);
     return;
   }
 
@@ -770,5 +764,5 @@ Future<void> _checkShowUnmaintainedAlert() async {
     },
   );
 
-  await file.create();
+  await file.create(recursive: true);
 }

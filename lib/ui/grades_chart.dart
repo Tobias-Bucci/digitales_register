@@ -17,8 +17,8 @@
 
 import 'package:built_collection/built_collection.dart';
 import 'package:charts_flutter/flutter.dart' as charts;
+import 'package:dr/app_selectors.dart';
 import 'package:dr/app_state.dart';
-import 'package:dr/container/grades_chart_container.dart';
 import 'package:dr/data.dart';
 import 'package:dr/utc_date_time.dart';
 import 'package:flutter/material.dart';

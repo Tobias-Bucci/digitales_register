@@ -30,6 +30,9 @@ import 'package:quill_delta/quill_delta.dart';
 import 'package:quill_delta_viewer/quill_delta_viewer.dart';
 import 'package:responsive_scaffold/responsive_scaffold.dart';
 
+final Map<int, _CachedMessageDelta> _messageDeltaCache =
+    <int, _CachedMessageDelta>{};
+
 class MessagesPage extends StatelessWidget {
   final MessagesState? state;
   final bool noInternet;
@@ -111,21 +114,27 @@ class MessageWidget extends StatefulWidget {
 
 class _MessageWidgetState extends State<MessageWidget> {
   late final bool initiallyExpanded;
+  late bool _expanded;
+
   @override
   void initState() {
     initiallyExpanded = widget.expand;
+    _expanded = widget.expand;
+    if (initiallyExpanded) {
+      widget.onMarkAsRead(widget.message);
+    }
     super.initState();
   }
 
   @override
   Widget build(BuildContext context) {
-    if (initiallyExpanded) {
-      widget.onMarkAsRead(widget.message);
-    }
     final textTheme = Theme.of(context).textTheme;
     return ExpansionTile(
       initiallyExpanded: initiallyExpanded,
       onExpansionChanged: (expanded) {
+        setState(() {
+          _expanded = expanded;
+        });
         if (expanded && widget.message.isNew) {
           widget.onMarkAsRead(widget.message);
         }
@@ -152,93 +161,153 @@ class _MessageWidgetState extends State<MessageWidget> {
         ],
       ),
       children: [
-        Padding(
-          padding: const EdgeInsets.symmetric(
-            horizontal: 16,
-          ).copyWith(
-            bottom: 8,
-          ),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text.rich(
-                TextSpan(
-                  children: [
-                    const TextSpan(
-                      text: "Gesendet: ",
-                      style: TextStyle(fontWeight: FontWeight.bold),
-                    ),
-                    TextSpan(
-                        text: DateFormat("d.M.yy H:mm")
-                            .format(widget.message.timeSent))
-                  ],
-                ),
-              ),
-              Text.rich(
-                TextSpan(
-                  children: [
-                    const TextSpan(
-                      text: "Von: ",
-                      style: TextStyle(fontWeight: FontWeight.bold),
-                    ),
-                    TextSpan(text: widget.message.fromName)
-                  ],
-                ),
-              ),
-              Text.rich(
-                TextSpan(
-                  children: [
-                    const TextSpan(
-                      text: "An: ",
-                      style: TextStyle(fontWeight: FontWeight.bold),
-                    ),
-                    TextSpan(text: widget.message.recipientString)
-                  ],
-                ),
-              ),
-              const Divider(),
-              renderMessage(widget.message.text, context),
-              if (widget.message.attachments.isNotEmpty) ...[
-                const Divider(),
-                Text(
-                  widget.message.attachments.length > 1
-                      ? "Anhänge:"
-                      : "Anhang:",
-                  style: const TextStyle(fontWeight: FontWeight.bold),
-                ),
-              ],
-              ...[
-                for (final attachment in widget.message.attachments)
-                  [
-                    Text(
-                      attachment.originalName,
-                    ),
-                    AnimatedLinearProgressIndicator(
-                      show: attachment.downloading,
-                    ),
-                    SizedBox(
-                      width: double.infinity,
-                      child: TextButton(
-                        onPressed:
-                            !attachment.fileAvailable && widget.noInternet
-                                ? null
-                                : () {
-                                    widget.onOpenFile(attachment);
-                                  },
-                        child: const Text("Öffnen"),
+        if (_expanded || initiallyExpanded)
+          Padding(
+            padding: const EdgeInsets.symmetric(
+              horizontal: 16,
+            ).copyWith(
+              bottom: 8,
+            ),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text.rich(
+                  TextSpan(
+                    children: [
+                      const TextSpan(
+                        text: "Gesendet: ",
+                        style: TextStyle(fontWeight: FontWeight.bold),
                       ),
-                    ),
-                  ]
-              ].intersperse(const Divider()),
-            ],
+                      TextSpan(
+                          text: DateFormat("d.M.yy H:mm")
+                              .format(widget.message.timeSent))
+                    ],
+                  ),
+                ),
+                Text.rich(
+                  TextSpan(
+                    children: [
+                      const TextSpan(
+                        text: "Von: ",
+                        style: TextStyle(fontWeight: FontWeight.bold),
+                      ),
+                      TextSpan(text: widget.message.fromName)
+                    ],
+                  ),
+                ),
+                Text.rich(
+                  TextSpan(
+                    children: [
+                      const TextSpan(
+                        text: "An: ",
+                        style: TextStyle(fontWeight: FontWeight.bold),
+                      ),
+                      TextSpan(text: widget.message.recipientString)
+                    ],
+                  ),
+                ),
+                const Divider(),
+                renderMessage(widget.message),
+                if (widget.message.attachments.isNotEmpty) ...[
+                  const Divider(),
+                  Text(
+                    widget.message.attachments.length > 1
+                        ? "Anhänge:"
+                        : "Anhang:",
+                    style: const TextStyle(fontWeight: FontWeight.bold),
+                  ),
+                ],
+                ...[
+                  for (final attachment in widget.message.attachments)
+                    [
+                      Text(
+                        attachment.originalName,
+                      ),
+                      AnimatedLinearProgressIndicator(
+                        show: attachment.downloading,
+                      ),
+                      SizedBox(
+                        width: double.infinity,
+                        child: TextButton(
+                          onPressed:
+                              !attachment.fileAvailable && widget.noInternet
+                                  ? null
+                                  : () {
+                                      widget.onOpenFile(attachment);
+                                    },
+                          child: const Text("Öffnen"),
+                        ),
+                      ),
+                    ]
+                ].intersperse(const Divider()),
+              ],
+            ),
           ),
-        ),
       ],
     );
   }
 }
 
-Widget renderMessage(String msg, BuildContext context) {
-  return QuillDeltaViewer(
-      delta: Delta.fromJson(jsonDecode(msg)["ops"] as List));
+Widget renderMessage(Message message) {
+  final stopwatch = Stopwatch()..start();
+  final resolved = _resolveMessageDelta(message);
+  stopwatch.stop();
+  logPerformanceEvent(
+    "message_render_ready",
+    <String, Object?>{
+      "messageId": message.id,
+      "elapsedUs": stopwatch.elapsedMicroseconds,
+      "fromCache": resolved.fromCache,
+    },
+  );
+  return QuillDeltaViewer(delta: resolved.delta);
+}
+
+_ResolvedMessageDelta _resolveMessageDelta(Message message) {
+  final cached = _messageDeltaCache[message.id];
+  if (cached != null && cached.source == message.text) {
+    return _ResolvedMessageDelta(
+      delta: cached.delta,
+      fromCache: true,
+    );
+  }
+
+  final stopwatch = Stopwatch()..start();
+  final delta = Delta.fromJson(jsonDecode(message.text)["ops"] as List);
+  stopwatch.stop();
+  logPerformanceEvent(
+    "message_delta_parsed",
+    <String, Object?>{
+      "messageId": message.id,
+      "elapsedMs": stopwatch.elapsedMilliseconds,
+    },
+  );
+  _messageDeltaCache[message.id] = _CachedMessageDelta(
+    source: message.text,
+    delta: delta,
+  );
+  return _ResolvedMessageDelta(
+    delta: delta,
+    fromCache: false,
+  );
+}
+
+class _CachedMessageDelta {
+  const _CachedMessageDelta({
+    required this.source,
+    required this.delta,
+  });
+
+  final String source;
+  final Delta delta;
+}
+
+class _ResolvedMessageDelta {
+  const _ResolvedMessageDelta({
+    required this.delta,
+    required this.fromCache,
+  });
+
+  final Delta delta;
+  final bool fromCache;
 }

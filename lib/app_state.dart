@@ -24,6 +24,9 @@ import 'package:dr/utc_date_time.dart';
 
 part 'app_state.g.dart';
 
+final Expando<List<String>> _allSubjectsCache =
+    Expando<List<String>>('appStateAllSubjects');
+
 bool isDemoUser({required String? url, required String? username}) {
   return username == "demo-user-6540" &&
       url == "https://vinzentinum.digitalesregister.it";
@@ -61,6 +64,10 @@ abstract class AppState implements Built<AppState, AppStateBuilder> {
   bool get isDemo => isDemoUser(url: url, username: loginState.username);
 
   List<String> extractAllSubjects() {
+    final cached = _allSubjectsCache[this];
+    if (cached != null) {
+      return cached;
+    }
     final subjects = <String>{};
     for (final day in calendarState.days.values) {
       for (final hour in day.hours) {
@@ -77,7 +84,9 @@ abstract class AppState implements Built<AppState, AppStateBuilder> {
         }
       }
     }
-    return subjects.toList();
+    final result = List<String>.unmodifiable(subjects);
+    _allSubjectsCache[this] = result;
+    return result;
   }
 
   factory AppState([Function(AppStateBuilder b)? updates]) = _$AppState;

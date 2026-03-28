@@ -246,6 +246,13 @@ class _SubjectWidgetState extends State<SubjectWidget> {
           setState(() {
             closed = !expansion;
             if (expansion) {
+              logPerformanceEvent(
+                "grades_subject_expanded",
+                <String, Object?>{
+                  "subjectId": widget.subject.id,
+                  "semester": widget.semester.name,
+                },
+              );
               widget.viewSubjectDetail();
             }
           });
@@ -275,14 +282,15 @@ class _SubjectWidgetState extends State<SubjectWidget> {
               duration: const Duration(milliseconds: 200),
               child: entries != null
                   ? Column(
-                      // we're using a UniqueKey here so that the framework
-                      // detects a change on every rebuild. There would be no
-                      // animations otherwise, as the Column as the direct child
-                      // of the AnimatedSwitcher always stays the same (just different children).
-                      key: UniqueKey(),
+                      key: ValueKey(
+                        "${widget.subject.id}-${widget.semester.name}-${widget.sortByType}-${widget.showCancelled}-${entries.length}",
+                      ),
                       children: [
                         if (widget.sortByType)
-                          ...Subject.sortByType(entries).entries.map(
+                          ...widget.subject
+                              .detailEntriesByType(widget.semester)
+                              .entries
+                              .map(
                                 (entry) => GradeTypeWidget(
                                   typeName: entry.key,
                                   entries: entry.value

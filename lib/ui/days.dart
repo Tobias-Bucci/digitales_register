@@ -254,15 +254,15 @@ class _DaysWidgetState extends State<DaysWidget> {
     int n, {
     required bool isLast,
     required bool showLastFetched,
+    required List<String> availableFavoriteSubjects,
+    required String? activeFavoriteSubject,
   }) {
     if (n == 0) {
       return DashboardHeader(
         future: widget.vm.future,
         onSwitchFuture: widget.onSwitchFuture,
-        favoriteSubjects: _availableFavoriteSubjects(),
-        selectedFavoriteSubject: _resolvedFavoriteSubject(
-          _availableFavoriteSubjects(),
-        ),
+        favoriteSubjects: availableFavoriteSubjects,
+        selectedFavoriteSubject: activeFavoriteSubject,
         onFavoriteSubjectChanged: (favoriteSubject) {
           setState(() {
             _favoriteSubject = favoriteSubject;
@@ -395,6 +395,8 @@ class _DaysWidgetState extends State<DaysWidget> {
               isLast: n == (visibleDays.length * 2 - 1) + 1,
               showLastFetched:
                   widget.vm.noInternet && daysShouldShowLastFetched,
+              availableFavoriteSubjects: availableFavoriteSubjects,
+              activeFavoriteSubject: activeFavoriteSubject,
             );
           },
         ),

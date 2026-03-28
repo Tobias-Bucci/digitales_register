@@ -60,15 +60,37 @@ typedef AddNetworkProtocolItem = void Function(NetworkProtocolItem item);
 
 class UnexpectedLogoutException implements Exception {}
 
+class AppRequestException implements Exception {
+  const AppRequestException({
+    required this.message,
+    this.isTimeout = false,
+    this.isConnectionIssue = false,
+  });
+
+  final String message;
+  final bool isTimeout;
+  final bool isConnectionIssue;
+
+  @override
+  String toString() => message;
+}
+
 class Wrapper {
   final cookieJar = DefaultCookieJar();
-  final Dio dio = Dio();
+  late final Dio dio;
   String get loginAddress => "${baseAddress}api/auth/login";
   String get baseAddress => "$url/v2/";
   String? user, pass, _url;
   bool demoMode = false;
 
   Wrapper() {
+    dio = Dio(
+      BaseOptions(
+        connectTimeout: const Duration(seconds: 15),
+        sendTimeout: const Duration(seconds: 15),
+        receiveTimeout: const Duration(seconds: 20),
+      ),
+    );
     dio.interceptors.add(CookieManager(cookieJar));
     (dio.httpClientAdapter as IOHttpClientAdapter).createHttpClient = () {
       final client = HttpClient();
@@ -105,6 +127,7 @@ class Wrapper {
 
   DateTime lastInteraction = DateTime.now();
   DateTime? _serverLogoutTime;
+  Timer? _sessionRefreshTimer;
   late Config config;
   Future<dynamic> login(
     String? user,
@@ -165,23 +188,26 @@ class Wrapper {
     _clearCookies();
     try {
       response = getMap(
-        (await dio.post<dynamic>(
-          loginAddress,
-          data: {
-            "username": user,
-            "password": pass,
-            if (tfaCode != null) "two_factor": tfaCode,
-          },
+        (await _runRequest(
+          "login",
+          () => dio.post<dynamic>(
+            loginAddress,
+            data: {
+              "username": user,
+              "password": pass,
+              if (tfaCode != null) "two_factor": tfaCode,
+            },
+          ),
         ))
             .data,
       )!;
     } catch (e) {
       loggedInCompleter.complete(false);
       log("Error while logging in (login failed)", error: e);
-      if (e is TimeoutException || await refreshNoInternet()) {
+      if (_mapRequestError(e).isConnectionIssue || await refreshNoInternet()) {
         noInternet = true;
       }
-      error = "Unknown Error:\n$e";
+      error = "Unknown Error:\n${_mapRequestError(e)}";
       return null;
     }
     if (getBool(response["loggedIn"]) ?? false) {
@@ -194,7 +220,7 @@ class Wrapper {
       await _loadConfig().then((_) {
         _serverLogoutTime =
             DateTime.now().add(Duration(seconds: config.autoLogoutSeconds));
-        _updateLogout();
+        _scheduleSessionRefresh();
         onConfigLoaded!();
       });
     } else {
@@ -250,25 +276,109 @@ class Wrapper {
     );
   }
 
+  AppRequestException _mapRequestError(Object error) {
+    if (error is AppRequestException) {
+      return error;
+    }
+    if (error is TimeoutException) {
+      return const AppRequestException(
+        message: "Die Anfrage hat das Zeitlimit ueberschritten.",
+        isTimeout: true,
+        isConnectionIssue: true,
+      );
+    }
+    if (error is DioException) {
+      final isTimeout = error.type == DioExceptionType.connectionTimeout ||
+          error.type == DioExceptionType.sendTimeout ||
+          error.type == DioExceptionType.receiveTimeout;
+      final isConnectionIssue =
+          isTimeout || error.type == DioExceptionType.connectionError;
+      return AppRequestException(
+        message: error.message ?? error.toString(),
+        isTimeout: isTimeout,
+        isConnectionIssue: isConnectionIssue,
+      );
+    }
+    return AppRequestException(
+      message: error.toString(),
+    );
+  }
+
+  bool _isTransientRequestError(Object error) {
+    final mapped = _mapRequestError(error);
+    return mapped.isConnectionIssue;
+  }
+
+  Future<T> _runRequest<T>(
+    String operation,
+    Future<T> Function() request, {
+    bool allowSingleRetry = false,
+  }) async {
+    final stopwatch = Stopwatch()..start();
+    var didRetry = false;
+    while (true) {
+      try {
+        final result = await request();
+        stopwatch.stop();
+        logPerformanceEvent(
+          "network_request",
+          <String, Object?>{
+            "operation": operation,
+            "elapsedMs": stopwatch.elapsedMilliseconds,
+            "retried": didRetry,
+          },
+        );
+        return result;
+      } catch (error) {
+        if (allowSingleRetry && !didRetry && _isTransientRequestError(error)) {
+          didRetry = true;
+          logPerformanceEvent(
+            "network_retry",
+            <String, Object?>{
+              "operation": operation,
+              "reason": _mapRequestError(error).message,
+            },
+          );
+          continue;
+        }
+        stopwatch.stop();
+        logPerformanceEvent(
+          "network_failure",
+          <String, Object?>{
+            "operation": operation,
+            "elapsedMs": stopwatch.elapsedMilliseconds,
+            "error": _mapRequestError(error).message,
+          },
+        );
+        throw _mapRequestError(error);
+      }
+    }
+  }
+
   Future<dynamic> changePass(
       String url, String user, String oldPass, String newPass) async {
     this.url = url;
     Map response;
     _clearCookies();
     try {
-      response = getMap((await dio.post<dynamic>(
-        "${baseAddress}api/auth/setNewPassword",
-        data: {
-          "username": user,
-          "oldPassword": oldPass,
-          "newPassword": newPass,
-        },
-      ))
-          .data)!;
+      response = getMap(
+        (await _runRequest(
+          "change_password",
+          () => dio.post<dynamic>(
+            "${baseAddress}api/auth/setNewPassword",
+            data: {
+              "username": user,
+              "oldPassword": oldPass,
+              "newPassword": newPass,
+            },
+          ),
+        ))
+            .data,
+      )!;
     } catch (e) {
       _loggedIn = Future.value(false);
       log("Failed to change pass", error: e);
-      error = "Unknown Error:\n$e";
+      error = "Unknown Error:\n${_mapRequestError(e)}";
       return null;
     }
     if (response["error"] != null) {
@@ -283,7 +393,12 @@ class Wrapper {
   }
 
   Future<void> _loadConfig() async {
-    final source = (await dio.get<String>(baseAddress)).data;
+    final source = (await _runRequest(
+      "load_config",
+      () => dio.get<String>(baseAddress),
+      allowSingleRetry: true,
+    ))
+        .data;
     config = parseConfig(source!);
   }
 
@@ -430,17 +545,22 @@ class Wrapper {
 
     dynamic responseData;
     try {
-      final response = await (method == "POST"
-          ? dio.post<dynamic>(
-              baseAddress + url,
-              data: args,
-            )
-          : method == "GET"
-              ? dio.get<dynamic>(
-                  baseAddress + url,
-                )
-              : throw Exception(
-                  "invalid method: $method; expected POST or GET"));
+      final response = await _runRequest(
+        "$method $url",
+        () => method == "POST"
+            ? dio.post<dynamic>(
+                baseAddress + url,
+                data: args,
+              )
+            : method == "GET"
+                ? dio.get<dynamic>(
+                    baseAddress + url,
+                  )
+                : throw Exception(
+                    "invalid method: $method; expected POST or GET",
+                  ),
+        allowSingleRetry: method == "GET",
+      );
       responseData = response.data;
     } on Exception catch (e) {
       await _handleError(e);
@@ -485,45 +605,66 @@ class Wrapper {
 
   Future<void> _handleError(Exception e) async {
     log("Error while sending request", error: e);
-    if (e is TimeoutException || await refreshNoInternet()) {
+    final requestError = _mapRequestError(e);
+    if (requestError.isConnectionIssue || await refreshNoInternet()) {
       noInternet = true;
       _loggedIn = Future.value(false);
       await actions.noInternet(true);
       error = "Keine Internetverbindung";
     } else {
-      error = e.toString();
+      error = requestError.toString();
     }
   }
 
-  Future<void> _updateLogout() async {
+  void _scheduleSessionRefresh() {
+    _sessionRefreshTimer?.cancel();
+    if (demoMode || _serverLogoutTime == null) {
+      return;
+    }
+    var delay = _serverLogoutTime!
+        .subtract(const Duration(seconds: 25))
+        .difference(DateTime.now());
+    if (delay.isNegative) {
+      delay = Duration.zero;
+    }
+    _sessionRefreshTimer = Timer(
+      delay,
+      () => unawaited(_refreshSession()),
+    );
+  }
+
+  Future<void> _refreshSession() async {
     if (!await _loggedIn) return;
     if (demoMode) return;
-    if (_serverLogoutTime != null &&
-        DateTime.now()
-            .add(const Duration(seconds: 25))
-            .isAfter(_serverLogoutTime!)) {
-      //autologout happens soon!
-      final result = getMap(
-        await send(
-          "api/auth/extendSession",
-          args: <String, Object?>{
-            "lastAction": lastInteraction.millisecondsSinceEpoch ~/ 1000,
-          },
-        ),
+    if (_serverLogoutTime == null) return;
+
+    final result = getMap(
+      await send(
+        "api/auth/extendSession",
+        args: <String, Object?>{
+          "lastAction": lastInteraction.millisecondsSinceEpoch ~/ 1000,
+        },
+      ),
+    );
+    if (result == null) {
+      logPerformanceEvent(
+        "session_refresh_failed",
+        <String, Object?>{"forcedLogout": true},
       );
-      if (result == null) {
-        logout(hard: safeMode, logoutForcedByServer: true);
-        return;
-      }
-      if (result["forceLogout"] == true) {
-        logout(hard: safeMode, logoutForcedByServer: true);
-        return;
-      } else {
-        _serverLogoutTime = DateTime.fromMillisecondsSinceEpoch(
-            (result["newExpiration"] as int) * 1000);
-      }
+      logout(hard: safeMode, logoutForcedByServer: true);
+      return;
     }
-    Future.delayed(const Duration(seconds: 5), _updateLogout);
+    if (result["forceLogout"] == true) {
+      logPerformanceEvent(
+        "session_refresh_forced_logout",
+      );
+      logout(hard: safeMode, logoutForcedByServer: true);
+      return;
+    }
+    _serverLogoutTime = DateTime.fromMillisecondsSinceEpoch(
+      (result["newExpiration"] as int) * 1000,
+    );
+    _scheduleSessionRefresh();
   }
 
   void interaction() {
@@ -531,15 +672,25 @@ class Wrapper {
   }
 
   void logout({required bool hard, bool logoutForcedByServer = false}) {
+    _sessionRefreshTimer?.cancel();
+    _sessionRefreshTimer = null;
     if (!logoutForcedByServer && _url != null) {
-      dio.get<dynamic>("${baseAddress}logout");
+      unawaited(dio.get<dynamic>("${baseAddress}logout"));
     }
     if (hard) {
       if (logoutForcedByServer) {
         onLogout!();
       }
       _url = user = pass = null;
+      _serverLogoutTime = null;
     }
+    logPerformanceEvent(
+      "logout",
+      <String, Object?>{
+        "hard": hard,
+        "forcedByServer": logoutForcedByServer,
+      },
+    );
     _loggedIn = Future.value(false);
     _clearCookies();
   }
