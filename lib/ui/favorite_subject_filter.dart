@@ -51,8 +51,7 @@ class FavoriteSubjectFilter extends StatelessWidget {
           for (final subject in subjects)
             Builder(
               builder: (context) {
-                final isSelected =
-                    normalizedSelected != null &&
+                final isSelected = normalizedSelected != null &&
                     equalsIgnoreCase(normalizedSelected, subject);
                 final subjectTheme = _subjectTheme(subject);
                 final chipColor = subjectTheme != null
@@ -62,12 +61,12 @@ class FavoriteSubjectFilter extends StatelessWidget {
                   label: Text(subject),
                   selected: isSelected,
                   onSelected: (_) => onSelected(subject),
-                  selectedColor: chipColor.withOpacity(
-                    theme.brightness == Brightness.dark ? 0.30 : 0.18,
+                  selectedColor: chipColor.withValues(
+                    alpha: theme.brightness == Brightness.dark ? 0.30 : 0.18,
                   ),
                   side: BorderSide(
                     color: isSelected
-                        ? chipColor.withOpacity(0.65)
+                        ? chipColor.withValues(alpha: 0.65)
                         : theme.colorScheme.outlineVariant,
                   ),
                   labelStyle: isSelected

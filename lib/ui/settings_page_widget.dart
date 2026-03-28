@@ -143,13 +143,10 @@ class _SettingsPageWidgetState extends State<SettingsPageWidget> {
     switch (theme!) {
       case _Theme.light:
         widget.onSetThemePreference(AppThemePreference.light);
-        break;
       case _Theme.dark:
         widget.onSetThemePreference(AppThemePreference.dark);
-        break;
       case _Theme.followDevice:
         widget.onSetThemePreference(AppThemePreference.system);
-        break;
     }
   }
 
@@ -233,27 +230,30 @@ class _SettingsPageWidgetState extends State<SettingsPageWidget> {
               ),
             ),
           ),
-          RadioListTile(
-            value: _Theme.followDevice,
+          RadioGroup<_Theme>(
             groupValue: currentTheme,
             onChanged: _selectTheme,
-            title: const Text("Geräte-Theme folgen"),
-          ),
-          RadioListTile(
-            value: _Theme.light,
-            groupValue: currentTheme,
-            onChanged: _selectTheme,
-            title: const Text("Hell"),
-          ),
-          RadioListTile(
-            value: _Theme.dark,
-            groupValue: currentTheme,
-            onChanged: _selectTheme,
-            title: const Text("Dunkel"),
+            child: const Column(
+              children: [
+                RadioListTile(
+                  value: _Theme.followDevice,
+                  title: Text("Geräte-Theme folgen"),
+                ),
+                RadioListTile(
+                  value: _Theme.light,
+                  title: Text("Hell"),
+                ),
+                RadioListTile(
+                  value: _Theme.dark,
+                  title: Text("Dunkel"),
+                ),
+              ],
+            ),
           ),
           SwitchListTile.adaptive(
             title: const Text("AMOLED-Modus"),
-            subtitle: const Text("Graue Flächen in Dunkelmodus auf Schwarz setzen"),
+            subtitle:
+                const Text("Graue Flächen in Dunkelmodus auf Schwarz setzen"),
             value: widget.vm.amoledMode,
             onChanged: widget.onSetAmoledMode,
           ),
@@ -267,7 +267,7 @@ class _SettingsPageWidgetState extends State<SettingsPageWidget> {
                 color: Theme.of(context).colorScheme.primary,
                 borderRadius: BorderRadius.circular(8),
                 border: Border.all(
-                  color: Theme.of(context).dividerColor.withOpacity(0.4),
+                  color: Theme.of(context).dividerColor.withValues(alpha: 0.4),
                 ),
               ),
             ),
@@ -305,7 +305,7 @@ class _SettingsPageWidgetState extends State<SettingsPageWidget> {
                         MapEntry(
                           theme.key,
                           theme.value.rebuild(
-                            (b) => b.color = color.value,
+                            (b) => b.color = color.toARGB32(),
                           ),
                         ),
                       );
@@ -357,14 +357,14 @@ class _SettingsPageWidgetState extends State<SettingsPageWidget> {
               ),
             ),
           ),
-            SwitchListTile.adaptive(
-              title: const Text("Push Notifications aktivieren"),
-              subtitle: const Text(
-                "Prueft neue Notifications periodisch im Hintergrund (OS-abhaengig, ca. 10-15 Min.)",
-              ),
-              onChanged: widget.onSetPushNotificationsEnabled,
-              value: widget.vm.pushNotificationsEnabled,
+          SwitchListTile.adaptive(
+            title: const Text("Push Notifications aktivieren"),
+            subtitle: const Text(
+              "Prueft neue Notifications periodisch im Hintergrund (OS-abhaengig, ca. 10-15 Min.)",
             ),
+            onChanged: widget.onSetPushNotificationsEnabled,
+            value: widget.vm.pushNotificationsEnabled,
+          ),
           SwitchListTile.adaptive(
             title: const Text("Neue oder geänderte Einträge markieren"),
             onChanged: (bool value) {
@@ -517,8 +517,8 @@ class _SettingsPageWidgetState extends State<SettingsPageWidget> {
                     ),
                   );
                 }
-                i -= 1;
-                final key = widget.vm.subjectNicks.entries.toList()[i].key;
+                final index = i - 1;
+                final key = widget.vm.subjectNicks.entries.toList()[index].key;
                 final value = widget.vm.subjectNicks[key];
                 return Deleteable(
                   key: ValueKey(key),
@@ -550,7 +550,7 @@ class _SettingsPageWidgetState extends State<SettingsPageWidget> {
                               widget.onSetSubjectNicks(
                                 Map.fromEntries(
                                   List.of(widget.vm.subjectNicks.entries)
-                                    ..[i] = newValue,
+                                    ..[index] = newValue,
                                 ),
                               );
                             }
@@ -670,8 +670,7 @@ class _SettingsPageWidgetState extends State<SettingsPageWidget> {
           if (Platform.isAndroid)
             SwitchListTile.adaptive(
               title: const Text("Gay Mode"),
-              subtitle: const Text(
-                  "Imitiere das Aussehen einer iOS-App"),
+              subtitle: const Text("Imitiere das Aussehen einer iOS-App"),
               onChanged: (bool value) {
                 widget.onSetPlatformOverride(value);
               },
@@ -742,7 +741,8 @@ class _SettingsPageWidgetState extends State<SettingsPageWidget> {
             onTap: () {
               showLicensePage(
                 context: context,
-                applicationName: "Digitales Register (Client) - Tobias Bucci Fork",
+                applicationName:
+                    "Digitales Register (Client) - Tobias Bucci Fork",
                 applicationVersion: "v1.0",
               );
             },
@@ -757,7 +757,7 @@ class _SettingsPageWidgetState extends State<SettingsPageWidget> {
     final isDark = theme.brightness == Brightness.dark;
     final accent = theme.colorScheme.primary;
     final accentBg = Color.alphaBlend(
-      accent.withOpacity(isDark ? 0.24 : 0.14),
+      accent.withValues(alpha: isDark ? 0.24 : 0.14),
       theme.colorScheme.surface,
     );
 
@@ -766,12 +766,13 @@ class _SettingsPageWidgetState extends State<SettingsPageWidget> {
       builder: (context) {
         return Dialog(
           backgroundColor: Colors.transparent,
-          insetPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 24),
+          insetPadding:
+              const EdgeInsets.symmetric(horizontal: 20, vertical: 24),
           child: DecoratedBox(
             decoration: BoxDecoration(
               color: accentBg,
               borderRadius: BorderRadius.circular(22),
-              border: Border.all(color: accent.withOpacity(0.35)),
+              border: Border.all(color: accent.withValues(alpha: 0.35)),
             ),
             child: SingleChildScrollView(
               padding: const EdgeInsets.fromLTRB(18, 18, 18, 16),
@@ -793,7 +794,7 @@ class _SettingsPageWidgetState extends State<SettingsPageWidget> {
                       width: 68,
                       height: 3,
                       decoration: BoxDecoration(
-                        color: accent.withOpacity(0.9),
+                        color: accent.withValues(alpha: 0.9),
                         borderRadius: BorderRadius.circular(12),
                       ),
                     ),
@@ -804,7 +805,7 @@ class _SettingsPageWidgetState extends State<SettingsPageWidget> {
                     color: theme.colorScheme.surface,
                     shape: RoundedRectangleBorder(
                       borderRadius: BorderRadius.circular(16),
-                      side: BorderSide(color: accent.withOpacity(0.25)),
+                      side: BorderSide(color: accent.withValues(alpha: 0.25)),
                     ),
                     child: Padding(
                       padding: const EdgeInsets.fromLTRB(14, 14, 14, 14),
@@ -874,7 +875,7 @@ class _SettingsPageWidgetState extends State<SettingsPageWidget> {
   }
 
   Future<MapEntry<String, String>?> showEditSubjectNick(BuildContext context,
-      String key, String? value, List<String> suggestions) async {
+      String key, String? value, List<String> suggestions) {
     return showDialog(
       context: context,
       builder: (context) => EditSubjectsNicks(
@@ -933,9 +934,9 @@ class _EditSubjectsNicksState extends State<EditSubjectsNicks> {
       title: Text("Kürzel ${forNewNick ? "hinzufügen" : "bearbeiten"}"),
       content: Row(
         children: [
-          Column(
+          const Column(
             mainAxisSize: MainAxisSize.min,
-            children: const [
+            children: [
               Text("Fach"),
               SizedBox(
                 height: 27,
@@ -1157,6 +1158,7 @@ class _ColorPicker extends StatefulWidget {
 
 class _ColorPickerState extends State<_ColorPicker> {
   Color? color;
+
   @override
   void initState() {
     color = widget.initialColor;

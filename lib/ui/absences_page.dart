@@ -281,7 +281,7 @@ class _FutureAbsenceDialogState extends State<_FutureAbsenceDialog> {
               children: [
                 Expanded(
                   child: DropdownButtonFormField<int>(
-                    value: _startTime,
+                    initialValue: _startTime,
                     decoration: const InputDecoration(labelText: 'Startstunde'),
                     items: List.generate(
                       20,
@@ -300,7 +300,7 @@ class _FutureAbsenceDialogState extends State<_FutureAbsenceDialog> {
                 const SizedBox(width: 12),
                 Expanded(
                   child: DropdownButtonFormField<int>(
-                    value: _endTime,
+                    initialValue: _endTime,
                     decoration: const InputDecoration(labelText: 'Endstunde'),
                     items: List.generate(
                       20,

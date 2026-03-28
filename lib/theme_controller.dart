@@ -45,18 +45,15 @@ class AppThemeController extends ChangeNotifier with WidgetsBindingObserver {
       _contrastColor = Color(persistedColor);
     }
 
-    final followDevice =
-        prefs.getBool(_followDeviceThemePreferenceKey) ?? true;
+    final followDevice = prefs.getBool(_followDeviceThemePreferenceKey) ?? true;
     if (followDevice) {
       _themePreference = AppThemePreference.system;
     } else {
       final isDark = prefs.getBool(_themeBrightnessPreferenceKey) ?? false;
-      _themePreference = isDark
-          ? AppThemePreference.dark
-          : AppThemePreference.light;
+      _themePreference =
+          isDark ? AppThemePreference.dark : AppThemePreference.light;
     }
-    _platformOverride =
-        prefs.getBool(_platformOverridePreferenceKey) ?? false;
+    _platformOverride = prefs.getBool(_platformOverridePreferenceKey) ?? false;
     notifyListeners();
   }
 
@@ -165,7 +162,7 @@ class AppThemeController extends ChangeNotifier with WidgetsBindingObserver {
     notifyListeners();
 
     final prefs = await SharedPreferences.getInstance();
-    await prefs.setInt(contrastColorPreferenceKey, color.value);
+    await prefs.setInt(contrastColorPreferenceKey, color.toARGB32());
   }
 }
 

@@ -52,11 +52,13 @@ class _RequestPassResetState extends State<RequestPassReset> {
       fillColor: theme.colorScheme.surface,
       border: OutlineInputBorder(
         borderRadius: BorderRadius.circular(14),
-        borderSide: BorderSide(color: theme.dividerColor.withOpacity(0.25)),
+        borderSide:
+            BorderSide(color: theme.dividerColor.withValues(alpha: 0.25)),
       ),
       enabledBorder: OutlineInputBorder(
         borderRadius: BorderRadius.circular(14),
-        borderSide: BorderSide(color: theme.dividerColor.withOpacity(0.25)),
+        borderSide:
+            BorderSide(color: theme.dividerColor.withValues(alpha: 0.25)),
       ),
       focusedBorder: OutlineInputBorder(
         borderRadius: BorderRadius.circular(14),
@@ -71,7 +73,7 @@ class _RequestPassResetState extends State<RequestPassReset> {
     final isDark = theme.brightness == Brightness.dark;
     final accent = theme.colorScheme.primary;
     final accentBg = Color.alphaBlend(
-      accent.withOpacity(isDark ? 0.24 : 0.14),
+      accent.withValues(alpha: isDark ? 0.24 : 0.14),
       theme.colorScheme.surface,
     );
     const fixedBackground = Color(0xFF1B2026);
@@ -124,7 +126,7 @@ class _RequestPassResetState extends State<RequestPassReset> {
                           width: 68,
                           height: 3,
                           decoration: BoxDecoration(
-                            color: accent.withOpacity(0.85),
+                            color: accent.withValues(alpha: 0.85),
                             borderRadius: BorderRadius.circular(12),
                           ),
                         ),
@@ -137,7 +139,7 @@ class _RequestPassResetState extends State<RequestPassReset> {
                     shape: RoundedRectangleBorder(
                       borderRadius: BorderRadius.circular(22),
                       side: BorderSide(
-                        color: accent.withOpacity(isDark ? 0.28 : 0.16),
+                        color: accent.withValues(alpha: isDark ? 0.28 : 0.16),
                       ),
                     ),
                     child: Padding(
@@ -196,7 +198,9 @@ class _RequestPassResetState extends State<RequestPassReset> {
                     Container(
                       margin: const EdgeInsets.only(top: 14),
                       decoration: BoxDecoration(
-                        color: accentBg.withOpacity(isDark ? 0.5 : 0.7),
+                        color: accentBg.withValues(
+                          alpha: isDark ? 0.5 : 0.7,
+                        ),
                         borderRadius: BorderRadius.circular(12),
                       ),
                       padding: const EdgeInsets.all(12),

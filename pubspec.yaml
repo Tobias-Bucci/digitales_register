@@ -35,10 +35,10 @@ dependencies:
   flutter_built_redux:
     path: packages/flutter_built_redux
   flutter_colorpicker: ^1.0.3
+  flutter_local_notifications: ^17.2.4
   flutter_localizations:
     sdk: flutter
   flutter_secure_storage: ^8.1.0
-  flutter_local_notifications: ^17.2.4
   flutter_svg: ^2.2.0
   flutter_widget_from_html_core: ^0.17.0
   fuzzy: ^0.4.0-nullsafety.0
@@ -60,10 +60,10 @@ dependencies:
   scrollable_positioned_list: ^0.3.1
   shared_preferences: ^2.5.3
   tuple: ^2.0.0
-  workmanager: ^0.9.0+3
   uni_links:
     path: packages/uni_links
   url_launcher: ^6.3.2
+  workmanager: ^0.9.0+3
 
 dependency_overrides:
   file: ^6.1.4

@@ -109,7 +109,7 @@ class _LoginPageContentState extends State<LoginPageContent> {
     final isDark = theme.brightness == Brightness.dark;
     final naturalBlue = theme.colorScheme.primary;
     final naturalBlueBg = Color.alphaBlend(
-      naturalBlue.withOpacity(isDark ? 0.24 : 0.14),
+      naturalBlue.withValues(alpha: isDark ? 0.24 : 0.14),
       theme.colorScheme.surface,
     );
     const fixedBackground = Color(0xFF1B2026);
@@ -138,11 +138,13 @@ class _LoginPageContentState extends State<LoginPageContent> {
         fillColor: theme.colorScheme.surface,
         border: OutlineInputBorder(
           borderRadius: BorderRadius.circular(14),
-          borderSide: BorderSide(color: theme.dividerColor.withOpacity(0.25)),
+          borderSide:
+              BorderSide(color: theme.dividerColor.withValues(alpha: 0.25)),
         ),
         enabledBorder: OutlineInputBorder(
           borderRadius: BorderRadius.circular(14),
-          borderSide: BorderSide(color: theme.dividerColor.withOpacity(0.25)),
+          borderSide:
+              BorderSide(color: theme.dividerColor.withValues(alpha: 0.25)),
         ),
         focusedBorder: OutlineInputBorder(
           borderRadius: BorderRadius.circular(14),
@@ -208,7 +210,7 @@ class _LoginPageContentState extends State<LoginPageContent> {
                                   width: 68,
                                   height: 3,
                                   decoration: BoxDecoration(
-                                    color: naturalBlue.withOpacity(0.85),
+                                    color: naturalBlue.withValues(alpha: 0.85),
                                     borderRadius: BorderRadius.circular(12),
                                   ),
                                 ),
@@ -221,8 +223,9 @@ class _LoginPageContentState extends State<LoginPageContent> {
                           shape: RoundedRectangleBorder(
                             borderRadius: BorderRadius.circular(22),
                             side: BorderSide(
-                              color:
-                                  naturalBlue.withOpacity(isDark ? 0.28 : 0.16),
+                              color: naturalBlue.withValues(
+                                alpha: isDark ? 0.28 : 0.16,
+                              ),
                             ),
                           ),
                           child: Padding(
@@ -398,8 +401,9 @@ class _LoginPageContentState extends State<LoginPageContent> {
                                     if (widget.vm.mustChangePass)
                                       Container(
                                         decoration: BoxDecoration(
-                                          color:
-                                              naturalBlueBg.withOpacity(0.35),
+                                          color: naturalBlueBg.withValues(
+                                            alpha: 0.35,
+                                          ),
                                           borderRadius:
                                               BorderRadius.circular(12),
                                         ),
@@ -411,8 +415,11 @@ class _LoginPageContentState extends State<LoginPageContent> {
                                     const SizedBox(height: 10),
                                     Container(
                                       decoration: BoxDecoration(
-                                        color: theme.colorScheme.surfaceVariant
-                                            .withOpacity(isDark ? 0.35 : 0.55),
+                                        color: theme
+                                            .colorScheme.surfaceContainerHighest
+                                            .withValues(
+                                          alpha: isDark ? 0.35 : 0.55,
+                                        ),
                                         borderRadius: BorderRadius.circular(12),
                                       ),
                                       padding: const EdgeInsets.all(12),
@@ -517,9 +524,9 @@ class _LoginPageContentState extends State<LoginPageContent> {
                                       "Deine Zugangsdaten werden lokal gespeichert",
                                     ),
                                     contentPadding: EdgeInsets.zero,
-                                    activeColor: naturalBlue,
+                                    activeThumbColor: naturalBlue,
                                     activeTrackColor:
-                                        naturalBlue.withOpacity(0.42),
+                                        naturalBlue.withValues(alpha: 0.42),
                                     value: !safeMode,
                                     onChanged: widget.vm.loading
                                         ? null
@@ -567,7 +574,8 @@ class _LoginPageContentState extends State<LoginPageContent> {
                             shape: RoundedRectangleBorder(
                               borderRadius: BorderRadius.circular(18),
                               side: BorderSide(
-                                color: theme.dividerColor.withOpacity(0.2),
+                                color:
+                                    theme.dividerColor.withValues(alpha: 0.2),
                               ),
                             ),
                             child: Padding(
@@ -598,8 +606,9 @@ class _LoginPageContentState extends State<LoginPageContent> {
                           Container(
                             margin: const EdgeInsets.only(top: 14),
                             decoration: BoxDecoration(
-                              color:
-                                  naturalBlueBg.withOpacity(isDark ? 0.5 : 0.7),
+                              color: naturalBlueBg.withValues(
+                                alpha: isDark ? 0.5 : 0.7,
+                              ),
                               borderRadius: BorderRadius.circular(12),
                             ),
                             padding: const EdgeInsets.all(12),

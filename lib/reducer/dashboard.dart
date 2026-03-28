@@ -221,22 +221,16 @@ Homework _parseHomework(Map data) {
     switch (typeString) {
       case "lessonHomework":
         type = HomeworkType.lessonHomework;
-        break;
       case "gradeGroup":
         type = HomeworkType.gradeGroup;
-        break;
       case "grade":
         type = HomeworkType.grade;
-        break;
       case "observation":
         type = HomeworkType.observation;
-        break;
       case "homework":
         type = HomeworkType.homework;
-        break;
       default:
         type = HomeworkType.unknown;
-        break;
     }
     b.type = type;
 

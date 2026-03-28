@@ -130,7 +130,7 @@ class _SortedGradesWidgetState extends State<SortedGradesWidget> {
         Padding(
           padding: const EdgeInsets.symmetric(vertical: 16),
           child: ListTile(
-            title: Row(
+            title: const Row(
               children: [
                 Text("Notenrechner"),
               ],

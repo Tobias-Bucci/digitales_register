@@ -7,12 +7,19 @@ analyzer:
     - "packages/built_redux/**"
     - "packages/charts_repo/**"
     - "packages/collapsible_sidebar/**"
+    - "packages/dynamic_theme/**"
     - "packages/flutter_built_redux/**"
+    - "packages/open_file/**"
+    - "packages/open_file/example/**"
     - "packages/quill_delta_viewer/**"
     - "packages/responsive_scaffold/**"
+    - "packages/uni_links/**"
+    - "packages/uni_links/example/**"
+    - "packages/uni_links/test/**"
   errors:
     # This lint is not helpful in combination with implicit-dynamic: false.
     avoid_dynamic_calls: ignore
+    unreachable_from_main: ignore
   strong-mode:
     implicit-casts: false
     implicit-dynamic: false

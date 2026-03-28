@@ -523,7 +523,6 @@ Future<void> _start(
         await api.actions.loginActions.addAfterLoginCallback(
           () => api.actions.gradesActions.setSemester(Semester.first),
         );
-        break;
       case "2":
         await api.actions.loginActions.addAfterLoginCallback(
           () => api.actions.gradesActions.setSemester(Semester.second),
@@ -554,7 +553,6 @@ Future<void> _start(
           await redirectAfterLogin(
               parameters["redirect"]!.replaceFirst("#", ""), api);
         }
-        break;
       default:
         showSnackBar("Dieser Link konnte nicht geöffnet werden");
     }
@@ -573,27 +571,22 @@ Future<void> redirectAfterLogin(String location,
       await api.actions.loginActions.addAfterLoginCallback(
         api.actions.routingActions.showAbsences.call,
       );
-      break;
     case "calendar/student":
       await api.actions.loginActions.addAfterLoginCallback(
         api.actions.routingActions.showCalendar.call,
       );
-      break;
     case "student/subjects":
       await api.actions.loginActions.addAfterLoginCallback(
         api.actions.routingActions.showGrades.call,
       );
-      break;
     case "student/certificate":
       await api.actions.loginActions.addAfterLoginCallback(
         api.actions.routingActions.showCertificate.call,
       );
-      break;
     case "message/list":
       await api.actions.loginActions.addAfterLoginCallback(
         api.actions.routingActions.showMessages.call,
       );
-      break;
     default:
       showSnackBar("Dieser Link konnte nicht geöffnet werden");
   }
@@ -688,7 +681,7 @@ Future<void> openFile(String fileName) async {
   );
 }
 
-Future<bool?> askShouldOverwriteFile(String fileName) async {
+Future<bool?> askShouldOverwriteFile(String fileName) {
   return navigatorKey!.currentState!.push<bool>(
     DialogRoute(
       builder: (context) {

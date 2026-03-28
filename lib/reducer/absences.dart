@@ -28,8 +28,7 @@ final absencesReducerBuilder = NestedReducerBuilder<AppState, AppStateBuilder,
     AbsencesState, AbsencesStateBuilder>(
   (s) => s.absencesState,
   (b) => b.absencesState,
-)
-  ..add<dynamic>(AbsencesActionsNames.loaded, _loaded);
+)..add<dynamic>(AbsencesActionsNames.loaded, _loaded);
 
 void _loaded(
     AbsencesState state, Action<dynamic> action, AbsencesStateBuilder builder) {
@@ -64,7 +63,8 @@ void _loaded(
 String _absenceGroupKey(AbsenceGroup group) {
   final absenceItems = group.absences
       .map(
-        (a) => '${a.date.toIso8601String()}|${a.hour}|${a.minutes}|${a.minutesCameTooLate}|${a.minutesLeftTooEarly}',
+        (a) =>
+            '${a.date.toIso8601String()}|${a.hour}|${a.minutes}|${a.minutesCameTooLate}|${a.minutesLeftTooEarly}',
       )
       .join('||');
   return '${group.justified.name}::${group.reason ?? ''}::${group.note ?? ''}::${group.reasonSignature ?? ''}::${group.reasonTimestamp?.toIso8601String() ?? ''}::$absenceItems';
@@ -81,9 +81,7 @@ AbsencesState _parseAbsences(Map json) {
     ..percentage = rawStats["percentage"]?.toString().isNotEmpty == true
         ? rawStats["percentage"].toString()
         : null;
-  final absences = (json["absences"] as List)
-      .map(_parseAbsence)
-      .toList()
+  final absences = (json["absences"] as List).map(_parseAbsence).toList()
     ..sort((a, b) {
       final latestA =
           a.absences.reduce((x, y) => x.date.isAfter(y.date) ? x : y).date;
@@ -131,17 +129,17 @@ AbsenceGroup _parseAbsence(dynamic g) {
           },
         ),
       )
-      ..minutes = b.absences.build().fold<int>(0, (min, a) {
+      ..minutes = b.absences.build().fold<int>(0, (minutes, a) {
         if (a.minutes != 50) {
-          min += a.minutesCameTooLate + a.minutesLeftTooEarly;
+          return minutes + a.minutesCameTooLate + a.minutesLeftTooEarly;
         }
-        return min;
+        return minutes;
       })
-      ..hours = b.absences.build().fold<int>(0, (h, a) {
+      ..hours = b.absences.build().fold<int>(0, (hours, a) {
         if (a.minutes == 50) {
-          h++;
+          return hours + 1;
         }
-        return h;
+        return hours;
       }),
   );
 }

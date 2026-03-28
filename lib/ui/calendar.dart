@@ -280,7 +280,7 @@ class _CalendarState extends State<Calendar> with TickerProviderStateMixin {
                               opacity: _dateRangeOpacityAnimation,
                               child: TextButton(
                                 style: ButtonStyle(
-                                  textStyle: MaterialStateProperty.all(
+                                  textStyle: WidgetStateProperty.all(
                                       Theme.of(context).textTheme.titleLarge),
                                 ),
                                 onPressed: () async {
@@ -449,7 +449,7 @@ class EditNickBar extends StatelessWidget {
                       padding: const EdgeInsets.symmetric(horizontal: 8),
                       child: TextButton(
                         onPressed: onShowEditNicks,
-                        child: Row(
+                        child: const Row(
                           children: [
                             Padding(
                               padding: EdgeInsets.symmetric(horizontal: 8),

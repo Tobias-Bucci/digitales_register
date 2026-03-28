@@ -5,38 +5,40 @@ import 'dart:io';
 import 'package:flutter/services.dart';
 import 'package:open_file/src/common/open_result.dart';
 
+// ignore: avoid_classes_with_only_static_members
 class OpenFile {
-  static const MethodChannel _channel = const MethodChannel('open_file');
+  static const MethodChannel _channel = MethodChannel('open_file');
 
   ///linuxDesktopName like 'xdg'/'gnome'
   static Future<OpenResult> open(String filePath,
       {String? type, String? uti, String linuxDesktopName = "xdg"}) async {
     if (!Platform.isIOS && !Platform.isAndroid) {
-      int _result;
+      late final int resultCode;
       if (Platform.isMacOS || Platform.isWindows) {
         final process = await Process.start("open", [filePath]);
-        _result = await process.exitCode;
+        resultCode = await process.exitCode;
       } else if (Platform.isLinux) {
         final process =
             await Process.start("$linuxDesktopName-open", [filePath]);
-        _result = await process.exitCode;
+        resultCode = await process.exitCode;
       } else {
         throw UnsupportedError("Unsupported platform");
       }
       return OpenResult(
-          type: _result == 0 ? ResultType.done : ResultType.error,
-          message: _result == 0
+          type: resultCode == 0 ? ResultType.done : ResultType.error,
+          message: resultCode == 0
               ? "done"
               : "there are some errors when open $filePath");
     }
 
-    Map<String, String?> map = {
+    final map = <String, String?>{
       "file_path": filePath,
       "type": type,
-      "uti": uti
+      "uti": uti,
     };
-    final _result = await _channel.invokeMethod('open_file', map);
-    Map resultMap = json.decode(_result);
-    return OpenResult.fromJson(resultMap as Map<String, dynamic>);
+    final rawResult = await _channel.invokeMethod<String>('open_file', map);
+    final resultMap = json.decode(rawResult ?? '{"message":"error","type":-4}')
+        as Map<String, dynamic>;
+    return OpenResult.fromJson(resultMap);
   }
 }

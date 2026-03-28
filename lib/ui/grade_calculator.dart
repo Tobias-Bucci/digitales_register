@@ -419,7 +419,7 @@ class Greeting extends StatelessWidget {
             padding: const EdgeInsets.all(16),
             child: ElevatedButton(
               onPressed: import,
-              child: Row(
+              child: const Row(
                 mainAxisSize: MainAxisSize.min,
                 children: [
                   Icon(Icons.save_alt),
@@ -435,7 +435,7 @@ class Greeting extends StatelessWidget {
             padding: const EdgeInsets.all(16),
             child: ElevatedButton(
               onPressed: add,
-              child: Row(
+              child: const Row(
                 mainAxisSize: MainAxisSize.min,
                 children: [
                   Icon(Icons.add),
@@ -525,9 +525,7 @@ class _ImportGradesState extends State<_ImportGrades> {
           const SizedBox(
             height: 16,
           ),
-          RadioListTile<Semester>(
-            title: const Text("Erstes Semester"),
-            value: Semester.first,
+          RadioGroup<Semester>(
             groupValue: selectedSemester,
             onChanged: (value) {
               setState(() {
@@ -535,28 +533,25 @@ class _ImportGradesState extends State<_ImportGrades> {
               });
               _recalculateGrades();
             },
-          ),
-          RadioListTile<Semester>(
-            title: const Text("Zweites Semester"),
-            value: Semester.second,
-            groupValue: selectedSemester,
-            onChanged: (value) {
-              setState(() {
-                selectedSemester = value;
-              });
-              _recalculateGrades();
-            },
-          ),
-          RadioListTile<Semester>(
-            title: const Text("Beide Semester"),
-            value: Semester.all,
-            groupValue: selectedSemester,
-            onChanged: (value) {
-              setState(() {
-                selectedSemester = value;
-              });
-              _recalculateGrades();
-            },
+            child: Column(
+              children: [
+                // ignore: prefer_const_constructors
+                RadioListTile<Semester>(
+                  title: const Text("Erstes Semester"),
+                  value: Semester.first,
+                ),
+                // ignore: prefer_const_constructors
+                RadioListTile<Semester>(
+                  title: const Text("Zweites Semester"),
+                  value: Semester.second,
+                ),
+                // ignore: prefer_const_constructors
+                RadioListTile<Semester>(
+                  title: const Text("Beide Semester"),
+                  value: Semester.all,
+                ),
+              ],
+            ),
           ),
           const SizedBox(
             height: 16,

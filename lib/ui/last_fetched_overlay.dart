@@ -50,7 +50,7 @@ class RawLastFetchedOverlay extends StatelessWidget {
               horizontal: 8,
             ).copyWith(right: 8),
             decoration: BoxDecoration(
-              color: Colors.black.withOpacity(0.55),
+              color: Colors.black.withValues(alpha: 0.55),
               borderRadius: BorderRadius.circular(5),
             ),
             child: Text(

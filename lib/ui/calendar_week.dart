@@ -44,29 +44,26 @@ class CalendarWeek extends StatelessWidget {
   Widget build(BuildContext context) {
     final latestHour =
         vm.days.fold<int>(0, (a, b) => a < b.toHour ? b.toHour : a);
-    final displayedDays = vm.days
-        .map(
-          (day) {
-            final filteredHours = favoriteSubject == null
-                ? day.hours
-                : BuiltList<CalendarHour>(
-                    day.hours.where(
-                      (hour) =>
-                          matchesFavoriteSubject(hour.subject, favoriteSubject!),
-                    ),
-                  );
-            return _DisplayedCalendarDay(
-              day: day.rebuild(
-                (b) => b.hours.replace(filteredHours),
-              ),
-              showNoFavoriteSubject:
-                  favoriteSubject != null &&
-                  day.hours.isNotEmpty &&
-                  filteredHours.isEmpty,
-            );
-          },
-        )
-        .toList();
+    final displayedDays = vm.days.map(
+      (day) {
+        final filteredHours = favoriteSubject == null
+            ? day.hours
+            : BuiltList<CalendarHour>(
+                day.hours.where(
+                  (hour) =>
+                      matchesFavoriteSubject(hour.subject, favoriteSubject!),
+                ),
+              );
+        return _DisplayedCalendarDay(
+          day: day.rebuild(
+            (b) => b.hours.replace(filteredHours),
+          ),
+          showNoFavoriteSubject: favoriteSubject != null &&
+              day.hours.isNotEmpty &&
+              filteredHours.isEmpty,
+        );
+      },
+    ).toList();
     return vm.days.isEmpty
         ? vm.noInternet
             ? const NoInternet()
@@ -91,8 +88,8 @@ class CalendarWeek extends StatelessWidget {
                                   vm.selection?.date == displayedDay.day.date,
                               selectedHour:
                                   vm.selection?.date == displayedDay.day.date
-                                  ? vm.selection?.hour
-                                  : null,
+                                      ? vm.selection?.hour
+                                      : null,
                               colorBackground: vm.colorBackground,
                               subjectThemes: vm.subjectThemes,
                               showNoFavoriteSubject:
@@ -174,11 +171,11 @@ class _HoursChunk extends StatelessWidget {
                       isSelected: selectedHour == hours[n ~/ 2].fromHour,
                       backgroundColor: colorBackground
                           ? Color(subjectThemes[hours[n ~/ 2].subject]!.color)
-                              .withOpacity(0.25)
+                              .withValues(alpha: 0.25)
                           : Colors.transparent,
                       selectedBackgroundColor: colorBackground
                           ? Color(subjectThemes[hours[n ~/ 2].subject]!.color)
-                              .withOpacity(0.5)
+                              .withValues(alpha: 0.5)
                           : Theme.of(context)
                               .colorScheme
                               .secondary
@@ -428,7 +425,7 @@ Widget findHolidayIconForSeason(UtcDateTime date, Color color, double size) {
   if (month == 10 && day >= 24 || month == 11 && day <= 8) {
     return SvgPicture.asset(
       "assets/halloween.svg",
-      color: color,
+      colorFilter: ColorFilter.mode(color, BlendMode.srcIn),
       height: size,
       width: size,
     );
@@ -438,7 +435,7 @@ Widget findHolidayIconForSeason(UtcDateTime date, Color color, double size) {
   if (_dateIsNear(date, easter)) {
     return SvgPicture.asset(
       "assets/easter.svg",
-      color: color,
+      colorFilter: ColorFilter.mode(color, BlendMode.srcIn),
       height: size,
       width: size,
     );
@@ -448,7 +445,7 @@ Widget findHolidayIconForSeason(UtcDateTime date, Color color, double size) {
   if (_dateIsNear(date, carnival)) {
     return SvgPicture.asset(
       "assets/carnival.svg",
-      color: color,
+      colorFilter: ColorFilter.mode(color, BlendMode.srcIn),
       height: size,
       width: size,
     );

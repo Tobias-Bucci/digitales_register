@@ -65,7 +65,7 @@ Future<void> _login(MiddlewareApi<AppState, AppStateBuilder, AppActions> api,
   if (action.payload.user == "" || action.payload.pass == "") {
     await api.actions.loginActions.loginFailed(
       LoginFailedPayload(
-        (b) async => b
+        (b) => b
           ..cause = "Bitte gib etwas ein"
           ..username = action.payload.user,
       ),

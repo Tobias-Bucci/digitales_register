@@ -5,8 +5,8 @@ class OpenResult {
   OpenResult({this.type = ResultType.done, this.message = "done"});
 
   OpenResult.fromJson(Map<String, dynamic> json)
-      : message = json['message'],
-        type = _convertJson(json['type']);
+      : message = json['message'] as String? ?? 'done',
+        type = _convertJson(json['type'] as int?);
 
   static ResultType _convertJson(int? jsonType) {
     switch (jsonType) {

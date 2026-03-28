@@ -67,16 +67,12 @@ class AbsenceGroupContainer extends StatelessWidget {
                     absenceGroup.reasonTimestamp != null
                 ? "${DateFormat("EE d.M.yyyy 'um' HH:mm", "de").format(absenceGroup.reasonTimestamp!)} als „${absenceGroup.reasonSignature}“ entschuldigt"
                 : "entschuldigt";
-            break;
           case AbsenceJustified.forSchool:
             justifiedString = "Im Auftrag der Schule (entschuldigt)";
-            break;
           case AbsenceJustified.notJustified:
             justifiedString = "Nicht entschuldigt";
-            break;
           default:
             justifiedString = "Noch nicht entschuldigt";
-            break;
         }
         return AbsencesViewModel(
           fromTo,

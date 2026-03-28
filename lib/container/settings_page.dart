@@ -66,7 +66,7 @@ class SettingsPageContainer extends StatelessWidget {
               actions.settingsActions.calendarColorBackground.call,
           onSetDashboardColorTestsInRed:
               actions.settingsActions.dashboardColorTestsInRed.call,
-            onSetPushNotificationsEnabled:
+          onSetPushNotificationsEnabled:
               actions.settingsActions.pushNotificationsEnabled.call,
           onSetAmoledMode: actions.settingsActions.amoledMode.call,
           onSetSubjectTheme: actions.settingsActions.setSubjectTheme.call,

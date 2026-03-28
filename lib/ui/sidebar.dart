@@ -77,7 +77,7 @@ class Sidebar extends StatelessWidget {
       screenPadding: 0,
       title: Container(
         decoration: BoxDecoration(
-          color: scheme.primary.withOpacity(0.08),
+          color: scheme.primary.withValues(alpha: 0.08),
           borderRadius: BorderRadius.circular(12),
         ),
         padding: const EdgeInsets.symmetric(horizontal: 8),
@@ -127,7 +127,7 @@ class Sidebar extends StatelessWidget {
           //"https://vinzentinum.digitalesregister.it/v2/theme/icons/profile_empty.png" is the (ugly) default
           userIcon?.endsWith("/profile_empty.png") ?? true
               ? CircleAvatar(
-                  backgroundColor: scheme.primary.withOpacity(0.12),
+                  backgroundColor: scheme.primary.withValues(alpha: 0.12),
                   child: Icon(
                     Icons.account_circle,
                     color: scheme.primary,
@@ -138,7 +138,7 @@ class Sidebar extends StatelessWidget {
       selectedIconColor: scheme.primary,
       unselectedTextColor: theme.textTheme.titleMedium!.color!,
       selectedTextColor: scheme.primary,
-      selectedIconBox: scheme.primary.withOpacity(0.12),
+      selectedIconBox: scheme.primary.withValues(alpha: 0.12),
       items: [
         if (tabletMode)
           CollapsibleItem(

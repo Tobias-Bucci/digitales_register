@@ -475,9 +475,9 @@ class _DaysWidgetState extends State<DaysWidget> {
         ],
       ),
       homeAppBar: ResponsiveAppBar(
-        title: Row(
+        title: const Row(
           mainAxisSize: MainAxisSize.min,
-          children: const [
+          children: [
             Icon(Icons.dashboard_customize_outlined),
             SizedBox(width: 8),
             Text("Dashboard"),
@@ -547,14 +547,14 @@ class DashboardHeader extends StatelessWidget {
           color: scheme.surface,
           borderRadius: BorderRadius.circular(16),
           border: Border.all(
-            color: scheme.outline.withOpacity(
-              theme.brightness == Brightness.dark ? 0.45 : 0.2,
+            color: scheme.outline.withValues(
+              alpha: theme.brightness == Brightness.dark ? 0.45 : 0.2,
             ),
           ),
           boxShadow: [
             if (theme.brightness == Brightness.light)
               BoxShadow(
-                color: Colors.black.withOpacity(0.04),
+                color: Colors.black.withValues(alpha: 0.04),
                 blurRadius: 16,
                 offset: const Offset(0, 6),
               ),
@@ -650,7 +650,7 @@ class DayWidget extends StatelessWidget {
     required this.showLastFetched,
   });
 
-  Future<String?> showEnterReminderDialog(BuildContext context) async {
+  Future<String?> showEnterReminderDialog(BuildContext context) {
     return showDialog(
       context: context,
       builder: (context) {
@@ -722,7 +722,7 @@ class DayWidget extends StatelessWidget {
                   controller: controller,
                   index: index,
                   key: ValueKey(index),
-                  highlightColor: Colors.grey.withOpacity(0.5),
+                  highlightColor: Colors.grey.withValues(alpha: 0.5),
                   child: IconButton(
                     icon: badge.Badge(
                       badgeContent: Icon(
@@ -1156,7 +1156,7 @@ class ItemWidget extends StatelessWidget {
         index: index!,
         key: ValueKey(index),
         controller: controller!,
-        highlightColor: Colors.grey.withOpacity(0.5),
+        highlightColor: Colors.grey.withValues(alpha: 0.5),
         child: child,
       );
     }

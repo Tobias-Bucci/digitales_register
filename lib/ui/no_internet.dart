@@ -34,10 +34,10 @@ class NoInternet extends StatelessWidget {
             decoration: BoxDecoration(
               color: scheme.surface,
               borderRadius: BorderRadius.circular(20),
-              border: Border.all(color: scheme.outline.withOpacity(0.35)),
+              border: Border.all(color: scheme.outline.withValues(alpha: 0.35)),
               boxShadow: [
                 BoxShadow(
-                  color: Colors.black.withOpacity(0.08),
+                  color: Colors.black.withValues(alpha: 0.08),
                   blurRadius: 18,
                   offset: const Offset(0, 10),
                 ),
@@ -83,7 +83,7 @@ class NoInternet extends StatelessWidget {
                   padding:
                       const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
                   decoration: BoxDecoration(
-                    color: scheme.primaryContainer.withOpacity(0.55),
+                    color: scheme.primaryContainer.withValues(alpha: 0.55),
                     borderRadius: BorderRadius.circular(12),
                   ),
                   child: Row(

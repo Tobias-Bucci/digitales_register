@@ -72,7 +72,7 @@ class GradesChartLegendEntry extends StatelessWidget {
                 max: 5,
                 divisions: 5,
                 activeColor: Color(config.color),
-                inactiveColor: Color(config.color).withOpacity(0.2),
+                inactiveColor: Color(config.color).withValues(alpha: 0.2),
               );
             }),
           ),

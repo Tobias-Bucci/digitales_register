@@ -27,8 +27,8 @@ class AbsenceGroupWidget extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final bodyStyle = Theme.of(context).textTheme.bodyMedium;
-    final divider = Row(
-      children: const [
+    const divider = Row(
+      children: [
         Spacer(),
         Flexible(
           flex: 48,
@@ -113,20 +113,16 @@ class FutureAbsenceWidget extends StatelessWidget {
     switch (absence.justified) {
       case AbsenceJustified.justified:
         justifiedString = "Entschuldigt";
-        break;
       case AbsenceJustified.forSchool:
         justifiedString = "Im Auftrag der Schule (entschuldigt)";
-        break;
       case AbsenceJustified.notJustified:
         justifiedString = "Nicht entschuldigt";
-        break;
       default:
         justifiedString = "Noch nicht entschuldigt";
-        break;
     }
 
-    final divider = Row(
-      children: const [
+    const divider = Row(
+      children: [
         Spacer(),
         Flexible(
           flex: 48,

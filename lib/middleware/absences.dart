@@ -19,9 +19,9 @@ part of 'middleware.dart';
 
 final _absencesMiddleware =
     MiddlewareBuilder<AppState, AppStateBuilder, AppActions>()
-  ..add(AbsencesActionsNames.load, _loadAbsences)
-  ..add(AbsencesActionsNames.addFutureAbsence, _addFutureAbsence)
-  ..add(AbsencesActionsNames.removeFutureAbsence, _removeFutureAbsence);
+      ..add(AbsencesActionsNames.load, _loadAbsences)
+      ..add(AbsencesActionsNames.addFutureAbsence, _addFutureAbsence)
+      ..add(AbsencesActionsNames.removeFutureAbsence, _removeFutureAbsence);
 
 Future<void> _loadAbsences(
     MiddlewareApi<AppState, AppStateBuilder, AppActions> api,
@@ -42,7 +42,7 @@ Future<void> _loadAbsences(
     if (responseMap != null) {
       final absencesCount = (responseMap['absences'] as List?)?.length;
       final futureCount = (responseMap['futureAbsences'] as List?)?.length;
-        final dynamic canEdit = responseMap['canEdit'];
+      final dynamic canEdit = responseMap['canEdit'];
       _absencesDebug(
         'load <- canEdit=$canEdit absences=$absencesCount futureAbsences=$futureCount',
       );
@@ -137,7 +137,8 @@ Future<void> _handleUnexpectedLogout(
   MiddlewareApi<AppState, AppStateBuilder, AppActions> api,
   String operation,
 ) async {
-  _absencesDebug('$operation -> unexpected logout from server, triggering forced logout');
+  _absencesDebug(
+      '$operation -> unexpected logout from server, triggering forced logout');
   if (!wrapper.noInternet) {
     showSnackBar('Sitzung abgelaufen, bitte erneut anmelden');
   }

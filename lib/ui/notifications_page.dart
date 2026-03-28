@@ -70,7 +70,7 @@ class NotificationPage extends StatelessWidget {
                         alignment: Alignment.centerRight,
                         child: TextButton(
                           onPressed: noInternet ? null : deleteAllNotifications,
-                          child: Row(
+                          child: const Row(
                             mainAxisSize: MainAxisSize.min,
                             children: [
                               Text("Alle gelesen"),
@@ -81,10 +81,10 @@ class NotificationPage extends StatelessWidget {
                         ),
                       );
                     }
-                    n -= 1;
+                    final index = n - 1;
                     return NotificationWidget(
-                      key: ObjectKey(notifications[n]),
-                      notification: notifications[n],
+                      key: ObjectKey(notifications[index]),
+                      notification: notifications[index],
                       onDelete: deleteNotification,
                       noInternet: noInternet,
                       goToMessage: goToMessage,

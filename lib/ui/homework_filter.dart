@@ -83,11 +83,11 @@ class _HomeworkFilterState extends State<HomeworkFilter>
           builder: (context, setSheetState) {
             final localBlacklistSnapshot = localBlacklist.build();
             final hasGrades =
-              !localBlacklistSnapshot.contains(HomeworkType.grade);
+                !localBlacklistSnapshot.contains(HomeworkType.grade);
             final hasHomework =
-              !localBlacklistSnapshot.contains(HomeworkType.homework);
+                !localBlacklistSnapshot.contains(HomeworkType.homework);
             final hasObservation =
-              !localBlacklistSnapshot.contains(HomeworkType.observation);
+                !localBlacklistSnapshot.contains(HomeworkType.observation);
             return SafeArea(
               child: Padding(
                 padding: const EdgeInsets.fromLTRB(16, 8, 16, 16),
@@ -183,7 +183,8 @@ class _HomeworkFilterState extends State<HomeworkFilter>
           padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
         ),
         icon: const Icon(Icons.tune_rounded),
-        label: Text(activeFilterCount > 0 ? "Filter ($activeFilterCount)" : "Filter"),
+        label: Text(
+            activeFilterCount > 0 ? "Filter ($activeFilterCount)" : "Filter"),
       ),
     );
   }
