@@ -26,8 +26,16 @@ typedef HomeworkBlacklistCallback = void Function(
 class HomeworkFilter extends StatefulWidget {
   final HomeworkFilterVM vm;
   final HomeworkBlacklistCallback callback;
+  final bool showEmptyDays;
+  final ValueChanged<bool> onShowEmptyDaysChanged;
 
-  const HomeworkFilter({super.key, required this.vm, required this.callback});
+  const HomeworkFilter({
+    super.key,
+    required this.vm,
+    required this.callback,
+    required this.showEmptyDays,
+    required this.onShowEmptyDaysChanged,
+  });
 
   @override
   _HomeworkFilterState createState() => _HomeworkFilterState();
@@ -65,6 +73,7 @@ class _HomeworkFilterState extends State<HomeworkFilter>
 
   Future<void> _openFilterSheet(BuildContext context) async {
     final localBlacklist = widget.vm.currentBlacklist.toBuilder();
+    var showEmptyDays = widget.showEmptyDays;
 
     void updateBlacklist(
       void Function(ListBuilder<HomeworkType> blacklist) updates,
@@ -72,6 +81,15 @@ class _HomeworkFilterState extends State<HomeworkFilter>
     ) {
       updates(localBlacklist);
       widget.callback(ListBuilder<HomeworkType>(localBlacklist.build()));
+      setSheetState(() {});
+    }
+
+    void updateShowEmptyDays(
+      bool value,
+      void Function(void Function()) setSheetState,
+    ) {
+      showEmptyDays = value;
+      widget.onShowEmptyDaysChanged(value);
       setSheetState(() {});
     }
 
@@ -88,6 +106,12 @@ class _HomeworkFilterState extends State<HomeworkFilter>
                 !localBlacklistSnapshot.contains(HomeworkType.homework);
             final hasObservation =
                 !localBlacklistSnapshot.contains(HomeworkType.observation);
+            final activeFilterCount = [
+              !hasGrades,
+              !hasHomework,
+              !hasObservation,
+              !showEmptyDays,
+            ].where((isDisabled) => isDisabled).length;
             return SafeArea(
               child: Padding(
                 padding: const EdgeInsets.fromLTRB(16, 8, 16, 16),
@@ -101,7 +125,9 @@ class _HomeworkFilterState extends State<HomeworkFilter>
                     ),
                     const SizedBox(height: 6),
                     Text(
-                      "Wähle aus, welche Inhalte angezeigt werden.",
+                      activeFilterCount == 0
+                          ? "Wähle aus, welche Inhalte angezeigt werden."
+                          : "$activeFilterCount Filter deaktiviert.",
                       style: Theme.of(context).textTheme.bodyMedium,
                     ),
                     const SizedBox(height: 12),
@@ -159,6 +185,15 @@ class _HomeworkFilterState extends State<HomeworkFilter>
                       title: const Text("Beobachtungen"),
                       value: hasObservation,
                     ),
+                    CheckboxListTile(
+                      contentPadding: EdgeInsets.zero,
+                      dense: true,
+                      onChanged: (v) {
+                        updateShowEmptyDays(v ?? false, setSheetState);
+                      },
+                      title: const Text("Leere Tage anzeigen"),
+                      value: showEmptyDays,
+                    ),
                   ],
                 ),
               ),
@@ -172,7 +207,17 @@ class _HomeworkFilterState extends State<HomeworkFilter>
   @override
   Widget build(BuildContext context) {
     super.build(context);
-    final activeFilterCount = widget.vm.currentBlacklist.length;
+    final hasGrades = !widget.vm.currentBlacklist.contains(HomeworkType.grade);
+    final hasHomework =
+        !widget.vm.currentBlacklist.contains(HomeworkType.homework);
+    final hasObservation =
+        !widget.vm.currentBlacklist.contains(HomeworkType.observation);
+    final activeFilterCount = [
+      !hasGrades,
+      !hasHomework,
+      !hasObservation,
+      !widget.showEmptyDays,
+    ].where((isDisabled) => isDisabled).length;
     return Align(
       alignment: Alignment.centerLeft,
       child: FilledButton.tonalIcon(

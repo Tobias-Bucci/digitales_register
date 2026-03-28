@@ -83,6 +83,7 @@ class DaysWidget extends StatefulWidget {
 class _DaysWidgetState extends State<DaysWidget> {
   final controller = AutoScrollController(suggestedRowHeight: 100);
   String? _favoriteSubject;
+  bool _showEmptyDays = true;
 
   bool _afterFirstFrame = false;
 
@@ -172,27 +173,34 @@ class _DaysWidgetState extends State<DaysWidget> {
   }
 
   List<Day> _filteredDays(String? favoriteSubject) {
-    if (favoriteSubject == null) {
-      return widget.vm.days.toList();
-    }
-    return widget.vm.days
-        .map(
-          (day) => day.rebuild(
-            (b) => b
-              ..homework.replace(
-                day.homework.where(
-                  (homework) =>
-                      matchesFavoriteSubject(homework.label, favoriteSubject),
-                ),
-              )
-              ..deletedHomework.replace(
-                day.deletedHomework.where(
-                  (homework) =>
-                      matchesFavoriteSubject(homework.label, favoriteSubject),
-                ),
+    final shouldHideEmptyDays = !_showEmptyDays || favoriteSubject != null;
+    final filteredDays = favoriteSubject == null
+        ? widget.vm.days.toList()
+        : widget.vm.days
+            .map(
+              (day) => day.rebuild(
+                (b) => b
+                  ..homework.replace(
+                    day.homework.where(
+                      (homework) => matchesFavoriteSubject(
+                          homework.label, favoriteSubject),
+                    ),
+                  )
+                  ..deletedHomework.replace(
+                    day.deletedHomework.where(
+                      (homework) => matchesFavoriteSubject(
+                          homework.label, favoriteSubject),
+                    ),
+                  ),
               ),
-          ),
-        )
+            )
+            .toList();
+
+    if (!shouldHideEmptyDays) {
+      return filteredDays;
+    }
+
+    return filteredDays
         .where(
           (day) => day.homework.isNotEmpty || day.deletedHomework.isNotEmpty,
         )
@@ -267,6 +275,14 @@ class _DaysWidgetState extends State<DaysWidget> {
           setState(() {
             _favoriteSubject = favoriteSubject;
             updateValues(_filteredDays(favoriteSubject));
+            update();
+          });
+        },
+        showEmptyDays: _showEmptyDays,
+        onShowEmptyDaysChanged: (value) {
+          setState(() {
+            _showEmptyDays = value;
+            updateValues(_filteredDays(activeFavoriteSubject));
             update();
           });
         },
@@ -359,6 +375,14 @@ class _DaysWidgetState extends State<DaysWidget> {
               setState(() {
                 _favoriteSubject = favoriteSubject;
                 updateValues(_filteredDays(favoriteSubject));
+                update();
+              });
+            },
+            showEmptyDays: _showEmptyDays,
+            onShowEmptyDaysChanged: (value) {
+              setState(() {
+                _showEmptyDays = value;
+                updateValues(_filteredDays(activeFavoriteSubject));
                 update();
               });
             },
@@ -524,6 +548,8 @@ class DashboardHeader extends StatelessWidget {
   final List<String> favoriteSubjects;
   final String? selectedFavoriteSubject;
   final ValueChanged<String?> onFavoriteSubjectChanged;
+  final bool showEmptyDays;
+  final ValueChanged<bool> onShowEmptyDaysChanged;
   final BuiltMap<String, SubjectTheme> subjectThemes;
   final bool future;
   const DashboardHeader({
@@ -533,6 +559,8 @@ class DashboardHeader extends StatelessWidget {
     required this.favoriteSubjects,
     required this.selectedFavoriteSubject,
     required this.onFavoriteSubjectChanged,
+    required this.showEmptyDays,
+    required this.onShowEmptyDaysChanged,
     required this.subjectThemes,
   });
 
@@ -569,7 +597,12 @@ class DashboardHeader extends StatelessWidget {
             children: [
               Row(
                 children: [
-                  Expanded(child: HomeworkFilterContainer()),
+                  Expanded(
+                    child: HomeworkFilterContainer(
+                      showEmptyDays: showEmptyDays,
+                      onShowEmptyDaysChanged: onShowEmptyDaysChanged,
+                    ),
+                  ),
                   const SizedBox(width: 8),
                   AnimatedSwitcher(
                     duration: const Duration(milliseconds: 220),

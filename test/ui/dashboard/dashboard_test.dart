@@ -731,4 +731,111 @@ Future<void> main() async {
     expect(find.text("Titel Fach2"), findsNothing);
     expect(find.text("Ohne Fach"), findsNothing);
   });
+
+  testWidgets('empty days option increments filter count when disabled',
+      (WidgetTester tester) async {
+    final now = UtcDateTime(2050);
+    final widget = ReduxProvider(
+      store: Store<AppState, AppStateBuilder, AppActions>(
+        appReducerBuilder.build(),
+        AppState(
+          (b) => b.dashboardState.allDays = ListBuilder(
+            <Day>[
+              Day(
+                (b) => b
+                  ..date = now
+                  ..deletedHomework = ListBuilder()
+                  ..homework = ListBuilder()
+                  ..lastRequested = now,
+              ),
+              Day(
+                (b) => b
+                  ..date = now.add(const Duration(days: 1))
+                  ..deletedHomework = ListBuilder()
+                  ..homework = ListBuilder(
+                    <Homework>[
+                      Homework(
+                        (b) => b
+                          ..checkable = false
+                          ..checked = false
+                          ..deleteable = false
+                          ..deleted = false
+                          ..firstSeen = now
+                          ..id = 1
+                          ..isChanged = false
+                          ..isNew = false
+                          ..type = HomeworkType.lessonHomework
+                          ..warning = false
+                          ..title = "Mit Eintrag"
+                          ..subtitle = "Untertitel",
+                      ),
+                    ],
+                  )
+                  ..lastRequested = now,
+              ),
+              Day(
+                (b) => b
+                  ..date = now.add(const Duration(days: 2))
+                  ..deletedHomework = ListBuilder(
+                    <Homework>[
+                      Homework(
+                        (b) => b
+                          ..checkable = false
+                          ..checked = false
+                          ..deleteable = false
+                          ..deleted = true
+                          ..firstSeen = now
+                          ..id = 2
+                          ..isChanged = true
+                          ..isNew = false
+                          ..type = HomeworkType.lessonHomework
+                          ..warning = false
+                          ..title = "Gelöschter Eintrag"
+                          ..subtitle = "Untertitel",
+                      ),
+                    ],
+                  )
+                  ..homework = ListBuilder()
+                  ..lastRequested = now,
+              ),
+              Day(
+                (b) => b
+                  ..date = now.add(const Duration(days: 3))
+                  ..deletedHomework = ListBuilder()
+                  ..homework = ListBuilder()
+                  ..lastRequested = now,
+              ),
+            ],
+          ),
+        ),
+        AppActions(),
+      ),
+      child: MaterialApp(
+        home: DaysContainer(),
+        theme: ThemeData(primarySwatch: Colors.deepOrange),
+      ),
+    );
+
+    await tester.pumpWidget(widget);
+    await tester.pumpAndSettle();
+
+    expect(find.widgetWithText(FilledButton, "Filter"), findsOneWidget);
+    expect(find.text("Leere Tage anzeigen"), findsNothing);
+    expect(find.byType(DayWidget), findsNWidgets(4));
+    expect(find.text("Mit Eintrag"), findsOneWidget);
+    expect(find.text("Gelöschter Eintrag"), findsNothing);
+
+    await tester.tap(find.widgetWithText(FilledButton, "Filter"));
+    await tester.pumpAndSettle();
+
+    expect(find.text("Leere Tage anzeigen"), findsOneWidget);
+
+    await tester
+        .tap(find.widgetWithText(CheckboxListTile, "Leere Tage anzeigen"));
+    await tester.pumpAndSettle();
+
+    expect(find.widgetWithText(FilledButton, "Filter (1)"), findsOneWidget);
+    expect(find.byType(DayWidget), findsNWidgets(2));
+    expect(find.text("Mit Eintrag"), findsOneWidget);
+  });
 }

@@ -27,12 +27,23 @@ import 'package:flutter_built_redux/flutter_built_redux.dart';
 part 'homework_filter_container.g.dart';
 
 class HomeworkFilterContainer extends StatelessWidget {
+  final bool showEmptyDays;
+  final ValueChanged<bool> onShowEmptyDaysChanged;
+
+  const HomeworkFilterContainer({
+    super.key,
+    required this.showEmptyDays,
+    required this.onShowEmptyDaysChanged,
+  });
+
   @override
   Widget build(BuildContext context) {
     return StoreConnection<AppState, AppActions, HomeworkFilterVM>(
       builder: (context, vm, actions) {
         return HomeworkFilter(
           vm: vm,
+          showEmptyDays: showEmptyDays,
+          onShowEmptyDaysChanged: onShowEmptyDaysChanged,
           callback: (list) =>
               actions.dashboardActions.updateBlacklist(list.build()),
         );
