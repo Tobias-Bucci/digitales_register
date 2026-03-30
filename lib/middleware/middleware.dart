@@ -720,20 +720,16 @@ Future<void> _checkShowUnmaintainedAlert() async {
     return;
   }
 
-  final isBeforeJuly2023 = DateTime.now().isBefore(DateTime(2023, 7));
-
   await showDialog<void>(
     context: navigatorKey!.currentContext!,
     builder: (context) {
       return InfoDialog(
-        title: const Text("Hi!"),
+        title: const Text("Willkommen!"),
         content: Text.rich(
           TextSpan(
             text:
-                "Wie Du vielleicht weißt, ist diese App ein Hobbyprojekt von mir. Nachdem ich ${isBeforeJuly2023 ? "dieses Jahr maturiere" : "2023 maturiert habe"}, "
-                "werde ich mich in Zukunft nicht mehr selbst um Fehlerbehebungen in der App kümmern können, "
-                "auch wenn sie wahrscheinlich noch weiter funktionieren wird.\n\n"
-                "${isBeforeJuly2023 ? "Ich hoffe, die App war euch bisher eine Hilfe. " : ""}Für Interessierte: ",
+                "Diese App ist ein Fork des Originals. In der App findest du sowohl das Original-Projekt als auch diesen Fork verlinkt.\n\n"
+                "Das Original stammt von miDeb: ",
             children: [
               TextSpan(
                 text: "github.com/mideb/digitales_register",
@@ -747,10 +743,23 @@ Future<void> _checkShowUnmaintainedAlert() async {
                   },
               ),
               const TextSpan(
-                  text: ".\n\n"
-                      "Die offizielle Seite (digitalesregister.it) ist davon natürlich nicht betroffen!\n\n"
-                      "Danke nochmal an alle, die diese App in den letzten Jahren genutzt haben.\n\n"
-                      "Michael")
+                text: "\n\nMein Fork ist hier zu finden: ",
+              ),
+              TextSpan(
+                text: "github.com/Tobias-Bucci/digitales_register",
+                style: const TextStyle(color: Colors.blue),
+                recognizer: TapGestureRecognizer()
+                  ..onTap = () {
+                    launchUrl(
+                      Uri.parse(
+                          "https://github.com/Tobias-Bucci/digitales_register"),
+                      mode: LaunchMode.externalApplication,
+                    );
+                  },
+              ),
+              const TextSpan(
+                text: "\n\nJede und jeder darf daran mitarbeiten.",
+              ),
             ],
           ),
         ),
