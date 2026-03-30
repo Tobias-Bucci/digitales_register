@@ -193,6 +193,7 @@ void resetTestState() {
   deletedData = false;
   statePersistenceService.clear();
   passDio = null;
+  resetNoInternetRetryForTest();
 }
 
 Store<AppState, AppStateBuilder, AppActions> createStore({

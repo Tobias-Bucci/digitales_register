@@ -79,6 +79,12 @@ final AppStatePersistenceService statePersistenceService =
     AppStatePersistenceService();
 
 @visibleForTesting
+Duration noInternetRetryInterval = const Duration(seconds: 5);
+
+Timer? _noInternetRetryTimer;
+bool _noInternetRetryInFlight = false;
+
+@visibleForTesting
 Wrapper wrapper = Wrapper();
 
 List<Middleware<AppState, AppStateBuilder, AppActions>> middleware({
@@ -214,6 +220,46 @@ Future<void> _refreshNoInternet(
   await api.actions.noInternet(noInternet);
 }
 
+void _cancelNoInternetRetry() {
+  _noInternetRetryTimer?.cancel();
+  _noInternetRetryTimer = null;
+}
+
+@visibleForTesting
+void resetNoInternetRetryForTest() {
+  _cancelNoInternetRetry();
+  _noInternetRetryInFlight = false;
+  noInternetRetryInterval = const Duration(seconds: 5);
+}
+
+void _scheduleNoInternetRetry() {
+  if (_noInternetRetryTimer != null) {
+    return;
+  }
+  _noInternetRetryTimer = Timer(
+    noInternetRetryInterval,
+    () {
+      _noInternetRetryTimer = null;
+      unawaited(_runNoInternetRetry());
+    },
+  );
+}
+
+Future<void> _runNoInternetRetry() async {
+  if (_noInternetRetryInFlight) {
+    return;
+  }
+  _noInternetRetryInFlight = true;
+  try {
+    await actions.refreshNoInternet();
+  } finally {
+    _noInternetRetryInFlight = false;
+    if (wrapper.noInternet) {
+      _scheduleNoInternetRetry();
+    }
+  }
+}
+
 Future<void> _noInternet(
     MiddlewareApi<AppState, AppStateBuilder, AppActions> api,
     ActionHandler next,
@@ -223,6 +269,7 @@ Future<void> _noInternet(
   final noInternet = api.state.noInternet;
   if (prevNoInternet != noInternet) {
     if (noInternet) {
+      _scheduleNoInternetRetry();
       showSnackBar("Keine Verbindung");
 
       wrapper.logout(
@@ -230,6 +277,7 @@ Future<void> _noInternet(
         logoutForcedByServer: true,
       );
     } else {
+      _cancelNoInternetRetry();
       await api.actions.dashboardActions.refresh();
     }
   }
@@ -242,6 +290,8 @@ Future<void> _load(MiddlewareApi<AppState, AppStateBuilder, AppActions> api,
   if (wrapper is! Mock) {
     wrapper = Wrapper();
   }
+  _cancelNoInternetRetry();
+  _noInternetRetryInFlight = false;
   statePersistenceService.clear();
   wrapper.noInternet = api.state.noInternet;
   await next(action);

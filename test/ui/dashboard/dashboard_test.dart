@@ -20,7 +20,9 @@ void main() {
     await bootstrapTestEnvironment();
   });
 
-  tearDown(resetTestState);
+  tearDown(() {
+    resetTestState();
+  });
 
   testWidgets('home page shows the no internet state', (tester) async {
     final store = createStore(
@@ -235,5 +237,36 @@ void main() {
     await settleFor(tester, duration: const Duration(milliseconds: 300));
 
     expect(tester.widget<Checkbox>(find.byType(Checkbox)).onChanged, isNull);
+    resetNoInternetRetryForTest();
+  });
+
+  testWidgets('offline mode triggers automatic retry checks', (tester) async {
+    final mockWrapper = MockWrapper();
+    var refreshChecks = 0;
+    when(() => mockWrapper.noInternet).thenReturn(true);
+    when(() => mockWrapper.refreshNoInternet()).thenAnswer((_) async {
+      refreshChecks++;
+      return true;
+    });
+    wrapper = mockWrapper;
+    noInternetRetryInterval = const Duration(milliseconds: 20);
+
+    final store = createStore(
+      initialState: AppState(),
+      withMiddleware: true,
+    );
+
+    await pumpApp(
+      tester,
+      store: store,
+      home: DaysContainer(),
+    );
+
+    await store.actions.noInternet(true);
+    await tester.pump();
+    await settleFor(tester, duration: const Duration(milliseconds: 80));
+
+    expect(refreshChecks, greaterThanOrEqualTo(1));
+    resetNoInternetRetryForTest();
   });
 }

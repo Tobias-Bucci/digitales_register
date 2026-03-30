@@ -49,6 +49,9 @@ class GradesChart extends StatelessWidget {
     required this.isFullscreen,
   }) : grades = convert(graphs);
 
+  bool get _shouldIncludePreviewPoints =>
+      isFullscreen || grades.any((series) => series.data.length < 2);
+
   static int _channelValue(double component) {
     final value = (component * 255.0).round();
     return value.clamp(0, 255);
@@ -175,7 +178,7 @@ class GradesChart extends StatelessWidget {
                     ]
                   : null,
               defaultRenderer: charts.LineRendererConfig(
-                includePoints: isFullscreen,
+                includePoints: _shouldIncludePreviewPoints,
                 radiusPx: 2,
                 roundEndCaps: true,
               ),
