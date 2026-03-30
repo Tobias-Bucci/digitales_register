@@ -71,6 +71,7 @@ dependency_overrides:
 dev_dependencies:
   flutter_test:
     sdk: flutter
+  flutter_launcher_icons: ^0.14.4
   golden_toolkit: ^0.15.0
   lint: ^2.3.0
   matcher: ^0.12.10-nullsafety.3
@@ -85,8 +86,8 @@ flutter_icons:
 flutter_native_splash:
   color: "fafafa"
   color_dark: "303030"
-  image: "assets/4.0x/splash-light.png"
-  image_dark: "assets/4.0x/splash-dark.png"
+  image: "assets/4.0x/transparent.png"
+  image_dark: "assets/4.0x/transparent.png"
 
 # For information on the generic Dart part of this file, see the
 # following page: https://www.dartlang.org/tools/pub/pubspec
