@@ -18,6 +18,9 @@
 # Visual Studio Code related
 .vscode/
 
+# Eclipse/Buildship settings inside local packages
+packages/uni_links/**/**/.settings/
+
 # Flutter/Dart/Pub related
 **/doc/api/
 **/ios/Flutter/.last_build_id
