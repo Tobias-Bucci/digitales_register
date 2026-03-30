@@ -39,30 +39,16 @@ class GradesPage extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final semesterStyle = Theme.of(context).textTheme.titleMedium;
     final averageStyle = Theme.of(context).textTheme.titleMedium;
     return Scaffold(
       appBar: ResponsiveAppBar(
         title: const Text("Noten"),
         actions: <Widget>[
-          DropdownButtonHideUnderline(
-            child: DropdownButton<Semester>(
-              value: vm.showSemester,
-              style: semesterStyle,
-              items: Semester.values
-                  .map(
-                    (s) => DropdownMenuItem(
-                      value: s,
-                      child: Text(
-                        s.name,
-                        style: semesterStyle,
-                      ),
-                    ),
-                  )
-                  .toList(),
-              onChanged: (value) {
-                if (vm.showSemester != value) changeSemester(value!);
-              },
+          Padding(
+            padding: const EdgeInsets.only(right: 12),
+            child: _SemesterSwitcher(
+              selectedSemester: vm.showSemester,
+              onChanged: changeSemester,
             ),
           ),
         ],
@@ -113,6 +99,129 @@ class GradesPage extends StatelessWidget {
                     ),
                   ],
                 ),
+    );
+  }
+}
+
+class _SemesterSwitcher extends StatelessWidget {
+  final Semester selectedSemester;
+  final ValueChanged<Semester> onChanged;
+
+  const _SemesterSwitcher({
+    required this.selectedSemester,
+    required this.onChanged,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final colorScheme = theme.colorScheme;
+    final isDark = theme.brightness == Brightness.dark;
+    final buttonColor = isDark
+        ? const Color(0xFF1C1C1E)
+        : Color.alphaBlend(
+            colorScheme.primary.withValues(alpha: 0.10),
+            colorScheme.surface,
+          );
+    final menuColor = isDark ? const Color(0xFF141414) : colorScheme.surface;
+    final borderColor = isDark
+        ? const Color(0xFF323236)
+        : colorScheme.primary.withValues(alpha: 0.18);
+    final selectedIconColor =
+        isDark ? const Color(0xFFB8B8BD) : colorScheme.primary;
+    return Builder(
+      builder: (context) {
+        return GestureDetector(
+          behavior: HitTestBehavior.opaque,
+          onTap: () async {
+            final button = context.findRenderObject();
+            final overlay =
+                Overlay.maybeOf(context)?.context.findRenderObject();
+            if (button is! RenderBox || overlay is! RenderBox) {
+              return;
+            }
+            final position = RelativeRect.fromRect(
+              Rect.fromPoints(
+                button.localToGlobal(Offset.zero, ancestor: overlay),
+                button.localToGlobal(
+                  button.size.bottomRight(Offset.zero),
+                  ancestor: overlay,
+                ),
+              ),
+              Offset.zero & overlay.size,
+            );
+            final semester = await showMenu<Semester>(
+              context: context,
+              position: position,
+              elevation: 10,
+              color: menuColor,
+              surfaceTintColor:
+                  isDark ? Colors.transparent : colorScheme.surfaceTint,
+              shadowColor: colorScheme.shadow.withValues(alpha: 0.18),
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(18),
+              ),
+              items: Semester.values
+                  .map(
+                    (semester) => PopupMenuItem<Semester>(
+                      value: semester,
+                      child: Row(
+                        children: [
+                          Expanded(
+                            child: Text(
+                              semester.name,
+                              style: theme.textTheme.bodyLarge,
+                            ),
+                          ),
+                          if (semester == selectedSemester)
+                            Icon(
+                              Icons.check_rounded,
+                              size: 18,
+                              color: selectedIconColor,
+                            ),
+                        ],
+                      ),
+                    ),
+                  )
+                  .toList(),
+            );
+            if (semester != null && semester != selectedSemester) {
+              onChanged(semester);
+            }
+          },
+          child: DecoratedBox(
+            decoration: BoxDecoration(
+              color: buttonColor,
+              borderRadius: BorderRadius.circular(18),
+              border: Border.all(
+                color: borderColor,
+              ),
+            ),
+            child: Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  AnimatedDefaultTextStyle(
+                    duration: const Duration(milliseconds: 180),
+                    curve: Curves.easeOutCubic,
+                    style: theme.textTheme.labelLarge!.copyWith(
+                      color: colorScheme.onSurface,
+                      fontWeight: FontWeight.w600,
+                    ),
+                    child: Text(selectedSemester.name),
+                  ),
+                  const SizedBox(width: 6),
+                  Icon(
+                    Icons.keyboard_arrow_down_rounded,
+                    color: colorScheme.onSurfaceVariant,
+                  ),
+                ],
+              ),
+            ),
+          ),
+        );
+      },
     );
   }
 }

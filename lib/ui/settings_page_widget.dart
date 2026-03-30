@@ -35,6 +35,7 @@ import 'package:url_launcher/url_launcher.dart';
 enum _Theme {
   light,
   dark,
+  amoled,
   followDevice,
 }
 
@@ -143,10 +144,16 @@ class _SettingsPageWidgetState extends State<SettingsPageWidget> {
     switch (theme!) {
       case _Theme.light:
         widget.onSetThemePreference(AppThemePreference.light);
+        widget.onSetAmoledMode(false);
       case _Theme.dark:
         widget.onSetThemePreference(AppThemePreference.dark);
+        widget.onSetAmoledMode(false);
+      case _Theme.amoled:
+        widget.onSetThemePreference(AppThemePreference.dark);
+        widget.onSetAmoledMode(true);
       case _Theme.followDevice:
         widget.onSetThemePreference(AppThemePreference.system);
+        widget.onSetAmoledMode(false);
     }
   }
 
@@ -160,7 +167,8 @@ class _SettingsPageWidgetState extends State<SettingsPageWidget> {
     }
     final currentTheme = switch (widget.currentThemePreference) {
       AppThemePreference.light => _Theme.light,
-      AppThemePreference.dark => _Theme.dark,
+      AppThemePreference.dark =>
+        widget.vm.amoledMode ? _Theme.amoled : _Theme.dark,
       AppThemePreference.system => _Theme.followDevice,
     };
     return Scaffold(
@@ -247,15 +255,12 @@ class _SettingsPageWidgetState extends State<SettingsPageWidget> {
                   value: _Theme.dark,
                   title: Text("Dunkel"),
                 ),
+                RadioListTile(
+                  value: _Theme.amoled,
+                  title: Text("Amoled"),
+                ),
               ],
             ),
-          ),
-          SwitchListTile.adaptive(
-            title: const Text("AMOLED-Modus"),
-            subtitle:
-                const Text("Graue Flächen in Dunkelmodus auf Schwarz setzen"),
-            value: widget.vm.amoledMode,
-            onChanged: widget.onSetAmoledMode,
           ),
           ListTile(
             title: const Text("Kontrastfarbe"),
