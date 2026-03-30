@@ -8,7 +8,7 @@
 PRODUCT_NAME = dr
 
 // The application's bundle identifier
-PRODUCT_BUNDLE_IDENTIFIER = com.digitalesregister.dr
+PRODUCT_BUNDLE_IDENTIFIER = it.bucci.digitalesregister
 
 // The copyright displayed in application information
-PRODUCT_COPYRIGHT = Copyright © 2021 com.digitalesregister. All rights reserved.
+PRODUCT_COPYRIGHT = Copyright © 2026 it.bucci.digitalesregister. All rights reserved.

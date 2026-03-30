@@ -1,4 +1,4 @@
-package it.digitalesregisterapp
+package it.bucci.digitalesregister
 
 import io.flutter.embedding.android.FlutterFragmentActivity
 

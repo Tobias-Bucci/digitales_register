@@ -8,7 +8,7 @@
 	<true/>
 		<key>keychain-access-groups</key>
 	<array>
-		<string>$(AppIdentifierPrefix)com.digitalesregister</string>
+		<string>$(AppIdentifierPrefix)it.bucci.digitalesregister</string>
 	</array>
 </dict>
 </plist>

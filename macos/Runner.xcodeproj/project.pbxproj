@@ -434,7 +434,7 @@
 					"@executable_path/../Frameworks",
 				);
 				MARKETING_VERSION = 8.2.15;
-				PRODUCT_BUNDLE_IDENTIFIER = com.digitalesregister;
+				PRODUCT_BUNDLE_IDENTIFIER = it.bucci.digitalesregister;
 				PRODUCT_NAME = "Digitales Register";
 				PROVISIONING_PROFILE_SPECIFIER = MacDevDR2;
 				SWIFT_VERSION = 5.0;
@@ -569,7 +569,7 @@
 					"@executable_path/../Frameworks",
 				);
 				MARKETING_VERSION = 8.2.15;
-				PRODUCT_BUNDLE_IDENTIFIER = com.digitalesregister;
+				PRODUCT_BUNDLE_IDENTIFIER = it.bucci.digitalesregister;
 				PRODUCT_NAME = "Digitales Register";
 				PROVISIONING_PROFILE_SPECIFIER = MacDevDR3;
 				SWIFT_OPTIMIZATION_LEVEL = "-Onone";
@@ -596,7 +596,7 @@
 					"@executable_path/../Frameworks",
 				);
 				MARKETING_VERSION = 8.2.15;
-				PRODUCT_BUNDLE_IDENTIFIER = com.digitalesregister;
+				PRODUCT_BUNDLE_IDENTIFIER = it.bucci.digitalesregister;
 				PRODUCT_NAME = "Digitales Register";
 				PROVISIONING_PROFILE_SPECIFIER = MacDevDR3;
 				SWIFT_VERSION = 5.0;

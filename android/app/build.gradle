@@ -33,7 +33,7 @@ def allowDebugSigningForRelease = (localProperties.getProperty('allowDebugSignin
         ?: 'false').toBoolean()
 
 android {
-    namespace "it.digitalesregisterapp"
+    namespace "it.bucci.digitalesregister"
     compileSdk 36
 
     compileOptions {
@@ -51,7 +51,7 @@ android {
     }
 
     defaultConfig {
-        applicationId "it.digitalesregisterapp"
+        applicationId "it.bucci.digitalesregister"
         minSdkVersion flutter.minSdkVersion
         targetSdk 36
         versionCode flutterVersionCode.toInteger()
