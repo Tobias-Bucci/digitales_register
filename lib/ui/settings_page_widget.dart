@@ -674,7 +674,7 @@ class _SettingsPageWidgetState extends State<SettingsPageWidget> {
           ),
           if (Platform.isAndroid)
             SwitchListTile.adaptive(
-              title: const Text("Gay Mode"),
+              title: const Text("IOS Mode"),
               subtitle: const Text("Imitiere das Aussehen einer iOS-App"),
               onChanged: (bool value) {
                 widget.onSetPlatformOverride(value);

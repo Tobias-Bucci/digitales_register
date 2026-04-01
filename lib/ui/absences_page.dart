@@ -404,7 +404,7 @@ class _AbsencesStatisticWidgetState extends State<AbsencesStatisticWidget> {
         ),
       if (widget.vm.statistic.delayed != null)
         _AbsenceMetricData(
-          label: 'Verspaetungen',
+          label: 'Verspätungen',
           value: widget.vm.statistic.delayed.toString(),
           icon: Icons.schedule_outlined,
           accent: colorScheme.tertiary,
