@@ -10,6 +10,7 @@ class AppSelectors {
   final _allSubjectsAverageSelector = _AllSubjectsAverageSelector();
   final _hasGradesDataSelector = _HasGradesDataSelector();
   final _chartSelector = _GradesChartSelector();
+  final _absenceStatsSelector = _AbsenceStatsSelector();
 
   BuiltList<Day> dashboardDays(AppState state) =>
       _dashboardDaysSelector.select(state);
@@ -21,9 +22,37 @@ class AppSelectors {
 
   Map<SubjectGrades, SubjectTheme> chartGraphs(AppState state) =>
       _chartSelector.select(state);
+
+  AbsenceStatsViewModel absenceStatistics(AbsencesState state) =>
+      _absenceStatsSelector.select(state);
 }
 
 final AppSelectors appSelectors = AppSelectors();
+
+class AbsenceStatsViewModel {
+  final AbsenceStatistic statistic;
+  final BuiltList<AbsenceMonthlyHistoryValue> monthlyHistory;
+
+  const AbsenceStatsViewModel({
+    required this.statistic,
+    required this.monthlyHistory,
+  });
+
+  bool get hasHistoricalData => monthlyHistory.isNotEmpty;
+
+  bool get spansMultipleYears =>
+      monthlyHistory.map((entry) => entry.month.year).toSet().length > 1;
+}
+
+class AbsenceMonthlyHistoryValue {
+  final UtcDateTime month;
+  final double lessons;
+
+  const AbsenceMonthlyHistoryValue({
+    required this.month,
+    required this.lessons,
+  });
+}
 
 const _typesToTitles = <HomeworkType, List<String>>{
   HomeworkType.grade: ["Bewertung"],
@@ -195,5 +224,52 @@ class _GradesChartSelector {
     _semester = state.gradesState.semester;
     _lastResult = result;
     return result;
+  }
+}
+
+class _AbsenceStatsSelector {
+  AbsencesState? _state;
+  AbsenceStatsViewModel? _lastResult;
+
+  AbsenceStatsViewModel select(AbsencesState state) {
+    if (identical(state, _state) && _lastResult != null) {
+      return _lastResult!;
+    }
+
+    final historyByMonth = <UtcDateTime, double>{};
+    for (final group in state.absences) {
+      for (final absence in group.absences) {
+        final month = UtcDateTime(absence.date.year, absence.date.month);
+        historyByMonth.update(
+          month,
+          (current) => current + _lessonEquivalent(absence),
+          ifAbsent: () => _lessonEquivalent(absence),
+        );
+      }
+    }
+
+    final sortedMonths = historyByMonth.keys.toList()..sort();
+    final result = AbsenceStatsViewModel(
+      statistic: state.statistic ?? AbsenceStatistic(),
+      monthlyHistory: BuiltList<AbsenceMonthlyHistoryValue>(
+        sortedMonths.map(
+          (month) => AbsenceMonthlyHistoryValue(
+            month: month,
+            lessons: historyByMonth[month]!,
+          ),
+        ),
+      ),
+    );
+
+    _state = state;
+    _lastResult = result;
+    return result;
+  }
+
+  double _lessonEquivalent(Absence absence) {
+    if (absence.minutes == 50) {
+      return 1;
+    }
+    return (absence.minutesCameTooLate + absence.minutesLeftTooEarly) / 50;
   }
 }
