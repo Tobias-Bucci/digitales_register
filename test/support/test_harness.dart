@@ -6,6 +6,7 @@ import 'package:dr/actions/app_actions.dart';
 import 'package:dr/app_state.dart';
 import 'package:dr/main.dart';
 import 'package:dr/middleware/middleware.dart';
+import 'package:dr/notification_background_service.dart';
 import 'package:dr/reducer/reducer.dart';
 import 'package:dr/theme_controller.dart';
 import 'package:dr/utc_date_time.dart';
@@ -156,6 +157,7 @@ Future<void> bootstrapTestEnvironment({
   scaffoldKey = GlobalKey<ResponsiveScaffoldState<Pages>>();
   scaffoldMessengerKey = GlobalKey<ScaffoldMessengerState>();
   mockNow = fixedNow;
+  await NotificationBackgroundService.resetForTest();
   await _ensurePathProviderMocks();
 }
 
@@ -188,12 +190,13 @@ Future<void> _ensurePathProviderMocks() async {
   _pathProviderMockInstalled = true;
 }
 
-void resetTestState() {
+Future<void> resetTestState() async {
   mockNow = null;
   deletedData = false;
   statePersistenceService.clear();
   passDio = null;
   resetNoInternetRetryForTest();
+  await NotificationBackgroundService.resetForTest();
 }
 
 Store<AppState, AppStateBuilder, AppActions> createStore({

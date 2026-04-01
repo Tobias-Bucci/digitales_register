@@ -365,7 +365,7 @@ class _SettingsPageWidgetState extends State<SettingsPageWidget> {
           SwitchListTile.adaptive(
             title: const Text("Push Notifications aktivieren"),
             subtitle: const Text(
-              "Prueft neue Notifications periodisch im Hintergrund (OS-abhaengig, ca. 10-15 Min.)",
+              "Prueft ungelesene Notifications im Vordergrund alle 10 Minuten und im Android-Hintergrund ca. alle 15 Minuten.",
             ),
             onChanged: widget.onSetPushNotificationsEnabled,
             value: widget.vm.pushNotificationsEnabled,
@@ -748,7 +748,7 @@ class _SettingsPageWidgetState extends State<SettingsPageWidget> {
                 context: context,
                 applicationName:
                     "Digitales Register (Client) - Tobias Bucci Fork",
-                applicationVersion: "v1.0",
+                applicationVersion: "v1.1",
               );
             },
           ),
@@ -824,7 +824,7 @@ class _SettingsPageWidgetState extends State<SettingsPageWidget> {
                             ),
                           ),
                           const SizedBox(height: 4),
-                          const Text("v1.0"),
+                          const Text("v1.1"),
                           const SizedBox(height: 12),
                           const Text(
                             "Original Copyright: Michael Debertol und Simon Wachtler 2019-2022\n"

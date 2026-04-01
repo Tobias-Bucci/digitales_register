@@ -1,10 +1,13 @@
+import 'dart:async';
 import 'dart:convert';
 import 'dart:developer';
+import 'dart:io';
 
 import 'package:cookie_jar/cookie_jar.dart';
 import 'package:dio/dio.dart';
 import 'package:dio_cookie_manager/dio_cookie_manager.dart';
 import 'package:dr/desktop.dart';
+import 'package:dr/utc_date_time.dart';
 import 'package:dr/util.dart';
 import 'package:flutter/widgets.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
@@ -14,15 +17,30 @@ import 'package:workmanager/workmanager.dart';
 const _backgroundTaskUniqueName = "dr_notification_polling_unique";
 const _backgroundTaskName = "dr_notification_polling_task";
 const _pushEnabledKey = "pushNotificationsEnabled";
-const _knownNotificationIdsKey = "knownBackgroundNotificationIds";
-const _knownNotificationIdsInitializedKey =
-    "knownBackgroundNotificationIdsInitialized";
+const _reminderEntriesKey = "backgroundNotificationReminderEntries";
 const _backgroundLogsKey = "backgroundNotificationLogs";
+const _pollLeaseKey = "backgroundNotificationPollLease";
+const _pollLastCompletedKey = "backgroundNotificationPollLastCompleted";
 const _backgroundLogLimit = 200;
 
 const _channelId = "dr_background_notifications";
 const _channelName = "Digitales Register Benachrichtigungen";
-const _channelDescription = "Lokale Benachrichtigungen fuer neue Mitteilungen";
+const _channelDescription =
+    "Lokale Benachrichtigungen fuer ungelesene Mitteilungen";
+const _summaryNotificationId = 0x4444524e;
+const _foregroundPollingInterval = Duration(minutes: 10);
+const _backgroundPollingInterval = Duration(minutes: 15);
+const _pollLeaseDuration = Duration(minutes: 2);
+const _pollDebounceWindow = Duration(minutes: 1);
+
+typedef NotificationFetchOverride = Future<List<Map<String, dynamic>>> Function();
+typedef NotificationPermissionOverride = Future<bool> Function();
+typedef NotificationShowOverride = Future<void> Function(
+  NotificationDisplayRequest request,
+);
+typedef NotificationCancelOverride = Future<void> Function(int id);
+typedef BackgroundTaskSyncOverride = Future<void> Function({required bool enabled});
+typedef LocalNotificationsInitOverride = Future<void> Function();
 
 @pragma("vm:entry-point")
 void notificationBackgroundDispatcher() {
@@ -58,12 +76,187 @@ void notificationBackgroundDispatcher() {
   });
 }
 
+class NotificationDisplayRequest {
+  const NotificationDisplayRequest({
+    required this.id,
+    required this.title,
+    required this.body,
+    required this.payload,
+    this.lines = const <String>[],
+  });
+
+  final int id;
+  final String title;
+  final String? body;
+  final String payload;
+  final List<String> lines;
+}
+
+class NotificationReminderCandidate {
+  const NotificationReminderCandidate({
+    required this.key,
+    required this.title,
+    required this.body,
+  });
+
+  final String key;
+  final String title;
+  final String? body;
+}
+
+class NotificationReminderEntry {
+  const NotificationReminderEntry({
+    required this.key,
+    required this.title,
+    required this.body,
+    required this.firstSeenAt,
+    required this.lastSeenAt,
+    this.lastAlertedAt,
+  });
+
+  factory NotificationReminderEntry.fromJson(Map<String, dynamic> json) {
+    return NotificationReminderEntry(
+      key: getString(json["key"]) ?? "",
+      title: getString(json["title"]) ?? "",
+      body: getString(json["body"]),
+      firstSeenAt:
+          UtcDateTime.tryParse(getString(json["firstSeenAt"]) ?? "") ?? now,
+      lastSeenAt:
+          UtcDateTime.tryParse(getString(json["lastSeenAt"]) ?? "") ?? now,
+      lastAlertedAt: UtcDateTime.tryParse(getString(json["lastAlertedAt"]) ?? ""),
+    );
+  }
+
+  final String key;
+  final String title;
+  final String? body;
+  final UtcDateTime firstSeenAt;
+  final UtcDateTime lastSeenAt;
+  final UtcDateTime? lastAlertedAt;
+
+  Map<String, Object?> toJson() {
+    return <String, Object?>{
+      "key": key,
+      "title": title,
+      "body": body,
+      "firstSeenAt": firstSeenAt.toIso8601String(),
+      "lastSeenAt": lastSeenAt.toIso8601String(),
+      "lastAlertedAt": lastAlertedAt?.toIso8601String(),
+    };
+  }
+
+  NotificationReminderEntry copyWith({
+    String? key,
+    String? title,
+    String? body,
+    UtcDateTime? firstSeenAt,
+    UtcDateTime? lastSeenAt,
+    UtcDateTime? lastAlertedAt,
+    bool clearLastAlertedAt = false,
+  }) {
+    return NotificationReminderEntry(
+      key: key ?? this.key,
+      title: title ?? this.title,
+      body: body ?? this.body,
+      firstSeenAt: firstSeenAt ?? this.firstSeenAt,
+      lastSeenAt: lastSeenAt ?? this.lastSeenAt,
+      lastAlertedAt:
+          clearLastAlertedAt ? null : (lastAlertedAt ?? this.lastAlertedAt),
+    );
+  }
+}
+
+class NotificationReminderEvaluation {
+  const NotificationReminderEvaluation({
+    required this.trackedEntries,
+    required this.dueEntries,
+  });
+
+  final List<NotificationReminderEntry> trackedEntries;
+  final List<NotificationReminderEntry> dueEntries;
+}
+
+@visibleForTesting
+NotificationReminderEvaluation evaluateNotificationReminders({
+  required Iterable<NotificationReminderEntry> previousEntries,
+  required Iterable<NotificationReminderCandidate> unreadCandidates,
+  required UtcDateTime currentTime,
+  Duration reminderInterval = _foregroundPollingInterval,
+}) {
+  final previousByKey = <String, NotificationReminderEntry>{
+    for (final entry in previousEntries) entry.key: entry,
+  };
+  final trackedEntries = <NotificationReminderEntry>[];
+  final dueEntries = <NotificationReminderEntry>[];
+
+  for (final candidate in unreadCandidates) {
+    final existing = previousByKey[candidate.key];
+    final updated = (existing ??
+            NotificationReminderEntry(
+              key: candidate.key,
+              title: candidate.title,
+              body: candidate.body,
+              firstSeenAt: currentTime,
+              lastSeenAt: currentTime,
+            ))
+        .copyWith(
+      title: candidate.title,
+      body: candidate.body,
+      lastSeenAt: currentTime,
+    );
+
+    trackedEntries.add(updated);
+
+    final lastAlertedAt = updated.lastAlertedAt;
+    final due = lastAlertedAt == null ||
+        !currentTime.isBefore(lastAlertedAt.add(reminderInterval));
+    if (due) {
+      dueEntries.add(updated);
+    }
+  }
+
+  trackedEntries.sort((a, b) => a.key.compareTo(b.key));
+  dueEntries.sort((a, b) => a.key.compareTo(b.key));
+
+  return NotificationReminderEvaluation(
+    trackedEntries: trackedEntries,
+    dueEntries: dueEntries,
+  );
+}
+
+class _PollLeaseResult {
+  const _PollLeaseResult({
+    required this.acquired,
+    required this.token,
+    required this.reason,
+  });
+
+  final bool acquired;
+  final String token;
+  final String? reason;
+}
+
 // ignore: avoid_classes_with_only_static_members
 class NotificationBackgroundService {
   static final FlutterLocalNotificationsPlugin _notificationsPlugin =
       FlutterLocalNotificationsPlugin();
   static bool _notificationsInitialized = false;
   static bool _workmanagerInitialized = false;
+  static bool _appInForeground = true;
+  static Timer? _foregroundPollTimer;
+
+  @visibleForTesting
+  static NotificationFetchOverride? fetchUnreadNotificationsOverride;
+  @visibleForTesting
+  static NotificationPermissionOverride? requestNotificationPermissionOverride;
+  @visibleForTesting
+  static NotificationShowOverride? showNotificationOverride;
+  @visibleForTesting
+  static NotificationCancelOverride? cancelNotificationOverride;
+  @visibleForTesting
+  static BackgroundTaskSyncOverride? syncBackgroundTaskOverride;
+  @visibleForTesting
+  static LocalNotificationsInitOverride? initializeLocalNotificationsOverride;
 
   static Future<void> initialize() async {
     WidgetsFlutterBinding.ensureInitialized();
@@ -78,6 +271,7 @@ class NotificationBackgroundService {
 
     final enabled = await isEnabled();
     await _syncBackgroundTask(enabled: enabled);
+    await _syncForegroundPolling(enabled: enabled, triggerImmediate: false);
     await appendLog(
       "Service initialisiert, pushEnabled=$enabled",
     );
@@ -88,53 +282,64 @@ class NotificationBackgroundService {
     return prefs.getBool(_pushEnabledKey) ?? false;
   }
 
-  static Future<void> setEnabled({required bool enabled}) async {
+  static Future<bool> setEnabled({
+    required bool enabled,
+    bool triggerImmediatePoll = true,
+  }) async {
     final prefs = await SharedPreferences.getInstance();
-    await prefs.setBool(_pushEnabledKey, enabled);
-
     await ensureLocalNotificationsInitialized();
+
     if (enabled) {
-      await _requestNotificationPermission();
-      await _seedKnownNotificationIds();
+      final permissionGranted = await _requestNotificationPermission();
+      if (!permissionGranted) {
+        await prefs.setBool(_pushEnabledKey, false);
+        await _syncBackgroundTask(enabled: false);
+        await _syncForegroundPolling(enabled: false, triggerImmediate: false);
+        await appendLog("Push Notifications deaktiviert: Berechtigung verweigert");
+        return false;
+      }
     }
 
+    await prefs.setBool(_pushEnabledKey, enabled);
     await _syncBackgroundTask(enabled: enabled);
+    await _syncForegroundPolling(
+      enabled: enabled,
+      triggerImmediate: false,
+    );
     await appendLog("Push Notifications gesetzt auf: $enabled");
+
+    if (enabled && triggerImmediatePoll) {
+      unawaited(
+        pollAndNotify(trigger: "manual_enable"),
+      );
+    } else if (!enabled) {
+      await _cancelSummaryNotification();
+    }
+
+    return enabled;
   }
 
-  static Future<void> _syncBackgroundTask({required bool enabled}) async {
-    if (!_workmanagerInitialized) {
-      await Workmanager().initialize(
-        notificationBackgroundDispatcher,
-      );
-      _workmanagerInitialized = true;
-    }
-
-    if (!enabled) {
-      await Workmanager().cancelByUniqueName(_backgroundTaskUniqueName);
-      await appendLog("Background-Task deaktiviert");
-      return;
-    }
-
-    await Workmanager().registerPeriodicTask(
-      _backgroundTaskUniqueName,
-      _backgroundTaskName,
-      frequency: const Duration(minutes: 15),
-      initialDelay: const Duration(minutes: 1),
-      existingWorkPolicy: ExistingPeriodicWorkPolicy.replace,
-      constraints: Constraints(
-        networkType: NetworkType.connected,
-      ),
-      backoffPolicy: BackoffPolicy.linear,
-      backoffPolicyDelay: const Duration(minutes: 1),
+  static Future<void> handleAppResumed() async {
+    _appInForeground = true;
+    final enabled = await isEnabled();
+    await _syncForegroundPolling(
+      enabled: enabled,
+      triggerImmediate: enabled,
     );
-    await appendLog(
-      "Background-Task aktiviert (Intervall OS-abhaengig, min. ~15 Min auf Android)",
-    );
+  }
+
+  static Future<void> handleAppPaused() async {
+    _appInForeground = false;
+    _stopForegroundPolling();
   }
 
   static Future<void> ensureLocalNotificationsInitialized() async {
     if (_notificationsInitialized) return;
+    if (initializeLocalNotificationsOverride != null) {
+      await initializeLocalNotificationsOverride!();
+      _notificationsInitialized = true;
+      return;
+    }
 
     const androidSettings =
         AndroidInitializationSettings("@mipmap/launcher_icon");
@@ -161,93 +366,155 @@ class NotificationBackgroundService {
     _notificationsInitialized = true;
   }
 
-  static Future<void> _requestNotificationPermission() async {
-    await _notificationsPlugin
-        .resolvePlatformSpecificImplementation<
-            AndroidFlutterLocalNotificationsPlugin>()
-        ?.requestNotificationsPermission();
-
-    await _notificationsPlugin
-        .resolvePlatformSpecificImplementation<
-            IOSFlutterLocalNotificationsPlugin>()
-        ?.requestPermissions(
-          alert: true,
-          badge: true,
-          sound: true,
-        );
-  }
-
   static Future<void> pollAndNotify({required String trigger}) async {
-    final unread = await _fetchUnreadNotifications();
-    final prefs = await SharedPreferences.getInstance();
-    final idsInitialized =
-        prefs.getBool(_knownNotificationIdsInitializedKey) ?? false;
+    final lease = await _tryAcquirePollLease(trigger: trigger);
+    if (!lease.acquired) {
+      await appendLog("[$trigger] Polling uebersprungen: ${lease.reason}");
+      return;
+    }
 
-    final knownIds =
-        prefs.getStringList(_knownNotificationIdsKey) ?? <String>[];
-    final knownSet = knownIds.toSet();
-
-    final normalized = unread.map(_toNotificationCandidate).toList();
-    final allCurrentIds = normalized.map((n) => n.key).toSet();
-
-    if (!idsInitialized) {
-      await prefs.setStringList(
-        _knownNotificationIdsKey,
-        allCurrentIds.toList(),
+    try {
+      final unread = await (fetchUnreadNotificationsOverride != null
+          ? fetchUnreadNotificationsOverride!()
+          : _fetchUnreadNotifications());
+      final prefs = await SharedPreferences.getInstance();
+      final previousEntries = _readReminderEntries(prefs);
+      final currentTime = now;
+      final evaluation = evaluateNotificationReminders(
+        previousEntries: previousEntries,
+        unreadCandidates: unread.map(_toNotificationCandidate),
+        currentTime: currentTime,
       );
-      await prefs.setBool(_knownNotificationIdsInitializedKey, true);
+
+      if (evaluation.dueEntries.isEmpty) {
+        await _writeReminderEntries(
+          prefs,
+          evaluation.trackedEntries,
+        );
+        await _cancelSummaryNotification();
+        await appendLog(
+          "[$trigger] Keine faelligen ungelesenen Notifications (${evaluation.trackedEntries.length} verfolgt)",
+        );
+        return;
+      }
+
+      if (evaluation.dueEntries.length == 1) {
+        await _cancelSummaryNotification();
+        await _showReminderNotification(evaluation.dueEntries.single);
+      } else {
+        await _showSummaryNotification(evaluation.dueEntries);
+      }
+
+      final alertedKeys = evaluation.dueEntries.map((entry) => entry.key).toSet();
+      final updatedEntries = evaluation.trackedEntries
+          .map(
+            (entry) => alertedKeys.contains(entry.key)
+                ? entry.copyWith(lastAlertedAt: currentTime)
+                : entry,
+          )
+          .toList(growable: false);
+      await _writeReminderEntries(prefs, updatedEntries);
       await appendLog(
-        "[$trigger] Initialer Seed: ${allCurrentIds.length} IDs gespeichert, keine Pushes gesendet",
+        "[$trigger] ${evaluation.dueEntries.length} Notification-Erinnerungen gesendet: ${evaluation.dueEntries.map((entry) => entry.key).join(",")}",
       );
+    } finally {
+      await _releasePollLease(token: lease.token);
+    }
+  }
+
+  static Future<void> _syncForegroundPolling({
+    required bool enabled,
+    required bool triggerImmediate,
+  }) async {
+    if (!enabled || !_appInForeground) {
+      _stopForegroundPolling();
       return;
     }
 
-    final newNotifications = normalized
-        .where((notification) => !knownSet.contains(notification.key))
-        .toList();
-
-    if (newNotifications.isEmpty) {
-      await prefs.setStringList(
-        _knownNotificationIdsKey,
-        allCurrentIds.toList(),
+    if (_foregroundPollTimer == null) {
+      _foregroundPollTimer = Timer.periodic(
+        _foregroundPollingInterval,
+        (_) => unawaited(
+          pollAndNotify(trigger: "foreground_timer"),
+        ),
       );
-      await appendLog("[$trigger] Keine neuen Notifications gefunden");
+      await appendLog("Foreground-Polling aktiviert (alle 10 Minuten)");
+    }
+
+    if (triggerImmediate) {
+      unawaited(
+        pollAndNotify(trigger: "foreground_resume"),
+      );
+    }
+  }
+
+  static void _stopForegroundPolling() {
+    _foregroundPollTimer?.cancel();
+    _foregroundPollTimer = null;
+  }
+
+  static Future<void> _syncBackgroundTask({required bool enabled}) async {
+    if (syncBackgroundTaskOverride != null) {
+      await syncBackgroundTaskOverride!(enabled: enabled);
       return;
     }
 
-    for (final notification in newNotifications) {
-      await _showLocalNotification(notification);
+    if (!_workmanagerInitialized) {
+      await Workmanager().initialize(
+        notificationBackgroundDispatcher,
+      );
+      _workmanagerInitialized = true;
     }
 
-    await prefs.setStringList(
-      _knownNotificationIdsKey,
-      allCurrentIds.toList(),
+    if (!enabled) {
+      await Workmanager().cancelByUniqueName(_backgroundTaskUniqueName);
+      await appendLog("Background-Task deaktiviert");
+      return;
+    }
+
+    await Workmanager().registerPeriodicTask(
+      _backgroundTaskUniqueName,
+      _backgroundTaskName,
+      frequency: _backgroundPollingInterval,
+      initialDelay: const Duration(minutes: 1),
+      existingWorkPolicy: ExistingPeriodicWorkPolicy.replace,
+      constraints: Constraints(
+        networkType: NetworkType.connected,
+      ),
+      backoffPolicy: BackoffPolicy.linear,
+      backoffPolicyDelay: const Duration(minutes: 1),
     );
-
     await appendLog(
-      "[$trigger] ${newNotifications.length} neue Notifications: ${newNotifications.map((e) => e.key).join(",")}",
+      "Background-Task aktiviert (Android min. ca. 15 Min, OS-abhaengig)",
     );
   }
 
-  static Future<void> _seedKnownNotificationIds() async {
-    try {
-      final unread = await _fetchUnreadNotifications();
-      final prefs = await SharedPreferences.getInstance();
-      final ids =
-          unread.map(_toNotificationCandidate).map((n) => n.key).toSet();
-      await prefs.setStringList(_knownNotificationIdsKey, ids.toList());
-      await prefs.setBool(_knownNotificationIdsInitializedKey, true);
-      await appendLog(
-        "Seed bei Aktivierung: ${ids.length} bekannte IDs gespeichert",
-      );
-    } catch (e, trace) {
-      await appendLog("Seed bei Aktivierung fehlgeschlagen: $e");
-      log(
-        "Failed to seed known notification IDs",
-        error: e,
-        stackTrace: trace,
-      );
+  static Future<bool> _requestNotificationPermission() async {
+    if (requestNotificationPermissionOverride != null) {
+      return requestNotificationPermissionOverride!();
     }
+
+    if (Platform.isAndroid) {
+      final granted = await _notificationsPlugin
+          .resolvePlatformSpecificImplementation<
+              AndroidFlutterLocalNotificationsPlugin>()
+          ?.requestNotificationsPermission();
+      return granted ?? true;
+    }
+
+    if (Platform.isIOS || Platform.isMacOS) {
+      final granted = await _notificationsPlugin
+          .resolvePlatformSpecificImplementation<
+              IOSFlutterLocalNotificationsPlugin>()
+          ?.requestPermissions(
+            alert: true,
+            badge: true,
+            sound: true,
+          );
+      return granted ?? true;
+    }
+
+    return true;
   }
 
   static Future<List<Map<String, dynamic>>> _fetchUnreadNotifications() async {
@@ -319,7 +586,7 @@ class NotificationBackgroundService {
     }).toList();
   }
 
-  static _NotificationCandidate _toNotificationCandidate(
+  static NotificationReminderCandidate _toNotificationCandidate(
       Map<String, dynamic> n) {
     final id = getInt(n["id"]);
     final title = getString(n["title"]) ?? "";
@@ -332,16 +599,53 @@ class NotificationBackgroundService {
         ? "id:$id"
         : "hash:${_stableHash("$title|$subTitle|$type|$objectId|$timeSent")}";
 
-    return _NotificationCandidate(
+    return NotificationReminderCandidate(
       key: key,
       title: title,
       body: subTitle,
     );
   }
 
-  static Future<void> _showLocalNotification(
-      _NotificationCandidate notification) async {
-    const androidDetails = AndroidNotificationDetails(
+  static Future<void> _showReminderNotification(
+    NotificationReminderEntry entry,
+  ) async {
+    await _showNotification(
+      NotificationDisplayRequest(
+        id: _stableHash(entry.key) & 0x7fffffff,
+        title: entry.title,
+        body: entry.body,
+        payload: entry.key,
+      ),
+    );
+  }
+
+  static Future<void> _showSummaryNotification(
+    List<NotificationReminderEntry> dueEntries,
+  ) async {
+    final count = dueEntries.length;
+    final previewTitles =
+        dueEntries.take(3).map((entry) => entry.title).toList(growable: false);
+    final body = previewTitles.join(", ");
+    await _showNotification(
+      NotificationDisplayRequest(
+        id: _summaryNotificationId,
+        title: "$count ungelesene Benachrichtigungen",
+        body: body.isEmpty ? null : body,
+        payload: "summary",
+        lines: dueEntries.map((entry) => entry.title).toList(growable: false),
+      ),
+    );
+  }
+
+  static Future<void> _showNotification(
+    NotificationDisplayRequest request,
+  ) async {
+    if (showNotificationOverride != null) {
+      await showNotificationOverride!(request);
+      return;
+    }
+
+    final androidDetails = AndroidNotificationDetails(
       _channelId,
       _channelName,
       channelDescription: _channelDescription,
@@ -349,6 +653,13 @@ class NotificationBackgroundService {
       importance: Importance.high,
       priority: Priority.high,
       visibility: NotificationVisibility.public,
+      styleInformation: request.lines.isEmpty
+          ? null
+          : InboxStyleInformation(
+              request.lines,
+              contentTitle: request.title,
+              summaryText: request.body,
+            ),
     );
 
     const iosDetails = DarwinNotificationDetails(
@@ -357,18 +668,26 @@ class NotificationBackgroundService {
       presentSound: true,
     );
 
-    const details = NotificationDetails(
+    final details = NotificationDetails(
       android: androidDetails,
       iOS: iosDetails,
     );
 
     await _notificationsPlugin.show(
-      _stableHash(notification.key) & 0x7fffffff,
-      notification.title,
-      notification.body,
+      request.id,
+      request.title,
+      request.body,
       details,
-      payload: notification.key,
+      payload: request.payload,
     );
+  }
+
+  static Future<void> _cancelSummaryNotification() async {
+    if (cancelNotificationOverride != null) {
+      await cancelNotificationOverride!(_summaryNotificationId);
+      return;
+    }
+    await _notificationsPlugin.cancel(_summaryNotificationId);
   }
 
   static int _stableHash(String input) {
@@ -380,9 +699,113 @@ class NotificationBackgroundService {
     return hash;
   }
 
+  static List<NotificationReminderEntry> _readReminderEntries(
+    SharedPreferences prefs,
+  ) {
+    final raw = prefs.getString(_reminderEntriesKey);
+    if (raw == null || raw.isEmpty) {
+      return const <NotificationReminderEntry>[];
+    }
+
+    try {
+      final decoded = json.decode(raw);
+      final list = getList(decoded) ?? const <dynamic>[];
+      return list
+          .map((dynamic entry) => getMap(entry))
+          .whereType<Map>()
+          .map(
+            (entry) => NotificationReminderEntry.fromJson(
+              entry.map<String, dynamic>(
+                (key, value) => MapEntry(key.toString(), value),
+              ),
+            ),
+          )
+          .where((entry) => entry.key.isNotEmpty)
+          .toList(growable: false);
+    } catch (e, trace) {
+      log(
+        "Failed to parse stored notification reminders",
+        error: e,
+        stackTrace: trace,
+      );
+      return const <NotificationReminderEntry>[];
+    }
+  }
+
+  static Future<void> _writeReminderEntries(
+    SharedPreferences prefs,
+    List<NotificationReminderEntry> entries,
+  ) async {
+    await prefs.setString(
+      _reminderEntriesKey,
+      json.encode(entries.map((entry) => entry.toJson()).toList()),
+    );
+  }
+
+  static Future<_PollLeaseResult> _tryAcquirePollLease({
+    required String trigger,
+  }) async {
+    final prefs = await SharedPreferences.getInstance();
+    final currentTime = now;
+    final lastCompleted =
+        UtcDateTime.tryParse(prefs.getString(_pollLastCompletedKey) ?? "");
+    if (lastCompleted != null &&
+        currentTime.isBefore(lastCompleted.add(_pollDebounceWindow))) {
+      return const _PollLeaseResult(
+        acquired: false,
+        token: "",
+        reason: "kurz zuvor abgeschlossen",
+      );
+    }
+
+    final leaseMap = getMap(
+      prefs.getString(_pollLeaseKey) == null
+          ? null
+          : json.decode(prefs.getString(_pollLeaseKey)!),
+    );
+    final leaseExpiry =
+        UtcDateTime.tryParse(getString(leaseMap?["expiresAt"]) ?? "");
+    if (leaseExpiry != null && currentTime.isBefore(leaseExpiry)) {
+      return const _PollLeaseResult(
+        acquired: false,
+        token: "",
+        reason: "anderer Polling-Lauf aktiv",
+      );
+    }
+
+    final token = "$trigger-${currentTime.microsecondsSinceEpoch}";
+    await prefs.setString(
+      _pollLeaseKey,
+      json.encode(
+        <String, Object?>{
+          "token": token,
+          "expiresAt": currentTime.add(_pollLeaseDuration).toIso8601String(),
+        },
+      ),
+    );
+
+    return _PollLeaseResult(
+      acquired: true,
+      token: token,
+      reason: null,
+    );
+  }
+
+  static Future<void> _releasePollLease({required String token}) async {
+    final prefs = await SharedPreferences.getInstance();
+    final leaseRaw = prefs.getString(_pollLeaseKey);
+    if (leaseRaw != null) {
+      final leaseMap = getMap(json.decode(leaseRaw));
+      if (getString(leaseMap?["token"]) == token) {
+        await prefs.remove(_pollLeaseKey);
+      }
+    }
+    await prefs.setString(_pollLastCompletedKey, now.toIso8601String());
+  }
+
   static Future<void> appendLog(String entry) async {
-    final now = DateTime.now().toIso8601String();
-    final msg = "$now $entry";
+    final timestamp = now.toIso8601String();
+    final msg = "$timestamp $entry";
     log(msg, name: "NotificationBackgroundService");
 
     final prefs = await SharedPreferences.getInstance();
@@ -398,16 +821,35 @@ class NotificationBackgroundService {
     final prefs = await SharedPreferences.getInstance();
     return prefs.getStringList(_backgroundLogsKey) ?? const <String>[];
   }
-}
 
-class _NotificationCandidate {
-  final String key;
-  final String title;
-  final String? body;
+  @visibleForTesting
+  static bool get isForegroundPollingActive => _foregroundPollTimer != null;
 
-  const _NotificationCandidate({
-    required this.key,
-    required this.title,
-    required this.body,
-  });
+  @visibleForTesting
+  static Future<List<NotificationReminderEntry>> getStoredReminderEntries()
+      async {
+    final prefs = await SharedPreferences.getInstance();
+    return _readReminderEntries(prefs);
+  }
+
+  @visibleForTesting
+  static Future<void> resetForTest() async {
+    _foregroundPollTimer?.cancel();
+    _foregroundPollTimer = null;
+    _appInForeground = true;
+    _notificationsInitialized = false;
+    _workmanagerInitialized = false;
+    fetchUnreadNotificationsOverride = null;
+    requestNotificationPermissionOverride = null;
+    showNotificationOverride = null;
+    cancelNotificationOverride = null;
+    syncBackgroundTaskOverride = null;
+    initializeLocalNotificationsOverride = null;
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.remove(_reminderEntriesKey);
+    await prefs.remove(_pollLeaseKey);
+    await prefs.remove(_pollLastCompletedKey);
+    await prefs.remove(_backgroundLogsKey);
+    await prefs.remove(_pushEnabledKey);
+  }
 }

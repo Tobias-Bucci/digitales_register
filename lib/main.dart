@@ -254,9 +254,11 @@ class LifecycleObserver with WidgetsBindingObserver {
   @override
   void didChangeAppLifecycleState(AppLifecycleState state) {
     if (state == AppLifecycleState.resumed) {
+      unawaited(NotificationBackgroundService.handleAppResumed());
       onForeground();
     }
     if (state == AppLifecycleState.paused) {
+      unawaited(NotificationBackgroundService.handleAppPaused());
       onBackground();
     }
   }

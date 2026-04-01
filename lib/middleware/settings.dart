@@ -39,5 +39,15 @@ Future<void> _setPushNotificationsEnabled(
     ActionHandler next,
     Action<bool> action) async {
   await next(action);
-  await NotificationBackgroundService.setEnabled(enabled: action.payload);
+  final enabled = await NotificationBackgroundService.setEnabled(
+    enabled: action.payload,
+  );
+  if (action.payload && !enabled) {
+    showSnackBar(
+      "Benachrichtigungen sind nicht erlaubt und wurden deaktiviert.",
+    );
+    if (api.state.settingsState.pushNotificationsEnabled) {
+      await api.actions.settingsActions.pushNotificationsEnabled(false);
+    }
+  }
 }

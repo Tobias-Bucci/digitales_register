@@ -45,15 +45,17 @@ Die App kann neue ungelesene Notifications im Hintergrund pollen und als lokale 
 
 Wichtig:
 * Aktivierung erfolgt in den App-Einstellungen ueber den Toggle `Push Notifications aktivieren`.
-* Es werden nur neue Notifications beruecksichtigt. Bereits bekannte ungelesene Eintraege werden nicht erneut gepusht.
-* Auf Android ist das Intervall durch das OS eingeschraenkt (typisch mindestens ca. 15 Minuten bei WorkManager).
+* Ungelesene Notifications werden erneut erinnert, bis sie als gelesen markiert wurden.
+* Solange die App geoeffnet ist, prueft sie alle 10 Minuten auf ungelesene Notifications.
+* Auf Android laeuft der Hintergrund-Check ueber WorkManager und ist daher durch das OS typischerweise auf mindestens ca. 15 Minuten begrenzt.
+* Wenn mehrere ungelesene Notifications gleichzeitig faellig sind, zeigt die App eine zusammengefasste Erinnerung statt vieler einzelner Popups.
 
 ### Teststrategie ohne echten Sender
 
 1. Mock-API / Fake-Server
 * Starte lokal einen Test-Endpunkt fuer `api/notification/unread`.
-* Liefere zuerst eine feste Liste aus und erweitere sie spaeter um neue IDs.
-* Erwartung: nur die neu hinzugefuegte ID erzeugt eine weitere lokale Push-Notification.
+* Liefere zuerst eine feste Liste aus und lasse einzelne IDs ueber mehrere Polling-Zyklen ungelesen.
+* Erwartung: neue IDs werden sofort erinnert, alte ungelesene IDs nach dem Intervall erneut.
 
 2. Manuelle Testdaten
 * Hinterlege testweise JSON-Antworten fuer den Unread-Endpunkt.
@@ -67,5 +69,6 @@ Wichtig:
 * Pruefe die gespeicherten Background-Logs (Polling-Zeitpunkte, erkannte neue IDs, Fehlerfaelle).
 * Kontrolliere insbesondere:
   * wann Polling lief,
-  * welche IDs als neu erkannt wurden,
-  * ob bei identischer Liste keine Doppel-Pushes entstanden sind.
+  * welche IDs als ungelesen verfolgt wurden,
+  * wann Erinnerungen erneut ausgeliefert wurden,
+  * ob bei mehreren faelligen Eintraegen eine Sammel-Notification erzeugt wurde.

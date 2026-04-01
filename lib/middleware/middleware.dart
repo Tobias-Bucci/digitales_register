@@ -290,6 +290,7 @@ Future<void> _load(MiddlewareApi<AppState, AppStateBuilder, AppActions> api,
   if (wrapper is! Mock) {
     wrapper = Wrapper();
   }
+  await NotificationBackgroundService.handleAppPaused();
   _cancelNoInternetRetry();
   _noInternetRetryInFlight = false;
   statePersistenceService.clear();
@@ -426,9 +427,15 @@ Future<void> _loggedIn(MiddlewareApi<AppState, AppStateBuilder, AppActions> api,
     await next(action);
   }
 
-  await NotificationBackgroundService.setEnabled(
+  final notificationsEnabled = await NotificationBackgroundService.setEnabled(
     enabled: api.state.settingsState.pushNotificationsEnabled,
   );
+  if (!notificationsEnabled && api.state.settingsState.pushNotificationsEnabled) {
+    showSnackBar(
+      "Benachrichtigungen sind nicht erlaubt und wurden deaktiviert.",
+    );
+    await api.actions.settingsActions.pushNotificationsEnabled(false);
+  }
 
   for (final callback in api.state.loginState.callAfterLogin) {
     callback();

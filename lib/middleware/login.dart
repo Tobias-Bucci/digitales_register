@@ -31,6 +31,7 @@ final _loginMiddleware =
 
 Future<void> _logout(MiddlewareApi<AppState, AppStateBuilder, AppActions> api,
     ActionHandler next, Action<LogoutPayload> action) async {
+  await NotificationBackgroundService.handleAppPaused();
   if (action.payload.hard &&
       api.state.loginState.loggedIn &&
       api.state.loginState.username != null) {
