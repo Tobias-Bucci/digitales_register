@@ -1,5 +1,6 @@
 import 'package:dr/wrapper.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:dr/util.dart';
 
 void main() {
   test('parseConfig reads the important profile values from the webpage', () {
@@ -14,6 +15,13 @@ void main() {
     expect(config.autoLogoutSeconds, 300);
     expect(config.currentSemesterMaybe, isNull);
     expect(config.isStudentOrParent, isTrue);
+  });
+
+  test('parseConfig reports redirect pages as parse errors', () {
+    expect(
+      () => Wrapper.parseConfig(redirectSource),
+      throwsA(isA<ParseException>()),
+    );
   });
 }
 
@@ -55,4 +63,10 @@ String source = r"""
     </a></div>
 </body>
 </html>
+""";
+
+const String redirectSource = """
+<script type="text/javascript">
+window.location = "https://vinzentinum.digitalesregister.it/v2/login";
+</script>
 """;

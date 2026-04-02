@@ -429,8 +429,10 @@ Future<void> _loggedIn(MiddlewareApi<AppState, AppStateBuilder, AppActions> api,
 
   final notificationsEnabled = await NotificationBackgroundService.setEnabled(
     enabled: api.state.settingsState.pushNotificationsEnabled,
+    triggerImmediatePoll: false,
   );
-  if (!notificationsEnabled && api.state.settingsState.pushNotificationsEnabled) {
+  if (!notificationsEnabled &&
+      api.state.settingsState.pushNotificationsEnabled) {
     showSnackBar(
       "Benachrichtigungen sind nicht erlaubt und wurden deaktiviert.",
     );

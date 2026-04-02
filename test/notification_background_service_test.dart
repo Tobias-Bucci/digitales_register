@@ -114,7 +114,8 @@ void main() {
 
     expect(shown, hasLength(1));
     expect(shown.single.title, 'Mathe');
-    final stored = await NotificationBackgroundService.getStoredReminderEntries();
+    final stored =
+        await NotificationBackgroundService.getStoredReminderEntries();
     expect(stored, hasLength(1));
     expect(stored.single.lastAlertedAt, mockNow);
   });
@@ -206,7 +207,8 @@ void main() {
     mockNow = UtcDateTime(2026, 4, 1, 8, 1);
     await NotificationBackgroundService.pollAndNotify(trigger: 'second');
 
-    final stored = await NotificationBackgroundService.getStoredReminderEntries();
+    final stored =
+        await NotificationBackgroundService.getStoredReminderEntries();
     expect(stored.map((entry) => entry.key), <String>['id:2']);
   });
 
@@ -270,9 +272,12 @@ void main() {
     expect(NotificationBackgroundService.isForegroundPollingActive, isFalse);
   });
 
-  test('foreground polling starts on resume and stops on pause', () async {
-    NotificationBackgroundService.fetchUnreadNotificationsOverride =
-        () async => const <Map<String, dynamic>>[];
+  test('foreground polling resumes without an immediate poll', () async {
+    var fetchCount = 0;
+    NotificationBackgroundService.fetchUnreadNotificationsOverride = () async {
+      fetchCount++;
+      return const <Map<String, dynamic>>[];
+    };
     NotificationBackgroundService.showNotificationOverride = (_) async {};
     NotificationBackgroundService.cancelNotificationOverride = (_) async {};
 
@@ -288,6 +293,39 @@ void main() {
     await NotificationBackgroundService.handleAppResumed();
     await Future<void>.delayed(Duration.zero);
     expect(NotificationBackgroundService.isForegroundPollingActive, isTrue);
+    expect(fetchCount, 0);
+  });
+
+  test(
+      'logged-in bootstrap enables polling without an immediate background login',
+      () async {
+    var fetchCount = 0;
+    NotificationBackgroundService.fetchUnreadNotificationsOverride = () async {
+      fetchCount++;
+      return const <Map<String, dynamic>>[];
+    };
+    NotificationBackgroundService.showNotificationOverride = (_) async {};
+    NotificationBackgroundService.cancelNotificationOverride = (_) async {};
+
+    final store = createStore(
+      initialState: AppState(
+        (b) => b..settingsState.pushNotificationsEnabled = true,
+      ),
+      withMiddleware: true,
+    );
+
+    await store.actions.loginActions.loggedIn(
+      LoggedInPayload(
+        (b) => b
+          ..username = 'anna'
+          ..fromStorage = true
+          ..offlineOnly = true,
+      ),
+    );
+    await Future<void>.delayed(Duration.zero);
+
+    expect(NotificationBackgroundService.isForegroundPollingActive, isTrue);
+    expect(fetchCount, 0);
   });
 
   test('disabling notifications stops foreground polling', () async {

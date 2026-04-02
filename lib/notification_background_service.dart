@@ -33,13 +33,15 @@ const _backgroundPollingInterval = Duration(minutes: 15);
 const _pollLeaseDuration = Duration(minutes: 2);
 const _pollDebounceWindow = Duration(minutes: 1);
 
-typedef NotificationFetchOverride = Future<List<Map<String, dynamic>>> Function();
+typedef NotificationFetchOverride = Future<List<Map<String, dynamic>>>
+    Function();
 typedef NotificationPermissionOverride = Future<bool> Function();
 typedef NotificationShowOverride = Future<void> Function(
   NotificationDisplayRequest request,
 );
 typedef NotificationCancelOverride = Future<void> Function(int id);
-typedef BackgroundTaskSyncOverride = Future<void> Function({required bool enabled});
+typedef BackgroundTaskSyncOverride = Future<void> Function(
+    {required bool enabled});
 typedef LocalNotificationsInitOverride = Future<void> Function();
 
 @pragma("vm:entry-point")
@@ -123,7 +125,8 @@ class NotificationReminderEntry {
           UtcDateTime.tryParse(getString(json["firstSeenAt"]) ?? "") ?? now,
       lastSeenAt:
           UtcDateTime.tryParse(getString(json["lastSeenAt"]) ?? "") ?? now,
-      lastAlertedAt: UtcDateTime.tryParse(getString(json["lastAlertedAt"]) ?? ""),
+      lastAlertedAt:
+          UtcDateTime.tryParse(getString(json["lastAlertedAt"]) ?? ""),
     );
   }
 
@@ -295,7 +298,8 @@ class NotificationBackgroundService {
         await prefs.setBool(_pushEnabledKey, false);
         await _syncBackgroundTask(enabled: false);
         await _syncForegroundPolling(enabled: false, triggerImmediate: false);
-        await appendLog("Push Notifications deaktiviert: Berechtigung verweigert");
+        await appendLog(
+            "Push Notifications deaktiviert: Berechtigung verweigert");
         return false;
       }
     }
@@ -324,7 +328,9 @@ class NotificationBackgroundService {
     final enabled = await isEnabled();
     await _syncForegroundPolling(
       enabled: enabled,
-      triggerImmediate: enabled,
+      // The foreground app refreshes its own data on resume.
+      // Avoid starting a competing authenticated poll at the same time.
+      triggerImmediate: false,
     );
   }
 
@@ -405,7 +411,8 @@ class NotificationBackgroundService {
         await _showSummaryNotification(evaluation.dueEntries);
       }
 
-      final alertedKeys = evaluation.dueEntries.map((entry) => entry.key).toSet();
+      final alertedKeys =
+          evaluation.dueEntries.map((entry) => entry.key).toSet();
       final updatedEntries = evaluation.trackedEntries
           .map(
             (entry) => alertedKeys.contains(entry.key)
@@ -826,8 +833,8 @@ class NotificationBackgroundService {
   static bool get isForegroundPollingActive => _foregroundPollTimer != null;
 
   @visibleForTesting
-  static Future<List<NotificationReminderEntry>> getStoredReminderEntries()
-      async {
+  static Future<List<NotificationReminderEntry>>
+      getStoredReminderEntries() async {
     final prefs = await SharedPreferences.getInstance();
     return _readReminderEntries(prefs);
   }

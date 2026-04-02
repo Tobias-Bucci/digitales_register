@@ -213,16 +213,35 @@ class Wrapper {
     if (getBool(response["loggedIn"]) ?? false) {
       log("login succeeded");
       lastInteraction = DateTime.now();
-      loggedInCompleter.complete(true);
       this.user = user;
       this.pass = pass;
       error = null;
-      await _loadConfig().then((_) {
-        _serverLogoutTime =
-            DateTime.now().add(Duration(seconds: config.autoLogoutSeconds));
-        _scheduleSessionRefresh();
-        onConfigLoaded!();
-      });
+      try {
+        await _loadConfig();
+      } on UnexpectedLogoutException {
+        if (!loggedInCompleter.isCompleted) {
+          loggedInCompleter.complete(false);
+        }
+        log(
+          "login succeeded, but the server logged the user out before the config could be loaded",
+        );
+        error =
+            "Die Sitzung wurde direkt nach dem Login beendet. Das passiert oft, wenn dasselbe Konto gleichzeitig auf mehreren Geräten verwendet wird.";
+        _serverLogoutTime = null;
+        _sessionRefreshTimer?.cancel();
+        _clearCookies();
+        return null;
+      } catch (_) {
+        if (!loggedInCompleter.isCompleted) {
+          loggedInCompleter.complete(false);
+        }
+        rethrow;
+      }
+      loggedInCompleter.complete(true);
+      _serverLogoutTime =
+          DateTime.now().add(Duration(seconds: config.autoLogoutSeconds));
+      _scheduleSessionRefresh();
+      onConfigLoaded!();
     } else {
       log("login did not succeed");
       loggedInCompleter.complete(false);
@@ -399,25 +418,94 @@ class Wrapper {
       allowSingleRetry: true,
     ))
         .data;
-    config = parseConfig(source!);
+    if (source == null) {
+      throw const AppRequestException(
+        message: "Die Konfigurationsseite konnte nicht geladen werden.",
+      );
+    }
+    if (_isLoginRedirectPage(source)) {
+      throw UnexpectedLogoutException();
+    }
+    config = parseConfig(source);
   }
 
   static Config parseConfig(String source) {
-    final id = _readUserId(source);
-    final fullName = _readFullName(source);
-    final imgSource = _readImgSource(source);
-    final autoLogout = _readAutoLogoutSeconds(source);
-    final currentSemesterMaybe = _readCurrentSemester(source);
-    final isStudentOrParent = _readIsStudentOrParent(source);
-    return Config(
-      (b) => b
-        ..userId = id
-        ..autoLogoutSeconds = autoLogout
-        ..fullName = fullName
-        ..imgSource = imgSource
-        ..currentSemesterMaybe = currentSemesterMaybe
-        ..isStudentOrParent = isStudentOrParent,
-    );
+    return tryParse(source, (source) {
+      if (_isLoginRedirectPage(source)) {
+        throw const FormatException(
+          "Received login redirect page instead of the expected config page.",
+        );
+      }
+
+      final id = _readUserId(source);
+      final fullName = _readFullName(source);
+      final imgSource = _readImgSource(source);
+      final autoLogout = _readAutoLogoutSeconds(source);
+      final currentSemesterMaybe = _readCurrentSemester(source);
+      final isStudentOrParent = _readIsStudentOrParent(source);
+      return Config(
+        (b) => b
+          ..userId = id
+          ..autoLogoutSeconds = autoLogout
+          ..fullName = fullName
+          ..imgSource = imgSource
+          ..currentSemesterMaybe = currentSemesterMaybe
+          ..isStudentOrParent = isStudentOrParent,
+      );
+    }, hasEnoughContext: true);
+  }
+
+  static bool _isLoginRedirectPage(String source) {
+    return RegExp(
+      r'^[\s\n]*<script type="text/javascript">\n?\s*window\.location = "https://.+\.digitalesregister.it/v2/login";\n?\s*</script>[\s\n]*$',
+    ).hasMatch(source);
+  }
+
+  static String _readAssignmentValue(String source, String key) {
+    final marker = "$key=";
+    final start = source.indexOf(marker);
+    if (start < 0) {
+      throw FormatException("Missing '$marker' in config page.");
+    }
+    final valueStart = start + marker.length;
+    final end = source.indexOf(";", valueStart);
+    if (end < 0) {
+      throw FormatException("Missing ';' after '$marker' in config page.");
+    }
+    return source.substring(valueStart, end).trim();
+  }
+
+  static String _readConfigValue(String source, String key) {
+    final marker = "$key: ";
+    final start = source.indexOf(marker);
+    if (start < 0) {
+      throw FormatException("Missing '$marker' in config page.");
+    }
+    final valueStart = start + marker.length;
+    final end = source.indexOf(",", valueStart);
+    if (end < 0) {
+      throw FormatException("Missing ',' after '$marker' in config page.");
+    }
+    return source.substring(valueStart, end).trim();
+  }
+
+  static String _readRequiredSubstring(
+    String source,
+    String startMarker,
+    String endMarker,
+  ) {
+    final start = source.indexOf(startMarker);
+    if (start < 0) {
+      throw FormatException("Missing '$startMarker' in config page.");
+    }
+    final valueStart = start + startMarker.length;
+    final end = source.indexOf(endMarker, valueStart);
+    if (end < 0) {
+      throw FormatException(
+        "Missing '$endMarker' after '$startMarker' in config page.",
+      );
+    }
+    return source.substring(valueStart, end).trim();
   }
 
   static bool _readIsStudentOrParent(String source) {
@@ -434,18 +522,11 @@ class Wrapper {
   }
 
   static int _readAutoLogoutSeconds(String source) {
-    final substringFromId = source.substring(
-        source.indexOf("auto_logout_seconds: ") +
-            "auto_logout_seconds: ".length);
-    return int.parse(
-        substringFromId.substring(0, substringFromId.indexOf(",")).trim());
+    return int.parse(_readConfigValue(source, "auto_logout_seconds"));
   }
 
   static int _readUserId(String source) {
-    final substringFromId = source
-        .substring(source.indexOf("currentUserId=") + "currentUserId=".length);
-    return int.parse(
-        substringFromId.substring(0, substringFromId.indexOf(";")).trim());
+    return int.parse(_readAssignmentValue(source, "currentUserId"));
   }
 
   static String _readAfterImgId(String source) {
@@ -457,16 +538,12 @@ class Wrapper {
 
   static String _readFullName(String source) {
     final afterImgId = _readAfterImgId(source);
-    return afterImgId
-        .substring(afterImgId.indexOf(">") + 1, afterImgId.indexOf("<"))
-        .trim();
+    return _readRequiredSubstring(afterImgId, ">", "<");
   }
 
   static String _readImgSource(String source) {
     final afterImgId = _readAfterImgId(source);
-    final afterStart =
-        afterImgId.substring(afterImgId.indexOf('src="') + "src='".length);
-    return afterStart.substring(0, afterStart.indexOf('"')).trim();
+    return _readRequiredSubstring(afterImgId, 'src="', '"');
   }
 
   final _loginMutex = Mutex();
@@ -580,9 +657,7 @@ class Wrapper {
     //window.location = "https://vinzentinum.digitalesregister.it/v2/login";
     //</script>
 
-    if (responseData is String &&
-        RegExp(r'^[\s\n]*<script type="text/javascript">\n?\s*window\.location = "https://.+\.digitalesregister.it/v2/login";\n?\s*</script>[\s\n]*$')
-            .hasMatch(responseData)) {
+    if (responseData is String && _isLoginRedirectPage(responseData)) {
       // This is a very frequently reported bug, but I don't have an idea as to why this is happening.
       // Possible causes might be that the user's time is off, or the user might be trying to log in from a different device at the same time.
 
