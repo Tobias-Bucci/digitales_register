@@ -72,6 +72,7 @@ android {
             // Local override (explicit): set allowDebugSigningForRelease=true in local.properties
             // or ALLOW_DEBUG_SIGNING_FOR_RELEASE=true as environment variable.
             signingConfig allowDebugSigningForRelease ? signingConfigs.debug : signingConfigs.release
+            proguardFiles getDefaultProguardFile('proguard-android-optimize.txt'), 'proguard-rules.pro'
             // this is my (michael) release key. Used for dev purposes only.
             if (signingConfigs.release.keyAlias == "myandroidkey") {
                 applicationIdSuffix ".irelease"

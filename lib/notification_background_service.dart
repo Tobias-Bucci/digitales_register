@@ -9,6 +9,7 @@ import 'package:dio_cookie_manager/dio_cookie_manager.dart';
 import 'package:dr/desktop.dart';
 import 'package:dr/utc_date_time.dart';
 import 'package:dr/util.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter/widgets.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -32,6 +33,8 @@ const _foregroundPollingInterval = Duration(minutes: 10);
 const _backgroundPollingInterval = Duration(minutes: 15);
 const _pollLeaseDuration = Duration(minutes: 2);
 const _pollDebounceWindow = Duration(minutes: 1);
+const _androidNotificationMethodChannel =
+    MethodChannel("dr/notification_background_service");
 
 typedef NotificationFetchOverride = Future<List<Map<String, dynamic>>>
     Function();
@@ -260,6 +263,10 @@ class NotificationBackgroundService {
   static BackgroundTaskSyncOverride? syncBackgroundTaskOverride;
   @visibleForTesting
   static LocalNotificationsInitOverride? initializeLocalNotificationsOverride;
+  @visibleForTesting
+  static bool Function()? isAndroidOverride;
+
+  static bool get _isAndroid => isAndroidOverride?.call() ?? Platform.isAndroid;
 
   static Future<void> initialize() async {
     WidgetsFlutterBinding.ensureInitialized();
@@ -690,11 +697,24 @@ class NotificationBackgroundService {
   }
 
   static Future<void> _cancelSummaryNotification() async {
+    await _cancelNotification(_summaryNotificationId);
+  }
+
+  static Future<void> _cancelNotification(int id) async {
     if (cancelNotificationOverride != null) {
-      await cancelNotificationOverride!(_summaryNotificationId);
+      await cancelNotificationOverride!(id);
       return;
     }
-    await _notificationsPlugin.cancel(_summaryNotificationId);
+
+    if (_isAndroid) {
+      await _androidNotificationMethodChannel.invokeMethod<void>(
+        "cancelNotificationSafely",
+        <String, Object>{"id": id},
+      );
+      return;
+    }
+
+    await _notificationsPlugin.cancel(id);
   }
 
   static int _stableHash(String input) {
@@ -852,6 +872,7 @@ class NotificationBackgroundService {
     cancelNotificationOverride = null;
     syncBackgroundTaskOverride = null;
     initializeLocalNotificationsOverride = null;
+    isAndroidOverride = null;
     final prefs = await SharedPreferences.getInstance();
     await prefs.remove(_reminderEntriesKey);
     await prefs.remove(_pollLeaseKey);

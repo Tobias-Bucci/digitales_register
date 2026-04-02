@@ -348,6 +348,21 @@ void main() {
     expect(NotificationBackgroundService.isForegroundPollingActive, isFalse);
   });
 
+  test('disabling notifications on Android uses the safe cancel path',
+      () async {
+    final cancelled = <int>[];
+    NotificationBackgroundService.isAndroidOverride = () => true;
+    NotificationBackgroundService.cancelNotificationOverride =
+        (id) async => cancelled.add(id);
+
+    await NotificationBackgroundService.setEnabled(
+      enabled: false,
+      triggerImmediatePoll: false,
+    );
+
+    expect(cancelled, hasLength(1));
+  });
+
   test('logout stops foreground polling', () async {
     NotificationBackgroundService.fetchUnreadNotificationsOverride =
         () async => const <Map<String, dynamic>>[];
