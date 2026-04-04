@@ -57,6 +57,7 @@ class SidebarContainer extends StatelessWidget {
           showCertificate: actions.routingActions.showCertificate.call,
           showGrades: actions.routingActions.showGrades.call,
           showMessages: actions.routingActions.showMessages.call,
+          showProfile: actions.routingActions.showProfile.call,
           showSettings: actions.routingActions.showSettings.call,
           otherAccounts: state.otherAccounts.toList(),
           selectAccount: actions.loginActions.selectAccount.call,

@@ -40,7 +40,6 @@ class _ProfileAvatarState extends State<ProfileAvatar> {
   Uint8List? _imageBytes;
   String? _lastRequestedUrl;
   bool _isResolving = false;
-  bool _hasError = false;
 
   @override
   void initState() {
@@ -63,7 +62,6 @@ class _ProfileAvatarState extends State<ProfileAvatar> {
       setState(() {
         _imageBytes = null;
         _isResolving = false;
-        _hasError = false;
       });
       return;
     }
@@ -74,7 +72,6 @@ class _ProfileAvatarState extends State<ProfileAvatar> {
       setState(() {
         _imageBytes = cached;
         _isResolving = false;
-        _hasError = false;
       });
       return;
     }
@@ -82,7 +79,6 @@ class _ProfileAvatarState extends State<ProfileAvatar> {
     if (!mounted) return;
     setState(() {
       _isResolving = true;
-      _hasError = false;
     });
 
     try {
@@ -94,7 +90,6 @@ class _ProfileAvatarState extends State<ProfileAvatar> {
         setState(() {
           _imageBytes = null;
           _isResolving = false;
-          _hasError = true;
         });
         return;
       }
@@ -102,7 +97,6 @@ class _ProfileAvatarState extends State<ProfileAvatar> {
       setState(() {
         _imageBytes = bytes;
         _isResolving = false;
-        _hasError = false;
       });
     } catch (_) {
       if (!mounted || _lastRequestedUrl != imageUrl) {
@@ -111,7 +105,6 @@ class _ProfileAvatarState extends State<ProfileAvatar> {
       setState(() {
         _imageBytes = null;
         _isResolving = false;
-        _hasError = true;
       });
     }
   }
@@ -119,39 +112,31 @@ class _ProfileAvatarState extends State<ProfileAvatar> {
   @override
   Widget build(BuildContext context) {
     final colorScheme = Theme.of(context).colorScheme;
-    final placeholder = Container(
+    if (_imageBytes != null) {
+      return ClipOval(
+        child: Image.memory(
+          _imageBytes!,
+          width: widget.size,
+          height: widget.size,
+          fit: BoxFit.cover,
+          gaplessPlayback: true,
+        ),
+      );
+    }
+
+    return Container(
       width: widget.size,
       height: widget.size,
       decoration: BoxDecoration(
         shape: BoxShape.circle,
-        color: colorScheme.primary.withValues(alpha: 0.12),
+        color: colorScheme.surfaceContainerHighest.withValues(alpha: 0.9),
+        border: Border.all(
+          color: colorScheme.outlineVariant.withValues(alpha: 0.35),
+        ),
       ),
-      child: Icon(
-        Icons.person_rounded,
-        color: colorScheme.primary,
-        size: widget.size * 0.56,
-      ),
-    );
-
-    return SizedBox(
-      width: widget.size,
-      height: widget.size,
-      child: Stack(
-        alignment: Alignment.center,
-        children: [
-          placeholder,
-          if (_imageBytes != null)
-            ClipOval(
-              child: Image.memory(
-                _imageBytes!,
-                width: widget.size,
-                height: widget.size,
-                fit: BoxFit.cover,
-                gaplessPlayback: true,
-              ),
-            ),
-          if (_isResolving && _imageBytes == null)
-            SizedBox(
+      alignment: Alignment.center,
+      child: _isResolving
+          ? SizedBox(
               width: widget.size * 0.42,
               height: widget.size * 0.42,
               child: CircularProgressIndicator(
@@ -160,15 +145,38 @@ class _ProfileAvatarState extends State<ProfileAvatar> {
                   colorScheme.primary.withValues(alpha: 0.72),
                 ),
               ),
+            )
+          : SizedBox(
+              width: widget.size * 0.54,
+              height: widget.size * 0.54,
+              child: Stack(
+                alignment: Alignment.center,
+                children: [
+                  Positioned(
+                    top: 0,
+                    child: Container(
+                      width: widget.size * 0.2,
+                      height: widget.size * 0.2,
+                      decoration: BoxDecoration(
+                        shape: BoxShape.circle,
+                        color: colorScheme.onSurfaceVariant,
+                      ),
+                    ),
+                  ),
+                  Positioned(
+                    bottom: 0,
+                    child: Container(
+                      width: widget.size * 0.36,
+                      height: widget.size * 0.17,
+                      decoration: BoxDecoration(
+                        color: colorScheme.onSurfaceVariant,
+                        borderRadius: BorderRadius.circular(widget.size * 0.12),
+                      ),
+                    ),
+                  ),
+                ],
+              ),
             ),
-          if (_hasError && _imageBytes == null)
-            Icon(
-              Icons.person_rounded,
-              color: colorScheme.primary,
-              size: widget.size * 0.56,
-            ),
-        ],
-      ),
     );
   }
 }

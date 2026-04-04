@@ -40,6 +40,7 @@ class Sidebar extends StatelessWidget {
     required this.showCalendar,
     required this.showCertificate,
     required this.showMessages,
+    required this.showProfile,
     required this.showSettings,
     required this.logout,
     required this.otherAccounts,
@@ -55,6 +56,7 @@ class Sidebar extends StatelessWidget {
       showCalendar,
       showCertificate,
       showMessages,
+      showProfile,
       showSettings,
       logout,
       addAccount;
@@ -125,7 +127,17 @@ class Sidebar extends StatelessWidget {
       toggleTooltipExpanded: "Einklappen",
       toggleTitle: const SizedBox(),
       backgroundColor: scheme.surface,
-      avatar: ProfileAvatar(imageUrl: userIcon),
+      avatar: GestureDetector(
+        behavior: HitTestBehavior.opaque,
+        onTap: () {
+          scaffoldKey?.currentState?.closeDrawerIfOpen();
+          showProfile();
+        },
+        child: ProfileAvatar(
+          imageUrl: userIcon,
+          size: 56,
+        ),
+      ),
       unselectedIconColor: theme.iconTheme.color!,
       selectedIconColor: scheme.primary,
       unselectedTextColor: theme.textTheme.titleMedium!.color!,
