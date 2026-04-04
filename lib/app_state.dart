@@ -313,6 +313,7 @@ abstract class SettingsState
   bool get pushNotificationsEnabled;
   bool get dashboardColorTestsInRed;
   bool get amoledMode;
+  bool get biometricAppLockEnabled;
   BuiltMap<String, SubjectTheme> get subjectThemes;
   BuiltList<String> get ignoreForGradesAverage;
   BuiltList<String> get favoriteSubjects;
@@ -361,6 +362,7 @@ abstract class SettingsState
       ..pushNotificationsEnabled = false
       ..dashboardColorTestsInRed = true
       ..amoledMode = false
+      ..biometricAppLockEnabled = false
       ..scrollToGrades = false
       ..scrollToSubjectNicks = false;
   }

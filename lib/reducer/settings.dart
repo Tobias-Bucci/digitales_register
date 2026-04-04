@@ -1,4 +1,4 @@
-﻿// Copyright (C) 2021 Michael Debertol
+// Copyright (C) 2021 Michael Debertol
 // Copyright (C) 2026 Tobias Bucci
 //
 // This file is part of digitales_register.
@@ -58,6 +58,7 @@ final settingsReducerBuilder = NestedReducerBuilder<AppState, AppStateBuilder,
   ..add(
       SettingsActionsNames.pushNotificationsEnabled, _pushNotificationsEnabled)
   ..add(SettingsActionsNames.amoledMode, _amoledMode)
+  ..add(SettingsActionsNames.biometricAppLockEnabled, _biometricAppLockEnabled)
   ..add(
       SettingsActionsNames.dashboardColorTestsInRed, _dashboardColorTestsInRed);
 
@@ -187,6 +188,11 @@ void _dashboardColorTestsInRed(
 void _amoledMode(
     SettingsState state, Action<bool> action, SettingsStateBuilder builder) {
   builder.amoledMode = action.payload;
+}
+
+void _biometricAppLockEnabled(
+    SettingsState state, Action<bool> action, SettingsStateBuilder builder) {
+  builder.biometricAppLockEnabled = action.payload;
 }
 
 void _updateSubjectThemes(SettingsState? state, Action<List<String>> action,

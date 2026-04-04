@@ -27,14 +27,17 @@ class ProfileContainer extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return StoreConnection<AppState, AppActions,
-        Tuple3<bool, ProfileState, String?>>(
+        Tuple4<bool, ProfileState, String?, bool>>(
       builder: (context, vm, actions) {
         return Profile(
           profileState: vm.item2,
           baseUrl: vm.item3,
+          biometricAppLockEnabled: vm.item4,
           noInternet: vm.item1,
           setSendNotificationEmails:
               actions.profileActions.sendNotificationEmails.call,
+          setBiometricAppLockEnabled:
+              actions.settingsActions.biometricAppLockEnabled.call,
           changeEmail: actions.routingActions.showChangeEmail.call,
           changePass: () => actions.loginActions.showChangePass(false),
           uploadProfilePicture:
@@ -43,7 +46,12 @@ class ProfileContainer extends StatelessWidget {
         );
       },
       connect: (AppState state) {
-        return Tuple3(state.noInternet, state.profileState, state.url);
+        return Tuple4(
+          state.noInternet,
+          state.profileState,
+          state.url,
+          state.settingsState.biometricAppLockEnabled,
+        );
       },
     );
   }

@@ -1,4 +1,4 @@
-﻿// Copyright (C) 2021 Michael Debertol
+// Copyright (C) 2021 Michael Debertol
 // Copyright (C) 2026 Tobias Bucci
 //
 // This file is part of digitales_register.
@@ -22,6 +22,7 @@ import 'dart:io';
 import 'package:built_redux/built_redux.dart';
 import 'package:dr/actions/app_actions.dart';
 import 'package:dr/app_state.dart';
+import 'package:dr/biometric_app_lock.dart';
 import 'package:dr/container/change_email_container.dart';
 import 'package:dr/container/home_page.dart';
 import 'package:dr/container/login_page.dart';
@@ -151,9 +152,13 @@ class RegisterApp extends StatelessWidget {
       store: store,
       child: Listener(
         onPointerDown: (_) => store.actions.loginActions.updateLogout(),
-        child: StoreConnection<AppState, AppActions, bool>(
-          connect: (state) => state.settingsState.amoledMode,
-          builder: (context, amoledMode, actions) => AnimatedBuilder(
+        child: StoreConnection<AppState, AppActions, _RegisterAppViewModel>(
+          connect: (state) => _RegisterAppViewModel(
+            amoledMode: state.settingsState.amoledMode,
+            biometricAppLockEnabled:
+                state.settingsState.biometricAppLockEnabled,
+          ),
+          builder: (context, vm, actions) => AnimatedBuilder(
             animation: themeController,
             builder: (context, _) => MaterialApp(
               localizationsDelegates: const [
@@ -236,7 +241,13 @@ class RegisterApp extends StatelessWidget {
               ),
               darkTheme: themeController.buildTheme(
                 brightness: Brightness.dark,
-                amoledMode: amoledMode,
+                amoledMode: vm.amoledMode,
+              ),
+              builder: (context, child) => AppLockSync(
+                enabled: vm.biometricAppLockEnabled,
+                child: BiometricAppLockOverlay(
+                  child: child ?? const SizedBox.shrink(),
+                ),
               ),
               debugShowCheckedModeBanner: false,
             ),
@@ -255,14 +266,32 @@ class LifecycleObserver with WidgetsBindingObserver {
   @override
   void didChangeAppLifecycleState(AppLifecycleState state) {
     if (state == AppLifecycleState.resumed) {
-      unawaited(NotificationBackgroundService.handleAppResumed());
-      onForeground();
+      unawaited(_handleResumed());
     }
-    if (state == AppLifecycleState.paused) {
+    if (state == AppLifecycleState.hidden ||
+        state == AppLifecycleState.paused ||
+        state == AppLifecycleState.detached) {
+      biometricAppLockController.lock();
       unawaited(NotificationBackgroundService.handleAppPaused());
       onBackground();
     }
   }
+
+  Future<void> _handleResumed() async {
+    await NotificationBackgroundService.handleAppResumed();
+    await biometricAppLockController.authenticateIfNeeded();
+    onForeground();
+  }
+}
+
+class _RegisterAppViewModel {
+  const _RegisterAppViewModel({
+    required this.amoledMode,
+    required this.biometricAppLockEnabled,
+  });
+
+  final bool amoledMode;
+  final bool biometricAppLockEnabled;
 }
 
 /// Utility to show a global Snack Bar

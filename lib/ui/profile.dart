@@ -18,7 +18,9 @@
 
 import 'dart:async';
 
+import 'package:biometric_storage/biometric_storage.dart';
 import 'package:dr/app_state.dart';
+import 'package:dr/biometric_app_lock.dart';
 import 'package:dr/container/settings_page.dart';
 import 'package:dr/profile_picture.dart';
 import 'package:dr/ui/no_internet.dart';
@@ -32,7 +34,9 @@ class Profile extends StatefulWidget {
   final ProfileState profileState;
   final String? baseUrl;
   final bool noInternet;
+  final bool biometricAppLockEnabled;
   final OnSettingChanged<bool> setSendNotificationEmails;
+  final OnSettingChanged<bool> setBiometricAppLockEnabled;
   final VoidCallback changeEmail;
   final VoidCallback changePass;
   final AsyncVoidCallback uploadProfilePicture;
@@ -42,7 +46,9 @@ class Profile extends StatefulWidget {
     super.key,
     required this.profileState,
     required this.baseUrl,
+    required this.biometricAppLockEnabled,
     required this.setSendNotificationEmails,
+    required this.setBiometricAppLockEnabled,
     required this.changeEmail,
     required this.changePass,
     required this.noInternet,
@@ -58,6 +64,8 @@ class _ProfileState extends State<Profile> {
   late final TextEditingController _codiceFiscaleController;
   bool _uploadInProgress = false;
   bool _codiceFiscaleSaveInProgress = false;
+  bool _biometricToggleInProgress = false;
+  CanAuthenticateResponse? _biometricAvailability;
 
   @override
   void initState() {
@@ -65,6 +73,7 @@ class _ProfileState extends State<Profile> {
     _codiceFiscaleController = TextEditingController(
       text: widget.profileState.codiceFiscale ?? '',
     );
+    unawaited(_loadBiometricAvailability());
   }
 
   @override
@@ -89,6 +98,41 @@ class _ProfileState extends State<Profile> {
 
   String get _normalizedCodiceFiscale =>
       _codiceFiscaleController.text.trim().toUpperCase();
+
+  bool get _biometricSupported =>
+      _biometricAvailability == CanAuthenticateResponse.success;
+
+  bool get _canToggleBiometricLock =>
+      !_biometricToggleInProgress &&
+      (widget.biometricAppLockEnabled || _biometricSupported);
+
+  String get _biometricSubtitle {
+    if (_biometricToggleInProgress) {
+      return widget.biometricAppLockEnabled
+          ? "Biometrische Sperre wird deaktiviert..."
+          : "Biometrische Sperre wird aktiviert...";
+    }
+    if (_biometricAvailability == null) {
+      return "Prüft, ob biometrische Entsperrung auf diesem Gerät verfügbar ist.";
+    }
+    return biometricAvailabilityMessage(_biometricAvailability!);
+  }
+
+  Future<void> _loadBiometricAvailability() async {
+    final availability = await biometricAppLockController.checkAvailability();
+    if (!mounted) {
+      return;
+    }
+    setState(() {
+      _biometricAvailability = availability;
+    });
+  }
+
+  void _showMessage(String message) {
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(content: Text(message)),
+    );
+  }
 
   Future<void> _handleProfilePictureUpload() async {
     setState(() {
@@ -116,6 +160,33 @@ class _ProfileState extends State<Profile> {
       if (mounted) {
         setState(() {
           _codiceFiscaleSaveInProgress = false;
+        });
+      }
+    }
+  }
+
+  Future<void> _handleBiometricAppLockChanged(bool enabled) async {
+    FocusScope.of(context).unfocus();
+    setState(() {
+      _biometricToggleInProgress = true;
+    });
+    try {
+      if (enabled) {
+        await biometricAppLockController.enable();
+        widget.setBiometricAppLockEnabled(true);
+        _showMessage("Biometrische Sperre aktiviert.");
+      } else {
+        await biometricAppLockController.disable();
+        widget.setBiometricAppLockEnabled(false);
+        _showMessage("Biometrische Sperre deaktiviert.");
+      }
+    } on BiometricAppLockSetupException catch (error) {
+      _showMessage(error.message);
+    } finally {
+      await _loadBiometricAvailability();
+      if (mounted) {
+        setState(() {
+          _biometricToggleInProgress = false;
         });
       }
     }
@@ -230,6 +301,15 @@ class _ProfileState extends State<Profile> {
                   trailing: const Icon(Icons.chevron_right),
                   onTap: widget.changePass,
                   enabled: !widget.noInternet,
+                ),
+                const Divider(),
+                SwitchListTile.adaptive(
+                  title: const Text("Biometrische Sperre"),
+                  subtitle: Text(_biometricSubtitle),
+                  value: widget.biometricAppLockEnabled,
+                  onChanged: _canToggleBiometricLock
+                      ? _handleBiometricAppLockChanged
+                      : null,
                 ),
               ],
             ),

@@ -1,4 +1,4 @@
-﻿// Copyright (C) 2021 Michael Debertol
+// Copyright (C) 2021 Michael Debertol
 // Copyright (C) 2026 Tobias Bucci
 //
 // This file is part of digitales_register.
@@ -50,4 +50,5 @@ abstract class SettingsActions extends ReduxActions {
   abstract final ActionDispatcher<bool> pushNotificationsEnabled;
   abstract final ActionDispatcher<bool> dashboardColorTestsInRed;
   abstract final ActionDispatcher<bool> amoledMode;
+  abstract final ActionDispatcher<bool> biometricAppLockEnabled;
 }
