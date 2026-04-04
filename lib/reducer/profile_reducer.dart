@@ -1,4 +1,4 @@
-﻿// Copyright (C) 2021 Michael Debertol
+// Copyright (C) 2021 Michael Debertol
 // Copyright (C) 2026 Tobias Bucci
 //
 // This file is part of digitales_register.
@@ -41,11 +41,14 @@ void _sendNotificationEmails(
 }
 
 ProfileState _parseProfile(Map data) {
+  final codiceFiscale = getString(data["codiceFiscale"])?.trim();
   return ProfileState(
     (b) => b
       ..name = getString(data["name"])
       ..email = getString(data["email"])
       ..picture = getString(data["picture"])
+      ..codiceFiscale =
+          codiceFiscale == null || codiceFiscale.isEmpty ? null : codiceFiscale
       ..roleName = getString(data["roleName"])
       ..sendNotificationEmails = getBool(data["notificationsEnabled"])
       ..username = getString(data["username"]),

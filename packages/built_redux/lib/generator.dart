@@ -1,3 +1,20 @@
+// Copyright (C) 2026 Tobias Bucci
+//
+// This file is part of digitales_register.
+//
+// digitales_register is free software: you can redistribute it and/or modify
+// it under the terms of the GNU General Public License as published by
+// the Free Software Foundation, either version 3 of the License, or
+// (at your option) any later version.
+//
+// digitales_register is distributed in the hope that it will be useful,
+// but WITHOUT ANY WARRANTY; without even the implied warranty of
+// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+// GNU General Public License for more details.
+//
+// You should have received a copy of the GNU General Public License
+// along with digitales_register.  If not, see <http://www.gnu.org/licenses/>.
+
 import 'dart:async';
 import 'package:analyzer/dart/element/element.dart';
 import 'package:build/build.dart';
@@ -30,16 +47,19 @@ const _lintIgnores = """
 """;
 
 ActionsClass _actionsClassFromElement(ClassElement element) => ActionsClass(
-      element.name,
+      element.displayName,
       _actionsFromElement(element).toSet(),
       _composedActionClasses(element).toSet(),
       _actionsClassFromInheritedElements(element).toSet(),
     );
 
 Iterable<ComposedActionClass> _composedActionClasses(ClassElement element) =>
-    element.fields
-        .where((f) => _isReduxActions(f.type.element!))
-        .map((f) => ComposedActionClass(f.name, f.type.name!));
+    element.fields.where((f) => _isReduxActions(f.type.element!)).map(
+          (f) => ComposedActionClass(
+            f.displayName,
+            f.type.element!.displayName,
+          ),
+        );
 
 Iterable<Action> _actionsFromElement(ClassElement element) => element.fields
     .where(_isActionDispatcher)
@@ -54,45 +74,38 @@ Iterable<ActionsClass> _actionsClassFromInheritedElements(
         .map(_actionsClassFromElement);
 
 Action _fieldElementToAction(ClassElement element, FieldElement field) =>
-    Action('${element.name}-${field.name}', field.name,
+    Action('${element.displayName}-${field.displayName}', field.displayName,
         _fieldType(element, field));
 
 // hack to return the generics for the action
 // this is used so action whose payloads are of generated types
 // will not result in dynamic
 String _fieldType(ClassElement element, FieldElement field) {
-  if (field.isSynthetic) {
-    return _syntheticFieldType(element, field);
-  }
-  if (field.type.name == "VoidActionDispatcher") {
+  final type = field.type.getDisplayString(withNullability: true);
+  if (type == "VoidActionDispatcher") {
     return "void";
   }
-  return _getGenerics(field.source!.contents.data, field.nameOffset);
+  return _getGenerics(type);
 }
 
-String _syntheticFieldType(ClassElement element, FieldElement field) {
-  if (field.type.name == "VoidActionDispatcher") {
-    return "void";
+String _getGenerics(String type) {
+  final start = type.indexOf('<');
+  final end = type.lastIndexOf('>');
+  if (start < 0 || end <= start) {
+    return 'dynamic';
   }
-  final method = element.getGetter(field.name);
-  return _getGenerics(method!.source.contents.data, method.nameOffset);
-}
-
-String _getGenerics(String source, int nameOffset) {
-  final trimAfterName = source.substring(0, nameOffset);
-  final trimBeforeActionDispatcher =
-      trimAfterName.substring(trimAfterName.lastIndexOf('ActionDispatcher'));
-  return trimBeforeActionDispatcher.substring(
-      trimBeforeActionDispatcher.indexOf('<') + 1,
-      trimBeforeActionDispatcher.lastIndexOf('>'));
+  return type.substring(start + 1, end);
 }
 
 bool _isReduxActions(Element element) =>
     element is ClassElement && _hasSuperType(element, 'ReduxActions');
 
 bool _isActionDispatcher(FieldElement element) =>
-    element.type.name == 'ActionDispatcher' ||
-    element.type.name == "VoidActionDispatcher";
+    element.type.getDisplayString(withNullability: false) ==
+        'VoidActionDispatcher' ||
+    element.type
+        .getDisplayString(withNullability: false)
+        .startsWith('ActionDispatcher<');
 
 bool _hasSuperType(ClassElement classElement, String type) =>
     classElement.allSupertypes

@@ -28,6 +28,8 @@ abstract class ProfileActions extends ReduxActions {
   abstract final ActionDispatcher<Object> loaded;
   abstract final ActionDispatcher<bool> sendNotificationEmails;
   abstract final ActionDispatcher<ChangeEmailPayload> changeEmail;
+  abstract final VoidActionDispatcher pickAndUploadProfilePicture;
+  abstract final ActionDispatcher<String> updateCodiceFiscale;
 }
 
 abstract class ChangeEmailPayload

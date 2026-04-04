@@ -1,4 +1,4 @@
-﻿// Copyright (C) 2021 Michael Debertol
+// Copyright (C) 2021 Michael Debertol
 // Copyright (C) 2026 Tobias Bucci
 //
 // This file is part of digitales_register.
@@ -56,6 +56,7 @@ import 'package:dr/wrapper.dart';
 import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart' hide Action, Notification;
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
+import 'package:file_picker/file_picker.dart';
 import 'package:intl/intl.dart';
 import 'package:mocktail/mocktail.dart';
 import 'package:mutex/mutex.dart';
@@ -810,7 +811,8 @@ Future<void> _checkShowUnmaintainedAlert() async {
                 recognizer: TapGestureRecognizer()
                   ..onTap = () {
                     launchUrl(
-                      Uri.parse("https://github.com/Tobias-Bucci/digitales_register"),
+                      Uri.parse(
+                          "https://github.com/Tobias-Bucci/digitales_register"),
                       mode: LaunchMode.externalApplication,
                     );
                   },

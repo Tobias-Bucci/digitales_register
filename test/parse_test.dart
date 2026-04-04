@@ -91,7 +91,9 @@ void main() {
       ProfileState(
         (b) => b
           ..name = 'Debertol Michael'
+          ..codiceFiscale = 'BCCTBS07S23B220B'
           ..email = 'st-debmic-03@vinzentinum.it'
+          ..picture = '2GSwZUaN5CTXPPtHMcNEXGwq4rWqvFxA'
           ..username = 'st-debmic-03'
           ..roleName = 'Schüler/in'
           ..sendNotificationEmails = false,
@@ -316,7 +318,9 @@ final Map<String, Object?> subjectDetailsPayload = <String, Object?>{
 
 final Map<String, Object?> profilePayload = <String, Object?>{
   'name': 'Debertol Michael',
+  'codiceFiscale': 'BCCTBS07S23B220B',
   'email': 'st-debmic-03@vinzentinum.it',
+  'picture': '2GSwZUaN5CTXPPtHMcNEXGwq4rWqvFxA',
   'username': 'st-debmic-03',
   'roleName': 'Schüler/in',
   'notificationsEnabled': false,

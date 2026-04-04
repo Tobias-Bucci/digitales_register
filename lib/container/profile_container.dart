@@ -1,4 +1,5 @@
 // Copyright (C) 2021 Michael Debertol
+// Copyright (C) 2026 Tobias Bucci
 //
 // This file is part of digitales_register.
 //
@@ -25,19 +26,24 @@ import 'package:tuple/tuple.dart';
 class ProfileContainer extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
-    return StoreConnection<AppState, AppActions, Tuple2<bool, ProfileState>>(
+    return StoreConnection<AppState, AppActions,
+        Tuple3<bool, ProfileState, String?>>(
       builder: (context, vm, actions) {
         return Profile(
           profileState: vm.item2,
+          baseUrl: vm.item3,
           noInternet: vm.item1,
           setSendNotificationEmails:
               actions.profileActions.sendNotificationEmails.call,
           changeEmail: actions.routingActions.showChangeEmail.call,
           changePass: () => actions.loginActions.showChangePass(false),
+          uploadProfilePicture:
+              actions.profileActions.pickAndUploadProfilePicture.call,
+          updateCodiceFiscale: actions.profileActions.updateCodiceFiscale.call,
         );
       },
       connect: (AppState state) {
-        return Tuple2(state.noInternet, state.profileState);
+        return Tuple3(state.noInternet, state.profileState, state.url);
       },
     );
   }

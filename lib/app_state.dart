@@ -378,6 +378,7 @@ abstract class ProfileState
   String? get roleName;
   String? get name;
   String? get picture;
+  String? get codiceFiscale;
   bool? get sendNotificationEmails;
 }
 

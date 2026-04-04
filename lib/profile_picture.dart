@@ -19,11 +19,15 @@ String? buildProfilePictureUrl({
   required String? baseUrl,
   required String? picture,
 }) {
+  final normalizedBaseUrl = baseUrl?.trim();
   final normalizedPicture = picture?.trim();
+  if (normalizedBaseUrl == null || normalizedBaseUrl.isEmpty) {
+    return null;
+  }
   if (normalizedPicture == null || normalizedPicture.isEmpty) {
     return null;
   }
 
-  return 'https://fallmerayer.digitalesregister.it/v2/api/profile/picture&pictureUrl='
+  return '$normalizedBaseUrl/v2/api/profile/picture&pictureUrl='
       '${Uri.encodeQueryComponent(normalizedPicture)}';
 }

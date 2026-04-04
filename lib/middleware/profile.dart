@@ -22,7 +22,29 @@ final _profileMiddleware = MiddlewareBuilder<AppState, AppStateBuilder,
     AppActions>()
   ..add(ProfileActionsNames.load, _loadProfile)
   ..add(ProfileActionsNames.sendNotificationEmails, _setSendNotificationEmails)
-  ..add(ProfileActionsNames.changeEmail, _changeEmail);
+  ..add(ProfileActionsNames.changeEmail, _changeEmail)
+  ..add(
+    ProfileActionsNames.pickAndUploadProfilePicture,
+    _pickAndUploadProfilePicture,
+  )
+  ..add(ProfileActionsNames.updateCodiceFiscale, _updateCodiceFiscale);
+
+typedef ProfilePicturePicker = Future<SelectedProfilePicture?> Function();
+
+@visibleForTesting
+ProfilePicturePicker pickProfilePicture = _defaultPickProfilePicture;
+
+class SelectedProfilePicture {
+  const SelectedProfilePicture({
+    required this.bytes,
+    required this.contentType,
+    required this.fileName,
+  });
+
+  final List<int> bytes;
+  final String contentType;
+  final String fileName;
+}
 
 Future<void> _loadProfile(
     MiddlewareApi<AppState, AppStateBuilder, AppActions> api,
@@ -101,8 +123,145 @@ Future<void> _changeEmail(
   await api.actions.profileActions.load();
 }
 
+Future<void> _pickAndUploadProfilePicture(
+    MiddlewareApi<AppState, AppStateBuilder, AppActions> api,
+    ActionHandler next,
+    Action<void> action) async {
+  await next(action);
+  final selected = await pickProfilePicture();
+  if (selected == null) {
+    return;
+  }
+
+  dynamic result;
+  try {
+    result = await wrapper.sendBytes(
+      "api/profile/uploadProfilePicture",
+      bytes: selected.bytes,
+      contentType: selected.contentType,
+      fileName: selected.fileName,
+    );
+  } on UnexpectedLogoutException {
+    _showProfileRequestFailedMessage(
+      'Profilbild konnte nicht hochgeladen werden. Bitte versuche es erneut.',
+    );
+    return;
+  }
+  if (result == null) {
+    return;
+  }
+
+  final resultMap = getMap(result);
+  if (resultMap == null) {
+    showSnackBar('Profilbild konnte nicht hochgeladen werden.');
+    return;
+  }
+
+  if (resultMap["error"] == null) {
+    showSnackBar('Profilbild wurde aktualisiert.');
+    await api.actions.profileActions.load();
+  } else {
+    showSnackBar("[${resultMap["error"]}] ${resultMap["message"]}");
+  }
+}
+
+Future<void> _updateCodiceFiscale(
+    MiddlewareApi<AppState, AppStateBuilder, AppActions> api,
+    ActionHandler next,
+    Action<String> action) async {
+  await next(action);
+  if ((api.state.profileState.codiceFiscale?.trim().isNotEmpty ?? false)) {
+    showSnackBar(
+      'Steuernummer bereits vorhanden; diese kann nur vom Schulsekretariat geändert werden.',
+    );
+    return;
+  }
+
+  final codiceFiscale = action.payload.trim().toUpperCase();
+  if (codiceFiscale.isEmpty) {
+    return;
+  }
+
+  dynamic result;
+  try {
+    result = await wrapper.send(
+      "api/profile/updateCodiceFiscale",
+      args: <String, Object?>{
+        "codiceFiscale": codiceFiscale,
+      },
+    );
+  } on UnexpectedLogoutException {
+    _showProfileRequestFailedMessage(
+      'Steuernummer konnte nicht gespeichert werden. Bitte versuche es erneut.',
+    );
+    return;
+  }
+  if (result == null) {
+    return;
+  }
+
+  final resultMap = getMap(result);
+  if (resultMap == null) {
+    showSnackBar('Steuernummer konnte nicht gespeichert werden.');
+    return;
+  }
+
+  if (resultMap["error"] == null) {
+    showSnackBar(
+      getString(resultMap["message"]) ?? 'Steuernummer wurde geändert',
+    );
+    await api.actions.profileActions.load();
+  } else {
+    showSnackBar("[${resultMap["error"]}]: ${resultMap["message"]}");
+  }
+}
+
 void _showProfileRequestFailedMessage(String message) {
   if (!wrapper.noInternet) {
     showSnackBar(message);
   }
+}
+
+Future<SelectedProfilePicture?> _defaultPickProfilePicture() async {
+  final result = await FilePicker.platform.pickFiles(
+    type: FileType.image,
+    withData: true,
+  );
+  if (result == null || result.files.isEmpty) {
+    return null;
+  }
+
+  final file = result.files.single;
+  final bytes = file.bytes;
+  if (bytes == null || bytes.isEmpty) {
+    final path = file.path;
+    if (path == null || path.isEmpty) {
+      return null;
+    }
+    return SelectedProfilePicture(
+      bytes: await File(path).readAsBytes(),
+      contentType: _guessImageMimeType(file.name),
+      fileName: file.name,
+    );
+  }
+
+  return SelectedProfilePicture(
+    bytes: bytes,
+    contentType: _guessImageMimeType(file.name),
+    fileName: file.name,
+  );
+}
+
+String _guessImageMimeType(String fileName) {
+  final normalized = fileName.toLowerCase();
+  if (normalized.endsWith('.png')) {
+    return 'image/png';
+  }
+  if (normalized.endsWith('.gif')) {
+    return 'image/gif';
+  }
+  if (normalized.endsWith('.webp')) {
+    return 'image/webp';
+  }
+  return 'image/jpeg';
 }

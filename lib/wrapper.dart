@@ -1,4 +1,4 @@
-﻿// Copyright (C) 2021 Michael Debertol
+// Copyright (C) 2021 Michael Debertol
 // Copyright (C) 2026 Tobias Bucci
 //
 // This file is part of digitales_register.
@@ -687,6 +687,84 @@ class Wrapper {
         url,
         args: args,
         method: method,
+        isRetryAfterUnexpectedLogout: true,
+        forceRelogin: unexpectedLogoutRetryCount >= 1,
+        unexpectedLogoutRetryCount: unexpectedLogoutRetryCount + 1,
+      );
+    }
+    return responseData;
+  }
+
+  Future<dynamic> sendBytes(
+    String url, {
+    required List<int> bytes,
+    String contentType = "application/octet-stream",
+    String fileName = "upload.bin",
+    bool isRetryAfterUnexpectedLogout = false,
+    bool forceRelogin = false,
+    int unexpectedLogoutRetryCount = 0,
+  }) async {
+    if (demoMode) {
+      return <String, Object?>{"error": null};
+    }
+    assert(!url.startsWith("/"));
+
+    if (!await ensureLoggedIn(
+      isRetryAfterUnexpectedLogout: isRetryAfterUnexpectedLogout,
+      forceRelogin: forceRelogin,
+    )) {
+      log("returning null for binary request to $url, user is not logged in");
+      return null;
+    }
+
+    dynamic responseData;
+    try {
+      final formData = FormData.fromMap(
+        <String, Object>{
+          "file": MultipartFile.fromBytes(
+            bytes,
+            filename: fileName,
+            contentType: DioMediaType.parse(contentType),
+          ),
+        },
+      );
+      final response = await _runRequest(
+        "POST $url",
+        () => dio.post<dynamic>(
+          baseAddress + url,
+          data: formData,
+        ),
+      );
+      responseData = response.data;
+    } on Exception catch (e) {
+      await _handleError(e);
+      onAddProtocolItem!(NetworkProtocolItem((b) => b
+        ..address = baseAddress + url
+        ..response = stringifyMaybeJson(responseData)
+        ..parameters =
+            "multipart file payload (${bytes.length} bytes, $contentType, $fileName)"));
+      return null;
+    }
+    onAddProtocolItem!(NetworkProtocolItem((b) => b
+      ..address = baseAddress + url
+      ..response = stringifyMaybeJson(responseData)
+      ..parameters =
+          "multipart file payload (${bytes.length} bytes, $contentType, $fileName)"));
+
+    if (responseData is String && _isLoginRedirectPage(responseData)) {
+      if (unexpectedLogoutRetryCount >= 2) {
+        log(
+          "retrying the binary request was unsuccessful even after forced relogin; returning null.",
+        );
+        error = "Die Sitzung konnte nicht automatisch erneuert werden.";
+        _loggedIn = Future.value(false);
+        return null;
+      }
+      return sendBytes(
+        url,
+        bytes: bytes,
+        contentType: contentType,
+        fileName: fileName,
         isRetryAfterUnexpectedLogout: true,
         forceRelogin: unexpectedLogoutRetryCount >= 1,
         unexpectedLogoutRetryCount: unexpectedLogoutRetryCount + 1,

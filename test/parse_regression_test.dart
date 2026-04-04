@@ -137,8 +137,10 @@ void main() {
   test('profile parsing keeps notification setting as bool', () {
     store.actions.profileActions.loaded(
       <String, Object?>{
+        'codiceFiscale': '',
         'name': 'Anna Rossi',
         'email': 'anna@example.com',
+        'picture': 'profile-picture-token',
         'username': 'anna',
         'roleName': 'Schüler/in',
         'notificationsEnabled': 1,
@@ -146,6 +148,8 @@ void main() {
     );
 
     expect(store.state.profileState.sendNotificationEmails, isTrue);
+    expect(store.state.profileState.codiceFiscale, isNull);
+    expect(store.state.profileState.picture, 'profile-picture-token');
     expect(store.state.profileState.username, 'anna');
   });
 }
