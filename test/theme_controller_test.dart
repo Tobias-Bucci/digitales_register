@@ -1,6 +1,4 @@
-﻿// Copyright (C) 2026 Tobias Bucci
-
-import 'package:dr/theme_controller.dart';
+﻿import 'package:dr/theme_controller.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:shared_preferences/shared_preferences.dart';

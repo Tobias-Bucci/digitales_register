@@ -1,6 +1,4 @@
-﻿// Copyright (C) 2026 Tobias Bucci
-
-import 'dart:convert';
+﻿import 'dart:convert';
 import 'dart:io';
 
 import 'package:dr/wrapper.dart';
@@ -53,4 +51,85 @@ window.location = "https://vinzentinum.digitalesregister.it/v2/login";
       );
     },
   );
+
+  test(
+    'send refreshes the session in the background when the server redirects to login',
+    () async {
+      final server = await HttpServer.bind(InternetAddress.loopbackIPv4, 0);
+      addTearDown(server.close);
+
+      var loginRequests = 0;
+      var unreadRequests = 0;
+
+      server.listen((request) async {
+        if (request.uri.path == '/v2/api/auth/login' &&
+            request.method == 'POST') {
+          loginRequests++;
+          request.response.headers.contentType = ContentType.json;
+          request.response.write(
+            json.encode(<String, Object?>{'loggedIn': true}),
+          );
+        } else if (request.uri.path == '/v2/' && request.method == 'GET') {
+          request.response.headers.contentType = ContentType.html;
+          request.response.write(_configPageSource);
+        } else if (request.uri.path == '/v2/api/notification/unread' &&
+            request.method == 'POST') {
+          unreadRequests++;
+          if (unreadRequests <= 2) {
+            request.response.headers.contentType = ContentType.html;
+            request.response.write(_redirectSource);
+          } else {
+            request.response.headers.contentType = ContentType.json;
+            request.response.write(json.encode(<Object>[]));
+          }
+        } else {
+          request.response.statusCode = HttpStatus.notFound;
+        }
+        await request.response.close();
+      });
+
+      final wrapper = Wrapper();
+      await wrapper.login(
+        'user',
+        'pass',
+        null,
+        'http://127.0.0.1:${server.port}',
+        logout: () {},
+        configLoaded: () {},
+        relogin: () {},
+        addProtocolItem: (_) {},
+      );
+
+      final result = await wrapper.send('api/notification/unread');
+
+      expect(result, isA<List<dynamic>>());
+      expect(result as List<dynamic>, isEmpty);
+      expect(loginRequests, 3);
+      expect(unreadRequests, 3);
+    },
+  );
 }
+
+const String _configPageSource = '''
+<!DOCTYPE html>
+<html>
+<head>
+  <script>
+    var currentUserId=3539;
+    var config = {
+      auto_logout_seconds: 300,
+    };
+  </script>
+</head>
+<body>
+  <img id="navigationProfilePicture" src="https://vinzentinum.digitalesregister.it/v2/theme/icons/profile_empty.png">
+  Tobias Bucci
+</body>
+</html>
+''';
+
+const String _redirectSource = '''
+<script type="text/javascript">
+window.location = "https://vinzentinum.digitalesregister.it/v2/login";
+</script>
+''';

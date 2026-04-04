@@ -453,7 +453,7 @@ class Wrapper {
           ..currentSemesterMaybe = currentSemesterMaybe
           ..isStudentOrParent = isStudentOrParent,
       );
-    }, hasEnoughContext: true);
+    });
   }
 
   static bool _isLoginRedirectPage(String source) {
@@ -552,6 +552,7 @@ class Wrapper {
 
   Future<bool> ensureLoggedIn({
     bool isRetryAfterUnexpectedLogout = false,
+    bool forceRelogin = false,
   }) async {
     await _loginMutex.acquire();
     try {
@@ -560,7 +561,11 @@ class Wrapper {
           DateTime.now().isAfter(_serverLogoutTime!)) {
         _loggedIn = Future.value(false);
       }
-      if (isRetryAfterUnexpectedLogout) {
+      if (forceRelogin) {
+        log("unexpected logout: forcing relogin before retrying the request.");
+        _loggedIn = Future.value(false);
+        _lastUnexpectedLogout = DateTime.now();
+      } else if (isRetryAfterUnexpectedLogout) {
         // If we noticed an unexpected logout, we set the loggedIn flag here and try logging in again.
         // Since this has the potential of ending up in an infinite loop we only attempt a login following an unexpected logout
         // at most once every minute.
@@ -608,6 +613,8 @@ class Wrapper {
     Map<String, Object?> args = const <String, Object?>{},
     String method = "POST",
     bool isRetryAfterUnexpectedLogout = false,
+    bool forceRelogin = false,
+    int unexpectedLogoutRetryCount = 0,
   }) async {
     if (demoMode) {
       return getDemoResponse(url, args);
@@ -616,6 +623,7 @@ class Wrapper {
 
     if (!await ensureLoggedIn(
       isRetryAfterUnexpectedLogout: isRetryAfterUnexpectedLogout,
+      forceRelogin: forceRelogin,
     )) {
       log("returning null for request to $url, user is not logged in");
       return null;
@@ -662,10 +670,16 @@ class Wrapper {
       // This is a very frequently reported bug, but I don't have an idea as to why this is happening.
       // Possible causes might be that the user's time is off, or the user might be trying to log in from a different device at the same time.
 
-      // If this is already a retry, don't retry again. We really don't know anymore what's going on.
-      if (isRetryAfterUnexpectedLogout) {
-        log("retrying the request was unsuccessful, we seem to be still logged out.");
-        throw UnexpectedLogoutException();
+      // First try a normal background relogin, then one forced relogin.
+      // If the server still keeps redirecting us to login, fail this request quietly
+      // instead of surfacing an exception in the UI.
+      if (unexpectedLogoutRetryCount >= 2) {
+        log(
+          "retrying the request was unsuccessful even after forced relogin; returning null.",
+        );
+        error = "Die Sitzung konnte nicht automatisch erneuert werden.";
+        _loggedIn = Future.value(false);
+        return null;
       }
 
       // Retry the request.
@@ -674,6 +688,8 @@ class Wrapper {
         args: args,
         method: method,
         isRetryAfterUnexpectedLogout: true,
+        forceRelogin: unexpectedLogoutRetryCount >= 1,
+        unexpectedLogoutRetryCount: unexpectedLogoutRetryCount + 1,
       );
     }
     return responseData;

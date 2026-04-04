@@ -1,6 +1,4 @@
-﻿// Copyright (C) 2026 Tobias Bucci
-
-import 'dart:async';
+﻿import 'dart:async';
 import 'dart:convert';
 
 import 'package:dr/app_state.dart';

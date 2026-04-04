@@ -1,4 +1,5 @@
 // Copyright (C) 2021 Michael Debertol
+// Copyright (C) 2026 Tobias Bucci
 //
 // This file is part of digitales_register.
 //
@@ -29,7 +30,15 @@ Future<void> _loadProfile(
     Action<void> action) async {
   await next(action);
   if (api.state.noInternet) return;
-  final dynamic result = await wrapper.send("api/profile/get");
+  dynamic result;
+  try {
+    result = await wrapper.send("api/profile/get");
+  } on UnexpectedLogoutException {
+    _showProfileRequestFailedMessage(
+      'Profil konnte nicht geladen werden. Bitte versuche es erneut.',
+    );
+    return;
+  }
   if (result == null) {
     return;
   }
@@ -40,16 +49,24 @@ Future<void> _setSendNotificationEmails(
     MiddlewareApi<AppState, AppStateBuilder, AppActions> api,
     ActionHandler next,
     Action<bool> action) async {
-  await next(action);
-  final dynamic result = await wrapper.send(
-    "api/profile/updateNotificationSettings",
-    args: {
-      "notificationsEnabled": action.payload,
-    },
-  );
+  dynamic result;
+  try {
+    result = await wrapper.send(
+      "api/profile/updateNotificationSettings",
+      args: {
+        "notificationsEnabled": action.payload,
+      },
+    );
+  } on UnexpectedLogoutException {
+    _showProfileRequestFailedMessage(
+      'Benachrichtigungseinstellungen konnten nicht gespeichert werden.',
+    );
+    return;
+  }
   if (result == null) {
     return;
   }
+  await next(action);
 }
 
 Future<void> _changeEmail(
@@ -57,13 +74,21 @@ Future<void> _changeEmail(
     ActionHandler next,
     Action<ChangeEmailPayload> action) async {
   await next(action);
-  final dynamic result = await wrapper.send(
-    "api/profile/updateProfile",
-    args: {
-      "email": action.payload.email,
-      "password": action.payload.pass,
-    },
-  );
+  dynamic result;
+  try {
+    result = await wrapper.send(
+      "api/profile/updateProfile",
+      args: {
+        "email": action.payload.email,
+        "password": action.payload.pass,
+      },
+    );
+  } on UnexpectedLogoutException {
+    _showProfileRequestFailedMessage(
+      'Profil konnte nicht gespeichert werden. Bitte versuche es erneut.',
+    );
+    return;
+  }
   if (result == null) {
     return;
   }
@@ -74,4 +99,10 @@ Future<void> _changeEmail(
     showSnackBar("[${result["error"]}]: ${result["message"]}");
   }
   await api.actions.profileActions.load();
+}
+
+void _showProfileRequestFailedMessage(String message) {
+  if (!wrapper.noInternet) {
+    showSnackBar(message);
+  }
 }

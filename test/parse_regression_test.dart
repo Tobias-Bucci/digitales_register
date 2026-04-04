@@ -1,6 +1,4 @@
-﻿// Copyright (C) 2026 Tobias Bucci
-
-import 'package:built_redux/built_redux.dart';
+﻿import 'package:built_redux/built_redux.dart';
 import 'package:dr/actions/app_actions.dart';
 import 'package:dr/actions/dashboard_actions.dart';
 import 'package:dr/actions/grades_actions.dart';
