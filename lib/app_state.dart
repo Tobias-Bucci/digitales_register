@@ -376,6 +376,7 @@ abstract class ProfileState
   String? get username;
   String? get roleName;
   String? get name;
+  String? get picture;
   bool? get sendNotificationEmails;
 }
 

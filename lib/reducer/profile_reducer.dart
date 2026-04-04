@@ -44,6 +44,7 @@ ProfileState _parseProfile(Map data) {
     (b) => b
       ..name = getString(data["name"])
       ..email = getString(data["email"])
+      ..picture = getString(data["picture"])
       ..roleName = getString(data["roleName"])
       ..sendNotificationEmails = getBool(data["notificationsEnabled"])
       ..username = getString(data["username"]),

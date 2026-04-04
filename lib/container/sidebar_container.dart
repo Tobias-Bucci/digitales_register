@@ -21,6 +21,7 @@ import 'package:dr/actions/app_actions.dart';
 import 'package:dr/actions/login_actions.dart';
 import 'package:dr/app_state.dart';
 import 'package:dr/middleware/middleware.dart';
+import 'package:dr/profile_picture.dart';
 import 'package:dr/ui/sidebar.dart';
 import 'package:flutter/material.dart' hide Builder;
 import 'package:flutter_built_redux/flutter_built_redux.dart';
@@ -73,7 +74,10 @@ class SidebarContainer extends StatelessWidget {
         return SidebarViewModel(
           (b) => b
             ..username = state.config?.fullName ?? state.loginState.username
-            ..userIcon = state.config?.imgSource
+            ..userIcon = buildProfilePictureUrl(
+              baseUrl: state.url,
+              picture: state.profileState.picture,
+            )
             ..drawerInitiallyFullyExpanded =
                 state.settingsState.drawerFullyExpanded
             ..otherAccounts = state.loginState.otherAccounts.toBuilder()

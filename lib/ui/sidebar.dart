@@ -18,6 +18,8 @@
 import 'package:collapsible_sidebar/collapsible_sidebar.dart';
 import 'package:dr/main.dart';
 import 'package:dr/middleware/middleware.dart';
+import 'package:dr/ui/app_popup_button.dart';
+import 'package:dr/ui/profile_avatar.dart';
 import 'package:flutter/material.dart';
 
 typedef SelectAccountCallback = void Function(int index);
@@ -65,6 +67,29 @@ class Sidebar extends StatelessWidget {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final scheme = theme.colorScheme;
+    final accountEntries = <AppPopupButtonEntry<int>>[
+      AppPopupButtonEntry<int>(
+        value: 0,
+        label: username ?? "?",
+        leading: const Icon(Icons.person_outline_rounded, size: 20),
+      ),
+      for (var index = 0; index < otherAccounts.length; index++)
+        AppPopupButtonEntry<int>(
+          value: index + 1,
+          label: otherAccounts[index],
+          leading: const Icon(Icons.switch_account_rounded, size: 20),
+        ),
+      AppPopupButtonEntry<int>(
+        value: otherAccounts.length + 1,
+        label:
+            passwordSavingEnabled ? "Account hinzufügen" : "Account wechseln",
+        leading: Icon(
+          passwordSavingEnabled ? Icons.person_add_alt_1 : Icons.login_rounded,
+          size: 20,
+        ),
+      ),
+    ];
+
     return CollapsibleSidebar(
       onExpansionChange: onDrawerExpansionChange,
       alwaysExpanded: !tabletMode,
@@ -75,47 +100,23 @@ class Sidebar extends StatelessWidget {
       borderRadius: 0,
       minWidth: 74,
       screenPadding: 0,
-      title: Container(
-        decoration: BoxDecoration(
-          color: scheme.primary.withValues(alpha: 0.08),
-          borderRadius: BorderRadius.circular(12),
-        ),
+      title: Padding(
         padding: const EdgeInsets.symmetric(horizontal: 8),
-        child: DropdownButtonHideUnderline(
-          child: DropdownButton(
-            isExpanded: true,
-            icon: const Icon(Icons.keyboard_arrow_down_rounded),
-            value: 0,
-            items: [
-              for (var index = 0; index < otherAccounts.length + 2; index++)
-                DropdownMenuItem(
-                  value: index,
-                  child: Text(
-                    index == 0
-                        ? (username ?? "?")
-                        : index <= otherAccounts.length
-                            ? otherAccounts[index - 1]
-                            : passwordSavingEnabled
-                                ? "Account hinzufügen"
-                                : "Account wechseln",
-                    overflow: TextOverflow.ellipsis,
-                  ),
-                ),
-            ],
-            onChanged: (int? value) {
-              if (value == 0) {
-                // selected the current account that is already selected
-                // no-op
-              } else {
-                scaffoldKey?.currentState?.closeDrawerIfOpen();
-                if (value == otherAccounts.length + 1) {
-                  addAccount();
-                } else {
-                  selectAccount(value! - 1);
-                }
-              }
-            },
-          ),
+        child: AppPopupButton<int>(
+          selectedValue: 0,
+          expand: true,
+          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+          borderRadius: const BorderRadius.all(Radius.circular(16)),
+          entries: accountEntries,
+          labelBuilder: (_) => username ?? "?",
+          onSelected: (value) {
+            scaffoldKey?.currentState?.closeDrawerIfOpen();
+            if (value == otherAccounts.length + 1) {
+              addAccount();
+            } else if (value != 0) {
+              selectAccount(value - 1);
+            }
+          },
         ),
       ),
       titleTooltip: username ?? "?",
@@ -123,17 +124,7 @@ class Sidebar extends StatelessWidget {
       toggleTooltipExpanded: "Einklappen",
       toggleTitle: const SizedBox(),
       backgroundColor: scheme.surface,
-      avatar:
-          //"https://vinzentinum.digitalesregister.it/v2/theme/icons/profile_empty.png" is the (ugly) default
-          userIcon?.endsWith("/profile_empty.png") ?? true
-              ? CircleAvatar(
-                  backgroundColor: scheme.primary.withValues(alpha: 0.12),
-                  child: Icon(
-                    Icons.account_circle,
-                    color: scheme.primary,
-                  ),
-                )
-              : ClipOval(child: Image.network(userIcon!)),
+      avatar: ProfileAvatar(imageUrl: userIcon),
       unselectedIconColor: theme.iconTheme.color!,
       selectedIconColor: scheme.primary,
       unselectedTextColor: theme.textTheme.titleMedium!.color!,

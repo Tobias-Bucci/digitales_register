@@ -19,6 +19,7 @@ import 'dart:async';
 import 'dart:convert';
 import 'dart:developer';
 import 'dart:io';
+import 'dart:typed_data';
 
 import 'package:built_redux/built_redux.dart';
 import 'package:dio/dio.dart' as dio;
@@ -443,8 +444,11 @@ Future<void> _loggedIn(MiddlewareApi<AppState, AppStateBuilder, AppActions> api,
     callback();
   }
   if (!action.payload.offlineOnly) {
-    await api.actions.dashboardActions.load(api.state.dashboardState.future);
-    await api.actions.notificationsActions.load();
+    await Future.wait([
+      api.actions.dashboardActions.load(api.state.dashboardState.future),
+      api.actions.notificationsActions.load(),
+      api.actions.profileActions.load(),
+    ]);
   }
 }
 
@@ -719,6 +723,15 @@ Future<bool> downloadFile(
   }
 
   return success;
+}
+
+Future<Uint8List> fetchAuthenticatedBytes(String url) async {
+  await wrapper.ensureLoggedIn();
+  final response = await wrapper.dio.get<List<int>>(
+    url,
+    options: dio.Options(responseType: dio.ResponseType.bytes),
+  );
+  return Uint8List.fromList(response.data ?? const <int>[]);
 }
 
 Future<bool> canOpenFile(String fileName) async {

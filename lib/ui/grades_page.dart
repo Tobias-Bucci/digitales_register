@@ -20,6 +20,7 @@ import 'package:dr/container/grades_chart_container.dart';
 import 'package:dr/container/grades_page_container.dart';
 import 'package:dr/container/sorted_grades_container.dart';
 import 'package:dr/ui/animated_linear_progress_indicator.dart';
+import 'package:dr/ui/app_popup_button.dart';
 import 'package:dr/ui/last_fetched_overlay.dart';
 import 'package:dr/ui/no_internet.dart';
 import 'package:flutter/material.dart';
@@ -114,114 +115,18 @@ class _SemesterSwitcher extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    final colorScheme = theme.colorScheme;
-    final isDark = theme.brightness == Brightness.dark;
-    final buttonColor = isDark
-        ? const Color(0xFF1C1C1E)
-        : Color.alphaBlend(
-            colorScheme.primary.withValues(alpha: 0.10),
-            colorScheme.surface,
-          );
-    final menuColor = isDark ? const Color(0xFF141414) : colorScheme.surface;
-    final borderColor = isDark
-        ? const Color(0xFF323236)
-        : colorScheme.primary.withValues(alpha: 0.18);
-    final selectedIconColor =
-        isDark ? const Color(0xFFB8B8BD) : colorScheme.primary;
-    return Builder(
-      builder: (context) {
-        return GestureDetector(
-          behavior: HitTestBehavior.opaque,
-          onTap: () async {
-            final button = context.findRenderObject();
-            final overlay =
-                Overlay.maybeOf(context)?.context.findRenderObject();
-            if (button is! RenderBox || overlay is! RenderBox) {
-              return;
-            }
-            final position = RelativeRect.fromRect(
-              Rect.fromPoints(
-                button.localToGlobal(Offset.zero, ancestor: overlay),
-                button.localToGlobal(
-                  button.size.bottomRight(Offset.zero),
-                  ancestor: overlay,
-                ),
-              ),
-              Offset.zero & overlay.size,
-            );
-            final semester = await showMenu<Semester>(
-              context: context,
-              position: position,
-              elevation: 10,
-              color: menuColor,
-              surfaceTintColor:
-                  isDark ? Colors.transparent : colorScheme.surfaceTint,
-              shadowColor: colorScheme.shadow.withValues(alpha: 0.18),
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(18),
-              ),
-              items: Semester.values
-                  .map(
-                    (semester) => PopupMenuItem<Semester>(
-                      value: semester,
-                      child: Row(
-                        children: [
-                          Expanded(
-                            child: Text(
-                              semester.name,
-                              style: theme.textTheme.bodyLarge,
-                            ),
-                          ),
-                          if (semester == selectedSemester)
-                            Icon(
-                              Icons.check_rounded,
-                              size: 18,
-                              color: selectedIconColor,
-                            ),
-                        ],
-                      ),
-                    ),
-                  )
-                  .toList(),
-            );
-            if (semester != null && semester != selectedSemester) {
-              onChanged(semester);
-            }
-          },
-          child: DecoratedBox(
-            decoration: BoxDecoration(
-              color: buttonColor,
-              borderRadius: BorderRadius.circular(18),
-              border: Border.all(
-                color: borderColor,
-              ),
+    return AppPopupButton<Semester>(
+      selectedValue: selectedSemester,
+      entries: Semester.values
+          .map(
+            (semester) => AppPopupButtonEntry<Semester>(
+              value: semester,
+              label: semester.name,
             ),
-            child: Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
-              child: Row(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  AnimatedDefaultTextStyle(
-                    duration: const Duration(milliseconds: 180),
-                    curve: Curves.easeOutCubic,
-                    style: theme.textTheme.labelLarge!.copyWith(
-                      color: colorScheme.onSurface,
-                      fontWeight: FontWeight.w600,
-                    ),
-                    child: Text(selectedSemester.name),
-                  ),
-                  const SizedBox(width: 6),
-                  Icon(
-                    Icons.keyboard_arrow_down_rounded,
-                    color: colorScheme.onSurfaceVariant,
-                  ),
-                ],
-              ),
-            ),
-          ),
-        );
-      },
+          )
+          .toList(),
+      onSelected: onChanged,
+      labelBuilder: (semester) => semester.name,
     );
   }
 }
