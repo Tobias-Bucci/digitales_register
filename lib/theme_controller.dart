@@ -1,3 +1,5 @@
+﻿// Copyright (C) 2026 Tobias Bucci
+
 import 'dart:io';
 
 import 'package:flutter/material.dart';

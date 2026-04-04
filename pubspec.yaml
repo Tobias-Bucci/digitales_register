@@ -125,12 +125,12 @@ flutter:
   # For details regarding fonts from package dependencies,
   # see https://flutter.io/custom-fonts/#from-packages
 
-msix_config:
-  display_name: Digitales Register
-  publisher_display_name: Michael Debertol
-  identity_name: Bucci.DigitalesRegister
-  publisher: CN=2508760A-808B-4829-867A-4DB53593750E
-  msix_version: 1.2.1.0
-  logo_path: assets/4.0x/transparent.png
-  architecture: x64
-  capabilities: "internetClient"
+# msix_config:
+#   display_name: Digitales Register
+#   publisher_display_name: Tobias Bucci
+#   identity_name: Bucci.DigitalesRegister
+#   publisher: CN=2508760A-808B-4829-867A-4DB53593750E
+#   msix_version: 1.0
+#   logo_path: assets/4.0x/transparent.png
+#   architecture: x64
+#   capabilities: "internetClient"

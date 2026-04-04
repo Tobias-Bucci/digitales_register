@@ -7,7 +7,7 @@ void main() {
     final config = Wrapper.parseConfig(source);
 
     expect(config.userId, 3539);
-    expect(config.fullName, 'Michael Debertol');
+    expect(config.fullName, 'Tobias Bucci');
     expect(
       config.imgSource,
       'https://vinzentinum.digitalesregister.it/v2/theme/icons/profile_empty.png',

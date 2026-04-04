@@ -1,4 +1,5 @@
-// Copyright (C) 2021 Michael Debertol
+﻿// Copyright (C) 2021 Michael Debertol
+// Copyright (C) 2026 Tobias Bucci
 //
 // This file is part of digitales_register.
 //
@@ -95,7 +96,7 @@ class Wrapper {
     (dio.httpClientAdapter as IOHttpClientAdapter).createHttpClient = () {
       final client = HttpClient();
       client.userAgent =
-          "Digitales-Register-App $appVersion; https://github.com/miDeb/digitales_register";
+          "Digitales-Register-App $appVersion; https://github.com/Tobias-Bucci/digitales_register";
       return client;
     };
     //dio.interceptors.add(DebugInterceptor());

@@ -1,4 +1,5 @@
-// Copyright (C) 2021 Michael Debertol
+﻿// Copyright (C) 2021 Michael Debertol
+// Copyright (C) 2026 Tobias Bucci
 //
 // This file is part of digitales_register.
 //
@@ -730,7 +731,7 @@ class _SettingsPageWidgetState extends State<SettingsPageWidget> {
             trailing: const Icon(Icons.open_in_new),
             title: const Text("Zum originalem Quellcode"),
             onTap: () => launchUrl(
-              Uri.parse("https://github.com/miDeb/digitales_register"),
+              Uri.parse("https://github.com/Tobias-Bucci/digitales_register"),
             ),
           ),
           ListTile(

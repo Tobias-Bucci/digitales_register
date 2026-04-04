@@ -1,5 +1,6 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<!-- Copyright 2026 Michael Debertol <michael.debertol@gmail.com> -->
+<!-- Copyright 2021 Michael Debertol <michael.debertol@gmail.com> -->
+<!-- Copyright 2026 Tobias Bucci <buccitobias774@gmail.com> -->
 <component type="desktop-application">
   <id>io.github.mideb.digitales_register</id>
   <metadata_license>CC0-1.0</metadata_license>
@@ -77,27 +78,27 @@ Einzelne Funktionen, wie das Eintragen von neuen Absenzen, sind jedoch noch nich
   <screenshots>
     <screenshot type="default">
       <caption>Hausaufgaben-Übersicht</caption>
-      <image>https://github.com/miDeb/digitales_register/raw/main/screenshots/dashboard.png</image>
+      <image>https://github.com/Tobias-Bucci/digitales_register/raw/main/screenshots/dashboard.png</image>
     </screenshot>
     <screenshot>
       <caption>Noten</caption>
-      <image>https://github.com/miDeb/digitales_register/raw/main/screenshots/grades.png</image>
+      <image>https://github.com/Tobias-Bucci/digitales_register/raw/main/screenshots/grades.png</image>
     </screenshot>
     <screenshot>
       <caption>Noten-Diagramm (Vollbild)</caption>
-      <image>https://github.com/miDeb/digitales_register/raw/main/screenshots/grades_diagram_fullscreen.png</image>
+      <image>https://github.com/Tobias-Bucci/digitales_register/raw/main/screenshots/grades_diagram_fullscreen.png</image>
     </screenshot>
     <screenshot>
       <caption>Kalender (Light Mode)</caption>
-      <image>https://github.com/miDeb/digitales_register/raw/main/screenshots/calendar_light.png</image>
+      <image>https://github.com/Tobias-Bucci/digitales_register/raw/main/screenshots/calendar_light.png</image>
     </screenshot>
     <screenshot>
       <caption>Kalender (Dark Mode)</caption>
-      <image>https://github.com/miDeb/digitales_register/raw/main/screenshots/calendar_dark.png</image>
+      <image>https://github.com/Tobias-Bucci/digitales_register/raw/main/screenshots/calendar_dark.png</image>
     </screenshot>
   </screenshots>
   <content_rating type="oars-1.1" />
-  <url type="homepage">https://github.com/mideb/digitales_register</url>
-  <developer_name>Michael Debertol</developer_name>
-  <update_contact>michael.debertol@gmail.com</update_contact>
+  <url type="homepage">https://github.com/Tobias-Bucci/digitales_register</url>
+  <developer_name>Tobias Bucci</developer_name>
+  <update_contact>buccitobias774@gmail.com</update_contact>
 </component>
