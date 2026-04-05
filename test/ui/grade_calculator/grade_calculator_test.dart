@@ -115,7 +115,7 @@ void main() {
       await tester.pump();
       await tester.tap(find.text('Hinzufügen'));
       await tester.pump();
-      await settleFor(tester, duration: const Duration(milliseconds: 300));
+      await settleFor(tester);
     }
 
     for (var i = 0; i < 11; i++) {

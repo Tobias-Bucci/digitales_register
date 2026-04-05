@@ -1,6 +1,6 @@
+import 'package:dr/util.dart';
 import 'package:dr/wrapper.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:dr/util.dart';
 
 void main() {
   test('parseConfig reads the important profile values from the webpage', () {
@@ -25,7 +25,7 @@ void main() {
   });
 }
 
-String source = r"""
+String source = """
 <!DOCTYPE html>
 
 <html class="no-js linen" lang="de">

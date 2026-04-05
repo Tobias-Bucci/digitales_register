@@ -1,4 +1,3 @@
-﻿import 'dart:async';
 import 'dart:convert';
 
 import 'package:dr/app_state.dart';
@@ -111,7 +110,8 @@ void main() {
     expect(writes, <String>['second-server']);
   });
 
-  test('flush skips identical state instances for the same storage key', () async {
+  test('flush skips identical state instances for the same storage key',
+      () async {
     final service = AppStatePersistenceService();
     final writes = <String>[];
     final state = AppState(

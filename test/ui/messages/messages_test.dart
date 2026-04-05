@@ -23,7 +23,7 @@ void main() {
         (b) => b.messagesState.messages = ListBuilder<Message>(<Message>[
           buildMessage(
             attachments: <MessageAttachmentFile>[
-              buildAttachment(fileAvailable: false),
+              buildAttachment(),
             ],
           ),
         ]),

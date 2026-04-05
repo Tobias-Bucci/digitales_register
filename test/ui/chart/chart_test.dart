@@ -16,11 +16,10 @@ void main() {
     await bootstrapTestEnvironment();
   });
 
-  tearDown(() async {
-    resetTestState();
-  });
+  tearDown(resetTestState);
 
-  testWidgets('tapping the chart reveals the selected grade details', (tester) async {
+  testWidgets('tapping the chart reveals the selected grade details',
+      (tester) async {
     final store = createStore(initialState: buildGradesPageState());
 
     await pumpApp(
@@ -36,7 +35,7 @@ void main() {
         ),
       ),
     );
-    await settleFor(tester, duration: const Duration(milliseconds: 300));
+    await settleFor(tester);
 
     expect(
       find.text('Tippe auf das Diagramm, um Details zu sehen'),
@@ -45,13 +44,14 @@ void main() {
 
     await tester.tapAt(const Offset(750, 200));
     await tester.pump();
-    await settleFor(tester, duration: const Duration(milliseconds: 300));
+    await settleFor(tester);
 
     expect(find.text('Fach1 – Schularbeit3: 7+'), findsOneWidget);
     expect(find.text('4. Januar'), findsOneWidget);
   });
 
-  testWidgets('changing the legend clears the selected chart item', (tester) async {
+  testWidgets('changing the legend clears the selected chart item',
+      (tester) async {
     final store = createStore(initialState: buildGradesPageState());
 
     await pumpApp(
@@ -65,22 +65,22 @@ void main() {
         ),
       ),
     );
-    await settleFor(tester, duration: const Duration(milliseconds: 300));
+    await settleFor(tester);
 
     await tester.tapAt(const Offset(750, 200));
     await tester.pump();
-    await settleFor(tester, duration: const Duration(milliseconds: 300));
+    await settleFor(tester);
 
     expect(find.text('Fach1 – Schularbeit3: 7+'), findsOneWidget);
     expect(find.text('Legende'), findsOneWidget);
 
     await tester.tap(find.text('Legende'));
     await tester.pump();
-    await settleFor(tester, duration: const Duration(milliseconds: 300));
+    await settleFor(tester);
 
     await tester.tapAt(const Offset(510, 515));
     await tester.pump();
-    await settleFor(tester, duration: const Duration(milliseconds: 300));
+    await settleFor(tester);
 
     expect(
       find.text('Tippe auf das Diagramm, um Details zu sehen'),
@@ -121,11 +121,12 @@ void main() {
         ),
       ),
     );
-    await settleFor(tester, duration: const Duration(milliseconds: 300));
+    await settleFor(tester);
 
-    final chart =
-        tester.widget<charts.TimeSeriesChart>(find.byType(charts.TimeSeriesChart));
-    final renderer = chart.defaultRenderer as charts.LineRendererConfig<DateTime>;
+    final chart = tester
+        .widget<charts.TimeSeriesChart>(find.byType(charts.TimeSeriesChart));
+    final renderer =
+        chart.defaultRenderer! as charts.LineRendererConfig<DateTime>;
 
     expect(renderer.includePoints, isTrue);
   });

@@ -100,7 +100,7 @@ void main() {
         store: store,
         home: SettingsPageContainer(),
       );
-      await settleFor(tester, duration: const Duration(milliseconds: 300));
+      await settleFor(tester);
 
       await tester.scrollUntilVisible(
         find.text('Fächer aus dem Notendurchschnitt ausschließen'),
@@ -157,7 +157,7 @@ void main() {
         store: store,
         home: SettingsPageContainer(),
       );
-      await settleFor(tester, duration: const Duration(milliseconds: 300));
+      await settleFor(tester);
 
       await tester.scrollUntilVisible(find.text('Fokusfächer verwalten'), 150);
       tester.widget<IconButton>(
@@ -215,7 +215,7 @@ void main() {
         store: store,
         home: SettingsPageContainer(),
       );
-      await settleFor(tester, duration: const Duration(milliseconds: 300));
+      await settleFor(tester);
 
       await tester.scrollUntilVisible(find.text('Fokusfächer verwalten'), 150);
 

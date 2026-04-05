@@ -56,7 +56,7 @@ void main() {
     await tester.enterText(find.byType(TextField).last, 'foo@example.com');
     await tester.tap(find.text('Anfrage zum Zurücksetzen senden'));
     await tester.pump();
-    await settleFor(tester, duration: const Duration(milliseconds: 300));
+    await settleFor(tester);
 
     expect(find.text('Eine Email wurde gesendet...'), findsOneWidget);
     verify(

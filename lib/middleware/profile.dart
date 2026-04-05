@@ -170,7 +170,7 @@ Future<void> _updateCodiceFiscale(
     ActionHandler next,
     Action<String> action) async {
   await next(action);
-  if ((api.state.profileState.codiceFiscale?.trim().isNotEmpty ?? false)) {
+  if (api.state.profileState.codiceFiscale?.trim().isNotEmpty ?? false) {
     showSnackBar(
       'Steuernummer bereits vorhanden; diese kann nur vom Schulsekretariat geändert werden.',
     );

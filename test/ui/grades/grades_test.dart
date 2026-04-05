@@ -59,7 +59,7 @@ void main() {
       home: const GradesPageContainer(),
       theme: ThemeData(primarySwatch: Colors.deepOrange),
     );
-    await settleFor(tester, duration: const Duration(milliseconds: 300));
+    await settleFor(tester);
 
     expect(find.text('Dritte Schularbeit'), findsNothing);
 
@@ -85,7 +85,7 @@ void main() {
       home: const GradesPageContainer(),
       theme: ThemeData(primarySwatch: Colors.deepOrange),
     );
-    await settleFor(tester, duration: const Duration(milliseconds: 300));
+    await settleFor(tester);
 
     await tester.tap(find.text('Fach1'));
     await tester.pump();
@@ -109,7 +109,7 @@ void main() {
       home: const GradesPageContainer(),
       theme: ThemeData(primarySwatch: Colors.deepOrange),
     );
-    await settleFor(tester, duration: const Duration(milliseconds: 300));
+    await settleFor(tester);
 
     expect(find.byType(FavoriteSubjectFilter), findsOneWidget);
     expect(find.text('Fach2'), findsOneWidget);

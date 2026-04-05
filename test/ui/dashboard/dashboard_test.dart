@@ -67,7 +67,7 @@ void main() {
           ..future = false
           ..loading = true
           ..allDays = ListBuilder<Day>(<Day>[
-            buildDay(date: UtcDateTime(2020, 1, 1)),
+            buildDay(date: UtcDateTime(2020)),
           ]),
       ),
     );
@@ -77,7 +77,7 @@ void main() {
       store: store,
       home: DaysContainer(),
     );
-    await settleFor(tester, duration: const Duration(milliseconds: 300));
+    await settleFor(tester);
 
     expect(find.byType(DayWidget), findsOneWidget);
     expect(find.text('Keine Einträge vorhanden'), findsNothing);
@@ -86,7 +86,7 @@ void main() {
 
   testWidgets('favorite subject filter hides unrelated dashboard entries',
       (tester) async {
-    final now = UtcDateTime(2050, 1, 1);
+    final now = UtcDateTime(2050);
     final store = createStore(
       initialState: AppState(
         (b) {
@@ -96,7 +96,7 @@ void main() {
             buildDay(
               date: now,
               homework: <Homework>[
-                buildHomework(id: 1, title: 'Titel Fach1', label: 'Fach1'),
+                buildHomework(title: 'Titel Fach1', label: 'Fach1'),
                 buildHomework(id: 2, title: 'Titel Fach2', label: 'Fach2'),
                 buildHomework(id: 3, title: 'Ohne Fach'),
               ],
@@ -111,7 +111,7 @@ void main() {
       store: store,
       home: DaysContainer(),
     );
-    await settleFor(tester, duration: const Duration(milliseconds: 300));
+    await settleFor(tester);
 
     expect(find.byType(FavoriteSubjectFilter), findsOneWidget);
     expect(find.widgetWithText(ChoiceChip, 'Fach1'), findsOneWidget);
@@ -120,7 +120,7 @@ void main() {
 
     await tester.tap(find.widgetWithText(ChoiceChip, 'Fach1'));
     await tester.pump();
-    await settleFor(tester, duration: const Duration(milliseconds: 300));
+    await settleFor(tester);
 
     expect(find.text('Titel Fach1'), findsOneWidget);
     expect(find.text('Titel Fach2'), findsNothing);
@@ -129,7 +129,7 @@ void main() {
 
   testWidgets('empty days filter hides empty days and updates the counter',
       (tester) async {
-    final now = UtcDateTime(2050, 1, 1);
+    final now = UtcDateTime(2050);
     final store = createStore(
       initialState: AppState(
         (b) => b.dashboardState.allDays = ListBuilder<Day>(<Day>[
@@ -137,7 +137,7 @@ void main() {
           buildDay(
             date: now.add(const Duration(days: 1)),
             homework: <Homework>[
-              buildHomework(id: 1, title: 'Mit Eintrag'),
+              buildHomework(title: 'Mit Eintrag'),
             ],
           ),
           buildDay(
@@ -160,7 +160,7 @@ void main() {
       store: store,
       home: DaysContainer(),
     );
-    await settleFor(tester, duration: const Duration(milliseconds: 300));
+    await settleFor(tester);
 
     expect(find.widgetWithText(FilledButton, 'Filter'), findsOneWidget);
     expect(find.byType(DayWidget), findsNWidgets(4));
@@ -173,7 +173,7 @@ void main() {
 
     await tester.tap(find.widgetWithText(CheckboxListTile, 'Leere Tage anzeigen'));
     await tester.pump();
-    await settleFor(tester, duration: const Duration(milliseconds: 300));
+    await settleFor(tester);
 
     expect(find.widgetWithText(FilledButton, 'Filter (1)'), findsOneWidget);
     expect(find.byType(DayWidget), findsNWidgets(2));
@@ -201,14 +201,13 @@ void main() {
       initialState: AppState(
         (b) => b.dashboardState.allDays = ListBuilder<Day>(<Day>[
           buildDay(
-            date: UtcDateTime(2050, 1, 1),
+            date: UtcDateTime(2050),
             homework: <Homework>[
               buildHomework(
                 id: 0,
                 type: HomeworkType.homework,
                 checkable: true,
                 deleteable: true,
-                checked: false,
               ),
             ],
           ),
@@ -222,19 +221,19 @@ void main() {
       store: store,
       home: DaysContainer(),
     );
-    await settleFor(tester, duration: const Duration(milliseconds: 300));
+    await settleFor(tester);
 
     expect(tester.widget<Checkbox>(find.byType(Checkbox)).value, isFalse);
 
     await tester.tap(find.byType(Checkbox));
     await tester.pump();
-    await settleFor(tester, duration: const Duration(milliseconds: 300));
+    await settleFor(tester);
 
     expect(tester.widget<Checkbox>(find.byType(Checkbox)).value, isFalse);
 
     await store.actions.refreshNoInternet();
     await tester.pump();
-    await settleFor(tester, duration: const Duration(milliseconds: 300));
+    await settleFor(tester);
 
     expect(tester.widget<Checkbox>(find.byType(Checkbox)).onChanged, isNull);
     resetNoInternetRetryForTest();
