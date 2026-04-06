@@ -1,4 +1,4 @@
-﻿// Copyright (C) 2021 Michael Debertol
+// Copyright (C) 2021 Michael Debertol
 // Copyright (C) 2026 Tobias Bucci
 //
 // This file is part of digitales_register.
@@ -38,6 +38,7 @@ final dashboardReducerBuilder = NestedReducerBuilder<AppState, AppStateBuilder,
   ..add(DashboardActionsNames.switchFuture, _switchFuture)
   ..add(DashboardActionsNames.notLoaded, _notLoaded)
   ..add(DashboardActionsNames.homeworkAdded, _homeworkAdded)
+  ..add(DashboardActionsNames.reminderEdited, _reminderEdited)
   ..add(DashboardActionsNames.deleteHomework, _homeworkRemoved)
   ..add(DashboardActionsNames.toggleDone, _toggleDone)
   ..add(DashboardActionsNames.markAsSeen, _markAsSeen)
@@ -299,6 +300,29 @@ void _homeworkRemoved(DashboardState state, Action<Homework> action,
     DashboardStateBuilder builder) {
   builder.allDays
       .map((day) => day.rebuild((b) => b..homework.remove(action.payload)));
+}
+
+void _reminderEdited(DashboardState state, Action<HomeworkEditedPayload> action,
+    DashboardStateBuilder builder) {
+  final newHomework = _parseHomework(getMap(action.payload.data)!).rebuild(
+    (b) => b
+      ..firstSeen = now
+      ..lastNotSeen = now,
+  );
+
+  builder.allDays.map(
+    (day) => day.date == action.payload.date
+        ? day.rebuild((b) {
+            final index = day.homework.indexWhere(
+                (hw) => hw.id == action.payload.previousHomework.id);
+            if (index == -1) {
+              b.homework.add(newHomework);
+              return;
+            }
+            b.homework[index] = newHomework;
+          })
+        : day,
+  );
 }
 
 void _toggleDone(DashboardState state, Action<ToggleDonePayload> action,

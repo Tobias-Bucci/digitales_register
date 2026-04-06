@@ -1,4 +1,4 @@
-﻿// Copyright (C) 2021 Michael Debertol
+// Copyright (C) 2021 Michael Debertol
 // Copyright (C) 2026 Tobias Bucci
 //
 // This file is part of digitales_register.
@@ -47,6 +47,16 @@ class DaysContainer extends StatelessWidget {
               ),
             );
           },
+          editReminderCallback: (hw, day, msg) {
+            actions.dashboardActions.editReminder(
+              EditReminderPayload(
+                (b) => b
+                  ..previousHomework.replace(hw)
+                  ..msg = msg
+                  ..date = day.date,
+              ),
+            );
+          },
           removeReminderCallback: (hw, day) {
             actions.dashboardActions.deleteHomework(hw);
           },
@@ -79,6 +89,11 @@ class DaysContainer extends StatelessWidget {
 }
 
 typedef AddReminderCallback = void Function(Day day, String reminder);
+typedef EditReminderCallback = void Function(
+  Homework hw,
+  Day day,
+  String reminder,
+);
 typedef RemoveReminderCallback = void Function(Homework hw, Day day);
 typedef ToggleDoneCallback = void Function(Homework hw, bool done);
 typedef MarkAsNotNewOrChangedCallback = void Function(Homework hw);

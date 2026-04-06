@@ -1,4 +1,5 @@
 // Copyright (C) 2021 Michael Debertol
+// Copyright (C) 2026 Tobias Bucci
 //
 // This file is part of digitales_register.
 //
@@ -33,7 +34,9 @@ abstract class DashboardActions extends ReduxActions {
   abstract final ActionDispatcher<bool> load;
   abstract final VoidActionDispatcher switchFuture;
   abstract final ActionDispatcher<HomeworkAddedPayload> homeworkAdded;
+  abstract final ActionDispatcher<HomeworkEditedPayload> reminderEdited;
   abstract final ActionDispatcher<AddReminderPayload> addReminder;
+  abstract final ActionDispatcher<EditReminderPayload> editReminder;
   abstract final ActionDispatcher<Homework> deleteHomework;
   abstract final ActionDispatcher<ToggleDonePayload> toggleDone;
   abstract final ActionDispatcher<Homework> markAsSeen;
@@ -76,6 +79,30 @@ abstract class AddReminderPayload
       _$AddReminderPayload;
   AddReminderPayload._();
 
+  String get msg;
+  UtcDateTime get date;
+}
+
+abstract class HomeworkEditedPayload
+    implements Built<HomeworkEditedPayload, HomeworkEditedPayloadBuilder> {
+  factory HomeworkEditedPayload(
+          [void Function(HomeworkEditedPayloadBuilder)? updates]) =
+      _$HomeworkEditedPayload;
+  HomeworkEditedPayload._();
+
+  Homework get previousHomework;
+  Object get data;
+  UtcDateTime get date;
+}
+
+abstract class EditReminderPayload
+    implements Built<EditReminderPayload, EditReminderPayloadBuilder> {
+  factory EditReminderPayload(
+          [void Function(EditReminderPayloadBuilder)? updates]) =
+      _$EditReminderPayload;
+  EditReminderPayload._();
+
+  Homework get previousHomework;
   String get msg;
   UtcDateTime get date;
 }

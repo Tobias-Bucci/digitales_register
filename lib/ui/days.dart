@@ -1,4 +1,4 @@
-﻿// Copyright (C) 2021 Michael Debertol
+// Copyright (C) 2021 Michael Debertol
 // Copyright (C) 2026 Tobias Bucci
 //
 // This file is part of digitales_register.
@@ -43,6 +43,11 @@ import 'package:scroll_to_index/scroll_to_index.dart';
 import 'package:tuple/tuple.dart';
 
 typedef AddReminderCallback = void Function(Day day, String reminder);
+typedef EditReminderCallback = void Function(
+  Homework hw,
+  Day day,
+  String reminder,
+);
 typedef RemoveReminderCallback = void Function(Homework hw, Day day);
 typedef ToggleDoneCallback = void Function(Homework hw, bool done);
 typedef MarkAsNotNewOrChangedCallback = void Function(Homework hw);
@@ -55,6 +60,7 @@ class DaysWidget extends StatefulWidget {
   final MarkDeletedHomeworkAsSeenCallback markDeletedHomeworkAsSeenCallback;
   final VoidCallback markAllAsSeenCallback;
   final AddReminderCallback addReminderCallback;
+  final EditReminderCallback editReminderCallback;
   final RemoveReminderCallback removeReminderCallback;
   final VoidCallback onSwitchFuture;
   final ToggleDoneCallback toggleDoneCallback;
@@ -69,6 +75,7 @@ class DaysWidget extends StatefulWidget {
     required this.markAsSeenCallback,
     required this.markDeletedHomeworkAsSeenCallback,
     required this.addReminderCallback,
+    required this.editReminderCallback,
     required this.removeReminderCallback,
     required this.markAllAsSeenCallback,
     required this.onSwitchFuture,
@@ -308,6 +315,7 @@ class _DaysWidgetState extends State<DaysWidget> {
       controller: controller,
       index: _dayStartIndices[itemIndex]!,
       addReminderCallback: widget.addReminderCallback,
+      editReminderCallback: widget.editReminderCallback,
       removeReminderCallback: widget.removeReminderCallback,
       toggleDoneCallback: widget.toggleDoneCallback,
       setDoNotAskWhenDeleteCallback: widget.setDoNotAskWhenDeleteCallback,
@@ -546,6 +554,52 @@ class _DaysWidgetState extends State<DaysWidget> {
   }
 }
 
+Future<String?> showEnterReminderDialog(
+  BuildContext context, {
+  String initialMessage = "",
+}) {
+  return showDialog(
+    context: context,
+    builder: (context) {
+      final l10n = context.l10n;
+      final controller = TextEditingController(text: initialMessage);
+      String message = initialMessage;
+      return StatefulBuilder(
+        builder: (context, setState) => InfoDialog(
+          title: Text(l10n.text('dashboard.reminder')),
+          content: TextField(
+            controller: controller,
+            autofocus: true,
+            maxLines: null,
+            onChanged: (msg) {
+              setState(() => message = msg);
+            },
+            decoration: InputDecoration(
+              hintText: l10n.text('dashboard.reminderHint'),
+            ),
+          ),
+          actions: <Widget>[
+            TextButton(
+              onPressed: () {
+                Navigator.pop(context);
+              },
+              child: Text(l10n.text('common.cancel')),
+            ),
+            ElevatedButton(
+              onPressed: message.isNullOrEmpty
+                  ? null
+                  : () {
+                      Navigator.pop(context, message);
+                    },
+              child: Text(l10n.text('button.save')),
+            ),
+          ],
+        ),
+      );
+    },
+  );
+}
+
 class DashboardHeader extends StatelessWidget {
   final VoidCallback onSwitchFuture;
   final List<String> favoriteSubjects;
@@ -624,8 +678,9 @@ class DashboardHeader extends StatelessWidget {
                             ? Icons.history_toggle_off
                             : Icons.upcoming_rounded,
                       ),
-                      label:
-                          Text(future ? l10n.text('dashboard.past') : l10n.text('dashboard.future')),
+                      label: Text(future
+                          ? l10n.text('dashboard.past')
+                          : l10n.text('dashboard.future')),
                       style: FilledButton.styleFrom(
                         shape: const StadiumBorder(),
                         visualDensity: VisualDensity.compact,
@@ -659,6 +714,7 @@ class DayWidget extends StatelessWidget {
   final DaysViewModel vm;
 
   final AddReminderCallback addReminderCallback;
+  final EditReminderCallback editReminderCallback;
   final RemoveReminderCallback removeReminderCallback;
   final ToggleDoneCallback toggleDoneCallback;
   final VoidCallback setDoNotAskWhenDeleteCallback;
@@ -680,6 +736,7 @@ class DayWidget extends StatelessWidget {
     required this.controller,
     required this.index,
     required this.addReminderCallback,
+    required this.editReminderCallback,
     required this.removeReminderCallback,
     required this.toggleDoneCallback,
     required this.setDoNotAskWhenDeleteCallback,
@@ -689,47 +746,6 @@ class DayWidget extends StatelessWidget {
     required this.colorTestsInRed,
     required this.showLastFetched,
   });
-
-  Future<String?> showEnterReminderDialog(BuildContext context) {
-    return showDialog(
-      context: context,
-      builder: (context) {
-        final l10n = context.l10n;
-        String message = "";
-        return StatefulBuilder(
-          builder: (context, setState) => InfoDialog(
-            title: Text(l10n.text('dashboard.reminder')),
-            content: TextField(
-              autofocus: true,
-              maxLines: null,
-              onChanged: (msg) {
-                setState(() => message = msg);
-              },
-              decoration: InputDecoration(
-                hintText: l10n.text('dashboard.reminderHint'),
-              ),
-            ),
-            actions: <Widget>[
-              TextButton(
-                onPressed: () {
-                  Navigator.pop(context);
-                },
-                child: Text(l10n.text('common.cancel')),
-              ),
-              ElevatedButton(
-                onPressed: message.isNullOrEmpty
-                    ? null
-                    : () {
-                        Navigator.pop(context, message);
-                      },
-                child: Text(l10n.text('button.save')),
-              ),
-            ],
-          ),
-        );
-      },
-    );
-  }
 
   @override
   Widget build(BuildContext context) {
@@ -840,6 +856,15 @@ class DayWidget extends StatelessWidget {
           ItemWidget(
             item: hw,
             toggleDone: () => toggleDoneCallback(hw, !hw.checked),
+            editReminder: () async {
+              final message = await showEnterReminderDialog(
+                context,
+                initialMessage: hw.subtitle.isNotEmpty ? hw.subtitle : hw.title,
+              );
+              if (message != null) {
+                editReminderCallback(hw, day, message);
+              }
+            },
             removeThis: () => removeReminderCallback(hw, day),
             setDoNotAskWhenDelete: setDoNotAskWhenDeleteCallback,
             askWhenDelete: vm.askWhenDelete,
@@ -858,6 +883,7 @@ class DayWidget extends StatelessWidget {
 
 class ItemWidget extends StatelessWidget {
   final Homework item;
+  final Future<void> Function()? editReminder;
   final VoidCallback? removeThis;
   final VoidCallback? toggleDone;
   final VoidCallback? setDoNotAskWhenDelete;
@@ -877,6 +903,7 @@ class ItemWidget extends StatelessWidget {
   const ItemWidget({
     super.key,
     required this.item,
+    this.editReminder,
     this.removeThis,
     this.toggleDone,
     required this.askWhenDelete,
@@ -981,6 +1008,11 @@ class ItemWidget extends StatelessWidget {
   Widget build(BuildContext context) {
     final l10n = context.l10n;
     final isCompleted = item.checked && !isHistory && !isDeletedView;
+    final canEditReminder = !isHistory &&
+        !isDeletedView &&
+        item.type == HomeworkType.homework &&
+        item.deleteable &&
+        editReminder != null;
     Widget child = Deleteable(
       // this is a new entry or a reminder the user has just entered
       showEntryAnimation:
@@ -1040,8 +1072,10 @@ class ItemWidget extends StatelessWidget {
                                             : item.isNew
                                                 ? l10n.text('dashboard.new')
                                                 : item.deleted
-                                                    ? l10n.text('dashboard.deleted')
-                                                    : l10n.text('dashboard.changed'),
+                                                    ? l10n.text(
+                                                        'dashboard.deleted')
+                                                    : l10n.text(
+                                                        'dashboard.changed'),
                                         style: const TextStyle(
                                             color: Colors.white),
                                       ),
@@ -1109,6 +1143,15 @@ class ItemWidget extends StatelessWidget {
                   Column(
                     crossAxisAlignment: CrossAxisAlignment.end,
                     children: <Widget>[
+                      if (canEditReminder)
+                        IconButton(
+                          icon: const Icon(Icons.edit_outlined),
+                          onPressed: noInternet
+                              ? null
+                              : () async {
+                                  await editReminder!();
+                                },
+                        ),
                       if (!isHistory && item.label != null)
                         IconButton(
                           icon: (isDeletedView

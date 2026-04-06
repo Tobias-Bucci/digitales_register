@@ -1,3 +1,20 @@
+// Copyright (C) 2026 Tobias Bucci
+//
+// This file is part of digitales_register.
+//
+// digitales_register is free software: you can redistribute it and/or modify
+// it under the terms of the GNU General Public License as published by
+// the Free Software Foundation, either version 3 of the License, or
+// (at your option) any later version.
+//
+// digitales_register is distributed in the hope that it will be useful,
+// but WITHOUT ANY WARRANTY; without even the implied warranty of
+// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+// GNU General Public License for more details.
+//
+// You should have received a copy of the GNU General Public License
+// along with digitales_register.  If not, see <http://www.gnu.org/licenses/>.
+
 import 'package:built_collection/built_collection.dart';
 import 'package:dr/app_state.dart';
 import 'package:dr/container/days_container.dart';
@@ -59,7 +76,8 @@ void main() {
     expect(find.byType(DayWidget), findsNothing);
   });
 
-  testWidgets('loading with existing entries keeps the dashboard content visible',
+  testWidgets(
+      'loading with existing entries keeps the dashboard content visible',
       (tester) async {
     final store = createStore(
       initialState: AppState(
@@ -171,7 +189,8 @@ void main() {
 
     expect(find.text('Leere Tage anzeigen'), findsOneWidget);
 
-    await tester.tap(find.widgetWithText(CheckboxListTile, 'Leere Tage anzeigen'));
+    await tester
+        .tap(find.widgetWithText(CheckboxListTile, 'Leere Tage anzeigen'));
     await tester.pump();
     await settleFor(tester);
 
@@ -180,7 +199,8 @@ void main() {
     expect(find.text('Mit Eintrag'), findsOneWidget);
   });
 
-  testWidgets('checking an item becomes disabled after offline mode is confirmed',
+  testWidgets(
+      'checking an item becomes disabled after offline mode is confirmed',
       (tester) async {
     final mockWrapper = MockWrapper();
     when(() => mockWrapper.noInternet).thenReturn(true);
@@ -267,5 +287,98 @@ void main() {
 
     expect(refreshChecks, greaterThanOrEqualTo(1));
     resetNoInternetRetryForTest();
+  });
+
+  testWidgets(
+      'editing a reminder deletes the old entry and adds the updated one',
+      (tester) async {
+    final mockWrapper = MockWrapper();
+    when(() => mockWrapper.noInternet).thenReturn(false);
+    when(
+      () => mockWrapper.send(
+        'api/student/dashboard/delete_reminder',
+        args: <String, Object?>{'id': 7},
+      ),
+    ).thenAnswer((_) async => <String, Object?>{'success': true});
+    when(
+      () => mockWrapper.send(
+        'api/student/dashboard/save_reminder',
+        args: <String, Object?>{
+          'date': '2050-01-01',
+          'text': 'Neu formulierte Erinnerung',
+        },
+      ),
+    ).thenAnswer(
+      (_) async => <String, Object?>{
+        'id': 8,
+        'title': 'Erinnerung',
+        'subtitle': 'Neu formulierte Erinnerung',
+        'type': 'homework',
+        'deleteable': true,
+        'checkable': true,
+        'checked': false,
+      },
+    );
+    wrapper = mockWrapper;
+
+    final store = createStore(
+      initialState: AppState(
+        (b) => b.dashboardState.allDays = ListBuilder<Day>(<Day>[
+          buildDay(
+            date: UtcDateTime(2050, 1, 1),
+            homework: <Homework>[
+              buildHomework(
+                id: 7,
+                title: 'Erinnerung',
+                subtitle: 'Alte Erinnerung',
+                type: HomeworkType.homework,
+                deleteable: true,
+                checkable: true,
+              ),
+            ],
+          ),
+        ]),
+      ),
+      withMiddleware: true,
+    );
+
+    await pumpApp(
+      tester,
+      store: store,
+      home: DaysContainer(),
+    );
+    await settleFor(tester);
+
+    expect(find.byIcon(Icons.edit_outlined), findsOneWidget);
+    expect(find.text('Alte Erinnerung'), findsOneWidget);
+
+    await tester.tap(find.byIcon(Icons.edit_outlined));
+    await tester.pump();
+    await settleFor(tester);
+
+    await tester.enterText(
+      find.byType(TextField),
+      'Neu formulierte Erinnerung',
+    );
+    await tester.tap(find.widgetWithText(ElevatedButton, 'Speichern'));
+    await tester.pump();
+    await settleFor(tester);
+
+    verifyInOrder(<void Function()>[
+      () => mockWrapper.send(
+            'api/student/dashboard/delete_reminder',
+            args: <String, Object?>{'id': 7},
+          ),
+      () => mockWrapper.send(
+            'api/student/dashboard/save_reminder',
+            args: <String, Object?>{
+              'date': '2050-01-01',
+              'text': 'Neu formulierte Erinnerung',
+            },
+          ),
+    ]);
+
+    expect(find.text('Neu formulierte Erinnerung'), findsOneWidget);
+    expect(find.text('Alte Erinnerung'), findsNothing);
   });
 }

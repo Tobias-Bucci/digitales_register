@@ -1,4 +1,5 @@
 // Copyright (C) 2021 Michael Debertol
+// Copyright (C) 2026 Tobias Bucci
 //
 // This file is part of digitales_register.
 //
@@ -22,6 +23,7 @@ final _dashboardMiddleware = MiddlewareBuilder<AppState, AppStateBuilder,
   ..add(DashboardActionsNames.load, _loadDays)
   ..add(DashboardActionsNames.switchFuture, _switchFuture)
   ..add(DashboardActionsNames.addReminder, _addReminder)
+  ..add(DashboardActionsNames.editReminder, _editReminder)
   ..add(DashboardActionsNames.deleteHomework, _deleteHomework)
   ..add(DashboardActionsNames.toggleDone, _toggleDone)
   ..add(DashboardActionsNames.openAttachment, _openAttachment)
@@ -100,6 +102,51 @@ Future<void> _deleteHomework(
   } else if (!wrapper.noInternet) {
     showSnackBar("Beim Speichern ist ein Fehler aufgetreten");
   }
+}
+
+Future<void> _editReminder(
+    MiddlewareApi<AppState, AppStateBuilder, AppActions> api,
+    ActionHandler next,
+    Action<EditReminderPayload> action) async {
+  final deleteResult = await wrapper.send(
+    "api/student/dashboard/delete_reminder",
+    args: {
+      "id": action.payload.previousHomework.id,
+    },
+  );
+  if (deleteResult == null ||
+      deleteResult["success"] != true ||
+      wrapper.noInternet) {
+    if (!wrapper.noInternet) {
+      showSnackBar("Beim Speichern ist ein Fehler aufgetreten");
+    }
+    return;
+  }
+
+  final dynamic saveResult = await wrapper.send(
+    "api/student/dashboard/save_reminder",
+    args: {
+      "date": DateFormat("yyyy-MM-dd").format(action.payload.date),
+      "text": action.payload.msg,
+    },
+  );
+
+  if (saveResult == null) {
+    await api.actions.dashboardActions.load(api.state.dashboardState.future);
+    if (!wrapper.noInternet) {
+      showSnackBar("Beim Speichern ist ein Fehler aufgetreten");
+    }
+    return;
+  }
+
+  await api.actions.dashboardActions.reminderEdited(
+    HomeworkEditedPayload(
+      (b) => b
+        ..previousHomework.replace(action.payload.previousHomework)
+        ..data = saveResult
+        ..date = action.payload.date,
+    ),
+  );
 }
 
 Future<void> _toggleDone(
