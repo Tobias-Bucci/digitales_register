@@ -48,6 +48,7 @@ typedef EditReminderCallback = void Function(
   Day day,
   String reminder,
 );
+typedef AsyncCallback = Future<void> Function();
 typedef RemoveReminderCallback = void Function(Homework hw, Day day);
 typedef ToggleDoneCallback = void Function(Homework hw, bool done);
 typedef MarkAsNotNewOrChangedCallback = void Function(Homework hw);
@@ -65,7 +66,7 @@ class DaysWidget extends StatefulWidget {
   final VoidCallback onSwitchFuture;
   final ToggleDoneCallback toggleDoneCallback;
   final VoidCallback setDoNotAskWhenDeleteCallback;
-  final VoidCallback refresh;
+  final AsyncCallback refresh;
   final VoidCallback refreshNoInternet;
   final AttachmentCallback onOpenAttachment;
 
@@ -438,7 +439,7 @@ class _DaysWidgetState extends State<DaysWidget> {
       );
       if (!noInternet && !widget.vm.loading) {
         body = RefreshIndicator(
-          onRefresh: () async => widget.refresh(),
+          onRefresh: widget.refresh,
           child: body,
         );
       }
