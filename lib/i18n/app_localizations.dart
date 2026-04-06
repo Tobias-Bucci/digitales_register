@@ -502,7 +502,7 @@ class AppLocalizations {
 
   String translateAuthServerText(String input) {
     final trimmed = input.trim();
-      final connectionMatch = RegExp(r'^Keine Verbindung mit "(.+)" möglich')
+    final connectionMatch = RegExp('^Keine Verbindung mit "(.+)" möglich')
         .firstMatch(trimmed);
     if (connectionMatch != null) {
       return text(

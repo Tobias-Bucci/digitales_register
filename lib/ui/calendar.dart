@@ -452,10 +452,10 @@ class EditNickBar extends StatelessWidget {
                         child: Row(
                           children: [
                             Padding(
-                              padding: EdgeInsets.symmetric(horizontal: 8),
+                              padding: const EdgeInsets.symmetric(horizontal: 8),
                               child: Text(context.t('calendar.editNicknames')),
                             ),
-                            Spacer(),
+                            const Spacer(),
                           ],
                         ),
                       ),

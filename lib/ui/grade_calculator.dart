@@ -570,7 +570,7 @@ class _ImportGradesState extends State<_ImportGrades> {
               selectedSubject != null &&
               grades!.isEmpty)
             Padding(
-              padding: EdgeInsets.all(8.0),
+              padding: const EdgeInsets.all(8.0),
               child: Text(
                 context.t('gradeCalculator.noGradesAvailable'),
                 style: const TextStyle(color: Colors.red),

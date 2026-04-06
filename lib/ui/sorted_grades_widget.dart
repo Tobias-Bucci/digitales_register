@@ -126,7 +126,7 @@ class _SortedGradesWidgetState extends State<SortedGradesWidget> {
           ListTile(
             title: Text(
               context.t('grades.excludedAverageInfo'),
-              style: TextStyle(color: Colors.grey),
+              style: const TextStyle(color: Colors.grey),
             ),
           ),
         Padding(
