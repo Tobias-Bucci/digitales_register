@@ -25,6 +25,7 @@ import 'package:dr/container/homework_filter_container.dart';
 import 'package:dr/container/notification_icon_container.dart';
 import 'package:dr/container/sidebar_container.dart';
 import 'package:dr/data.dart';
+import 'package:dr/i18n/app_localizations.dart';
 import 'package:dr/main.dart';
 import 'package:dr/middleware/middleware.dart';
 import 'package:dr/ui/animated_linear_progress_indicator.dart';
@@ -333,6 +334,7 @@ class _DaysWidgetState extends State<DaysWidget> {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = context.l10n;
     final availableFavoriteSubjects = _availableFavoriteSubjects();
     final activeFavoriteSubject =
         _resolvedFavoriteSubject(availableFavoriteSubjects);
@@ -348,7 +350,7 @@ class _DaysWidgetState extends State<DaysWidget> {
         fullScreenBody = Padding(
           padding: const EdgeInsets.all(32),
           child: Text(
-            "Keine Einträge für dieses Fokusfach",
+            l10n.text('dashboard.noEntriesFavorite'),
             style: Theme.of(context).textTheme.headlineMedium,
             textAlign: TextAlign.center,
           ),
@@ -359,7 +361,7 @@ class _DaysWidgetState extends State<DaysWidget> {
         fullScreenBody = Padding(
           padding: const EdgeInsets.all(32),
           child: Text(
-            "Keine Einträge vorhanden",
+            l10n.text('dashboard.noEntries'),
             style: Theme.of(context).textTheme.headlineMedium,
             textAlign: TextAlign.center,
           ),
@@ -491,7 +493,7 @@ class _DaysWidgetState extends State<DaysWidget> {
               backgroundColor: Theme.of(context).colorScheme.primaryContainer,
               foregroundColor: Theme.of(context).colorScheme.onPrimaryContainer,
               icon: const Icon(Icons.keyboard_double_arrow_down_rounded),
-              label: const Text("Neue Einträge"),
+              label: Text(l10n.text('dashboard.newEntries')),
               onPressed: () async {
                 await controller.scrollToIndex(
                   _targets.first,
@@ -502,18 +504,18 @@ class _DaysWidgetState extends State<DaysWidget> {
         ],
       ),
       homeAppBar: ResponsiveAppBar(
-        title: const Row(
+        title: Row(
           mainAxisSize: MainAxisSize.min,
           children: [
-            Icon(Icons.dashboard_customize_outlined),
-            SizedBox(width: 8),
-            Text("Dashboard"),
+            const Icon(Icons.dashboard_customize_outlined),
+            const SizedBox(width: 8),
+            Text(l10n.text('dashboard.title')),
           ],
         ),
         actions: <Widget>[
           if (widget.vm.noInternet)
             Tooltip(
-              message: "Keine Verbindung - Neu laden",
+              message: l10n.text('dashboard.noConnectionReload'),
               child: IconButton(
                 onPressed: widget.refreshNoInternet,
                 icon: const Icon(Icons.wifi_off_rounded),
@@ -567,6 +569,7 @@ class DashboardHeader extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = context.l10n;
     final theme = Theme.of(context);
     final scheme = theme.colorScheme;
     return Padding(
@@ -621,7 +624,8 @@ class DashboardHeader extends StatelessWidget {
                             ? Icons.history_toggle_off
                             : Icons.upcoming_rounded,
                       ),
-                      label: Text(future ? "Vergangenheit" : "Zukunft"),
+                      label:
+                          Text(future ? l10n.text('dashboard.past') : l10n.text('dashboard.future')),
                       style: FilledButton.styleFrom(
                         shape: const StadiumBorder(),
                         visualDensity: VisualDensity.compact,
@@ -690,24 +694,27 @@ class DayWidget extends StatelessWidget {
     return showDialog(
       context: context,
       builder: (context) {
+        final l10n = context.l10n;
         String message = "";
         return StatefulBuilder(
           builder: (context, setState) => InfoDialog(
-            title: const Text("Erinnerung"),
+            title: Text(l10n.text('dashboard.reminder')),
             content: TextField(
               autofocus: true,
               maxLines: null,
               onChanged: (msg) {
                 setState(() => message = msg);
               },
-              decoration: const InputDecoration(hintText: 'zB. Hausaufgabe'),
+              decoration: InputDecoration(
+                hintText: l10n.text('dashboard.reminderHint'),
+              ),
             ),
             actions: <Widget>[
               TextButton(
                 onPressed: () {
                   Navigator.pop(context);
                 },
-                child: const Text("Abbrechen"),
+                child: Text(l10n.text('common.cancel')),
               ),
               ElevatedButton(
                 onPressed: message.isNullOrEmpty
@@ -715,9 +722,7 @@ class DayWidget extends StatelessWidget {
                     : () {
                         Navigator.pop(context, message);
                       },
-                child: const Text(
-                  "Speichern",
-                ),
+                child: Text(l10n.text('button.save')),
               ),
             ],
           ),
@@ -728,6 +733,7 @@ class DayWidget extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = context.l10n;
     var i = index;
     return Column(
       children: <Widget>[
@@ -742,12 +748,15 @@ class DayWidget extends StatelessWidget {
                   mainAxisAlignment: MainAxisAlignment.center,
                   children: [
                     Text(
-                      day.displayName,
+                      l10n.dashboardDayLabel(day.date),
                       style: Theme.of(context).textTheme.titleLarge,
                     ),
                     if (showLastFetched)
                       Text(
-                        "Zuletzt synchronisiert ${formatTimeAgo(day.lastRequested)}.",
+                        l10n.text(
+                          'dashboard.syncLast',
+                          args: {'time': l10n.formatTimeAgo(day.lastRequested)},
+                        ),
                         style: Theme.of(context).textTheme.bodySmall,
                       ),
                   ],
@@ -786,7 +795,7 @@ class DayWidget extends StatelessWidget {
                         context: context,
                         builder: (context) {
                           return InfoDialog(
-                            title: const Text("Gelöschte Einträge"),
+                            title: Text(l10n.text('dashboard.deletedEntries')),
                             content: SingleChildScrollView(
                               child: Column(
                                 children: day.deletedHomework
@@ -885,6 +894,7 @@ class ItemWidget extends StatelessWidget {
   });
 
   Future<Tuple2<bool, bool>> _showConfirmDelete(BuildContext context) async {
+    final l10n = context.l10n;
     var ask = true;
     final delete = await showDialog<bool>(
       context: context,
@@ -892,24 +902,22 @@ class ItemWidget extends StatelessWidget {
         return InfoDialog(
           content: StatefulBuilder(
             builder: (context, setState) => SwitchListTile.adaptive(
-              title: const Text("Nie fragen"),
+              title: Text(l10n.text('dashboard.neverAsk')),
               onChanged: (bool value) {
                 setState(() => ask = !value);
               },
               value: !ask,
             ),
           ),
-          title: const Text("Erinnerung löschen?"),
+          title: Text(l10n.text('dashboard.reminder.deleteQuestion')),
           actions: <Widget>[
             TextButton(
               onPressed: () => Navigator.pop(context),
-              child: const Text("Abbrechen"),
+              child: Text(l10n.text('common.cancel')),
             ),
             ElevatedButton(
               onPressed: () => Navigator.pop(context, true),
-              child: const Text(
-                "Löschen",
-              ),
+              child: Text(l10n.text('button.delete')),
             )
           ],
         );
@@ -919,6 +927,7 @@ class ItemWidget extends StatelessWidget {
   }
 
   void _showHistory(BuildContext context) {
+    final l10n = context.l10n;
     // if we are in the deleted view, show the history for the previous item
     final historyItem = isDeletedView ? item.previousVersion : item;
     showDialog<void>(
@@ -932,7 +941,7 @@ class ItemWidget extends StatelessWidget {
                 Text(formatChanged(historyItem)),
                 if (historyItem.previousVersion != null)
                   ExpansionTile(
-                    title: const Text("Versionen"),
+                    title: Text(l10n.text('dashboard.versions')),
                     children: <Widget>[
                       ItemWidget(
                         item: historyItem,
@@ -970,6 +979,7 @@ class ItemWidget extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = context.l10n;
     final isCompleted = item.checked && !isHistory && !isDeletedView;
     Widget child = Deleteable(
       // this is a new entry or a reminder the user has just entered
@@ -1007,7 +1017,9 @@ class ItemWidget extends StatelessWidget {
                               children: <Widget>[
                                 Center(
                                   child: Text(
-                                    item.label!,
+                                    l10n.translateDashboardServerText(
+                                      item.label!,
+                                    ),
                                     textAlign: TextAlign.center,
                                     overflow: TextOverflow.ellipsis,
                                   ),
@@ -1024,12 +1036,12 @@ class ItemWidget extends StatelessWidget {
                                       ),
                                       badgeContent: Text(
                                         isHistory && isCurrent
-                                            ? "aktuell"
+                                            ? l10n.text('dashboard.current')
                                             : item.isNew
-                                                ? "neu"
+                                                ? l10n.text('dashboard.new')
                                                 : item.deleted
-                                                    ? "gelöscht"
-                                                    : "geändert",
+                                                    ? l10n.text('dashboard.deleted')
+                                                    : l10n.text('dashboard.changed'),
                                         style: const TextStyle(
                                             color: Colors.white),
                                       ),
@@ -1040,7 +1052,7 @@ class ItemWidget extends StatelessWidget {
                           ListTile(
                             contentPadding: EdgeInsets.zero,
                             title: Text(
-                              item.title,
+                              l10n.translateDashboardServerText(item.title),
                               style: TextStyle(
                                 decoration: isCompleted
                                     ? TextDecoration.lineThrough
@@ -1050,7 +1062,9 @@ class ItemWidget extends StatelessWidget {
                             subtitle: item.subtitle.isNullOrEmpty
                                 ? null
                                 : SelectableText(
-                                    item.subtitle,
+                                    l10n.translateDashboardServerText(
+                                      item.subtitle,
+                                    ),
                                     style: TextStyle(
                                       decoration: isCompleted
                                           ? TextDecoration.lineThrough

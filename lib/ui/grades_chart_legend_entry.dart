@@ -17,6 +17,7 @@
 // along with digitales_register.  If not, see <http://www.gnu.org/licenses/>.
 
 import 'package:dr/app_state.dart';
+import 'package:dr/i18n/app_localizations.dart';
 import 'package:flutter/material.dart';
 
 typedef SetThickness = void Function(int thickness);
@@ -46,7 +47,7 @@ class GradesChartLegendEntry extends StatelessWidget {
             child: Padding(
               padding: const EdgeInsets.only(left: 8),
               child: Text(
-                name,
+                context.l10n.translateSubjectName(name),
                 style: Theme.of(context).textTheme.titleMedium,
               ),
             ),

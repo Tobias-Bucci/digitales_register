@@ -1,3 +1,20 @@
+// Copyright (C) 2026 Tobias Bucci
+//
+// This file is part of digitales_register.
+//
+// digitales_register is free software: you can redistribute it and/or modify
+// it under the terms of the GNU General Public License as published by
+// the Free Software Foundation, either version 3 of the License, or
+// (at your option) any later version.
+//
+// digitales_register is distributed in the hope that it will be useful,
+// but WITHOUT ANY WARRANTY; without even the implied warranty of
+// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+// GNU General Public License for more details.
+//
+// You should have received a copy of the GNU General Public License
+// along with digitales_register.  If not, see <http://www.gnu.org/licenses/>.
+
 import 'dart:convert';
 
 import 'package:dr/app_state.dart';
@@ -70,6 +87,31 @@ void main() {
       json.decode(payload) as Object,
     );
     expect(deserialized, isA<SettingsState>());
+  });
+
+  test('flush persists selected language in settings state', () async {
+    final service = AppStatePersistenceService();
+    late String payload;
+
+    await service.flush(
+      state: AppState(
+        (b) => b
+          ..loginState.loggedIn = true
+          ..loginState.username = 'anna'
+          ..settingsState.languageCode = 'en',
+      ),
+      deletedData: true,
+      server: 'https://example.com/v2/api/login',
+      writer: (key, value) async {
+        payload = value;
+      },
+      keyFactory: (user, server) => '$user@$server',
+    );
+
+    final deserialized = serializers.deserialize(
+      json.decode(payload) as Object,
+    )! as SettingsState;
+    expect(deserialized.languageCode, 'en');
   });
 
   test('schedule debounces to the latest pending save', () async {

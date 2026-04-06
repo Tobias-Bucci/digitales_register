@@ -37,6 +37,7 @@ import 'package:dr/actions/profile_actions.dart';
 import 'package:dr/actions/routing_actions.dart';
 import 'package:dr/actions/save_pass_actions.dart';
 import 'package:dr/actions/settings_actions.dart';
+import 'package:dr/app_language_controller.dart';
 import 'package:dr/app_state.dart';
 import 'package:dr/container/absences_page_container.dart';
 import 'package:dr/container/calendar_container.dart';
@@ -45,6 +46,8 @@ import 'package:dr/container/grades_page_container.dart';
 import 'package:dr/container/messages_container.dart';
 import 'package:dr/container/settings_page.dart';
 import 'package:dr/data.dart';
+import 'package:dr/i18n/app_language.dart';
+import 'package:dr/i18n/app_localizations.dart';
 import 'package:dr/main.dart';
 import 'package:dr/notification_background_service.dart';
 import 'package:dr/serializers.dart';
@@ -387,7 +390,9 @@ Future<void> _loggedIn(MiddlewareApi<AppState, AppStateBuilder, AppActions> api,
                     (b) => b.noPasswordSaving =
                         api.state.settingsState.noPasswordSaving,
                   ),
-                ),
+                )
+                ..settingsState.languageCode =
+                    api.state.settingsState.languageCode,
             ),
           );
         } else if (serializedState is AppState) {
@@ -406,7 +411,9 @@ Future<void> _loggedIn(MiddlewareApi<AppState, AppStateBuilder, AppActions> api,
                     )
                 // Override the previous password saving setting with whatever the user chose this time.
                 ..settingsState.noPasswordSaving =
-                    api.state.settingsState.noPasswordSaving,
+                    api.state.settingsState.noPasswordSaving
+                ..settingsState.languageCode =
+                    api.state.settingsState.languageCode,
             ),
           );
         }

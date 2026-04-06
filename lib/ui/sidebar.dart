@@ -17,6 +17,7 @@
 // along with digitales_register.  If not, see <http://www.gnu.org/licenses/>.
 
 import 'package:collapsible_sidebar/collapsible_sidebar.dart';
+import 'package:dr/i18n/app_localizations.dart';
 import 'package:dr/main.dart';
 import 'package:dr/middleware/middleware.dart';
 import 'package:dr/ui/app_popup_button.dart';
@@ -68,6 +69,7 @@ class Sidebar extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = context.l10n;
     final theme = Theme.of(context);
     final scheme = theme.colorScheme;
     final accountEntries = <AppPopupButtonEntry<int>>[
@@ -85,7 +87,9 @@ class Sidebar extends StatelessWidget {
       AppPopupButtonEntry<int>(
         value: otherAccounts.length + 1,
         label:
-            passwordSavingEnabled ? "Account hinzufügen" : "Account wechseln",
+            passwordSavingEnabled
+                ? l10n.text('sidebar.addAccount')
+                : l10n.text('sidebar.switchAccount'),
         leading: Icon(
           passwordSavingEnabled ? Icons.person_add_alt_1 : Icons.login_rounded,
           size: 20,
@@ -123,8 +127,8 @@ class Sidebar extends StatelessWidget {
         ),
       ),
       titleTooltip: username ?? "?",
-      toggleTooltipCollapsed: "Ausklappen",
-      toggleTooltipExpanded: "Einklappen",
+      toggleTooltipCollapsed: l10n.text('sidebar.expand'),
+      toggleTooltipExpanded: l10n.text('sidebar.collapse'),
       toggleTitle: const SizedBox(),
       backgroundColor: scheme.surface,
       avatar: GestureDetector(
@@ -148,48 +152,48 @@ class Sidebar extends StatelessWidget {
           CollapsibleItem(
             isSelected: currentSelected == Pages.homework,
             icon: Icons.dashboard_outlined,
-            text: "Hausaufgaben",
+            text: l10n.text('sidebar.homework'),
             onPressed: goHome,
           ),
         CollapsibleItem(
           onPressed: showGrades,
           isSelected: currentSelected == Pages.grades,
-          text: "Noten",
+          text: l10n.text('sidebar.grades'),
           icon: Icons.auto_graph_outlined,
         ),
         CollapsibleItem(
-            text: "Absenzen",
+            text: l10n.text('sidebar.absences'),
             icon: Icons.event_busy_outlined,
             isSelected: currentSelected == Pages.absences,
             onPressed: showAbsences),
         CollapsibleItem(
-          text: "Kalender",
+          text: l10n.text('sidebar.calendar'),
           icon: Icons.calendar_month_outlined,
           isSelected: currentSelected == Pages.calendar,
           onPressed: showCalendar,
         ),
         CollapsibleItem(
-          text: "Zeugnis",
+          text: l10n.text('sidebar.certificate'),
           icon: Icons.description_outlined,
           isSelected: currentSelected == Pages.certificate,
           onPressed: showCertificate,
         ),
         CollapsibleItem(
-          text: "Mitteilungen",
+          text: l10n.text('sidebar.messages'),
           icon: Icons.mark_email_unread_outlined,
           isSelected: currentSelected == Pages.messages,
           onPressed: showMessages,
         ),
         CollapsibleItem(
           hasDivider: true,
-          text: "Einstellungen",
+          text: l10n.text('sidebar.settings'),
           icon: Icons.tune,
           isSelected: currentSelected == Pages.settings,
           onPressed: showSettings,
         ),
         CollapsibleItem(
           hasDivider: true,
-          text: "Abmelden",
+          text: l10n.text('sidebar.logout'),
           icon: Icons.logout_rounded,
           onPressed: logout,
         ),

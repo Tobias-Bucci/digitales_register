@@ -1,4 +1,5 @@
 // Copyright (C) 2021 Michael Debertol
+// Copyright (C) 2026 Tobias Bucci
 //
 // This file is part of digitales_register.
 //
@@ -16,6 +17,7 @@
 // along with digitales_register.  If not, see <http://www.gnu.org/licenses/>.
 
 import 'package:flutter/material.dart';
+import 'package:dr/i18n/app_localizations.dart';
 
 class ChangeEmail extends StatefulWidget {
   final ChangeEmailCallback changeEmail;
@@ -32,9 +34,10 @@ class _ChangeEmailState extends State<ChangeEmail> {
       _emailController = TextEditingController();
   @override
   Widget build(BuildContext context) {
+    final l10n = context.l10n;
     return Scaffold(
       appBar: AppBar(
-        title: const Text("Email-Adresse ändern"),
+        title: Text(l10n.text('profile.changeEmail')),
       ),
       body: Padding(
         padding: const EdgeInsets.all(8.0),
@@ -45,14 +48,16 @@ class _ChangeEmailState extends State<ChangeEmail> {
               TextField(
                 obscureText: true,
                 controller: _passController,
-                decoration:
-                    const InputDecoration(labelText: 'Aktuelles Passwort'),
+                decoration: InputDecoration(
+                  labelText: l10n.text('changeEmail.currentPassword'),
+                ),
               ),
               TextField(
                 keyboardType: TextInputType.emailAddress,
                 controller: _emailController,
-                decoration:
-                    const InputDecoration(labelText: 'Neue Email-Adresse'),
+                decoration: InputDecoration(
+                  labelText: l10n.text('changeEmail.newEmail'),
+                ),
               ),
               const SizedBox(height: 16),
               ElevatedButton(
@@ -60,7 +65,7 @@ class _ChangeEmailState extends State<ChangeEmail> {
                   _passController.text,
                   _emailController.text,
                 ),
-                child: const Text("Speichern"),
+                child: Text(l10n.text('button.save')),
               ),
             ],
           ),

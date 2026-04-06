@@ -30,6 +30,14 @@ final _loginMiddleware =
       ..add(LoginActionsNames.addAccount, _addAccount)
       ..add(LoginActionsNames.selectAccount, _selectAccount);
 
+Future<String> _loginText(
+  String key, {
+  Map<String, String> args = const {},
+}) async {
+  final l10n = await AppLocalizations.load(appLanguageController.language.locale);
+  return l10n.text(key, args: args);
+}
+
 Future<void> _logout(MiddlewareApi<AppState, AppStateBuilder, AppActions> api,
     ActionHandler next, Action<LogoutPayload> action) async {
   await NotificationBackgroundService.handleAppPaused();
@@ -77,10 +85,11 @@ Future<void> _login(MiddlewareApi<AppState, AppStateBuilder, AppActions> api,
     ActionHandler next, Action<LoginPayload> action) async {
   await next(action);
   if (action.payload.user == "" || action.payload.pass == "") {
+    final emptyCredentials = await _loginText('login.emptyCredentials');
     await api.actions.loginActions.loginFailed(
       LoginFailedPayload(
         (b) => b
-          ..cause = "Bitte gib etwas ein"
+          ..cause = emptyCredentials
           ..username = action.payload.user,
       ),
     );
@@ -131,9 +140,11 @@ Future<void> _login(MiddlewareApi<AppState, AppStateBuilder, AppActions> api,
   if (await wrapper.loggedIn) {
     if (!wrapper.config.isStudentOrParent) {
       wrapper.logout(hard: true);
+      final unsupportedMessage =
+          await _loginText('login.userTypeUnsupported.message');
       await api.actions.loginActions.loginFailed(
         LoginFailedPayload(
-          (b) => b..cause = "Dieser Benutzertyp wird nicht unterstützt.",
+          (b) => b..cause = unsupportedMessage,
         ),
       );
       _showUserTypeNotSupported(url);
@@ -211,7 +222,7 @@ Future<void> _changePass(
       ),
     );
     navigatorKey?.currentState?.pop();
-    showSnackBar("Passwort erfolgreich geändert");
+    showSnackBar(await _loginText('login.passwordChangedSuccess'));
   }
 }
 
@@ -260,8 +271,12 @@ Future<void> _requestPassReset(
     }
   } catch (e) {
     if (await cannotConnectTo(api.state.url!)) {
+      final noConnectionMessage = await _loginText(
+        'login.noConnectionWithUrl',
+        args: {'url': api.state.url!},
+      );
       await api.actions.loginActions
-          .passResetFailed("Keine Verbindung mit \"${api.state.url}\" möglich");
+          .passResetFailed(noConnectionMessage);
     } else {
       rethrow;
     }
@@ -364,7 +379,7 @@ void _showUserTypeNotSupported(String url) {
               Padding(
                 padding: const EdgeInsets.all(16),
                 child: Text(
-                  "Tut uns leid!",
+                  context.t('login.userTypeUnsupported.title'),
                   style: Theme.of(context).textTheme.headlineMedium,
                   textAlign: TextAlign.center,
                 ),
@@ -372,7 +387,7 @@ void _showUserTypeNotSupported(String url) {
               Padding(
                 padding: const EdgeInsets.all(16),
                 child: Text(
-                  "Diese App ist ausschließlich für Schüler*innen und Eltern geeignet.",
+                  context.t('login.userTypeUnsupported.message'),
                   style: Theme.of(context).textTheme.headlineSmall,
                   textAlign: TextAlign.center,
                 ),
@@ -382,16 +397,12 @@ void _showUserTypeNotSupported(String url) {
                 children: [
                   TextButton(
                     onPressed: () => Navigator.pop(context),
-                    child: const Text(
-                      "Zurück",
-                    ),
+                    child: Text(context.t('common.cancel')),
                   ),
                   const SizedBox(width: 16),
                   ElevatedButton(
                     onPressed: () => launchUrl(Uri.parse(url)),
-                    child: const Text(
-                      "Hier geht's zur Website",
-                    ),
+                    child: Text(context.t('login.userTypeUnsupported.website')),
                   ),
                 ],
               ),

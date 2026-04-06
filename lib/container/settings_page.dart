@@ -21,6 +21,7 @@ import 'dart:async';
 import 'package:built_collection/built_collection.dart';
 import 'package:dr/actions/app_actions.dart';
 import 'package:dr/app_state.dart';
+import 'package:dr/i18n/app_language.dart';
 import 'package:dr/main.dart';
 import 'package:dr/theme_controller.dart';
 import 'package:dr/ui/settings_page_widget.dart';
@@ -38,6 +39,8 @@ class SettingsPageContainer extends StatelessWidget {
           platformOverride: themeController.platformOverride,
           onSetThemePreference: themeController.setThemePreference,
           onSetPlatformOverride: themeController.setPlatformOverride,
+          onSetLanguage: (language) =>
+              actions.settingsActions.setLanguage(language.code),
           onSetNoPassSaving: actions.settingsActions.saveNoPass.call,
           onSetNoDataSaving: actions.settingsActions.saveNoData.call,
           onSetAskWhenDelete:
@@ -88,6 +91,7 @@ typedef OnSettingChanged<T> = void Function(T newValue);
 class SettingsViewModel {
   final Map<String, String> subjectNicks;
   final bool noPassSaving;
+  final AppLanguage language;
   final bool noDataSaving;
   final bool askWhenDelete;
   final bool deleteDataOnLogout;
@@ -109,7 +113,8 @@ class SettingsViewModel {
   final List<String> favoriteSubjects;
   final BuiltMap<String, SubjectTheme> subjectThemes;
   SettingsViewModel(AppState state)
-      : noPassSaving = state.settingsState.noPasswordSaving,
+      : language = AppLanguage.fromCode(state.settingsState.languageCode),
+        noPassSaving = state.settingsState.noPasswordSaving,
         noDataSaving = state.settingsState.noDataSaving,
         askWhenDelete = state.settingsState.askWhenDelete,
         deleteDataOnLogout = state.settingsState.deleteDataOnLogout,

@@ -22,6 +22,7 @@ import 'package:biometric_storage/biometric_storage.dart';
 import 'package:dr/app_state.dart';
 import 'package:dr/biometric_app_lock.dart';
 import 'package:dr/container/settings_page.dart';
+import 'package:dr/i18n/app_localizations.dart';
 import 'package:dr/profile_picture.dart';
 import 'package:dr/ui/no_internet.dart';
 import 'package:dr/ui/user_profile.dart';
@@ -107,15 +108,30 @@ class _ProfileState extends State<Profile> {
       (widget.biometricAppLockEnabled || _biometricSupported);
 
   String get _biometricSubtitle {
+    final l10n = context.l10n;
     if (_biometricToggleInProgress) {
       return widget.biometricAppLockEnabled
-          ? "Biometrische Sperre wird deaktiviert..."
-          : "Biometrische Sperre wird aktiviert...";
+          ? l10n.text('profile.biometricDisabling')
+          : l10n.text('profile.biometricEnabling');
     }
     if (_biometricAvailability == null) {
-      return "Prüft, ob biometrische Entsperrung auf diesem Gerät verfügbar ist.";
+      return l10n.text('profile.biometricChecking');
     }
-    return biometricAvailabilityMessage(_biometricAvailability!);
+    return switch (_biometricAvailability!) {
+      CanAuthenticateResponse.success => l10n.text('profile.biometricAvailable'),
+      CanAuthenticateResponse.errorHwUnavailable =>
+        l10n.text('profile.biometricHwUnavailable'),
+      CanAuthenticateResponse.errorNoBiometricEnrolled =>
+        l10n.text('profile.biometricNoEnrolled'),
+      CanAuthenticateResponse.errorNoHardware =>
+        l10n.text('profile.biometricNoHardware'),
+      CanAuthenticateResponse.errorPasscodeNotSet =>
+        l10n.text('profile.biometricPasscodeMissing'),
+      CanAuthenticateResponse.statusUnknown =>
+        l10n.text('profile.biometricUnknown'),
+      CanAuthenticateResponse.unsupported =>
+        l10n.text('profile.biometricUnsupported'),
+    };
   }
 
   Future<void> _loadBiometricAvailability() async {
@@ -173,12 +189,14 @@ class _ProfileState extends State<Profile> {
     try {
       if (enabled) {
         await biometricAppLockController.enable();
+        if (!mounted) return;
         widget.setBiometricAppLockEnabled(true);
-        _showMessage("Biometrische Sperre aktiviert.");
+        _showMessage(context.t('profile.biometricEnabled'));
       } else {
         await biometricAppLockController.disable();
+        if (!mounted) return;
         widget.setBiometricAppLockEnabled(false);
-        _showMessage("Biometrische Sperre deaktiviert.");
+        _showMessage(context.t('profile.biometricDisabled'));
       }
     } on BiometricAppLockSetupException catch (error) {
       _showMessage(error.message);
@@ -202,7 +220,7 @@ class _ProfileState extends State<Profile> {
 
     return Scaffold(
       appBar: AppBar(
-        title: const Text("Profil"),
+        title: Text(context.t('profile.title')),
       ),
       body: profileState.name == null
           ? Center(
@@ -218,7 +236,9 @@ class _ProfileState extends State<Profile> {
                   child: UserProfile(
                     name: profileState.name!,
                     username: profileState.username!,
-                    role: profileState.roleName!,
+                    role: context.l10n.translateProfileRole(
+                      profileState.roleName!,
+                    ),
                     imageUrl: imageUrl,
                     onUploadProfilePicture: _handleProfilePictureUpload,
                     uploadInProgress: _uploadInProgress,
@@ -235,7 +255,7 @@ class _ProfileState extends State<Profile> {
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: <Widget>[
                           Text(
-                            "Codice fiscale / Steuernummer",
+                            context.t('profile.taxIdTitle'),
                             style: Theme.of(context).textTheme.titleMedium,
                           ),
                           const SizedBox(height: 12),
@@ -244,9 +264,9 @@ class _ProfileState extends State<Profile> {
                             readOnly: _hasCodiceFiscale,
                             enabled: !widget.noInternet,
                             textCapitalization: TextCapitalization.characters,
-                            decoration: const InputDecoration(
-                              border: OutlineInputBorder(),
-                              hintText: "Codice fiscale eingeben",
+                            decoration: InputDecoration(
+                              border: const OutlineInputBorder(),
+                              hintText: context.t('profile.taxIdHint'),
                             ),
                             onChanged: (_) {
                               if (!_hasCodiceFiscale) {
@@ -256,8 +276,8 @@ class _ProfileState extends State<Profile> {
                           ),
                           if (_hasCodiceFiscale) ...<Widget>[
                             const SizedBox(height: 12),
-                            const Text(
-                              "Steuernummer bereits vorhanden; diese kann nur vom Schulsekretariat geändert werden.",
+                            Text(
+                              context.t('profile.taxIdLocked'),
                             ),
                           ] else ...<Widget>[
                             const SizedBox(height: 12),
@@ -274,7 +294,7 @@ class _ProfileState extends State<Profile> {
                                       child: CircularProgressIndicator(
                                           strokeWidth: 2),
                                     )
-                                  : const Text("Steuernummer speichern"),
+                                  : Text(context.t('profile.saveTaxId')),
                             ),
                           ],
                         ],
@@ -283,28 +303,28 @@ class _ProfileState extends State<Profile> {
                   ),
                 ),
                 SwitchListTile.adaptive(
-                  title: const Text("Emails für Benachrichtigungen senden"),
+                  title: Text(context.t('profile.notificationEmails')),
                   value: profileState.sendNotificationEmails!,
                   onChanged: widget.noInternet
                       ? null
                       : widget.setSendNotificationEmails,
                 ),
                 ListTile(
-                  title: const Text("Email-Adresse ändern"),
+                  title: Text(context.t('profile.changeEmail')),
                   subtitle: Text(profileState.email!),
                   trailing: const Icon(Icons.chevron_right),
                   onTap: widget.changeEmail,
                   enabled: !widget.noInternet,
                 ),
                 ListTile(
-                  title: const Text("Passwort ändern"),
+                  title: Text(context.t('profile.changePassword')),
                   trailing: const Icon(Icons.chevron_right),
                   onTap: widget.changePass,
                   enabled: !widget.noInternet,
                 ),
                 const Divider(),
                 SwitchListTile.adaptive(
-                  title: const Text("Biometrische Sperre"),
+                  title: Text(context.t('profile.biometricLock')),
                   subtitle: Text(_biometricSubtitle),
                   value: widget.biometricAppLockEnabled,
                   onChanged: _canToggleBiometricLock

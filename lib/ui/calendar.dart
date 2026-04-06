@@ -20,6 +20,7 @@ import 'package:dr/container/calendar_container.dart';
 import 'package:dr/container/calendar_detail_container.dart';
 import 'package:dr/container/calendar_week_container.dart';
 import 'package:dr/data.dart';
+import 'package:dr/i18n/app_localizations.dart';
 import 'package:dr/main.dart';
 import 'package:dr/ui/favorite_subject_filter.dart';
 import 'package:dr/utc_date_time.dart';
@@ -236,7 +237,7 @@ class _CalendarState extends State<Calendar> with TickerProviderStateMixin {
               children: [
                 Scaffold(
                   appBar: ResponsiveAppBar(
-                    title: const Text("Kalender"),
+                    title: Text(context.t('calendar.title')),
                     actions: <Widget>[
                       if (toMonday(now) != widget.vm.currentMonday)
                         TextButton(
@@ -250,9 +251,7 @@ class _CalendarState extends State<Calendar> with TickerProviderStateMixin {
                                 curve: _animatePageCurve,
                                 duration: _animatePageDuration);
                           },
-                          child: const Text(
-                            "Aktuelle Woche",
-                          ),
+                          child: Text(context.t('calendar.currentWeek')),
                         ),
                     ],
                   ),
@@ -311,7 +310,7 @@ class _CalendarState extends State<Calendar> with TickerProviderStateMixin {
                                         "${_dateFormat.format(widget.vm.first!)} - ${_dateFormat.format(widget.vm.last!)}",
                                       )
                                     : widget.vm.noInternet
-                                        ? const Text("Wähle ein Datum")
+                                        ? Text(context.t('calendar.chooseDate'))
                                         : const CircularProgressIndicator(),
                               ),
                             ),
@@ -450,11 +449,11 @@ class EditNickBar extends StatelessWidget {
                       padding: const EdgeInsets.symmetric(horizontal: 8),
                       child: TextButton(
                         onPressed: onShowEditNicks,
-                        child: const Row(
+                        child: Row(
                           children: [
                             Padding(
                               padding: EdgeInsets.symmetric(horizontal: 8),
-                              child: Text("Kürzel bearbeiten"),
+                              child: Text(context.t('calendar.editNicknames')),
                             ),
                             Spacer(),
                           ],

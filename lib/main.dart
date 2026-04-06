@@ -21,7 +21,9 @@ import 'dart:io';
 
 import 'package:built_redux/built_redux.dart';
 import 'package:dr/actions/app_actions.dart';
+import 'package:dr/app_language_controller.dart';
 import 'package:dr/app_state.dart';
+import 'package:dr/app_subject_translation_controller.dart';
 import 'package:dr/biometric_app_lock.dart';
 import 'package:dr/container/change_email_container.dart';
 import 'package:dr/container/home_page.dart';
@@ -32,6 +34,8 @@ import 'package:dr/container/profile_container.dart';
 import 'package:dr/container/request_pass_reset_container.dart';
 import 'package:dr/container/settings_page.dart';
 import 'package:dr/desktop.dart';
+import 'package:dr/i18n/app_language.dart';
+import 'package:dr/i18n/app_localizations.dart';
 import 'package:dr/middleware/middleware.dart';
 import 'package:dr/notification_background_service.dart';
 import 'package:dr/reducer/reducer.dart';
@@ -65,9 +69,15 @@ Future<void> main() async {
   scaffoldKey = GlobalKey();
   scaffoldMessengerKey = GlobalKey();
   secureStorage = getFlutterSecureStorage();
+  await appLanguageController.load(
+    fallbackLocale: WidgetsBinding.instance.platformDispatcher.locale,
+  );
+  await appSubjectTranslationController.load();
   final store = Store<AppState, AppStateBuilder, AppActions>(
     appReducerBuilder.build(),
-    AppState(),
+    AppState(
+      (b) => b.settingsState.languageCode = appLanguageController.language.code,
+    ),
     actions,
     middleware: middleware(),
   );
@@ -157,18 +167,39 @@ class RegisterApp extends StatelessWidget {
             amoledMode: state.settingsState.amoledMode,
             biometricAppLockEnabled:
                 state.settingsState.biometricAppLockEnabled,
+            locale: AppLanguage.fromCode(state.settingsState.languageCode)
+                .locale,
           ),
           builder: (context, vm, actions) => AnimatedBuilder(
             animation: themeController,
             builder: (context, _) => MaterialApp(
               localizationsDelegates: const [
+                AppLocalizations.delegate,
                 GlobalCupertinoLocalizations.delegate,
                 GlobalMaterialLocalizations.delegate,
                 GlobalWidgetsLocalizations.delegate,
               ],
-              supportedLocales: const [
-                Locale("de"),
-              ],
+              supportedLocales: AppLocalizations.supportedLocales,
+              locale: vm.locale,
+              localeResolutionCallback: (locale, supportedLocales) {
+                if (locale == null) {
+                  return supportedLocales.first;
+                }
+                for (final supported in supportedLocales) {
+                  final sameLanguage =
+                      supported.languageCode == locale.languageCode;
+                  final sameCountry = supported.countryCode == locale.countryCode;
+                  if (sameLanguage && sameCountry) {
+                    return supported;
+                  }
+                }
+                for (final supported in supportedLocales) {
+                  if (supported.languageCode == locale.languageCode) {
+                    return supported;
+                  }
+                }
+                return supportedLocales.first;
+              },
               navigatorKey: navigatorKey,
               scaffoldMessengerKey: scaffoldMessengerKey,
               initialRoute: "/",
@@ -288,10 +319,12 @@ class _RegisterAppViewModel {
   const _RegisterAppViewModel({
     required this.amoledMode,
     required this.biometricAppLockEnabled,
+    required this.locale,
   });
 
   final bool amoledMode;
   final bool biometricAppLockEnabled;
+  final Locale locale;
 }
 
 /// Utility to show a global Snack Bar

@@ -23,6 +23,7 @@ final _settingsMiddleware =
       ..add(GradesActionsNames.loaded, _updateSubjectThemes)
       ..add(DashboardActionsNames.loaded, _updateSubjectThemes)
       ..add(CalendarActionsNames.loaded, _updateSubjectThemes)
+      ..add(SettingsActionsNames.setLanguage, _setLanguage)
       ..add(SettingsActionsNames.pushNotificationsEnabled,
           _setPushNotificationsEnabled);
 
@@ -51,4 +52,12 @@ Future<void> _setPushNotificationsEnabled(
       await api.actions.settingsActions.pushNotificationsEnabled(false);
     }
   }
+}
+
+Future<void> _setLanguage(
+    MiddlewareApi<AppState, AppStateBuilder, AppActions> api,
+    ActionHandler next,
+    Action<String> action) async {
+  await next(action);
+  await appLanguageController.setLanguage(AppLanguage.fromCode(action.payload));
 }

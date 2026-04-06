@@ -16,6 +16,7 @@
 // You should have received a copy of the GNU General Public License
 // along with digitales_register.  If not, see <http://www.gnu.org/licenses/>.
 
+import 'package:dr/i18n/app_localizations.dart';
 import 'package:dr/ui/profile_avatar.dart';
 import 'package:flutter/material.dart';
 
@@ -67,8 +68,8 @@ class UserProfile extends StatelessWidget {
                   : const Icon(Icons.upload_rounded),
               label: Text(
                 uploadInProgress
-                    ? "Profilbild wird hochgeladen..."
-                    : "Profilbild hochladen",
+                    ? context.t('profile.uploadingPicture')
+                    : context.t('profile.uploadPicture'),
               ),
             ),
           ],

@@ -20,6 +20,7 @@ import 'package:built_collection/built_collection.dart';
 import 'package:dr/app_state.dart';
 import 'package:dr/container/calendar_week_container.dart';
 import 'package:dr/data.dart';
+import 'package:dr/i18n/app_localizations.dart';
 import 'package:dr/main.dart';
 import 'package:dr/ui/last_fetched_overlay.dart';
 import 'package:dr/ui/no_internet.dart';
@@ -216,6 +217,7 @@ class CalendarDayWidget extends StatelessWidget {
   });
   @override
   Widget build(BuildContext context) {
+    final localeTag = Localizations.localeOf(context).toLanguageTag();
     final chunks = <List<CalendarHour>>[];
     for (final hour in calendarDay.hours) {
       if (chunks.isEmpty) {
@@ -231,9 +233,9 @@ class CalendarDayWidget extends StatelessWidget {
     }
     return Column(
       children: <Widget>[
-        Text(DateFormat("E", "de").format(calendarDay.date)),
+        Text(DateFormat("E", localeTag).format(calendarDay.date)),
         Text(
-          DateFormat("dd.MM", "de").format(calendarDay.date),
+          DateFormat("dd.MM", localeTag).format(calendarDay.date),
           style: DefaultTextStyle.of(context).style.copyWith(fontSize: 12),
         ),
         if (chunks.isNotEmpty) ...[
@@ -280,7 +282,7 @@ class CalendarDayWidget extends StatelessWidget {
                         ),
                         const SizedBox(height: 4),
                         Text(
-                          "Kein Fokusfach",
+                          context.t('settings.calendar.noFavoriteSubject'),
                           style: Theme.of(context).textTheme.titleMedium,
                           textAlign: TextAlign.center,
                         ),
@@ -303,7 +305,7 @@ class CalendarDayWidget extends StatelessWidget {
                       ),
                       const SizedBox(height: 4),
                       Text(
-                        "Frei",
+                        context.t('calendar.freeDay'),
                         style: Theme.of(context).textTheme.titleMedium,
                       ),
                     ],
@@ -363,7 +365,8 @@ class HourWidget extends StatelessWidget {
                   mainAxisAlignment: MainAxisAlignment.center,
                   children: [
                     Text(
-                      subjectNicks[hour.subject.toLowerCase()] ?? hour.subject,
+                      subjectNicks[hour.subject.toLowerCase()] ??
+                          context.l10n.translateSubjectName(hour.subject),
                       maxLines: 1,
                       softWrap: false,
                     ),

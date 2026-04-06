@@ -1,4 +1,5 @@
 // Copyright (C) 2021 Michael Debertol
+// Copyright (C) 2026 Tobias Bucci
 //
 // This file is part of digitales_register.
 //
@@ -15,6 +16,7 @@
 // You should have received a copy of the GNU General Public License
 // along with digitales_register.  If not, see <http://www.gnu.org/licenses/>.
 
+import 'package:dr/i18n/app_localizations.dart';
 import 'package:flutter/material.dart';
 
 /// Shows a close button
@@ -31,6 +33,7 @@ class InfoDialog extends StatelessWidget {
   });
   @override
   Widget build(BuildContext context) {
+    final l10n = context.l10n;
     return AlertDialog(
       titlePadding: EdgeInsets.zero,
       title: Row(
@@ -49,6 +52,7 @@ class InfoDialog extends StatelessWidget {
             padding: const EdgeInsets.only(top: 4, right: 4),
             child: IconButton(
               icon: const Icon(Icons.close),
+              tooltip: l10n.text('dialog.close'),
               onPressed: () {
                 Navigator.of(context).pop();
               },

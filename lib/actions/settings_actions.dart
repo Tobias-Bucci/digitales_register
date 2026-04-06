@@ -27,6 +27,7 @@ abstract class SettingsActions extends ReduxActions {
   factory SettingsActions() => _$SettingsActions();
   SettingsActions._();
 
+  abstract final ActionDispatcher<String> setLanguage;
   abstract final ActionDispatcher<bool> saveNoPass;
   abstract final ActionDispatcher<bool> saveNoData;
   abstract final ActionDispatcher<bool> deleteDataOnLogout;

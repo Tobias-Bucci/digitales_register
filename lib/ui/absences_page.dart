@@ -21,6 +21,7 @@ import 'package:dr/app_selectors.dart';
 import 'package:dr/app_state.dart';
 import 'package:dr/container/absence_group_container.dart';
 import 'package:dr/data.dart';
+import 'package:dr/i18n/app_localizations.dart';
 import 'package:dr/ui/absence.dart';
 import 'package:dr/ui/last_fetched_overlay.dart';
 import 'package:dr/ui/no_internet.dart';
@@ -46,8 +47,8 @@ class AbsencesPage extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: const ResponsiveAppBar(
-        title: Text("Absenzen"),
+      appBar: ResponsiveAppBar(
+        title: Text(context.t('absences.title')),
       ),
       body: LastFetchedOverlay(
         lastFetched: state.lastFetched,
@@ -85,7 +86,7 @@ class AbsencesBody extends StatelessWidget {
         ? state.absences.isEmpty && state.futureAbsences.isEmpty
             ? Center(
                 child: Text(
-                  "Noch keine Absenzen",
+                  context.t('absences.noneYet'),
                   style: Theme.of(context).textTheme.headlineMedium,
                   textAlign: TextAlign.center,
                 ),
@@ -112,7 +113,7 @@ class AbsencesBody extends StatelessWidget {
                                   }
                                 },
                           icon: const Icon(Icons.event_available_outlined),
-                          label: const Text('Voraus-Absenz'),
+                          label: Text(context.t('absences.addFutureAbsence')),
                         ),
                       ),
                     ),
@@ -122,7 +123,7 @@ class AbsencesBody extends StatelessWidget {
                     Padding(
                       padding: const EdgeInsets.all(8.0).copyWith(top: 16),
                       child: Text(
-                        "Im Voraus eingetragene Absenzen",
+                        context.t('absences.futureRecorded'),
                         style: Theme.of(context).textTheme.titleMedium,
                       ),
                     ),
@@ -139,7 +140,7 @@ class AbsencesBody extends StatelessWidget {
                     Padding(
                       padding: const EdgeInsets.all(8.0).copyWith(top: 16),
                       child: Text(
-                        "Absenzen",
+                        context.t('absences.listTitle'),
                         style: Theme.of(context).textTheme.titleMedium,
                       ),
                     ),
@@ -201,33 +202,35 @@ class _FutureAbsenceDialogState extends State<_FutureAbsenceDialog> {
 
   @override
   Widget build(BuildContext context) {
-    final dateFormat = DateFormat('yyyy-MM-dd');
+    final l10n = context.l10n;
+    final localeTag = Localizations.localeOf(context).toLanguageTag();
+    final dateFormat = DateFormat('yyyy-MM-dd', localeTag);
     return AlertDialog(
-      title: const Text('Voraus-Absenz eintragen'),
+      title: Text(l10n.text('absences.dialog.title')),
       content: SingleChildScrollView(
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
             TextField(
               controller: _reasonController,
-              decoration: const InputDecoration(
-                labelText: 'Begruendung *',
+              decoration: InputDecoration(
+                labelText: l10n.text('absences.dialog.reason'),
               ),
               onChanged: (_) => setState(() {}),
             ),
             const SizedBox(height: 8),
             TextField(
               controller: _signatureController,
-              decoration: const InputDecoration(
-                labelText: 'Bestaetigung (Name) *',
+              decoration: InputDecoration(
+                labelText: l10n.text('absences.dialog.signature'),
               ),
               onChanged: (_) => setState(() {}),
             ),
             const SizedBox(height: 12),
             ListTile(
               contentPadding: EdgeInsets.zero,
-              title: const Text('Startdatum'),
-              subtitle: Text(DateFormat('dd.MM.yyyy').format(_startDate)),
+              title: Text(l10n.text('absences.dialog.startDate')),
+              subtitle: Text(DateFormat('dd.MM.yyyy', localeTag).format(_startDate)),
               trailing: const Icon(Icons.calendar_today),
               onTap: () async {
                 final picked = await showDatePicker(
@@ -257,8 +260,8 @@ class _FutureAbsenceDialogState extends State<_FutureAbsenceDialog> {
             ),
             ListTile(
               contentPadding: EdgeInsets.zero,
-              title: const Text('Enddatum'),
-              subtitle: Text(DateFormat('dd.MM.yyyy').format(_endDate)),
+              title: Text(l10n.text('absences.dialog.endDate')),
+              subtitle: Text(DateFormat('dd.MM.yyyy', localeTag).format(_endDate)),
               trailing: const Icon(Icons.calendar_today),
               onTap: () async {
                 final picked = await showDatePicker(
@@ -288,7 +291,9 @@ class _FutureAbsenceDialogState extends State<_FutureAbsenceDialog> {
                 Expanded(
                   child: DropdownButtonFormField<int>(
                     initialValue: _startTime,
-                    decoration: const InputDecoration(labelText: 'Startstunde'),
+                    decoration: InputDecoration(
+                      labelText: l10n.text('absences.dialog.startHour'),
+                    ),
                     items: List.generate(
                       20,
                       (i) => DropdownMenuItem(
@@ -307,7 +312,9 @@ class _FutureAbsenceDialogState extends State<_FutureAbsenceDialog> {
                 Expanded(
                   child: DropdownButtonFormField<int>(
                     initialValue: _endTime,
-                    decoration: const InputDecoration(labelText: 'Endstunde'),
+                    decoration: InputDecoration(
+                      labelText: l10n.text('absences.dialog.endHour'),
+                    ),
                     items: List.generate(
                       20,
                       (i) => DropdownMenuItem(
@@ -328,7 +335,7 @@ class _FutureAbsenceDialogState extends State<_FutureAbsenceDialog> {
               Padding(
                 padding: const EdgeInsets.only(top: 10),
                 child: Text(
-                  'Start muss vor oder gleich Ende sein.',
+                  l10n.text('absences.dialog.invalidRange'),
                   style: TextStyle(color: Theme.of(context).colorScheme.error),
                 ),
               ),
@@ -338,7 +345,7 @@ class _FutureAbsenceDialogState extends State<_FutureAbsenceDialog> {
       actions: [
         TextButton(
           onPressed: () => Navigator.of(context).pop(),
-          child: const Text('Abbrechen'),
+          child: Text(l10n.text('common.cancel')),
         ),
         ElevatedButton(
           onPressed: _validInput && _validRange
@@ -358,7 +365,7 @@ class _FutureAbsenceDialogState extends State<_FutureAbsenceDialog> {
                   Navigator.of(context).pop(payload);
                 }
               : null,
-          child: const Text('Speichern'),
+          child: Text(l10n.text('button.save')),
         ),
       ],
     );
@@ -387,43 +394,46 @@ class _AbsencesStatisticWidgetState extends State<AbsencesStatisticWidget> {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = context.l10n;
     final colorScheme = Theme.of(context).colorScheme;
     final metrics = <_AbsenceMetricData>[
       if (widget.vm.statistic.counter != null)
         _AbsenceMetricData(
-          label: 'Absenzen',
+          label: l10n.text('absences.metric.absences'),
           value: widget.vm.statistic.counter.toString(),
           icon: Icons.event_busy_outlined,
           accent: colorScheme.primary,
         ),
       if (widget.vm.statistic.notJustified != null)
         _AbsenceMetricData(
-          label: 'Nicht entschuldigt',
+          label: l10n.text('absences.metric.notJustified'),
           value: widget.vm.statistic.notJustified.toString(),
           icon: Icons.error_outline,
           accent: colorScheme.error,
         ),
       if (widget.vm.statistic.delayed != null)
         _AbsenceMetricData(
-          label: 'Verspätungen',
+          label: l10n.text('absences.metric.delays'),
           value: widget.vm.statistic.delayed.toString(),
           icon: Icons.schedule_outlined,
           accent: colorScheme.tertiary,
         ),
       if (widget.vm.statistic.percentage != null)
         _AbsenceMetricData(
-          label: 'Abwesenheit',
+          label: l10n.text('absences.metric.absenceRate'),
           value: '${widget.vm.statistic.percentage} %',
           icon: Icons.pie_chart_outline,
           accent: colorScheme.secondary,
-          actionLabel: _showPieChart ? 'Ausblenden' : 'Kreisdiagramm',
+          actionLabel: _showPieChart
+              ? l10n.text('absences.chart.hide')
+              : l10n.text('absences.chart.pie'),
           onAction: _canShowPieChart
               ? () => setState(() => _showPieChart = !_showPieChart)
               : null,
         ),
       if (widget.vm.statistic.counterForSchool != null)
         _AbsenceMetricData(
-          label: 'Im Auftrag der Schule',
+          label: l10n.text('absences.metric.forSchool'),
           value: widget.vm.statistic.counterForSchool.toString(),
           icon: Icons.school_outlined,
           accent: colorScheme.tertiary,
@@ -433,19 +443,19 @@ class _AbsencesStatisticWidgetState extends State<AbsencesStatisticWidget> {
     final statuses = <_AbsenceStatusData>[
       if (widget.vm.statistic.justified != null)
         _AbsenceStatusData(
-          label: 'Entschuldigt',
+          label: l10n.text('absences.status.justified'),
           value: widget.vm.statistic.justified!,
           color: colorScheme.primary,
         ),
       if (widget.vm.statistic.notJustified != null)
         _AbsenceStatusData(
-          label: 'Nicht entschuldigt',
+          label: l10n.text('absences.status.notJustified'),
           value: widget.vm.statistic.notJustified!,
           color: colorScheme.error,
         ),
       if (widget.vm.statistic.counterForSchool != null)
         _AbsenceStatusData(
-          label: 'Schule',
+          label: l10n.text('absences.status.school'),
           value: widget.vm.statistic.counterForSchool!,
           color: colorScheme.tertiary,
         ),
@@ -465,7 +475,7 @@ class _AbsencesStatisticWidgetState extends State<AbsencesStatisticWidget> {
                 children: [
                   Expanded(
                     child: Text(
-                      'Statistik',
+                      l10n.text('absences.statistics'),
                       style: Theme.of(context).textTheme.titleMedium,
                     ),
                   ),
@@ -628,6 +638,7 @@ class _AbsenceStatusCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = context.l10n;
     final theme = Theme.of(context);
     final total = statuses.fold<int>(0, (sum, status) => sum + status.value);
 
@@ -639,13 +650,13 @@ class _AbsenceStatusCard extends StatelessWidget {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Text(
-              'Status',
+              l10n.text('absences.status'),
               style: theme.textTheme.titleMedium,
             ),
             const SizedBox(height: 12),
             if (statuses.isEmpty)
               Text(
-                'Keine Statusdaten verfuegbar.',
+                l10n.text('absences.status.none'),
                 style: theme.textTheme.bodyMedium,
               )
             else ...[
@@ -672,7 +683,7 @@ class _AbsenceStatusCard extends StatelessWidget {
                 )
               else
                 Text(
-                  'Noch keine Statuswerte vorhanden.',
+                  l10n.text('absences.status.noneValues'),
                   style: theme.textTheme.bodyMedium,
                 ),
               const SizedBox(height: 12),
@@ -755,6 +766,7 @@ class _AbsenceHistoryCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = context.l10n;
     final locale = Localizations.localeOf(context);
     final theme = Theme.of(context);
     final darkMode = theme.brightness == Brightness.dark;
@@ -785,12 +797,12 @@ class _AbsenceHistoryCard extends StatelessWidget {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Text(
-              'Verlauf',
+              l10n.text('absences.history'),
               style: theme.textTheme.titleMedium,
             ),
             const SizedBox(height: 4),
             Text(
-              'Verpasste Unterrichtseinheiten pro Monat',
+              l10n.text('absences.history.subtitle'),
               style: theme.textTheme.bodyMedium?.copyWith(
                 color: theme.colorScheme.onSurfaceVariant,
               ),
@@ -864,7 +876,7 @@ class _AbsenceHistoryCard extends StatelessWidget {
                     )
                   : Center(
                       child: Text(
-                        'Noch keine vergangenen Absenzen',
+                        l10n.text('absences.history.none'),
                         style: theme.textTheme.bodyLarge,
                         textAlign: TextAlign.center,
                       ),
@@ -897,7 +909,10 @@ class _AbsenceHistoryCard extends StatelessWidget {
               ),
               if (selectedHistory != null) const SizedBox(height: 8),
               Text(
-                'Historische Summe: ${_formatLessons(totalLessons)}',
+                l10n.text(
+                  'absences.history.total',
+                  args: {'value': _formatLessons(totalLessons)},
+                ),
                 style: theme.textTheme.bodyMedium?.copyWith(
                   color: theme.colorScheme.onSurfaceVariant,
                 ),
@@ -924,6 +939,7 @@ class _AbsencePercentagePieCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = context.l10n;
     final theme = Theme.of(context);
     final isDark = theme.brightness == Brightness.dark;
     final percentage =
@@ -932,12 +948,12 @@ class _AbsencePercentagePieCard extends StatelessWidget {
     final present = 100.0 - absent;
     final data = [
       _PieSliceData(
-        label: 'Abwesend',
+        label: l10n.text('absences.pie.absent'),
         value: absent,
         color: theme.colorScheme.secondary,
       ),
       _PieSliceData(
-        label: 'Anwesend',
+        label: l10n.text('absences.pie.present'),
         value: present,
         color: theme.colorScheme.surfaceContainerHighest,
       ),
@@ -951,7 +967,7 @@ class _AbsencePercentagePieCard extends StatelessWidget {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Text(
-              'Abwesenheit im Verhaeltnis',
+              l10n.text('absences.pie.title'),
               style: theme.textTheme.titleMedium,
             ),
             const SizedBox(height: 12),

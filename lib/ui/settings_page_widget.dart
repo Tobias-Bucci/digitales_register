@@ -20,7 +20,10 @@ import 'dart:io';
 
 import 'package:deleteable_tile/deleteable_tile.dart';
 import 'package:dr/app_state.dart';
+import 'package:dr/app_subject_translation_controller.dart';
 import 'package:dr/container/settings_page.dart';
+import 'package:dr/i18n/app_language.dart';
+import 'package:dr/i18n/app_localizations.dart';
 import 'package:dr/theme_controller.dart';
 import 'package:dr/ui/autocomplete_options.dart';
 import 'package:dr/ui/dialog.dart';
@@ -51,6 +54,7 @@ class SettingsPageWidget extends StatefulWidget {
   final OnSettingChanged<bool> onSetDashboardMarkNewOrChangedEntries;
   final OnSettingChanged<bool> onSetDashboardDeduplicateEntries;
   final OnSettingChanged<AppThemePreference> onSetThemePreference;
+  final OnSettingChanged<AppLanguage> onSetLanguage;
   final OnSettingChanged<bool> onSetPlatformOverride;
   final OnSettingChanged<bool> onSetDashboardColorBorders;
   final OnSettingChanged<bool> onSetCalenderColorBackground;
@@ -79,6 +83,7 @@ class SettingsPageWidget extends StatefulWidget {
     required this.onSetDashboardMarkNewOrChangedEntries,
     required this.onSetDashboardDeduplicateEntries,
     required this.onSetThemePreference,
+    required this.onSetLanguage,
     required this.onSetSubjectNicks,
     required this.vm,
     required this.onSetPlatformOverride,
@@ -102,6 +107,7 @@ class SettingsPageWidget extends StatefulWidget {
 
 class _SettingsPageWidgetState extends State<SettingsPageWidget> {
   final controller = AutoScrollController(suggestedRowHeight: 250);
+  late bool _translateSubjectsEnabled;
 
   List<String> get subjectsWithoutNick => widget.vm.allSubjects
       .where((element) => !widget.vm.subjectNicks.keys.contains(element))
@@ -118,6 +124,7 @@ class _SettingsPageWidgetState extends State<SettingsPageWidget> {
 
   @override
   void initState() {
+    _translateSubjectsEnabled = appSubjectTranslationController.enabled;
     if (widget.vm.showSubjectNicks) {
       WidgetsBinding.instance.addPostFrameCallback((_) async {
         await controller.scrollToIndex(4,
@@ -160,6 +167,7 @@ class _SettingsPageWidgetState extends State<SettingsPageWidget> {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = context.l10n;
     if (widget.vm.showSubjectNicks) {
       WidgetsBinding.instance.addPostFrameCallback((_) async {
         await controller.scrollToIndex(4,
@@ -173,8 +181,8 @@ class _SettingsPageWidgetState extends State<SettingsPageWidget> {
       AppThemePreference.system => _Theme.followDevice,
     };
     return Scaffold(
-      appBar: const ResponsiveAppBar(
-        title: Text("Einstellungen"),
+      appBar: ResponsiveAppBar(
+        title: Text(l10n.text('settings.title')),
       ),
       body: ListView(
         controller: controller,
@@ -183,7 +191,7 @@ class _SettingsPageWidgetState extends State<SettingsPageWidget> {
             const SizedBox(height: 8),
             ListTile(
               title: Text(
-                "Profil",
+                l10n.text('settings.section.profile'),
                 style: Theme.of(context).textTheme.headlineSmall,
               ),
               trailing: const Icon(Icons.chevron_right),
@@ -197,29 +205,29 @@ class _SettingsPageWidgetState extends State<SettingsPageWidget> {
             key: const ObjectKey(0),
             child: ListTile(
               title: Text(
-                "Anmeldung",
+                l10n.text('settings.section.auth'),
                 style: Theme.of(context).textTheme.headlineSmall,
               ),
             ),
           ),
           SwitchListTile.adaptive(
-            title: const Text("Angemeldet bleiben"),
-            subtitle: const Text("Deine Zugangsdaten werden lokal gespeichert"),
+            title: Text(l10n.text('settings.keepLoggedIn.title')),
+            subtitle: Text(l10n.text('settings.keepLoggedIn.subtitle')),
             onChanged: (bool value) {
               widget.onSetNoPassSaving(!value);
             },
             value: !widget.vm.noPassSaving,
           ),
           SwitchListTile.adaptive(
-            title: const Text("Daten lokal speichern"),
-            subtitle: const Text('Sehen, wann etwas eingetragen wurde'),
+            title: Text(l10n.text('settings.storeData.title')),
+            subtitle: Text(l10n.text('settings.storeData.subtitle')),
             onChanged: (bool value) {
               widget.onSetNoDataSaving(!value);
             },
             value: !widget.vm.noDataSaving,
           ),
           SwitchListTile.adaptive(
-            title: const Text("Daten beim Ausloggen löschen"),
+            title: Text(l10n.text('settings.deleteDataOnLogout.title')),
             onChanged: !widget.vm.noPassSaving && !widget.vm.noDataSaving
                 ? (bool value) {
                     widget.onSetDeleteDataOnLogout(value);
@@ -234,7 +242,7 @@ class _SettingsPageWidgetState extends State<SettingsPageWidget> {
             key: const ObjectKey(1),
             child: ListTile(
               title: Text(
-                "Aussehen",
+                l10n.text('settings.section.appearance'),
                 style: Theme.of(context).textTheme.headlineSmall,
               ),
             ),
@@ -242,30 +250,79 @@ class _SettingsPageWidgetState extends State<SettingsPageWidget> {
           RadioGroup<_Theme>(
             groupValue: currentTheme,
             onChanged: _selectTheme,
-            child: const Column(
+            child: Column(
               children: [
                 RadioListTile(
                   value: _Theme.followDevice,
-                  title: Text("Geräte-Theme folgen"),
+                  title: Text(l10n.text('settings.theme.followDevice')),
                 ),
                 RadioListTile(
                   value: _Theme.light,
-                  title: Text("Hell"),
+                  title: Text(l10n.text('settings.theme.light')),
                 ),
                 RadioListTile(
                   value: _Theme.dark,
-                  title: Text("Dunkel"),
+                  title: Text(l10n.text('settings.theme.dark')),
                 ),
                 RadioListTile(
                   value: _Theme.amoled,
-                  title: Text("Amoled"),
+                  title: Text(l10n.text('settings.theme.amoled')),
                 ),
               ],
             ),
           ),
           ListTile(
-            title: const Text("Kontrastfarbe"),
-            subtitle: const Text("Wird appweit als Akzentfarbe verwendet"),
+            title: Text(l10n.text('settings.language.label')),
+            trailing: SizedBox(
+              width: 160,
+              child: DropdownButton<AppLanguage>(
+                isExpanded: true,
+                value: widget.vm.language,
+                onChanged: (language) {
+                  if (language != null) {
+                    widget.onSetLanguage(language);
+                  }
+                },
+                items: [
+                  DropdownMenuItem(
+                    value: AppLanguage.de,
+                    child: Text(l10n.text('settings.language.de')),
+                  ),
+                  DropdownMenuItem(
+                    value: AppLanguage.it,
+                    child: Text(l10n.text('settings.language.it')),
+                  ),
+                  DropdownMenuItem(
+                    value: AppLanguage.lld,
+                    child: Text(l10n.text('settings.language.lld')),
+                  ),
+                  DropdownMenuItem(
+                    value: AppLanguage.en,
+                    child: Text(l10n.text('settings.language.en')),
+                  ),
+                ],
+              ),
+            ),
+          ),
+          SwitchListTile.adaptive(
+            title: Text(l10n.text('settings.subjectTranslation.title')),
+            subtitle: Text(l10n.text('settings.subjectTranslation.subtitle')),
+            value: _translateSubjectsEnabled,
+            onChanged: (enabled) async {
+              setState(() {
+                _translateSubjectsEnabled = enabled;
+              });
+              await appSubjectTranslationController.setEnabled(enabled);
+              if (enabled) {
+                widget.onSetSubjectNicks(const {});
+              } else {
+                widget.onSetSubjectNicks(Map.of(defaultSubjectNicks));
+              }
+            },
+          ),
+          ListTile(
+            title: Text(l10n.text('settings.contrastColor.title')),
+            subtitle: Text(l10n.text('settings.contrastColor.subtitle')),
             trailing: Container(
               width: 28,
               height: 28,
@@ -295,7 +352,7 @@ class _SettingsPageWidgetState extends State<SettingsPageWidget> {
             height: 0,
           ),
           ExpansionTile(
-            title: const Text("Fächerfarben"),
+            title: Text(l10n.text('settings.subjectColors.title')),
             children: [
               for (final theme in widget.vm.subjectThemes.entries)
                 ListTile(
@@ -331,23 +388,19 @@ class _SettingsPageWidgetState extends State<SettingsPageWidget> {
             ],
           ),
           SwitchListTile.adaptive(
-            title: const Text(
-              "Hausaufgaben mit diesen Farben umrahmen",
-            ),
+            title: Text(l10n.text('settings.subjectColors.borderHomework')),
             value: widget.vm.dashboardColorBorders,
             onChanged: widget.onSetDashboardColorBorders,
           ),
           SwitchListTile.adaptive(
-            title: const Text(
-              "Stunden im Kalender mit diesen Farben färben",
+            title: Text(
+              l10n.text('settings.subjectColors.calendarBackground'),
             ),
             value: widget.vm.calendarColorBackground,
             onChanged: widget.onSetCalenderColorBackground,
           ),
           SwitchListTile.adaptive(
-            title: const Text(
-              "Tests immer rot umrahmen",
-            ),
+            title: Text(l10n.text('settings.subjectColors.testsRed')),
             value: widget.vm.dashboardColorTestsInRed,
             onChanged: widget.onSetDashboardColorTestsInRed,
           ),
@@ -358,35 +411,33 @@ class _SettingsPageWidgetState extends State<SettingsPageWidget> {
             key: const ObjectKey(2),
             child: ListTile(
               title: Text(
-                "Merkheft",
+                l10n.text('settings.section.dashboard'),
                 style: Theme.of(context).textTheme.headlineSmall,
               ),
             ),
           ),
           SwitchListTile.adaptive(
-            title: const Text("Push Notifications aktivieren"),
-            subtitle: const Text(
-              "Prueft ungelesene Notifications im Vordergrund alle 10 Minuten und im Android-Hintergrund ca. alle 15 Minuten.",
-            ),
+            title: Text(l10n.text('settings.pushNotifications.title')),
+            subtitle: Text(l10n.text('settings.pushNotifications.subtitle')),
             onChanged: widget.onSetPushNotificationsEnabled,
             value: widget.vm.pushNotificationsEnabled,
           ),
           SwitchListTile.adaptive(
-            title: const Text("Neue oder geänderte Einträge markieren"),
+            title: Text(l10n.text('settings.dashboard.markChanged')),
             onChanged: (bool value) {
               widget.onSetDashboardMarkNewOrChangedEntries(value);
             },
             value: widget.vm.dashboardMarkNewOrChangedEntries,
           ),
           SwitchListTile.adaptive(
-            title: const Text("Doppelte Einträge ignorieren"),
+            title: Text(l10n.text('settings.dashboard.deduplicate')),
             onChanged: (bool value) {
               widget.onSetDashboardDeduplicateEntries(value);
             },
             value: widget.vm.dashboardDeduplicateEntries,
           ),
           SwitchListTile.adaptive(
-            title: const Text("Beim Löschen von Erinnerungen fragen"),
+            title: Text(l10n.text('settings.dashboard.askDeleteReminder')),
             onChanged: (bool value) {
               widget.onSetAskWhenDelete(value);
             },
@@ -399,27 +450,27 @@ class _SettingsPageWidgetState extends State<SettingsPageWidget> {
             key: const ObjectKey(3),
             child: ListTile(
               title: Text(
-                "Noten",
+                l10n.text('settings.section.grades'),
                 style: Theme.of(context).textTheme.headlineSmall,
               ),
             ),
           ),
           SwitchListTile.adaptive(
-            title: const Text("Noten in einem Diagramm darstellen"),
+            title: Text(l10n.text('settings.grades.diagram')),
             onChanged: (bool value) {
               widget.onSetShowGradesDiagram(value);
             },
             value: widget.vm.showGradesDiagram,
           ),
           SwitchListTile.adaptive(
-            title: const Text('Durchschnitt aller Fächer anzeigen'),
+            title: Text(l10n.text('settings.grades.averageAllSubjects')),
             onChanged: (bool value) {
               widget.onSetShowAllSubjectsAverage(value);
             },
             value: widget.vm.showAllSubjectsAverage,
           ),
           ListTile(
-            title: const Text("Fächer aus dem Notendurchschnitt ausschließen"),
+            title: Text(l10n.text('settings.grades.excludeAverage')),
             trailing: IconButton(
               icon: const Icon(Icons.add),
               onPressed: () async {
@@ -427,6 +478,7 @@ class _SettingsPageWidgetState extends State<SettingsPageWidget> {
                   context: context,
                   builder: (context) => AddSubject(
                     availableSubjects: notYetIgnoredForAverageSubjects,
+                    title: l10n.text('settings.addSubject'),
                   ),
                 );
                 if (newSubject != null) {
@@ -441,12 +493,12 @@ class _SettingsPageWidgetState extends State<SettingsPageWidget> {
             crossFadeState: widget.vm.ignoreForGradesAverage.isEmpty
                 ? CrossFadeState.showFirst
                 : CrossFadeState.showSecond,
-            firstChild: const Padding(
-              padding: EdgeInsets.only(left: 16),
+            firstChild: Padding(
+              padding: const EdgeInsets.only(left: 16),
               child: ListTile(
                 title: Text(
-                  "Kein Fach ausgeschlossen",
-                  style: TextStyle(color: Colors.grey),
+                  l10n.text('settings.grades.noExcludedSubject'),
+                  style: const TextStyle(color: Colors.grey),
                 ),
               ),
             ),
@@ -490,19 +542,28 @@ class _SettingsPageWidgetState extends State<SettingsPageWidget> {
             key: const ObjectKey(4),
             child: ListTile(
               title: Text(
-                "Kalender",
+                l10n.text('settings.section.calendar'),
                 style: Theme.of(context).textTheme.headlineSmall,
               ),
             ),
           ),
           ExpansionTile(
             initiallyExpanded: widget.vm.showSubjectNicks,
-            title: const Text("Fächerkürzel"),
+            title: Text(l10n.text('settings.calendar.subjectNicks')),
             children: List.generate(
               widget.vm.subjectNicks.length + 1,
               (i) {
                 if (i == 0) {
                   return ListTile(
+                    title: TextButton.icon(
+                      onPressed: () {
+                        widget.onSetSubjectNicks(Map.of(defaultSubjectNicks));
+                      },
+                      icon: const Icon(Icons.restore),
+                      label: Text(
+                        l10n.text('settings.calendar.subjectNicksReset'),
+                      ),
+                    ),
                     trailing: IconButton(
                       icon: const Icon(Icons.add),
                       onPressed: () async {
@@ -570,9 +631,10 @@ class _SettingsPageWidgetState extends State<SettingsPageWidget> {
             ),
           ),
           SwitchListTile.adaptive(
-            title: const Text("Hinweis zum Bearbeiten von Kürzeln"),
-            subtitle: const Text(
-                "Wird angezeigt, wenn für ein Fach kein Kürzel vorhanden ist"),
+            title: Text(l10n.text('settings.calendar.subjectNicksHint')),
+            subtitle: Text(
+              l10n.text('settings.calendar.subjectNicksHintBody'),
+            ),
             onChanged: (bool value) {
               widget.onSetShowCalendarEditNicksBar(value);
             },
@@ -585,16 +647,13 @@ class _SettingsPageWidgetState extends State<SettingsPageWidget> {
             key: const ObjectKey(5),
             child: ListTile(
               title: Text(
-                "Fokusfächer",
+                l10n.text('settings.calendar.favoriteSubjects'),
                 style: Theme.of(context).textTheme.headlineSmall,
               ),
             ),
           ),
           ListTile(
-            title: const Text("Fokusfächer verwalten"),
-            subtitle: const Text(
-              "Schnellfilter in Dashboard, Kalender und Noten",
-            ),
+            title: Text(l10n.text('settings.calendar.favoriteSubjects')),
             trailing: IconButton(
               icon: const Icon(Icons.add),
               onPressed: notYetFavoriteSubjects.isEmpty
@@ -604,7 +663,7 @@ class _SettingsPageWidgetState extends State<SettingsPageWidget> {
                         context: context,
                         builder: (context) => AddSubject(
                           availableSubjects: notYetFavoriteSubjects,
-                          title: "Fokusfach hinzufügen",
+                          title: l10n.text('settings.calendar.favoriteSubjects'),
                           requireSuggestionMatch: true,
                         ),
                       );
@@ -625,12 +684,12 @@ class _SettingsPageWidgetState extends State<SettingsPageWidget> {
             crossFadeState: widget.vm.favoriteSubjects.isEmpty
                 ? CrossFadeState.showFirst
                 : CrossFadeState.showSecond,
-            firstChild: const Padding(
-              padding: EdgeInsets.only(left: 16),
+            firstChild: Padding(
+              padding: const EdgeInsets.only(left: 16),
               child: ListTile(
                 title: Text(
-                  "Kein Fokusfach ausgewählt",
-                  style: TextStyle(color: Colors.grey),
+                  l10n.text('settings.calendar.noFavoriteSubject'),
+                  style: const TextStyle(color: Colors.grey),
                 ),
               ),
             ),
@@ -668,22 +727,22 @@ class _SettingsPageWidgetState extends State<SettingsPageWidget> {
             key: const ObjectKey(6),
             child: ListTile(
               title: Text(
-                "Erweitert",
+                l10n.text('settings.section.advanced'),
                 style: Theme.of(context).textTheme.headlineSmall,
               ),
             ),
           ),
           if (Platform.isAndroid)
             SwitchListTile.adaptive(
-              title: const Text("IOS Mode"),
-              subtitle: const Text("Imitiere das Aussehen einer iOS-App"),
+              title: Text(l10n.text('settings.advanced.iosMode')),
+              subtitle: Text(l10n.text('settings.advanced.iosMode.subtitle')),
               onChanged: (bool value) {
                 widget.onSetPlatformOverride(value);
               },
               value: widget.platformOverride,
             ),
           ListTile(
-            title: const Text("Netzwerkprotokoll"),
+            title: Text(l10n.text('settings.advanced.networkProtocol')),
             onTap: () {
               Navigator.push(
                 context,
@@ -698,9 +757,7 @@ class _SettingsPageWidgetState extends State<SettingsPageWidget> {
           if (!Platform.isMacOS)
             ListTile(
               leading: const Icon(Icons.monetization_on),
-              title: const Text(
-                "Unterstütze uns jetzt!",
-              ),
+              title: Text(l10n.text('settings.advanced.supportUs')),
               onTap: () {
                 Navigator.of(context).push(
                     MaterialPageRoute<void>(builder: (context) => Donate()));
@@ -708,7 +765,7 @@ class _SettingsPageWidgetState extends State<SettingsPageWidget> {
             ),
           ListTile(
             leading: const Icon(Icons.feedback),
-            title: const Text("Feedback geben"),
+            title: Text(l10n.text('settings.advanced.feedback')),
             trailing: const Icon(Icons.open_in_new),
             onTap: () async {
               await launchUrl(
@@ -721,7 +778,7 @@ class _SettingsPageWidgetState extends State<SettingsPageWidget> {
           ListTile(
             leading: const Icon(Icons.code),
             trailing: const Icon(Icons.open_in_new),
-            title: const Text("Zum Quellcode (Fork)"),
+            title: Text(l10n.text('settings.advanced.sourceFork')),
             onTap: () => launchUrl(
               Uri.parse("https://github.com/Tobias-Bucci/digitales_register"),
             ),
@@ -729,7 +786,7 @@ class _SettingsPageWidgetState extends State<SettingsPageWidget> {
           ListTile(
             leading: const Icon(Icons.code),
             trailing: const Icon(Icons.open_in_new),
-            title: const Text("Zum originalem Quellcode"),
+            title: Text(l10n.text('settings.advanced.sourceOriginal')),
             onTap: () => launchUrl(
               Uri.parse("https://github.com/Tobias-Bucci/digitales_register"),
             ),
@@ -737,19 +794,18 @@ class _SettingsPageWidgetState extends State<SettingsPageWidget> {
           ListTile(
             leading: const Icon(Icons.info_outline),
             trailing: const Icon(Icons.chevron_right),
-            title: const Text("Über diese App"),
+            title: Text(l10n.text('settings.advanced.about')),
             onTap: () => _showAboutAppDialog(context),
           ),
           ListTile(
             leading: const Icon(Icons.gavel_outlined),
             trailing: const Icon(Icons.chevron_right),
-            title: const Text("Lizenzen"),
+            title: Text(l10n.text('settings.advanced.licenses')),
             onTap: () {
               showLicensePage(
                 context: context,
-                applicationName:
-                    "Digitales Register (Client) - Tobias Bucci Fork",
-                applicationVersion: "v1.1",
+                applicationName: l10n.text('settings.about.title'),
+                applicationVersion: l10n.text('settings.about.version'),
               );
             },
           ),
@@ -759,6 +815,7 @@ class _SettingsPageWidgetState extends State<SettingsPageWidget> {
   }
 
   Future<void> _showAboutAppDialog(BuildContext context) async {
+    final l10n = context.l10n;
     final theme = Theme.of(context);
     final isDark = theme.brightness == Brightness.dark;
     final accent = theme.colorScheme.primary;
@@ -786,7 +843,7 @@ class _SettingsPageWidgetState extends State<SettingsPageWidget> {
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
                   Text(
-                    "Digitales Register",
+                    l10n.text('settings.about.appName'),
                     textAlign: TextAlign.center,
                     style: theme.textTheme.headlineSmall?.copyWith(
                       fontWeight: FontWeight.w700,
@@ -819,30 +876,21 @@ class _SettingsPageWidgetState extends State<SettingsPageWidget> {
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
                           Text(
-                            "Digitales Register (Client) - Tobias Bucci Fork",
+                            l10n.text('settings.about.title'),
                             style: theme.textTheme.titleMedium?.copyWith(
                               fontWeight: FontWeight.w700,
                             ),
                           ),
                           const SizedBox(height: 4),
-                          const Text("v1.1"),
+                          Text(l10n.text('settings.about.version')),
                           const SizedBox(height: 12),
-                          const Text(
-                            "Original Copyright: Michael Debertol und Simon Wachtler 2019-2022\n"
-                            "Diese Version Copyright: Tobias Bucci 2026",
-                          ),
+                          Text(l10n.text('settings.about.copyright')),
                           const SizedBox(height: 12),
-                          const Text(
-                            "Ein Client für das Digitale Register. Diese Version wurde von Tobias Bucci angepasst und weiterentwickelt.",
-                          ),
+                          Text(l10n.text('settings.about.description')),
                           const SizedBox(height: 12),
-                          const Text(
-                            "This is free software, and you are welcome to redistribute it under certain conditions (GPLv3).",
-                          ),
+                          Text(l10n.text('settings.about.gpl')),
                           const SizedBox(height: 4),
-                          const Text(
-                            "This program comes with ABSOLUTELY NO WARRANTY.",
-                          ),
+                          Text(l10n.text('settings.about.warranty')),
                           const SizedBox(height: 8),
                           InkWell(
                             onTap: () {
@@ -854,7 +902,7 @@ class _SettingsPageWidgetState extends State<SettingsPageWidget> {
                               );
                             },
                             child: Text(
-                              "See the GNU General Public License for more details.",
+                              l10n.text('settings.about.gnuDetails'),
                               style: TextStyle(color: accent),
                             ),
                           ),
@@ -869,7 +917,7 @@ class _SettingsPageWidgetState extends State<SettingsPageWidget> {
                       foregroundColor: theme.colorScheme.onSurface,
                     ),
                     onPressed: () => Navigator.of(context).pop(),
-                    child: const Text("Schließen"),
+                    child: Text(l10n.text('common.close')),
                   ),
                 ],
               ),
@@ -936,18 +984,23 @@ class _EditSubjectsNicksState extends State<EditSubjectsNicks> {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = context.l10n;
     return InfoDialog(
-      title: Text("Kürzel ${forNewNick ? "hinzufügen" : "bearbeiten"}"),
+      title: Text(
+        forNewNick
+            ? l10n.text('settings.subjectNick.add')
+            : l10n.text('settings.subjectNick.edit'),
+      ),
       content: Row(
         children: [
-          const Column(
+          Column(
             mainAxisSize: MainAxisSize.min,
             children: [
-              Text("Fach"),
-              SizedBox(
+              Text(l10n.text('settings.subject.field')),
+              const SizedBox(
                 height: 27,
               ),
-              Text("Kürzel"),
+              Text(l10n.text('settings.subject.nick')),
             ],
           ),
           const SizedBox(
@@ -1020,7 +1073,7 @@ class _EditSubjectsNicksState extends State<EditSubjectsNicks> {
           onPressed: () {
             Navigator.of(context).pop();
           },
-          child: const Text("Abbrechen"),
+          child: Text(l10n.text('common.cancel')),
         ),
         ElevatedButton(
           onPressed:
@@ -1034,7 +1087,7 @@ class _EditSubjectsNicksState extends State<EditSubjectsNicks> {
                       );
                     }
                   : null,
-          child: const Text("Fertig"),
+          child: Text(l10n.text('common.done')),
         ),
       ],
     );
@@ -1043,13 +1096,13 @@ class _EditSubjectsNicksState extends State<EditSubjectsNicks> {
 
 class AddSubject extends StatefulWidget {
   final List<String>? availableSubjects;
-  final String title;
+  final String? title;
   final bool requireSuggestionMatch;
 
   const AddSubject({
     super.key,
     this.availableSubjects,
-    this.title = "Fach hinzufügen",
+    this.title,
     this.requireSuggestionMatch = false,
   });
   @override
@@ -1095,8 +1148,9 @@ class _AddSubjectState extends State<AddSubject> {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = context.l10n;
     return InfoDialog(
-      title: Text(widget.title),
+      title: Text(widget.title ?? l10n.text('settings.addSubject')),
       content: RawAutocomplete<String>(
         focusNode: focusNode,
         textEditingController: subjectNameController,
@@ -1139,7 +1193,7 @@ class _AddSubjectState extends State<AddSubject> {
           onPressed: () {
             Navigator.of(context).pop();
           },
-          child: const Text("Abbrechen"),
+          child: Text(l10n.text('common.cancel')),
         ),
         ElevatedButton(
           onPressed: _selectedSubject != null
@@ -1147,7 +1201,7 @@ class _AddSubjectState extends State<AddSubject> {
                   Navigator.of(context).pop(_selectedSubject);
                 }
               : null,
-          child: const Text("Fertig"),
+          child: Text(l10n.text('common.done')),
         ),
       ],
     );
@@ -1173,8 +1227,9 @@ class _ColorPickerState extends State<_ColorPicker> {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = context.l10n;
     return InfoDialog(
-      title: const Text("Farbe auswählen"),
+      title: Text(l10n.text('settings.colorPicker.title')),
       content: SingleChildScrollView(
         child: ColorPicker(
           pickerColor: color!,
@@ -1190,7 +1245,7 @@ class _ColorPickerState extends State<_ColorPicker> {
           onPressed: () {
             Navigator.pop(context);
           },
-          child: const Text("Abbrechen"),
+          child: Text(l10n.text('common.cancel')),
         ),
         ElevatedButton(
           onPressed: color != widget.initialColor
@@ -1198,7 +1253,7 @@ class _ColorPickerState extends State<_ColorPicker> {
                   Navigator.pop(context, color);
                 }
               : null,
-          child: const Text("Auswählen"),
+          child: Text(l10n.text('common.select')),
         ),
       ],
     );

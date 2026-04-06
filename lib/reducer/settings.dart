@@ -28,6 +28,7 @@ final settingsReducerBuilder = NestedReducerBuilder<AppState, AppStateBuilder,
   (s) => s.settingsState,
   (b) => b.settingsState,
 )
+  ..add(SettingsActionsNames.setLanguage, _setLanguage)
   ..add(SettingsActionsNames.saveNoData, _saveNoData)
   ..add(SettingsActionsNames.saveNoPass, _saveNoPass)
   ..add(SettingsActionsNames.askWhenDeleteReminder, _askWhenDeleteReminder)
@@ -61,6 +62,11 @@ final settingsReducerBuilder = NestedReducerBuilder<AppState, AppStateBuilder,
   ..add(SettingsActionsNames.biometricAppLockEnabled, _biometricAppLockEnabled)
   ..add(
       SettingsActionsNames.dashboardColorTestsInRed, _dashboardColorTestsInRed);
+
+void _setLanguage(
+    SettingsState state, Action<String> action, SettingsStateBuilder builder) {
+  builder.languageCode = action.payload;
+}
 
 void _askWhenDeleteReminder(
     SettingsState state, Action<bool> action, SettingsStateBuilder builder) {

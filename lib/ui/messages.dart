@@ -21,6 +21,7 @@ import 'dart:convert';
 import 'package:badges/badges.dart' as badge;
 import 'package:dr/app_state.dart';
 import 'package:dr/data.dart';
+import 'package:dr/i18n/app_localizations.dart';
 import 'package:dr/ui/animated_linear_progress_indicator.dart';
 import 'package:dr/ui/last_fetched_overlay.dart';
 import 'package:dr/ui/no_internet.dart';
@@ -50,8 +51,8 @@ class MessagesPage extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: const ResponsiveAppBar(
-        title: Text("Mitteilungen"),
+      appBar: ResponsiveAppBar(
+        title: Text(context.t('messages.title')),
       ),
       body: state == null
           ? noInternet
@@ -69,7 +70,7 @@ class MessagesPage extends StatelessWidget {
                   if (state!.messages.isEmpty)
                     Center(
                       child: Text(
-                        "Noch keine Mitteilungen",
+                        context.t('messages.none'),
                         style: Theme.of(context).textTheme.headlineMedium,
                         textAlign: TextAlign.center,
                       ),
@@ -154,9 +155,9 @@ class _MessageWidgetState extends State<MessageWidget> {
                 shape: badge.BadgeShape.square,
                 borderRadius: BorderRadius.circular(20),
               ),
-              badgeContent: const Text(
-                "neu",
-                style: TextStyle(color: Colors.white),
+              badgeContent: Text(
+                context.t('messages.new'),
+                style: const TextStyle(color: Colors.white),
               ),
             )
         ],
@@ -175,12 +176,15 @@ class _MessageWidgetState extends State<MessageWidget> {
                 Text.rich(
                   TextSpan(
                     children: [
-                      const TextSpan(
-                        text: "Gesendet: ",
-                        style: TextStyle(fontWeight: FontWeight.bold),
+                      TextSpan(
+                        text: '${context.t('messages.sent')}: ',
+                        style: const TextStyle(fontWeight: FontWeight.bold),
                       ),
                       TextSpan(
-                          text: DateFormat("d.M.yy H:mm")
+                          text: DateFormat(
+                            "d.M.yy H:mm",
+                            Localizations.localeOf(context).toLanguageTag(),
+                          )
                               .format(widget.message.timeSent))
                     ],
                   ),
@@ -188,9 +192,9 @@ class _MessageWidgetState extends State<MessageWidget> {
                 Text.rich(
                   TextSpan(
                     children: [
-                      const TextSpan(
-                        text: "Von: ",
-                        style: TextStyle(fontWeight: FontWeight.bold),
+                      TextSpan(
+                        text: '${context.t('messages.from')}: ',
+                        style: const TextStyle(fontWeight: FontWeight.bold),
                       ),
                       TextSpan(text: widget.message.fromName)
                     ],
@@ -199,9 +203,9 @@ class _MessageWidgetState extends State<MessageWidget> {
                 Text.rich(
                   TextSpan(
                     children: [
-                      const TextSpan(
-                        text: "An: ",
-                        style: TextStyle(fontWeight: FontWeight.bold),
+                      TextSpan(
+                        text: '${context.t('messages.to')}: ',
+                        style: const TextStyle(fontWeight: FontWeight.bold),
                       ),
                       TextSpan(text: widget.message.recipientString)
                     ],
@@ -212,9 +216,9 @@ class _MessageWidgetState extends State<MessageWidget> {
                 if (widget.message.attachments.isNotEmpty) ...[
                   const Divider(),
                   Text(
-                    widget.message.attachments.length > 1
-                        ? "Anhänge:"
-                        : "Anhang:",
+                    context.l10n.attachmentLabel(
+                      widget.message.attachments.length,
+                    ),
                     style: const TextStyle(fontWeight: FontWeight.bold),
                   ),
                 ],
@@ -236,7 +240,7 @@ class _MessageWidgetState extends State<MessageWidget> {
                                   : () {
                                       widget.onOpenFile(attachment);
                                     },
-                          child: const Text("Öffnen"),
+                          child: Text(context.t('common.open')),
                         ),
                       ),
                     ]

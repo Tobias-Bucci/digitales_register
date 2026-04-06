@@ -21,6 +21,7 @@ import 'package:charts_flutter/flutter.dart' as charts;
 import 'package:dr/app_selectors.dart';
 import 'package:dr/app_state.dart';
 import 'package:dr/data.dart';
+import 'package:dr/i18n/app_localizations.dart';
 import 'package:dr/utc_date_time.dart';
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
@@ -196,13 +197,13 @@ class GradesChart extends StatelessWidget {
                     final selections = model.selectedDatum.map((datum) {
                       final grade = datum.datum.value.item1 as int;
                       final type = datum.datum.value.item2 as String;
-                      final subject = datum.series.displayName;
+                      final subject = datum.series.displayName ?? '';
                       final color = datum.series.colorFn!(0)!;
                       final date = datum.datum.key as UtcDateTime;
                       assert(allDate == null || allDate == date);
                       allDate = date;
                       return _Selection(
-                        "$subject – $type: ${formatGradeFromInt(grade)}",
+                        "${context.l10n.translateSubjectName(subject)} – ${context.l10n.translateSchoolTerm(type)}: ${formatGradeFromInt(grade)}",
                         Color.fromARGB(
                           color.a,
                           color.r,

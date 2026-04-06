@@ -17,6 +17,7 @@
 // along with digitales_register.  If not, see <http://www.gnu.org/licenses/>.
 
 import 'package:flutter/material.dart';
+import 'package:dr/i18n/app_localizations.dart';
 
 class PassReset extends StatefulWidget {
   final ResetPass resetPass;
@@ -48,6 +49,7 @@ class _PassResetState extends State<PassReset> {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = context.l10n;
     return PopScope<void>(
       onPopInvokedWithResult: (didPop, result) {
         if (!didPop) {
@@ -56,7 +58,7 @@ class _PassResetState extends State<PassReset> {
       },
       child: Scaffold(
         appBar: AppBar(
-          title: const Text("Passwort zurücksetzen"),
+          title: Text(l10n.text('login.passResetTitle')),
         ),
         body: Padding(
           padding: const EdgeInsets.all(8.0),
@@ -74,32 +76,27 @@ class _PassResetState extends State<PassReset> {
                       ),
                     ),
                     padding: const EdgeInsets.all(8),
-                    child: const Text(
-                      "Das neue Passwort muss:\n"
-                      "- mindestens 10 Zeichen lang sein\n"
-                      "- mindestens einen Großbuchstaben enthalten\n"
-                      "- mindestens einen Kleinbuchstaben enthalten\n"
-                      "- mindestens eine Zahl enthalten\n"
-                      "- mindestens ein Sonderzeichen enthalten\n"
-                      "- nicht mit dem alten Passwort übereinstimmen",
+                    child: Text(
+                      l10n.text('login.newPasswordRequirements'),
                     ),
                   ),
                   TextField(
                     autofillHints: const [AutofillHints.newPassword],
                     controller: _newPass1Controller,
-                    decoration:
-                        const InputDecoration(labelText: 'Neues Passwort'),
+                    decoration: InputDecoration(
+                      labelText: l10n.text('login.newPassword'),
+                    ),
                     obscureText: true,
                   ),
                   TextField(
                     autofillHints: const [AutofillHints.newPassword],
                     controller: _newPass2Controller,
                     decoration: InputDecoration(
-                      labelText: 'Neues Passwort wiederholen',
+                      labelText: l10n.text('login.repeatPassword'),
                       errorText:
                           _newPass1Controller.text == _newPass2Controller.text
                               ? null
-                              : "Die Passwörter stimmen noch nicht überein",
+                              : l10n.text('login.passwordsDoNotMatch'),
                     ),
                     obscureText: true,
                   ),
@@ -112,13 +109,13 @@ class _PassResetState extends State<PassReset> {
                               _newPass2Controller.text
                           ? null
                           : () => widget.resetPass(_newPass1Controller.text),
-                      child: const Text("Passwort zurücksetzen"),
+                      child: Text(l10n.text('login.passResetAction')),
                     ),
                   const SizedBox(height: 16),
                   if (widget.message != null)
                     Center(
                       child: Text(
-                        widget.message!,
+                        l10n.translateAuthServerText(widget.message!),
                         style: Theme.of(context).textTheme.bodyMedium!.copyWith(
                             color: widget.failure ? Colors.red : Colors.green),
                       ),
@@ -126,7 +123,7 @@ class _PassResetState extends State<PassReset> {
                   if (widget.message != null && !widget.failure)
                     ElevatedButton(
                       onPressed: widget.onClose,
-                      child: const Text("Ok"),
+                      child: Text(l10n.text('common.done')),
                     )
                 ],
               ),

@@ -1,7 +1,23 @@
 ﻿// Copyright (C) 2026 Tobias Bucci
+//
+// This file is part of digitales_register.
+//
+// digitales_register is free software: you can redistribute it and/or modify
+// it under the terms of the GNU General Public License as published by
+// the Free Software Foundation, either version 3 of the License, or
+// (at your option) any later version.
+//
+// digitales_register is distributed in the hope that it will be useful,
+// but WITHOUT ANY WARRANTY; without even the implied warranty of
+// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+// GNU General Public License for more details.
+//
+// You should have received a copy of the GNU General Public License
+// along with digitales_register.  If not, see <http://www.gnu.org/licenses/>.
 
 import 'package:built_collection/built_collection.dart';
 import 'package:dr/app_state.dart';
+import 'package:dr/i18n/app_localizations.dart';
 import 'package:dr/util.dart';
 import 'package:flutter/material.dart';
 
@@ -35,6 +51,7 @@ class FavoriteSubjectFilter extends StatelessWidget {
     if (subjects.isEmpty) {
       return const SizedBox.shrink();
     }
+    final l10n = context.l10n;
     final theme = Theme.of(context);
     final normalizedSelected = selectedSubject == null
         ? null
@@ -46,7 +63,7 @@ class FavoriteSubjectFilter extends StatelessWidget {
         runSpacing: 8,
         children: [
           ChoiceChip(
-            label: const Text("Alle"),
+            label: Text(l10n.text('filter.all')),
             selected: normalizedSelected == null,
             onSelected: (_) => onSelected(null),
           ),
@@ -60,7 +77,7 @@ class FavoriteSubjectFilter extends StatelessWidget {
                     ? Color(subjectTheme.color)
                     : theme.colorScheme.secondary;
                 return ChoiceChip(
-                  label: Text(subject),
+                  label: Text(l10n.translateSubjectName(subject)),
                   selected: isSelected,
                   onSelected: (_) => onSelected(subject),
                   selectedColor: chipColor.withValues(

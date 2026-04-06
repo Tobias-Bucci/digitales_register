@@ -18,6 +18,7 @@
 
 import 'package:collection/collection.dart';
 import 'package:dr/container/login_page.dart';
+import 'package:dr/i18n/app_localizations.dart';
 import 'package:dr/ui/animated_linear_progress_indicator.dart';
 import 'package:dr/ui/autocomplete_options.dart';
 import 'package:dr/util.dart';
@@ -74,6 +75,8 @@ class _LoginPageContentState extends State<LoginPageContent> {
   final _schoolFocusNode = FocusNode();
   late bool safeMode;
   bool newPasswordsMatch = true;
+  bool _customSchoolSelected = false;
+  String? _lastOtherSchoolLabel;
   Tuple2<String, String?>? selectedPresetServer;
   @override
   void initState() {
@@ -91,7 +94,7 @@ class _LoginPageContentState extends State<LoginPageContent> {
         selectedPresetServer = Tuple2(school.key, school.value);
         _schoolController.text = school.key;
       } else {
-        _schoolController.text = "Andere Schule";
+        _customSchoolSelected = true;
       }
     }
     _schoolFocusNode.addListener(() {
@@ -105,7 +108,23 @@ class _LoginPageContentState extends State<LoginPageContent> {
   String get url => selectedPresetServer?.item2 ?? _urlController.text;
 
   @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    final localizedOtherSchool = context.l10n.text('login.otherSchool');
+    if (_customSchoolSelected) {
+      final currentValue = _schoolController.text.trim();
+      if (currentValue.isEmpty ||
+          (_lastOtherSchoolLabel != null &&
+              currentValue == _lastOtherSchoolLabel)) {
+        _schoolController.text = localizedOtherSchool;
+      }
+    }
+    _lastOtherSchoolLabel = localizedOtherSchool;
+  }
+
+  @override
   Widget build(BuildContext context) {
+    final l10n = context.l10n;
     final theme = Theme.of(context);
     final isDark = theme.brightness == Brightness.dark;
     final naturalBlue = theme.colorScheme.primary;
@@ -171,7 +190,7 @@ class _LoginPageContentState extends State<LoginPageContent> {
                   elevation: 0,
                   backgroundColor: Colors.transparent,
                   foregroundColor: theme.colorScheme.onSurface,
-                  title: const Text('Passwort ändern'),
+                  title: Text(l10n.text('login.changePasswordTitle')),
                   automaticallyImplyLeading: !widget.vm.mustChangePass,
                 )
               : null,
@@ -195,7 +214,7 @@ class _LoginPageContentState extends State<LoginPageContent> {
                             child: Column(
                               children: [
                                 Text(
-                                  "Digitales Register",
+                                  l10n.text('login.appTitle'),
                                   textAlign: TextAlign.center,
                                   style:
                                       theme.textTheme.headlineSmall?.copyWith(
@@ -272,11 +291,13 @@ class _LoginPageContentState extends State<LoginPageContent> {
                                                 if (widget.vm.servers[value] ==
                                                     null) {
                                                   selectedPresetServer = null;
+                                                  _customSchoolSelected = false;
                                                 } else {
                                                   selectedPresetServer = Tuple2(
                                                     value,
                                                     widget.vm.servers[value],
                                                   );
+                                                  _customSchoolSelected = false;
                                                   _urlController.text =
                                                       selectedPresetServer!
                                                           .item2!;
@@ -284,17 +305,24 @@ class _LoginPageContentState extends State<LoginPageContent> {
                                               });
                                             },
                                             decoration: fieldDecoration(
-                                              "Schule",
+                                              l10n.text('login.school'),
                                               icon: Icons.school_outlined,
                                               errorText: !_schoolFocusNode
                                                           .hasFocus &&
-                                                      _schoolController.text !=
-                                                          "Andere Schule" &&
+                                                      !_customSchoolSelected &&
+                                                      !equalsIgnoreCase(
+                                                        _schoolController.text,
+                                                        l10n.text(
+                                                          'login.otherSchool',
+                                                        ),
+                                                      ) &&
                                                       _schoolController
                                                           .text.isNotEmpty &&
                                                       selectedPresetServer ==
                                                           null
-                                                  ? "Schule nicht gefunden"
+                                                  ? l10n.text(
+                                                      'login.schoolNotFound',
+                                                    )
                                                   : null,
                                             ),
                                           );
@@ -323,7 +351,7 @@ class _LoginPageContentState extends State<LoginPageContent> {
                                                 .search(textEditingValue.text)
                                                 .take(15)
                                                 .map((e) => e.item),
-                                            "Andere Schule",
+                                            l10n.text('login.otherSchool'),
                                           ];
                                         },
                                         onSelected: (option) {
@@ -333,8 +361,12 @@ class _LoginPageContentState extends State<LoginPageContent> {
                                               option,
                                               widget.vm.servers[option],
                                             );
-                                            if (option == "Andere Schule") {
+                                            if (option ==
+                                                l10n.text(
+                                                  'login.otherSchool',
+                                                )) {
                                               selectedPresetServer = null;
+                                              _customSchoolSelected = true;
                                               _urlController.text =
                                                   ".digitalesregister.it";
                                               _urlController.selection =
@@ -342,6 +374,7 @@ class _LoginPageContentState extends State<LoginPageContent> {
                                                 const TextPosition(offset: 0),
                                               );
                                             } else {
+                                              _customSchoolSelected = false;
                                               _urlController.text =
                                                   selectedPresetServer!.item2!;
                                             }
@@ -352,7 +385,7 @@ class _LoginPageContentState extends State<LoginPageContent> {
                                     const SizedBox(height: 12),
                                     TextField(
                                       decoration: fieldDecoration(
-                                        'Adresse',
+                                        l10n.text('login.address'),
                                         icon: Icons.language_rounded,
                                       ),
                                       controller: _urlController,
@@ -366,7 +399,7 @@ class _LoginPageContentState extends State<LoginPageContent> {
                                         ? null
                                         : [AutofillHints.username],
                                     decoration: fieldDecoration(
-                                      'Benutzername',
+                                      l10n.text('login.username'),
                                       icon: Icons.person_outline_rounded,
                                     ),
                                     controller: _usernameController,
@@ -379,8 +412,8 @@ class _LoginPageContentState extends State<LoginPageContent> {
                                         : [AutofillHints.password],
                                     decoration: fieldDecoration(
                                       widget.vm.changePass
-                                          ? 'Altes Passwort'
-                                          : 'Passwort',
+                                          ? l10n.text('login.oldPassword')
+                                          : l10n.text('login.password'),
                                       icon: Icons.lock_outline_rounded,
                                     ),
                                     controller: _passwordController,
@@ -395,7 +428,9 @@ class _LoginPageContentState extends State<LoginPageContent> {
                                       ),
                                       onPressed: () =>
                                           widget.onRequestPassReset(url),
-                                      child: const Text("Passwort vergessen"),
+                                      child: Text(
+                                        l10n.text('login.forgotPassword'),
+                                      ),
                                     ),
                                   ),
                                   if (widget.vm.changePass) ...[
@@ -409,8 +444,8 @@ class _LoginPageContentState extends State<LoginPageContent> {
                                               BorderRadius.circular(12),
                                         ),
                                         padding: const EdgeInsets.all(12),
-                                        child: const Text(
-                                          "Du musst dein Passwort ändern.",
+                                        child: Text(
+                                          l10n.text('login.mustChangePassword'),
                                         ),
                                       ),
                                     const SizedBox(height: 10),
@@ -424,14 +459,10 @@ class _LoginPageContentState extends State<LoginPageContent> {
                                         borderRadius: BorderRadius.circular(12),
                                       ),
                                       padding: const EdgeInsets.all(12),
-                                      child: const Text(
-                                        "Das neue Passwort muss:\n"
-                                        "- mindestens 10 Zeichen lang sein\n"
-                                        "- mindestens einen Großbuchstaben enthalten\n"
-                                        "- mindestens einen Kleinbuchstaben enthalten\n"
-                                        "- mindestens eine Zahl enthalten\n"
-                                        "- mindestens ein Sonderzeichen enthalten\n"
-                                        "- nicht mit dem alten Passwort übereinstimmen",
+                                      child: Text(
+                                        l10n.text(
+                                          'login.newPasswordRequirements',
+                                        ),
                                       ),
                                     ),
                                     const SizedBox(height: 12),
@@ -440,7 +471,7 @@ class _LoginPageContentState extends State<LoginPageContent> {
                                           ? null
                                           : [AutofillHints.newPassword],
                                       decoration: fieldDecoration(
-                                        'Neues Passwort',
+                                        l10n.text('login.newPassword'),
                                         icon:
                                             Icons.enhanced_encryption_outlined,
                                       ),
@@ -461,11 +492,13 @@ class _LoginPageContentState extends State<LoginPageContent> {
                                           ? null
                                           : [AutofillHints.newPassword],
                                       decoration: fieldDecoration(
-                                        'Neues Passwort wiederholen',
+                                        l10n.text('login.repeatPassword'),
                                         icon: Icons.check_circle_outline,
                                         errorText: newPasswordsMatch
                                             ? null
-                                            : "Die neuen Passwörter stimmen nicht überein",
+                                            : l10n.text(
+                                                'login.passwordsDoNotMatch',
+                                              ),
                                       ),
                                       controller: _newPassword2Controller,
                                       obscureText: true,
@@ -515,14 +548,18 @@ class _LoginPageContentState extends State<LoginPageContent> {
                                         ? Icons.key_rounded
                                         : Icons.login_rounded),
                                     label: Text(widget.vm.changePass
-                                        ? 'Passwort ändern'
-                                        : 'Login'),
+                                        ? l10n.text('login.changePassword')
+                                        : l10n.text('login.login')),
                                   ),
                                   const SizedBox(height: 8),
                                   SwitchListTile.adaptive(
-                                    title: const Text("Angemeldet bleiben"),
-                                    subtitle: const Text(
-                                      "Deine Zugangsdaten werden lokal gespeichert",
+                                    title: Text(
+                                      l10n.text('login.stayLoggedIn'),
+                                    ),
+                                    subtitle: Text(
+                                      l10n.text(
+                                        'settings.keepLoggedIn.subtitle',
+                                      ),
                                     ),
                                     contentPadding: EdgeInsets.zero,
                                     activeThumbColor: naturalBlue,
@@ -558,7 +595,9 @@ class _LoginPageContentState extends State<LoginPageContent> {
                                         },
                                         icon:
                                             const Icon(Icons.feedback_outlined),
-                                        label: const Text("Feedback senden"),
+                                        label: Text(
+                                          l10n.text('login.feedback'),
+                                        ),
                                       ),
                                     ),
                                 ],
@@ -585,7 +624,7 @@ class _LoginPageContentState extends State<LoginPageContent> {
                                 children: [
                                   ListTile(
                                     title: Text(
-                                      "Andere Accounts",
+                                      l10n.text('login.otherAccounts'),
                                       style: theme.textTheme.titleMedium,
                                     ),
                                   ),
@@ -615,8 +654,17 @@ class _LoginPageContentState extends State<LoginPageContent> {
                             padding: const EdgeInsets.all(12),
                             child: Text(
                               widget.vm.noInternet
-                                  ? 'Keine Verbindung mit "${widget.vm.url}" möglich. Bitte überprüfe deine Internetverbindung.\nWenn du "Andere Schule" ausgewählt hast, musst du eine gültige Adresse eingeben.'
-                                  : widget.vm.error!,
+                                  ? l10n.text(
+                                      'login.noConnectionHint',
+                                      args: {
+                                        'url': widget.vm.url ?? '',
+                                        'otherSchool':
+                                            l10n.text('login.otherSchool'),
+                                      },
+                                    )
+                                  : l10n.translateAuthServerText(
+                                      widget.vm.error!,
+                                    ),
                               style: theme.textTheme.bodyMedium?.copyWith(
                                 color: theme.colorScheme.onErrorContainer,
                               ),

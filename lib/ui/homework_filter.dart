@@ -19,6 +19,7 @@
 import 'package:built_collection/built_collection.dart';
 import 'package:dr/container/homework_filter_container.dart';
 import 'package:dr/data.dart';
+import 'package:dr/i18n/app_localizations.dart';
 import 'package:flutter/material.dart';
 
 typedef HomeworkBlacklistCallback = void Function(
@@ -73,6 +74,7 @@ class _HomeworkFilterState extends State<HomeworkFilter>
   }
 
   Future<void> _openFilterSheet(BuildContext context) async {
+    final l10n = context.l10n;
     final localBlacklist = widget.vm.currentBlacklist.toBuilder();
     var showEmptyDays = widget.showEmptyDays;
 
@@ -121,14 +123,17 @@ class _HomeworkFilterState extends State<HomeworkFilter>
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
-                      "Dashboard-Filter",
+                      l10n.text('dashboard.filterTitle'),
                       style: Theme.of(context).textTheme.titleLarge,
                     ),
                     const SizedBox(height: 6),
                     Text(
                       activeFilterCount == 0
-                          ? "Wähle aus, welche Inhalte angezeigt werden."
-                          : "$activeFilterCount Filter deaktiviert.",
+                          ? l10n.text('dashboard.filterDescription')
+                          : l10n.text(
+                              'dashboard.filterDisabled',
+                              args: {'count': activeFilterCount.toString()},
+                            ),
                       style: Theme.of(context).textTheme.bodyMedium,
                     ),
                     const SizedBox(height: 12),
@@ -148,7 +153,7 @@ class _HomeworkFilterState extends State<HomeworkFilter>
                           setSheetState,
                         );
                       },
-                      title: const Text("Noten & Tests"),
+                      title: Text(l10n.text('filter.gradesAndTests')),
                       value: hasGrades,
                     ),
                     CheckboxListTile(
@@ -167,7 +172,7 @@ class _HomeworkFilterState extends State<HomeworkFilter>
                           setSheetState,
                         );
                       },
-                      title: const Text("Hausaufgaben & Erinnerungen"),
+                      title: Text(l10n.text('filter.homeworkAndReminders')),
                       value: hasHomework,
                     ),
                     CheckboxListTile(
@@ -183,7 +188,7 @@ class _HomeworkFilterState extends State<HomeworkFilter>
                           setSheetState,
                         );
                       },
-                      title: const Text("Beobachtungen"),
+                      title: Text(l10n.text('filter.observations')),
                       value: hasObservation,
                     ),
                     CheckboxListTile(
@@ -192,7 +197,7 @@ class _HomeworkFilterState extends State<HomeworkFilter>
                       onChanged: (v) {
                         updateShowEmptyDays(v ?? false, setSheetState);
                       },
-                      title: const Text("Leere Tage anzeigen"),
+                      title: Text(l10n.text('filter.showEmptyDays')),
                       value: showEmptyDays,
                     ),
                   ],
@@ -208,6 +213,7 @@ class _HomeworkFilterState extends State<HomeworkFilter>
   @override
   Widget build(BuildContext context) {
     super.build(context);
+    final l10n = context.l10n;
     final hasGrades = !widget.vm.currentBlacklist.contains(HomeworkType.grade);
     final hasHomework =
         !widget.vm.currentBlacklist.contains(HomeworkType.homework);
@@ -230,7 +236,10 @@ class _HomeworkFilterState extends State<HomeworkFilter>
         ),
         icon: const Icon(Icons.tune_rounded),
         label: Text(
-            activeFilterCount > 0 ? "Filter ($activeFilterCount)" : "Filter"),
+          activeFilterCount > 0
+              ? '${l10n.text('dashboard.filter')} ($activeFilterCount)'
+              : l10n.text('dashboard.filter'),
+        ),
       ),
     );
   }

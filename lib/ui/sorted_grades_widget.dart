@@ -20,6 +20,7 @@ import 'package:dr/app_state.dart';
 import 'package:dr/container/grades_page_container.dart';
 import 'package:dr/container/sorted_grades_container.dart';
 import 'package:dr/data.dart';
+import 'package:dr/i18n/app_localizations.dart';
 import 'package:dr/ui/animated_linear_progress_indicator.dart';
 import 'package:dr/ui/favorite_subject_filter.dart';
 import 'package:dr/util.dart';
@@ -93,12 +94,12 @@ class _SortedGradesWidgetState extends State<SortedGradesWidget> {
             padding: const EdgeInsets.fromLTRB(16, 12, 16, 4),
           ),
         SwitchListTile.adaptive(
-          title: const Text("Noten nach Art sortieren"),
+          title: Text(context.t('grades.sortByType')),
           onChanged: widget.sortByTypeCallback,
           value: widget.vm.sortByType,
         ),
         SwitchListTile.adaptive(
-          title: const Text("Gelöschte Noten anzeigen"),
+          title: Text(context.t('grades.showDeleted')),
           onChanged: widget.showCancelledCallback,
           value: widget.vm.showCancelled!,
         ),
@@ -122,22 +123,21 @@ class _SortedGradesWidgetState extends State<SortedGradesWidget> {
             (element) => element.toLowerCase() == s.name.toLowerCase(),
           ),
         ))
-          const ListTile(
+          ListTile(
             title: Text(
-              "* Du hast dieses Fach aus dem Notendurchschnitt ausgeschlossen",
+              context.t('grades.excludedAverageInfo'),
               style: TextStyle(color: Colors.grey),
             ),
           ),
         Padding(
           padding: const EdgeInsets.symmetric(vertical: 16),
           child: ListTile(
-            title: const Row(
+            title: Row(
               children: [
-                Text("Notenrechner"),
+                Text(context.t('grades.calculator')),
               ],
             ),
-            subtitle:
-                const Text("Berechne den Durchschnitt von beliebigen Noten"),
+            subtitle: Text(context.t('grades.calculator.subtitle')),
             onTap: widget.showGradeCalculator,
           ),
         ),
@@ -195,6 +195,7 @@ class _SubjectWidgetState extends State<SubjectWidget> {
       return null;
     }
     final formatted = formatTimeAgoPerSemester(
+      localizations: context.l10n,
       noInternet: widget.noInternet,
       lastFetched: widget.subject.lastFetchedDetailed,
       semester: widget.semester,
@@ -218,7 +219,7 @@ class _SubjectWidgetState extends State<SubjectWidget> {
         key: ValueKey(widget.subject.id),
         title: Text.rich(
           TextSpan(
-            text: widget.subject.name,
+            text: context.l10n.translateSubjectName(widget.subject.name),
             children: [
               if (widget.ignoredForAverage)
                 const TextSpan(
@@ -345,11 +346,11 @@ class GradeWidget extends StatelessWidget {
                   style: _cancelledStyle(theme.bodyMedium, grade.cancelled),
                 ),
               Text(
-                "${DateFormat("dd.MM.yy").format(grade.date)}: ${grade.type} - ${grade.weightPercentage}%",
+                "${DateFormat("dd.MM.yy", Localizations.localeOf(context).toLanguageTag()).format(grade.date)}: ${context.l10n.translateSchoolTerm(grade.type)} - ${grade.weightPercentage}%",
                 style: _cancelledStyle(theme.bodyMedium, grade.cancelled),
               ),
               Text(
-                grade.created,
+                context.l10n.translateCreatedText(grade.created),
                 style: _cancelledStyle(theme.bodySmall, grade.cancelled),
               ),
               if (!grade.cancelledDescription.isNullOrEmpty)
@@ -385,11 +386,11 @@ class ObservationWidget extends StatelessWidget {
     final theme = Theme.of(context).textTheme;
     return ListTile(
       title: Text(
-        observation.typeName,
+        context.l10n.translateSchoolTerm(observation.typeName),
         style: _cancelledStyle(theme.bodyLarge, observation.cancelled),
       ),
       subtitle: Text(
-        "${DateFormat("dd.MM.yy").format(observation.date)}${observation.note.isNullOrEmpty ? "" : ": ${observation.note}"}\n${observation.created}",
+        "${DateFormat("dd.MM.yy", Localizations.localeOf(context).toLanguageTag()).format(observation.date)}${observation.note.isNullOrEmpty ? "" : ": ${observation.note}"}\n${context.l10n.translateCreatedText(observation.created)}",
         style: _cancelledStyle(theme.bodyMedium, observation.cancelled),
       ),
     );
@@ -410,7 +411,7 @@ class CompetenceWidget extends StatelessWidget {
       child: Wrap(
         children: <Widget>[
           Text(
-            competence.typeName,
+            context.l10n.translateSchoolTerm(competence.typeName),
             style: _cancelledStyle(theme.bodyMedium, cancelled),
           ),
           Row(
@@ -457,7 +458,7 @@ class GradeTypeWidget extends StatelessWidget {
     return displayGrades.isEmpty
         ? const SizedBox()
         : ExpansionTile(
-            title: Text(typeName),
+            title: Text(context.l10n.translateSchoolTerm(typeName)),
             initiallyExpanded: true,
             children: displayGrades,
           );

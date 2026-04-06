@@ -25,6 +25,21 @@ import 'package:dr/utc_date_time.dart';
 
 part 'app_state.g.dart';
 
+const Map<String, String> defaultSubjectNicks = {
+  'Deutsch': 'Deu',
+  'Mathematik': 'Mat',
+  'Latein': 'Lat',
+  'Religion': 'Rel',
+  'Englisch': 'Eng',
+  'Naturwissenschaften': 'Nat',
+  'Geschichte': 'Gesch',
+  'Italienisch': 'Ita',
+  'Bewegung und Sport': 'Sport',
+  'Recht und Wirtschaft': 'Rw',
+  'Griechisch': 'Gr',
+  'FÜ': 'Fü',
+};
+
 final Expando<List<String>> _allSubjectsCache =
     Expando<List<String>>('appStateAllSubjects');
 
@@ -282,6 +297,7 @@ abstract class Semester implements Built<Semester, SemesterBuilder> {
 
 abstract class SettingsState
     implements Built<SettingsState, SettingsStateBuilder> {
+  String get languageCode;
   bool get noPasswordSaving;
   bool get noDataSaving;
 
@@ -328,26 +344,14 @@ abstract class SettingsState
   static Serializer<SettingsState> get serializer => _$settingsStateSerializer;
   static void _initializeBuilder(SettingsStateBuilder builder) {
     builder
+      ..languageCode = 'de'
       ..noPasswordSaving = false
       ..noDataSaving = false
       ..typeSorted = false
       ..askWhenDelete = false
       ..showCancelled = false
       ..deleteDataOnLogout = false
-      ..subjectNicks = MapBuilder<String, String>(const {
-        "Deutsch": "Deu",
-        "Mathematik": "Mat",
-        "Latein": "Lat",
-        "Religion": "Rel",
-        "Englisch": "Eng",
-        "Naturwissenschaften": "Nat",
-        "Geschichte": "Gesch",
-        "Italienisch": "Ita",
-        "Bewegung und Sport": "Sport",
-        "Recht und Wirtschaft": "Rw",
-        "Griechisch": "Gr",
-        "FÜ": "Fü",
-      })
+      ..subjectNicks = MapBuilder<String, String>(defaultSubjectNicks)
       ..showCalendarNicksBar = true
       ..showGradesDiagram = true
       ..showAllSubjectsAverage = true

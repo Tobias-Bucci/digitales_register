@@ -21,6 +21,7 @@ import 'package:deleteable_tile/deleteable_tile.dart';
 import 'package:dr/actions/app_actions.dart';
 import 'package:dr/app_state.dart';
 import 'package:dr/data.dart';
+import 'package:dr/i18n/app_localizations.dart';
 import 'package:dr/ui/dialog.dart';
 import 'package:dr/util.dart';
 import 'package:flutter/material.dart';
@@ -152,7 +153,7 @@ class _GradeCalculatorState extends State<GradeCalculator> {
         int? weight;
         return StatefulBuilder(
           builder: (context, setState) => InfoDialog(
-            title: const Text("Neue Note erstellen"),
+            title: Text(context.t('gradeCalculator.newGrade')),
             content: Column(
               mainAxisSize: MainAxisSize.min,
               children: [
@@ -182,9 +183,7 @@ class _GradeCalculatorState extends State<GradeCalculator> {
                 onPressed: () {
                   Navigator.pop(context);
                 },
-                child: const Text(
-                  "Abbrechen",
-                ),
+                child: Text(context.t('common.cancel')),
               ),
               ElevatedButton(
                 onPressed: grade != null && weight != null
@@ -192,9 +191,7 @@ class _GradeCalculatorState extends State<GradeCalculator> {
                         Navigator.pop(context, Tuple2(grade!, weight!));
                       }
                     : null,
-                child: const Text(
-                  "Hinzufügen",
-                ),
+                child: Text(context.t('gradeCalculator.add')),
               ),
             ],
           ),
@@ -246,7 +243,7 @@ class _GradeCalculatorState extends State<GradeCalculator> {
     final showGreeting = grades.isEmpty;
     return Scaffold(
       appBar: AppBar(
-        title: const Text("Notenrechner"),
+        title: Text(context.t('gradeCalculator.title')),
       ),
       body: AnimatedCrossFade(
         firstChild: Greeting(
@@ -266,7 +263,7 @@ class _GradeCalculatorState extends State<GradeCalculator> {
           ? null
           : FloatingActionButton.extended(
               onPressed: addGrade,
-              label: const Text("Note hinzufügen"),
+              label: Text(context.t('gradeCalculator.addGrade')),
               icon: const Icon(Icons.add),
             ),
     );
@@ -291,9 +288,8 @@ class GradesList extends StatelessWidget {
         Material(
           elevation: 2,
           child: ListTile(
-            title: const Text("Durchschnitt"),
-            subtitle:
-                Text(grades.length == 1 ? "1 Note" : "${grades.length} Noten"),
+            title: Text(context.t('gradeCalculator.average')),
+            subtitle: Text(context.l10n.gradeCountLabel(grades.length)),
             trailing: Text(_calculateAverage(grades)),
           ),
         ),
@@ -410,7 +406,7 @@ class Greeting extends StatelessWidget {
         Padding(
           padding: const EdgeInsets.all(32),
           child: Text(
-            "Um zu beginnen, importiere entweder bestehende Noten aus einem Fach\noder füge eine erste Note hinzu.",
+            context.t('gradeCalculator.greeting'),
             style: Theme.of(context).textTheme.titleLarge,
             textAlign: TextAlign.center,
           ),
@@ -420,12 +416,12 @@ class Greeting extends StatelessWidget {
             padding: const EdgeInsets.all(16),
             child: ElevatedButton(
               onPressed: import,
-              child: const Row(
+              child: Row(
                 mainAxisSize: MainAxisSize.min,
                 children: [
-                  Icon(Icons.save_alt),
-                  SizedBox(width: 8),
-                  Text("Noten importieren"),
+                  const Icon(Icons.save_alt),
+                  const SizedBox(width: 8),
+                  Text(context.t('gradeCalculator.importGrades')),
                 ],
               ),
             ),
@@ -436,12 +432,12 @@ class Greeting extends StatelessWidget {
             padding: const EdgeInsets.all(16),
             child: ElevatedButton(
               onPressed: add,
-              child: const Row(
+              child: Row(
                 mainAxisSize: MainAxisSize.min,
                 children: [
-                  Icon(Icons.add),
-                  SizedBox(width: 8),
-                  Text("Note hinzufügen"),
+                  const Icon(Icons.add),
+                  const SizedBox(width: 8),
+                  Text(context.t('gradeCalculator.addGrade')),
                 ],
               ),
             ),
@@ -487,7 +483,8 @@ class _ImportGradesState extends State<_ImportGrades> {
                   (e) => _Grade(
                     grade: e.grade!,
                     weightPercentage: e.weightPercentage,
-                    description: "${selectedSubject!.name} · ${e.type}",
+                    description:
+                        "${context.l10n.translateSubjectName(selectedSubject!.name)} · ${context.l10n.translateSchoolTerm(e.type)}",
                   ),
                 )
                 .toList() ??
@@ -502,7 +499,7 @@ class _ImportGradesState extends State<_ImportGrades> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text("Noten importieren"),
+        title: Text(context.t('gradeCalculator.importTitle')),
       ),
       body: Column(
         children: [
@@ -511,11 +508,11 @@ class _ImportGradesState extends State<_ImportGrades> {
               for (final subject in widget.subjects)
                 DropdownMenuItem(
                   value: subject,
-                  child: Text(subject.name),
+                  child: Text(context.l10n.translateSubjectName(subject.name)),
                 ),
             ],
             value: selectedSubject,
-            hint: const Text("Fach auswählen"),
+            hint: Text(context.t('gradeCalculator.selectSubject')),
             onChanged: (subject) {
               setState(() {
                 selectedSubject = subject;
@@ -538,17 +535,17 @@ class _ImportGradesState extends State<_ImportGrades> {
               children: [
                 // ignore: prefer_const_constructors
                 RadioListTile<Semester>(
-                  title: const Text("Erstes Semester"),
+                  title: Text(context.l10n.semesterLabel(Semester.first)),
                   value: Semester.first,
                 ),
                 // ignore: prefer_const_constructors
                 RadioListTile<Semester>(
-                  title: const Text("Zweites Semester"),
+                  title: Text(context.l10n.semesterLabel(Semester.second)),
                   value: Semester.second,
                 ),
                 // ignore: prefer_const_constructors
                 RadioListTile<Semester>(
-                  title: const Text("Beide Semester"),
+                  title: Text(context.l10n.semesterLabel(Semester.all)),
                   value: Semester.all,
                 ),
               ],
@@ -566,17 +563,17 @@ class _ImportGradesState extends State<_ImportGrades> {
                       Navigator.pop(context, grades);
                     }
                   : null,
-              child: const Text("Importieren"),
+              child: Text(context.t('gradeCalculator.import')),
             ),
           ),
           if (selectedSemester != null &&
               selectedSubject != null &&
               grades!.isEmpty)
-            const Padding(
+            Padding(
               padding: EdgeInsets.all(8.0),
               child: Text(
-                "Für dieses Fach sind in diesem Zeitraum keine Noten verfügbar",
-                style: TextStyle(color: Colors.red),
+                context.t('gradeCalculator.noGradesAvailable'),
+                style: const TextStyle(color: Colors.red),
               ),
             ),
         ],
@@ -650,8 +647,10 @@ class _InputState extends State<_Input> {
                 (!widget.showErrorForEmptyInput && controller.text.isEmpty) ||
                 focusNode.hasFocus
             ? null
-            : "Ungültiger Wert",
-        labelText: widget.inputType == _InputType.grade ? "Note" : "Gewichtung",
+            : context.t('gradeCalculator.invalidValue'),
+        labelText: widget.inputType == _InputType.grade
+            ? context.t('gradeCalculator.grade')
+            : context.t('gradeCalculator.weight'),
         suffixText: widget.inputType == _InputType.weight ? "%" : null,
       ),
       onChanged: (_) {

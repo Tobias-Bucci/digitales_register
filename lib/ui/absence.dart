@@ -18,6 +18,7 @@
 
 import 'package:dr/container/absence_group_container.dart';
 import 'package:dr/data.dart';
+import 'package:dr/i18n/app_localizations.dart';
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 
@@ -95,11 +96,13 @@ class FutureAbsenceWidget extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = context.l10n;
     final bodyStyle = Theme.of(context).textTheme.bodyMedium;
+    final localeTag = Localizations.localeOf(context).toLanguageTag();
     var fromTo = "";
     if (absence.startDate == absence.endDate) {
       fromTo +=
-          "${DateFormat("EE d.M.yyyy", "de").format(absence.startDate)}, ";
+          "${DateFormat("EE d.M.yyyy", localeTag).format(absence.startDate)}, ";
       if (absence.startHour == absence.endHour) {
         fromTo += "${absence.startHour}. h";
       } else {
@@ -107,20 +110,9 @@ class FutureAbsenceWidget extends StatelessWidget {
       }
     } else {
       fromTo +=
-          "${DateFormat("EE d.M.yyyy", "de").format(absence.startDate)} ${absence.startHour}. h - ${DateFormat("EE d.M.yyyy", "de").format(absence.endDate)} ${absence.endHour}. h ";
+          "${DateFormat("EE d.M.yyyy", localeTag).format(absence.startDate)} ${absence.startHour}. h - ${DateFormat("EE d.M.yyyy", localeTag).format(absence.endDate)} ${absence.endHour}. h ";
     }
-
-    String justifiedString;
-    switch (absence.justified) {
-      case AbsenceJustified.justified:
-        justifiedString = "Entschuldigt";
-      case AbsenceJustified.forSchool:
-        justifiedString = "Im Auftrag der Schule (entschuldigt)";
-      case AbsenceJustified.notJustified:
-        justifiedString = "Nicht entschuldigt";
-      default:
-        justifiedString = "Noch nicht entschuldigt";
-    }
+    final justifiedString = l10n.absenceJustificationLabel(absence.justified);
 
     const divider = Row(
       children: [
@@ -172,7 +164,10 @@ class FutureAbsenceWidget extends StatelessWidget {
                   if (absence.reasonTimestamp != null &&
                       absence.reasonSignature != null)
                     Text(
-                      "${DateFormat("EE d.M.yyyy 'um' HH:mm", "de").format(absence.reasonTimestamp!)} als „${absence.reasonSignature}“ eingetragen",
+                      l10n.formatAbsenceSignature(
+                        absence.reasonTimestamp!,
+                        absence.reasonSignature!,
+                      ),
                       style: bodyStyle,
                       textAlign: TextAlign.center,
                     ),
@@ -187,7 +182,7 @@ class FutureAbsenceWidget extends StatelessWidget {
                 top: 0,
                 child: IconButton(
                   icon: const Icon(Icons.delete_outline, size: 20),
-                  tooltip: 'Voraus-Absenz löschen',
+                  tooltip: l10n.text('absences.future.delete'),
                   onPressed: onRemove,
                   padding: EdgeInsets.zero,
                   constraints: const BoxConstraints(

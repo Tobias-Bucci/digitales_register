@@ -1,3 +1,21 @@
+// Copyright (C) 2026 Tobias Bucci
+//
+// This file is part of digitales_register.
+//
+// digitales_register is free software: you can redistribute it and/or modify
+// it under the terms of the GNU General Public License as published by
+// the Free Software Foundation, either version 3 of the License, or
+// (at your option) any later version.
+//
+// digitales_register is distributed in the hope that it will be useful,
+// but WITHOUT ANY WARRANTY; without even the implied warranty of
+// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+// GNU General Public License for more details.
+//
+// You should have received a copy of the GNU General Public License
+// along with digitales_register.  If not, see <http://www.gnu.org/licenses/>.
+
+import 'package:dr/i18n/app_localizations.dart';
 import 'package:dr/utc_date_time.dart';
 import 'package:flutter/material.dart';
 
@@ -14,12 +32,15 @@ class LastFetchedOverlay extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = context.l10n;
     if (lastFetched == null || !noInternet) {
       return child;
     }
     return RawLastFetchedOverlay(
-      message:
-          "Offline-Modus aktiv. Zuletzt synchronisiert ${formatTimeAgo(lastFetched!)}.",
+      message: l10n.text(
+        'grades.offlineMode',
+        args: {'time': l10n.formatTimeAgo(lastFetched!)},
+      ),
       child: child,
     );
   }
@@ -65,14 +86,5 @@ class RawLastFetchedOverlay extends StatelessWidget {
 }
 
 String formatTimeAgo(UtcDateTime dateTime) {
-  final diff = UtcDateTime.now().difference(dateTime);
-  if (diff.inDays >= 1) {
-    return "vor ${diff.inDays} ${diff.inDays == 1 ? "Tag" : "Tagen"}";
-  } else if (diff.inHours >= 1) {
-    return "vor ${diff.inHours} ${diff.inHours == 1 ? "Stunde" : "Stunden"}";
-  } else if (diff.inMinutes >= 1) {
-    return "vor ${diff.inMinutes} ${diff.inMinutes == 1 ? "Minute" : "Minuten"}";
-  } else {
-    return "vor ${diff.inSeconds} ${diff.inSeconds == 1 ? "Sekunde" : "Sekunden"}";
-  }
+  return dateTime.toIso8601String();
 }

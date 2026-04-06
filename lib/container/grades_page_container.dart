@@ -21,8 +21,8 @@ import 'package:built_value/built_value.dart';
 import 'package:dr/actions/app_actions.dart';
 import 'package:dr/app_selectors.dart';
 import 'package:dr/app_state.dart';
+import 'package:dr/i18n/app_localizations.dart';
 import 'package:dr/ui/grades_page.dart';
-import 'package:dr/ui/last_fetched_overlay.dart';
 import 'package:dr/utc_date_time.dart';
 import 'package:flutter/material.dart' hide Builder;
 import 'package:flutter_built_redux/flutter_built_redux.dart';
@@ -44,7 +44,7 @@ class GradesPageContainer extends StatelessWidget {
         );
       },
       connect: (state) {
-        return GradesPageViewModel.from(state);
+        return GradesPageViewModel.from(state, AppLocalizations.of(context));
       },
     );
   }
@@ -67,7 +67,10 @@ abstract class GradesPageViewModel
       _$GradesPageViewModel;
   GradesPageViewModel._();
 
-  factory GradesPageViewModel.from(AppState state) {
+  factory GradesPageViewModel.from(
+    AppState state,
+    AppLocalizations localizations,
+  ) {
     return GradesPageViewModel(
       (b) => b
         ..showSemester = state.gradesState.semester.toBuilder()
@@ -77,16 +80,17 @@ abstract class GradesPageViewModel
         ..noInternet = state.noInternet
         ..showGradesDiagram = state.settingsState.showGradesDiagram
         ..showAllSubjectsAverage = state.settingsState.showAllSubjectsAverage
-        ..lastFetchedMessage = _lastFetchedMessage(state),
+        ..lastFetchedMessage = _lastFetchedMessage(state, localizations),
     );
   }
 }
 
-String? _lastFetchedMessage(AppState state) {
+String? _lastFetchedMessage(AppState state, AppLocalizations localizations) {
   if (state.gradesState.subjects.isEmpty) {
     return null;
   }
   final timeAgoString = formatTimeAgoPerSemester(
+    localizations: localizations,
     noInternet: state.noInternet,
     lastFetched: state.gradesState.subjects.first.lastFetchedBasic,
     semester: state.gradesState.semester,
@@ -94,10 +98,14 @@ String? _lastFetchedMessage(AppState state) {
   if (timeAgoString == null) {
     return null;
   }
-  return "Offline-Modus aktiv. $timeAgoString.";
+  return localizations.text(
+    'grades.offlineMode',
+    args: {'time': timeAgoString},
+  );
 }
 
 String? formatTimeAgoPerSemester({
+  required AppLocalizations localizations,
   required bool noInternet,
   required BuiltMap<Semester, UtcDateTime>? lastFetched,
   required Semester semester,
@@ -112,10 +120,18 @@ String? formatTimeAgoPerSemester({
     if (first == null || second == null) {
       return null;
     }
-    final firstFormatted = formatTimeAgo(first);
-    final secondFormatted = formatTimeAgo(second);
+    final firstFormatted = localizations.formatTimeAgo(first);
+    final secondFormatted = localizations.formatTimeAgo(second);
     if (firstFormatted != secondFormatted) {
-      return "Zuletzt synchronisiert $firstFormatted (1. Semester) / $secondFormatted (2. Semester)";
+      return localizations.text(
+        'grades.lastFetched.multiple',
+        args: {
+          'first': firstFormatted,
+          'firstSemester': localizations.semesterLabel(Semester.first),
+          'second': secondFormatted,
+          'secondSemester': localizations.semesterLabel(Semester.second),
+        },
+      );
     }
     lastFetchedFormatted = firstFormatted;
   } else {
@@ -123,7 +139,10 @@ String? formatTimeAgoPerSemester({
     if (last == null) {
       return null;
     }
-    lastFetchedFormatted = formatTimeAgo(last);
+    lastFetchedFormatted = localizations.formatTimeAgo(last);
   }
-  return "Zuletzt synchronisiert $lastFetchedFormatted";
+  return localizations.text(
+    'grades.lastFetched.single',
+    args: {'time': lastFetchedFormatted},
+  );
 }

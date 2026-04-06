@@ -20,6 +20,7 @@ import 'package:dr/app_state.dart';
 import 'package:dr/container/grades_chart_container.dart';
 import 'package:dr/container/grades_page_container.dart';
 import 'package:dr/container/sorted_grades_container.dart';
+import 'package:dr/i18n/app_localizations.dart';
 import 'package:dr/ui/animated_linear_progress_indicator.dart';
 import 'package:dr/ui/app_popup_button.dart';
 import 'package:dr/ui/last_fetched_overlay.dart';
@@ -41,10 +42,11 @@ class GradesPage extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = context.l10n;
     final averageStyle = Theme.of(context).textTheme.titleMedium;
     return Scaffold(
       appBar: ResponsiveAppBar(
-        title: const Text("Noten"),
+        title: Text(l10n.text('sidebar.grades')),
         actions: <Widget>[
           Padding(
             padding: const EdgeInsets.only(right: 12),
@@ -78,7 +80,7 @@ class GradesPage extends StatelessWidget {
                             ListTile(
                               title: Row(
                                 children: [
-                                  const Text("Notendurchschnitt"),
+                                  Text(l10n.text('grades.average')),
                                   IconButton(
                                     icon: const Icon(Icons.settings),
                                     onPressed: showGradesSettings,
@@ -122,12 +124,13 @@ class _SemesterSwitcher extends StatelessWidget {
           .map(
             (semester) => AppPopupButtonEntry<Semester>(
               value: semester,
-              label: semester.name,
+              label: AppLocalizations.of(context).semesterLabel(semester),
             ),
           )
           .toList(),
       onSelected: onChanged,
-      labelBuilder: (semester) => semester.name,
+      labelBuilder: (semester) =>
+          AppLocalizations.of(context).semesterLabel(semester),
     );
   }
 }

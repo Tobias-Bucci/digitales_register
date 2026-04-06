@@ -17,6 +17,7 @@
 // along with digitales_register.  If not, see <http://www.gnu.org/licenses/>.
 
 import 'package:flutter/material.dart';
+import 'package:dr/i18n/app_localizations.dart';
 
 class RequestPassReset extends StatefulWidget {
   final ResetPass resetPass;
@@ -70,6 +71,7 @@ class _RequestPassResetState extends State<RequestPassReset> {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = context.l10n;
     final theme = Theme.of(context);
     final isDark = theme.brightness == Brightness.dark;
     final accent = theme.colorScheme.primary;
@@ -95,7 +97,7 @@ class _RequestPassResetState extends State<RequestPassReset> {
       child: Scaffold(
         backgroundColor: fixedBackground,
         appBar: AppBar(
-          title: const Text("Passwort vergessen"),
+          title: Text(l10n.text('login.forgotPassword')),
           elevation: 0,
           backgroundColor: Colors.transparent,
           foregroundColor: theme.colorScheme.onSurface,
@@ -112,7 +114,7 @@ class _RequestPassResetState extends State<RequestPassReset> {
                     child: Column(
                       children: [
                         Text(
-                          "Digitales Register",
+                          l10n.text('login.appTitle'),
                           textAlign: TextAlign.center,
                           style: theme.textTheme.headlineSmall?.copyWith(
                             fontWeight: FontWeight.w700,
@@ -154,7 +156,7 @@ class _RequestPassResetState extends State<RequestPassReset> {
                               controller: _usernameController,
                               decoration: _fieldDecoration(
                                 context,
-                                'Benutzername',
+                                l10n.text('login.username'),
                                 Icons.person_outline_rounded,
                                 accent,
                               ),
@@ -166,7 +168,7 @@ class _RequestPassResetState extends State<RequestPassReset> {
                               controller: _emailController,
                               decoration: _fieldDecoration(
                                 context,
-                                'Email-Adresse',
+                                l10n.text('login.newEmail'),
                                 Icons.alternate_email_rounded,
                                 accent,
                               ),
@@ -187,8 +189,9 @@ class _RequestPassResetState extends State<RequestPassReset> {
                                 _emailController.text,
                               ),
                               icon: const Icon(Icons.send_rounded),
-                              label:
-                                  const Text("Anfrage zum Zurücksetzen senden"),
+                              label: Text(
+                                l10n.text('login.requestPasswordReset'),
+                              ),
                             ),
                           ],
                         ),
@@ -206,7 +209,7 @@ class _RequestPassResetState extends State<RequestPassReset> {
                       ),
                       padding: const EdgeInsets.all(12),
                       child: Text(
-                        widget.message!,
+                        l10n.translateAuthServerText(widget.message!),
                         style: theme.textTheme.bodyMedium?.copyWith(
                           color: theme.colorScheme.onErrorContainer,
                         ),

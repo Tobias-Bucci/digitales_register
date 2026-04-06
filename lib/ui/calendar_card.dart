@@ -1,4 +1,5 @@
 // Copyright (C) 2021 Michael Debertol
+// Copyright (C) 2026 Tobias Bucci
 //
 // This file is part of digitales_register.
 //
@@ -17,6 +18,7 @@
 
 import 'package:dr/app_state.dart';
 import 'package:dr/data.dart';
+import 'package:dr/i18n/app_localizations.dart';
 import 'package:dr/ui/animated_linear_progress_indicator.dart';
 import 'package:dr/utc_date_time.dart';
 import 'package:flutter/material.dart';
@@ -46,6 +48,7 @@ class CalendarCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final localizedSubject = context.l10n.translateSubjectName(hour.subject);
     return Card(
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.circular(10),
@@ -67,13 +70,13 @@ class CalendarCard extends StatelessWidget {
             Row(
               children: [
                 CircledLetter(
-                  letter: hour.subject.characters.first,
+                  letter: localizedSubject.characters.first,
                   color: Color(theme.color),
                 ),
                 const SizedBox(width: 8),
                 Expanded(
                   child: Text(
-                    hour.subject,
+                    localizedSubject,
                     style: Theme.of(context).textTheme.titleLarge,
                   ),
                 ),

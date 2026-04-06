@@ -1,4 +1,5 @@
 // Copyright (C) 2021 Michael Debertol
+// Copyright (C) 2026 Tobias Bucci
 //
 // This file is part of digitales_register.
 //
@@ -16,6 +17,7 @@
 // along with digitales_register.  If not, see <http://www.gnu.org/licenses/>.
 
 import 'package:dr/container/certificate_container.dart';
+import 'package:dr/i18n/app_localizations.dart';
 import 'package:dr/ui/last_fetched_overlay.dart';
 import 'package:dr/ui/no_internet.dart';
 import 'package:flutter/material.dart';
@@ -29,7 +31,7 @@ class Certificate extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: const ResponsiveAppBar(title: Text("Zeugnis")),
+      appBar: ResponsiveAppBar(title: Text(context.t('certificate.title'))),
       body: vm.html == null
           ? Center(
               child: vm.noInternet
