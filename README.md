@@ -1,74 +1,188 @@
-# Digitales Register
+# Digitales Register (App)
 
-Inoffizielle App für das Digitale Register (http://xxxxxx.digitalesregister.it)
+Unofficial application for the Digital Register platform  
+(http://xxxxxx.digitalesregister.it)
+
+This repository is a fork of the original project:  
+https://github.com/miDeb/digitales_register
+
+It builds upon the original implementation and may include modifications, improvements, or adaptations specific to this version.
+
+---
+
+## Overview
+
+Digitales Register (App) provides a mobile-friendly interface to access the Digital Register system.  
+The goal of this project is to improve usability, accessibility, and convenience compared to the web version by offering a native mobile experience.
+
+The application is developed using Flutter and currently targets Android devices.
+
+---
+
+## Features
+
+- Native mobile interface for the Digital Register
+- Authentication with existing user accounts
+- Background notification system for unread updates
+- Demo mode for testing without a real account
+- Aggregated notifications to reduce noise
+- Configurable settings within the app
+
+---
 
 ## Installation
-### Android
-<a href='https://play.google.com/store/apps/details?id=it.digitalesregisterapp&pcampaignid=pcampaignidMKT-Other-global-all-co-prtnr-py-PartBadge-Mar2515-1'><img alt='Jetzt bei Google Play' src='https://play.google.com/intl/en_us/badges/static/images/badges/de_badge_web_generic.png' style="width: 250px;"/></a>
 
-### iOS / MacOS
-<a href="https://apps.apple.com/us/app/digitales-register/id1546447854?itsct=apps_box_badge&amp;itscg=30200" style="display: inline-block; overflow: hidden; border-radius: 13px; width: 250px; height: 83px;"><img src="https://tools.applemediaservices.com/api/badges/download-on-the-app-store/black/de-de?size=250x83&amp;releaseDate=1609200000&h=c0c347c2e3e174c681774abe55a01914" alt="Download on the App Store" style="border-radius: 13px; width: 250px; height: 83px;"></a>
+### Android (Google Play)
 
-### Windows
-<a target="_blank" href="https://www.microsoft.com/store/apps/9N3QQ0J3V0HQ">
-  <img alt="Microsoft Store badge logo" src="https://get.microsoft.com/images/de-de dark.svg" width="250">
-</a>
+Download the app from the Play Store:
 
-### Linux
-<a href='https://flathub.org/apps/details/io.github.mideb.digitales_register'><img width='240' alt='Download on Flathub' src='https://flathub.org/assets/badges/flathub-badge-en.png'/></a>
+https://play.google.com/store/apps/details?id=it.bucci.digitalesregister
 
-## Run it from source
-* First, run `flutter packages run build_runner build` in your terminal to generate the necessary files.
-* Launch the app with `flutter run`. This will launch a debug build of the app. For a release build (which is faster), run `flutter run --release` instead.
+---
 
-## Android build notes (local development)
-This project is configured for a stable Android toolchain with Java 11.
+## Development
 
-Local release APK builds are separated from production signing:
-* By default, `release` expects a real keystore in `android/key.properties`.
-* For local testing only, you can explicitly allow debug signing for release builds by setting one of:
-  * `allowDebugSigningForRelease=true` in `android/local.properties`
-  * Environment variable `ALLOW_DEBUG_SIGNING_FOR_RELEASE=true`
+### Requirements
 
-Example:
-* `flutter build apk --release`
+- Flutter SDK (latest stable recommended)
+- Dart SDK (bundled with Flutter)
+- Java 11 (required for Android builds)
+- Android SDK / Android Studio
+
+### Setup
+
+Clone the repository:
+
+git clone https://github.com/Tobias-Bucci/digitales_register
+cd digitales_register
+
+Install dependencies and generate code:
+
+flutter packages run build_runner build
+
+Run the app in debug mode:
+
+flutter run
+
+Run in release mode:
+
+flutter run --release
+
+---
+
+## Build (Android)
+
+The project is configured for a stable Android toolchain using Java 11.
+
+### Release Build Configuration
+
+By default, release builds expect a valid keystore configuration:
+
+android/key.properties
+
+### Local Development (Debug Signing)
+
+For local testing without a production keystore, debug signing can be enabled.
+
+Option 1 – local.properties:
+
+allowDebugSigningForRelease=true
+
+Option 2 – Environment Variable:
+
+ALLOW_DEBUG_SIGNING_FOR_RELEASE=true
+
+### Build APK
+
+flutter build apk --release
+
+---
 
 ## Demo Mode
-If you want to use the app without having an actual account, select `Vinzentinum` as the school, `demo-user-6540` as the user and any password.
-You will be logged in to a (local) demo account that displays dummy data. Please note that some features
-may not work as usual and data might not be consistent. This feature was implemented to enable reviews from countries where `digitalesregister.it`
-is not accessible, allowing it to be made available in mobile app stores.
 
-## Hintergrund-Notifications
+The application includes a demo mode for testing purposes without requiring a real account.
 
-Die App kann neue ungelesene Notifications im Hintergrund pollen und als lokale Push-Notification anzeigen.
+Credentials:
 
-Wichtig:
-* Aktivierung erfolgt in den App-Einstellungen ueber den Toggle `Push Notifications aktivieren`.
-* Ungelesene Notifications werden erneut erinnert, bis sie als gelesen markiert wurden.
-* Solange die App geoeffnet ist, prueft sie alle 10 Minuten auf ungelesene Notifications.
-* Auf Android laeuft der Hintergrund-Check ueber WorkManager und ist daher durch das OS typischerweise auf mindestens ca. 15 Minuten begrenzt.
-* Wenn mehrere ungelesene Notifications gleichzeitig faellig sind, zeigt die App eine zusammengefasste Erinnerung statt vieler einzelner Popups.
+- School: Vinzentinum
+- Username: demo-user-6540
+- Password: any value
 
-### Teststrategie ohne echten Sender
+Notes:
 
-1. Mock-API / Fake-Server
-* Starte lokal einen Test-Endpunkt fuer `api/notification/unread`.
-* Liefere zuerst eine feste Liste aus und lasse einzelne IDs ueber mehrere Polling-Zyklen ungelesen.
-* Erwartung: neue IDs werden sofort erinnert, alte ungelesene IDs nach dem Intervall erneut.
+- The demo environment uses mock data
+- Some features may be limited or behave differently
+- Data is not guaranteed to be consistent or persistent
 
-2. Manuelle Testdaten
-* Hinterlege testweise JSON-Antworten fuer den Unread-Endpunkt.
-* Simuliere Szenarien wie gleiche ungelesene Liste, neue ID, geaenderter Titel bei gleicher ID.
+---
 
-3. Debug-Endpunkt zum Erzeugen neuer Notifications
-* Falls serverseitig moeglich: baue einen internen Debug-Endpunkt, der gezielt neue Notification-Objekte erstellt.
-* So kann das Verhalten reproduzierbar geprueft werden, ohne manuelle Eingriffe in Produktivdaten.
+## Background Notifications
 
-4. Logging zur Verifikation
-* Pruefe die gespeicherten Background-Logs (Polling-Zeitpunkte, erkannte neue IDs, Fehlerfaelle).
-* Kontrolliere insbesondere:
-  * wann Polling lief,
-  * welche IDs als ungelesen verfolgt wurden,
-  * wann Erinnerungen erneut ausgeliefert wurden,
-  * ob bei mehreren faelligen Eintraegen eine Sammel-Notification erzeugt wurde.
+The application supports background polling for unread notifications and displays them as local push notifications.
+
+### Behavior
+
+- Notifications must be enabled in app settings
+- Unread notifications are repeatedly reminded until marked as read
+- While the app is open: polling every 10 minutes
+- In background (Android): handled via WorkManager (typically ~15 minutes minimum interval enforced by OS)
+- Multiple notifications are grouped into a single summary notification
+
+---
+
+## Testing (Without Backend Access)
+
+### 1. Mock API
+
+- Provide a local endpoint for: api/notification/unread
+- Return static and evolving datasets across polling cycles
+- Expected behavior:
+  - New IDs trigger immediate notifications
+  - Existing unread IDs trigger repeated reminders
+
+### 2. Static Test Data
+
+- Use predefined JSON responses
+- Simulate:
+  - unchanged lists
+  - new entries
+  - updated content for existing IDs
+
+### 3. Debug Endpoints
+
+- Optionally implement server-side debug endpoints
+- Allow controlled creation of notification objects
+- Enables reproducible test scenarios
+
+### 4. Logging
+
+Verify:
+
+- polling intervals
+- detected unread IDs
+- retry/reminder logic
+- grouping of notifications
+
+---
+
+## License
+
+This project is licensed under the GNU General Public License v3.0 (GPL-3.0).
+
+You are free to use, modify, and distribute this software under the terms of the license.  
+Any derivative work must also be distributed under the same license.
+
+For full details, see the LICENSE file or:  
+https://www.gnu.org/licenses/gpl-3.0.en.html
+
+---
+
+## Contributing
+
+Contributions are welcome.
+
+- Fork the repository
+- Create a feature branch
+- Submit a pull request
+
+For significant changes, please open an issue first to discuss the proposed modifications.

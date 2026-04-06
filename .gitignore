@@ -35,6 +35,7 @@ packages/uni_links/**/**/.settings/
 /build/native_assets/
 /build/test_cache/
 /build/unit_test_assets/
+/android/build/
 
 # Web related
 lib/generated_plugin_registrant.dart
