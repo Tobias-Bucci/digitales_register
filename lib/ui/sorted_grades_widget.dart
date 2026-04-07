@@ -59,6 +59,7 @@ class SortedGradesWidget extends StatefulWidget {
 
 class _SortedGradesWidgetState extends State<SortedGradesWidget> {
   String? _favoriteSubject;
+  int? _expandedSubjectId;
 
   @override
   Widget build(BuildContext context) {
@@ -108,6 +109,7 @@ class _SortedGradesWidgetState extends State<SortedGradesWidget> {
         ),
         for (final s in visibleSubjects)
           SubjectWidget(
+            key: ValueKey(s.id),
             subject: s,
             sortByType: widget.vm.sortByType,
             viewSubjectDetail: () => widget.viewSubjectDetail(s),
@@ -117,6 +119,16 @@ class _SortedGradesWidgetState extends State<SortedGradesWidget> {
             ignoredForAverage: widget.vm.ignoredSubjectsForAverage.any(
               (element) => element.toLowerCase() == s.name.toLowerCase(),
             ),
+            expanded: _expandedSubjectId == s.id,
+            onExpansionChanged: (expanded) {
+              setState(() {
+                if (expanded) {
+                  _expandedSubjectId = s.id;
+                } else if (_expandedSubjectId == s.id) {
+                  _expandedSubjectId = null;
+                }
+              });
+            },
           ),
         if (widget.vm.subjects.any(
           (s) => widget.vm.ignoredSubjectsForAverage.any(
@@ -147,6 +159,9 @@ class _SortedGradesWidgetState extends State<SortedGradesWidget> {
 
   @override
   void didUpdateWidget(covariant SortedGradesWidget oldWidget) {
+    if (oldWidget.vm.semester != widget.vm.semester) {
+      _expandedSubjectId = null;
+    }
     if (_favoriteSubject != null &&
         findSubjectIgnoreCase(
               filterAvailableFavoriteSubjects(
@@ -158,6 +173,17 @@ class _SortedGradesWidgetState extends State<SortedGradesWidget> {
             null) {
       _favoriteSubject = null;
     }
+    final visibleSubjects = (_favoriteSubject == null
+            ? widget.vm.subjects
+            : widget.vm.subjects.where(
+                (subject) =>
+                    matchesFavoriteSubject(subject.name, _favoriteSubject!),
+              ))
+        .toList();
+    if (_expandedSubjectId != null &&
+        !visibleSubjects.any((subject) => subject.id == _expandedSubjectId)) {
+      _expandedSubjectId = null;
+    }
     super.didUpdateWidget(oldWidget);
   }
 }
@@ -167,6 +193,8 @@ class SubjectWidget extends StatefulWidget {
   final Subject subject;
   final Semester semester;
   final VoidCallback viewSubjectDetail;
+  final bool expanded;
+  final ValueChanged<bool> onExpansionChanged;
 
   const SubjectWidget(
       {super.key,
@@ -176,18 +204,42 @@ class SubjectWidget extends StatefulWidget {
       required this.showCancelled,
       required this.semester,
       required this.noInternet,
-      required this.ignoredForAverage});
+      required this.ignoredForAverage,
+      required this.expanded,
+      required this.onExpansionChanged});
 
   @override
   _SubjectWidgetState createState() => _SubjectWidgetState();
 }
 
 class _SubjectWidgetState extends State<SubjectWidget> {
-  bool closed = true;
+  late final ExpansibleController _controller;
+
+  bool get closed => !widget.expanded;
+
+  @override
+  void initState() {
+    super.initState();
+    _controller = ExpansibleController();
+  }
+
   @override
   void didUpdateWidget(SubjectWidget oldWidget) {
-    if (oldWidget.semester != widget.semester) closed = true;
     super.didUpdateWidget(oldWidget);
+    if (widget.expanded == oldWidget.expanded) {
+      return;
+    }
+    if (widget.expanded) {
+      _controller.expand();
+    } else {
+      _controller.collapse();
+    }
+  }
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
   }
 
   Widget? _lastFetchedMessage() {
@@ -216,7 +268,9 @@ class _SubjectWidgetState extends State<SubjectWidget> {
     return AbsorbPointer(
       absorbing: widget.noInternet && entries == null,
       child: ExpansionTile(
-        key: ValueKey(widget.subject.id),
+        controller: _controller,
+        initiallyExpanded: widget.expanded,
+        maintainState: true,
         title: Text.rich(
           TextSpan(
             text: context.l10n.translateSubjectName(widget.subject.name),
@@ -245,21 +299,18 @@ class _SubjectWidgetState extends State<SubjectWidget> {
         trailing:
             widget.noInternet && entries == null ? const SizedBox() : null,
         onExpansionChanged: (expansion) {
-          setState(() {
-            closed = !expansion;
-            if (expansion) {
-              logPerformanceEvent(
-                "grades_subject_expanded",
-                <String, Object?>{
-                  "subjectId": widget.subject.id,
-                  "semester": widget.semester.name,
-                },
-              );
-              widget.viewSubjectDetail();
-            }
-          });
+          if (expansion) {
+            logPerformanceEvent(
+              "grades_subject_expanded",
+              <String, Object?>{
+                "subjectId": widget.subject.id,
+                "semester": widget.semester.name,
+              },
+            );
+            widget.viewSubjectDetail();
+          }
+          widget.onExpansionChanged(expansion);
         },
-        initiallyExpanded: !closed,
         children: [
           AnimatedSize(
             duration: const Duration(milliseconds: 200),

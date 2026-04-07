@@ -35,7 +35,7 @@ import 'package:responsive_scaffold/responsive_scaffold.dart';
 final Map<int, _CachedMessageDelta> _messageDeltaCache =
     <int, _CachedMessageDelta>{};
 
-class MessagesPage extends StatelessWidget {
+class MessagesPage extends StatefulWidget {
   final MessagesState? state;
   final bool noInternet;
   final void Function(MessageAttachmentFile message) onOpenFile;
@@ -49,25 +49,58 @@ class MessagesPage extends StatelessWidget {
     required this.onMarkAsRead,
   });
   @override
+  State<MessagesPage> createState() => _MessagesPageState();
+}
+
+class _MessagesPageState extends State<MessagesPage> {
+  int? _expandedMessageId;
+
+  @override
+  void initState() {
+    super.initState();
+    _expandedMessageId = widget.state?.showMessage;
+  }
+
+  @override
+  void didUpdateWidget(covariant MessagesPage oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    final messages = _visibleMessages(widget.state);
+    if (_expandedMessageId != null &&
+        !messages.any((message) => message.id == _expandedMessageId)) {
+      _expandedMessageId = widget.state?.showMessage != null &&
+              messages.any((message) => message.id == widget.state!.showMessage)
+          ? widget.state!.showMessage
+          : null;
+    } else if (oldWidget.state?.showMessage != widget.state?.showMessage &&
+        widget.state?.showMessage != null &&
+        messages.any((message) => message.id == widget.state!.showMessage)) {
+      _expandedMessageId = widget.state!.showMessage;
+    }
+  }
+
+  @override
   Widget build(BuildContext context) {
+    final visibleMessages = _visibleMessages(widget.state);
     return Scaffold(
       appBar: ResponsiveAppBar(
         title: Text(context.t('messages.title')),
       ),
-      body: state == null
-          ? noInternet
+      body: widget.state == null
+          ? widget.noInternet
               ? const NoInternet()
               : const Center(child: CircularProgressIndicator())
           : LastFetchedOverlay(
-              lastFetched: state!.lastFetched,
-              noInternet: noInternet,
+              lastFetched: widget.state!.lastFetched,
+              noInternet: widget.noInternet,
               child: Stack(
                 children: <Widget>[
                   AnimatedLinearProgressIndicator(
-                    show: state!.showMessage != null &&
-                        !state!.messages.any((m) => m.id == state!.showMessage),
+                    show: widget.state!.showMessage != null &&
+                        !visibleMessages.any(
+                          (m) => m.id == widget.state!.showMessage,
+                        ),
                   ),
-                  if (state!.messages.isEmpty)
+                  if (visibleMessages.isEmpty)
                     Center(
                       child: Text(
                         context.t('messages.none'),
@@ -76,14 +109,25 @@ class MessagesPage extends StatelessWidget {
                       ),
                     ),
                   ListView.builder(
-                    itemCount: state!.messages.length,
+                    itemCount: visibleMessages.length,
                     itemBuilder: (context, i) {
                       return MessageWidget(
-                        message: state!.messages[i],
-                        onOpenFile: onOpenFile,
-                        onMarkAsRead: onMarkAsRead,
-                        noInternet: noInternet,
-                        expand: state!.messages[i].id == state!.showMessage,
+                        key: ValueKey(visibleMessages[i].id),
+                        message: visibleMessages[i],
+                        onOpenFile: widget.onOpenFile,
+                        onMarkAsRead: widget.onMarkAsRead,
+                        noInternet: widget.noInternet,
+                        expand: visibleMessages[i].id == _expandedMessageId,
+                        onExpansionChanged: (expanded) {
+                          setState(() {
+                            if (expanded) {
+                              _expandedMessageId = visibleMessages[i].id;
+                            } else if (_expandedMessageId ==
+                                visibleMessages[i].id) {
+                              _expandedMessageId = null;
+                            }
+                          });
+                        },
                       );
                     },
                   ),
@@ -91,6 +135,13 @@ class MessagesPage extends StatelessWidget {
               ),
             ),
     );
+  }
+
+  List<Message> _visibleMessages(MessagesState? state) {
+    if (state == null) {
+      return const <Message>[];
+    }
+    return state.messages.where(_canRenderMessage).toList(growable: false);
   }
 }
 
@@ -100,6 +151,7 @@ class MessageWidget extends StatefulWidget {
   final void Function(Message message) onMarkAsRead;
   final bool noInternet;
   final bool expand;
+  final ValueChanged<bool> onExpansionChanged;
 
   const MessageWidget({
     super.key,
@@ -108,6 +160,7 @@ class MessageWidget extends StatefulWidget {
     required this.noInternet,
     required this.onMarkAsRead,
     required this.expand,
+    required this.onExpansionChanged,
   });
 
   @override
@@ -115,31 +168,51 @@ class MessageWidget extends StatefulWidget {
 }
 
 class _MessageWidgetState extends State<MessageWidget> {
-  late final bool initiallyExpanded;
-  late bool _expanded;
+  late final ExpansibleController _controller;
 
   @override
   void initState() {
-    initiallyExpanded = widget.expand;
-    _expanded = widget.expand;
-    if (initiallyExpanded) {
+    super.initState();
+    _controller = ExpansibleController();
+    if (widget.expand) {
       widget.onMarkAsRead(widget.message);
     }
-    super.initState();
+  }
+
+  @override
+  void didUpdateWidget(covariant MessageWidget oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (widget.expand == oldWidget.expand) {
+      return;
+    }
+    if (widget.expand) {
+      _controller.expand();
+      if (widget.message.isNew) {
+        widget.onMarkAsRead(widget.message);
+      }
+    } else {
+      _controller.collapse();
+    }
+  }
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
   }
 
   @override
   Widget build(BuildContext context) {
     final textTheme = Theme.of(context).textTheme;
     return ExpansionTile(
-      initiallyExpanded: initiallyExpanded,
+      controller: _controller,
+      initiallyExpanded: widget.expand,
+      maintainState: true,
       onExpansionChanged: (expanded) {
-        setState(() {
-          _expanded = expanded;
-        });
         if (expanded && widget.message.isNew) {
           widget.onMarkAsRead(widget.message);
         }
+        widget.onExpansionChanged(expanded);
       },
       title: Row(
         children: <Widget>[
@@ -149,7 +222,7 @@ class _MessageWidgetState extends State<MessageWidget> {
               style: textTheme.titleMedium,
             ),
           ),
-          if (widget.message.isNew || initiallyExpanded)
+          if (widget.message.isNew && !widget.expand)
             badge.Badge(
               badgeStyle: badge.BadgeStyle(
                 shape: badge.BadgeShape.square,
@@ -163,109 +236,157 @@ class _MessageWidgetState extends State<MessageWidget> {
         ],
       ),
       children: [
-        if (_expanded || initiallyExpanded)
-          Padding(
-            padding: const EdgeInsets.symmetric(
-              horizontal: 16,
-            ).copyWith(
-              bottom: 8,
-            ),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text.rich(
-                  TextSpan(
-                    children: [
-                      TextSpan(
-                        text: '${context.t('messages.sent')}: ',
-                        style: const TextStyle(fontWeight: FontWeight.bold),
-                      ),
-                      TextSpan(
-                          text: DateFormat(
-                            "d.M.yy H:mm",
-                            Localizations.localeOf(context).toLanguageTag(),
-                          )
-                              .format(widget.message.timeSent))
-                    ],
-                  ),
-                ),
-                Text.rich(
-                  TextSpan(
-                    children: [
-                      TextSpan(
-                        text: '${context.t('messages.from')}: ',
-                        style: const TextStyle(fontWeight: FontWeight.bold),
-                      ),
-                      TextSpan(text: widget.message.fromName)
-                    ],
-                  ),
-                ),
-                Text.rich(
-                  TextSpan(
-                    children: [
-                      TextSpan(
-                        text: '${context.t('messages.to')}: ',
-                        style: const TextStyle(fontWeight: FontWeight.bold),
-                      ),
-                      TextSpan(text: widget.message.recipientString)
-                    ],
-                  ),
-                ),
-                const Divider(),
-                renderMessage(widget.message),
-                if (widget.message.attachments.isNotEmpty) ...[
-                  const Divider(),
-                  Text(
-                    context.l10n.attachmentLabel(
-                      widget.message.attachments.length,
-                    ),
-                    style: const TextStyle(fontWeight: FontWeight.bold),
-                  ),
-                ],
-                ...[
-                  for (final attachment in widget.message.attachments)
-                    [
-                      Text(
-                        attachment.originalName,
-                      ),
-                      AnimatedLinearProgressIndicator(
-                        show: attachment.downloading,
-                      ),
-                      SizedBox(
-                        width: double.infinity,
-                        child: TextButton(
-                          onPressed:
-                              !attachment.fileAvailable && widget.noInternet
-                                  ? null
-                                  : () {
-                                      widget.onOpenFile(attachment);
-                                    },
-                          child: Text(context.t('common.open')),
-                        ),
-                      ),
-                    ]
-                ].intersperse(const Divider()),
-              ],
-            ),
+        Padding(
+          padding: const EdgeInsets.symmetric(
+            horizontal: 16,
+          ).copyWith(
+            bottom: 8,
           ),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text.rich(
+                TextSpan(
+                  children: [
+                    TextSpan(
+                      text: '${context.t('messages.sent')}: ',
+                      style: const TextStyle(fontWeight: FontWeight.bold),
+                    ),
+                    TextSpan(
+                        text: DateFormat(
+                          "d.M.yy H:mm",
+                          Localizations.localeOf(context).toLanguageTag(),
+                        ).format(widget.message.timeSent))
+                  ],
+                ),
+              ),
+              Text.rich(
+                TextSpan(
+                  children: [
+                    TextSpan(
+                      text: '${context.t('messages.from')}: ',
+                      style: const TextStyle(fontWeight: FontWeight.bold),
+                    ),
+                    TextSpan(text: widget.message.fromName)
+                  ],
+                ),
+              ),
+              Text.rich(
+                TextSpan(
+                  children: [
+                    TextSpan(
+                      text: '${context.t('messages.to')}: ',
+                      style: const TextStyle(fontWeight: FontWeight.bold),
+                    ),
+                    TextSpan(text: widget.message.recipientString)
+                  ],
+                ),
+              ),
+              const Divider(),
+              renderMessage(widget.message),
+              if (widget.message.attachments.isNotEmpty) ...[
+                const Divider(),
+                Text(
+                  context.l10n.attachmentLabel(
+                    widget.message.attachments.length,
+                  ),
+                  style: const TextStyle(fontWeight: FontWeight.bold),
+                ),
+              ],
+              ...[
+                for (final attachment in widget.message.attachments)
+                  [
+                    Text(
+                      attachment.originalName,
+                    ),
+                    AnimatedLinearProgressIndicator(
+                      show: attachment.downloading,
+                    ),
+                    SizedBox(
+                      width: double.infinity,
+                      child: TextButton(
+                        onPressed:
+                            !attachment.fileAvailable && widget.noInternet
+                                ? null
+                                : () {
+                                    widget.onOpenFile(attachment);
+                                  },
+                        child: Text(context.t('common.open')),
+                      ),
+                    ),
+                  ]
+              ].intersperse(const Divider()),
+            ],
+          ),
+        ),
       ],
     );
   }
 }
 
+bool _canRenderMessage(Message message) {
+  try {
+    final resolved = _resolveMessageDelta(message);
+    return _isRenderableMessageDelta(resolved.delta);
+  } catch (_) {
+    return false;
+  }
+}
+
 Widget renderMessage(Message message) {
-  final stopwatch = Stopwatch()..start();
-  final resolved = _resolveMessageDelta(message);
-  stopwatch.stop();
-  logPerformanceEvent(
-    "message_render_ready",
-    <String, Object?>{
-      "messageId": message.id,
-      "elapsedUs": stopwatch.elapsedMicroseconds,
-      "fromCache": resolved.fromCache,
-    },
-  );
-  return QuillDeltaViewer(delta: resolved.delta);
+  try {
+    final stopwatch = Stopwatch()..start();
+    final resolved = _resolveMessageDelta(message);
+    if (!_isRenderableMessageDelta(resolved.delta)) {
+      return const SizedBox.shrink();
+    }
+    stopwatch.stop();
+    logPerformanceEvent(
+      "message_render_ready",
+      <String, Object?>{
+        "messageId": message.id,
+        "elapsedUs": stopwatch.elapsedMicroseconds,
+        "fromCache": resolved.fromCache,
+      },
+    );
+    return QuillDeltaViewer(delta: resolved.delta);
+  } catch (_) {
+    return const SizedBox.shrink();
+  }
+}
+
+bool _isRenderableMessageDelta(Delta delta) {
+  final operations = <Operation>[];
+  for (var i = 0; i < delta.length; i++) {
+    final op = delta.elementAt(i);
+    if (op.data is! String) {
+      return false;
+    }
+    var string = op.data as String;
+    final split = <String>[];
+    for (;;) {
+      final index = string.indexOf("\n");
+      if (index == -1) {
+        split.add(string);
+        break;
+      }
+      split.add(string.substring(0, index + 1));
+      string = string.substring(index + 1);
+    }
+    operations.addAll(
+      split.map((s) => Operation.insert(s, op.attributes)),
+    );
+  }
+
+  while (operations.isNotEmpty) {
+    final last = operations.last.data;
+    if (last is! String || last.isNotEmpty) {
+      break;
+    }
+    operations.removeLast();
+  }
+
+  return operations.isNotEmpty;
 }
 
 _ResolvedMessageDelta _resolveMessageDelta(Message message) {
