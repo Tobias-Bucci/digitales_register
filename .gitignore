@@ -65,3 +65,4 @@ app.*.map.json
 android/key.properties
 android/*.jks
 ios/Flutter/ephemeral/
+macos/Flutter/GeneratedPluginRegistrant.swift
