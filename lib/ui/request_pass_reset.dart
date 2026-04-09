@@ -1,4 +1,4 @@
-﻿// Copyright (C) 2021 Michael Debertol
+// Copyright (C) 2021 Michael Debertol
 // Copyright (C) 2026 Tobias Bucci
 //
 // This file is part of digitales_register.
@@ -54,13 +54,15 @@ class _RequestPassResetState extends State<RequestPassReset> {
       fillColor: theme.colorScheme.surface,
       border: OutlineInputBorder(
         borderRadius: BorderRadius.circular(14),
-        borderSide:
-            BorderSide(color: theme.dividerColor.withValues(alpha: 0.25)),
+        borderSide: BorderSide(
+          color: theme.dividerColor.withValues(alpha: 0.25),
+        ),
       ),
       enabledBorder: OutlineInputBorder(
         borderRadius: BorderRadius.circular(14),
-        borderSide:
-            BorderSide(color: theme.dividerColor.withValues(alpha: 0.25)),
+        borderSide: BorderSide(
+          color: theme.dividerColor.withValues(alpha: 0.25),
+        ),
       ),
       focusedBorder: OutlineInputBorder(
         borderRadius: BorderRadius.circular(14),
@@ -79,7 +81,9 @@ class _RequestPassResetState extends State<RequestPassReset> {
       accent.withValues(alpha: isDark ? 0.24 : 0.14),
       theme.colorScheme.surface,
     );
-    const fixedBackground = Color(0xFF1B2026);
+    final pageBackground = isDark
+        ? const Color(0xFF1B2026)
+        : theme.colorScheme.surface;
 
     final pageTheme = theme.copyWith(
       colorScheme: theme.colorScheme.copyWith(
@@ -95,7 +99,7 @@ class _RequestPassResetState extends State<RequestPassReset> {
     return Theme(
       data: pageTheme,
       child: Scaffold(
-        backgroundColor: fixedBackground,
+        backgroundColor: pageBackground,
         appBar: AppBar(
           title: Text(l10n.text('login.forgotPassword')),
           elevation: 0,
@@ -178,8 +182,9 @@ class _RequestPassResetState extends State<RequestPassReset> {
                               style: ElevatedButton.styleFrom(
                                 backgroundColor: accent,
                                 foregroundColor: Colors.white,
-                                padding:
-                                    const EdgeInsets.symmetric(vertical: 14),
+                                padding: const EdgeInsets.symmetric(
+                                  vertical: 14,
+                                ),
                                 shape: RoundedRectangleBorder(
                                   borderRadius: BorderRadius.circular(14),
                                 ),
@@ -202,9 +207,7 @@ class _RequestPassResetState extends State<RequestPassReset> {
                     Container(
                       margin: const EdgeInsets.only(top: 14),
                       decoration: BoxDecoration(
-                        color: accentBg.withValues(
-                          alpha: isDark ? 0.5 : 0.7,
-                        ),
+                        color: accentBg.withValues(alpha: isDark ? 0.5 : 0.7),
                         borderRadius: BorderRadius.circular(12),
                       ),
                       padding: const EdgeInsets.all(12),

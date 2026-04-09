@@ -1,4 +1,4 @@
-﻿// Copyright (C) 2021 Michael Debertol
+// Copyright (C) 2021 Michael Debertol
 // Copyright (C) 2026 Tobias Bucci
 //
 // This file is part of digitales_register.
@@ -29,8 +29,8 @@ import 'package:tuple/tuple.dart';
 import 'package:url_launcher/url_launcher.dart';
 
 typedef LoginCallback = void Function(String user, String pass, String url);
-typedef ChangePassCallback = void Function(
-    String user, String oldPass, String newPass, String url);
+typedef ChangePassCallback =
+    void Function(String user, String oldPass, String newPass, String url);
 typedef SetSafeModeCallback = void Function(bool safeMode);
 typedef SelectAccountCallback = void Function(int index);
 
@@ -67,9 +67,7 @@ class _LoginPageContentState extends State<LoginPageContent> {
       _urlController = TextEditingController.fromValue(
         TextEditingValue(
           text: ".digitalesregister.it",
-          selection: TextSelection.fromPosition(
-            const TextPosition(offset: 0),
-          ),
+          selection: TextSelection.fromPosition(const TextPosition(offset: 0)),
         ),
       );
   final _schoolFocusNode = FocusNode();
@@ -132,7 +130,9 @@ class _LoginPageContentState extends State<LoginPageContent> {
       naturalBlue.withValues(alpha: isDark ? 0.24 : 0.14),
       theme.colorScheme.surface,
     );
-    const fixedBackground = Color(0xFF1B2026);
+    final pageBackground = isDark
+        ? const Color(0xFF1B2026)
+        : theme.colorScheme.surface;
     final loginTheme = theme.copyWith(
       colorScheme: theme.colorScheme.copyWith(
         primary: naturalBlue,
@@ -158,13 +158,15 @@ class _LoginPageContentState extends State<LoginPageContent> {
         fillColor: theme.colorScheme.surface,
         border: OutlineInputBorder(
           borderRadius: BorderRadius.circular(14),
-          borderSide:
-              BorderSide(color: theme.dividerColor.withValues(alpha: 0.25)),
+          borderSide: BorderSide(
+            color: theme.dividerColor.withValues(alpha: 0.25),
+          ),
         ),
         enabledBorder: OutlineInputBorder(
           borderRadius: BorderRadius.circular(14),
-          borderSide:
-              BorderSide(color: theme.dividerColor.withValues(alpha: 0.25)),
+          borderSide: BorderSide(
+            color: theme.dividerColor.withValues(alpha: 0.25),
+          ),
         ),
         focusedBorder: OutlineInputBorder(
           borderRadius: BorderRadius.circular(14),
@@ -184,7 +186,7 @@ class _LoginPageContentState extends State<LoginPageContent> {
           await SystemNavigator.pop();
         },
         child: Scaffold(
-          backgroundColor: fixedBackground,
+          backgroundColor: pageBackground,
           appBar: widget.vm.changePass
               ? AppBar(
                   elevation: 0,
@@ -216,14 +218,14 @@ class _LoginPageContentState extends State<LoginPageContent> {
                                 Text(
                                   l10n.text('login.appTitle'),
                                   textAlign: TextAlign.center,
-                                  style:
-                                      theme.textTheme.headlineSmall?.copyWith(
-                                    fontWeight: FontWeight.w700,
-                                    letterSpacing: 0.2,
-                                    color: isDark
-                                        ? const Color(0xFFE7EDF3)
-                                        : const Color(0xFF1A2733),
-                                  ),
+                                  style: theme.textTheme.headlineSmall
+                                      ?.copyWith(
+                                        fontWeight: FontWeight.w700,
+                                        letterSpacing: 0.2,
+                                        color: isDark
+                                            ? const Color(0xFFE7EDF3)
+                                            : const Color(0xFF1A2733),
+                                      ),
                                 ),
                                 const SizedBox(height: 8),
                                 Container(
@@ -256,132 +258,154 @@ class _LoginPageContentState extends State<LoginPageContent> {
                                 children: [
                                   if (!widget.vm.changePass) ...[
                                     LayoutBuilder(
-                                        builder: (context, constraints) {
-                                      return RawAutocomplete<String>(
-                                        focusNode: _schoolFocusNode,
-                                        textEditingController:
-                                            _schoolController,
-                                        optionsViewBuilder:
-                                            (context, onSelected, options) {
-                                          return AutocompleteOptions(
-                                            displayStringForOption:
-                                                RawAutocomplete
-                                                    .defaultStringForOption,
-                                            onSelected: onSelected,
-                                            options: options,
-                                            maxOptionsHeight: 220,
-                                            width: constraints.maxWidth,
-                                          );
-                                        },
-                                        fieldViewBuilder: (context,
-                                            textEditingController,
-                                            focusNode,
-                                            onFieldSubmitted) {
-                                          return TextFormField(
-                                            controller: textEditingController,
-                                            focusNode: focusNode,
-                                            onFieldSubmitted: (String value) {
-                                              onFieldSubmitted();
-                                            },
-                                            autofocus:
-                                                _schoolController.text.isEmpty,
-                                            enabled: !widget.vm.loading,
-                                            onChanged: (value) {
-                                              setState(() {
-                                                if (widget.vm.servers[value] ==
-                                                    null) {
-                                                  selectedPresetServer = null;
-                                                  _customSchoolSelected = false;
-                                                } else {
-                                                  selectedPresetServer = Tuple2(
-                                                    value,
-                                                    widget.vm.servers[value],
-                                                  );
-                                                  _customSchoolSelected = false;
-                                                  _urlController.text =
-                                                      selectedPresetServer!
-                                                          .item2!;
-                                                }
-                                              });
-                                            },
-                                            decoration: fieldDecoration(
-                                              l10n.text('login.school'),
-                                              icon: Icons.school_outlined,
-                                              errorText: !_schoolFocusNode
-                                                          .hasFocus &&
-                                                      !_customSchoolSelected &&
-                                                      !equalsIgnoreCase(
-                                                        _schoolController.text,
-                                                        l10n.text(
-                                                          'login.otherSchool',
-                                                        ),
-                                                      ) &&
-                                                      _schoolController
-                                                          .text.isNotEmpty &&
-                                                      selectedPresetServer ==
-                                                          null
-                                                  ? l10n.text(
-                                                      'login.schoolNotFound',
-                                                    )
-                                                  : null,
-                                            ),
-                                          );
-                                        },
-                                        optionsBuilder: (textEditingValue) {
-                                          if (textEditingValue.text
-                                                  .trim()
-                                                  .length <
-                                              3) {
-                                            return [];
-                                          }
-                                          if (widget.vm.servers.containsKey(
-                                              textEditingValue.text)) {
-                                            return [
-                                              textEditingValue.text,
-                                            ];
-                                          }
-                                          return [
-                                            ...Fuzzy(
-                                              widget.vm.servers.keys.toList(),
-                                              options: FuzzyOptions<String>(
-                                                maxPatternLength: 256,
-                                                tokenize: true,
-                                              ),
-                                            )
-                                                .search(textEditingValue.text)
-                                                .take(15)
-                                                .map((e) => e.item),
-                                            l10n.text('login.otherSchool'),
-                                          ];
-                                        },
-                                        onSelected: (option) {
-                                          _schoolFocusNode.unfocus();
-                                          setState(() {
-                                            selectedPresetServer = Tuple2(
-                                              option,
-                                              widget.vm.servers[option],
-                                            );
-                                            if (option ==
-                                                l10n.text(
-                                                  'login.otherSchool',
-                                                )) {
-                                              selectedPresetServer = null;
-                                              _customSchoolSelected = true;
-                                              _urlController.text =
-                                                  ".digitalesregister.it";
-                                              _urlController.selection =
-                                                  TextSelection.fromPosition(
-                                                const TextPosition(offset: 0),
-                                              );
-                                            } else {
-                                              _customSchoolSelected = false;
-                                              _urlController.text =
-                                                  selectedPresetServer!.item2!;
+                                      builder: (context, constraints) {
+                                        return RawAutocomplete<String>(
+                                          focusNode: _schoolFocusNode,
+                                          textEditingController:
+                                              _schoolController,
+                                          optionsViewBuilder:
+                                              (context, onSelected, options) {
+                                                return AutocompleteOptions(
+                                                  displayStringForOption:
+                                                      RawAutocomplete
+                                                          .defaultStringForOption,
+                                                  onSelected: onSelected,
+                                                  options: options,
+                                                  maxOptionsHeight: 220,
+                                                  width: constraints.maxWidth,
+                                                );
+                                              },
+                                          fieldViewBuilder:
+                                              (
+                                                context,
+                                                textEditingController,
+                                                focusNode,
+                                                onFieldSubmitted,
+                                              ) {
+                                                return TextFormField(
+                                                  controller:
+                                                      textEditingController,
+                                                  focusNode: focusNode,
+                                                  onFieldSubmitted:
+                                                      (String value) {
+                                                        onFieldSubmitted();
+                                                      },
+                                                  autofocus: _schoolController
+                                                      .text
+                                                      .isEmpty,
+                                                  enabled: !widget.vm.loading,
+                                                  onChanged: (value) {
+                                                    setState(() {
+                                                      if (widget
+                                                              .vm
+                                                              .servers[value] ==
+                                                          null) {
+                                                        selectedPresetServer =
+                                                            null;
+                                                        _customSchoolSelected =
+                                                            false;
+                                                      } else {
+                                                        selectedPresetServer =
+                                                            Tuple2(
+                                                              value,
+                                                              widget
+                                                                  .vm
+                                                                  .servers[value],
+                                                            );
+                                                        _customSchoolSelected =
+                                                            false;
+                                                        _urlController.text =
+                                                            selectedPresetServer!
+                                                                .item2!;
+                                                      }
+                                                    });
+                                                  },
+                                                  decoration: fieldDecoration(
+                                                    l10n.text('login.school'),
+                                                    icon: Icons.school_outlined,
+                                                    errorText:
+                                                        !_schoolFocusNode
+                                                                .hasFocus &&
+                                                            !_customSchoolSelected &&
+                                                            !equalsIgnoreCase(
+                                                              _schoolController
+                                                                  .text,
+                                                              l10n.text(
+                                                                'login.otherSchool',
+                                                              ),
+                                                            ) &&
+                                                            _schoolController
+                                                                .text
+                                                                .isNotEmpty &&
+                                                            selectedPresetServer ==
+                                                                null
+                                                        ? l10n.text(
+                                                            'login.schoolNotFound',
+                                                          )
+                                                        : null,
+                                                  ),
+                                                );
+                                              },
+                                          optionsBuilder: (textEditingValue) {
+                                            if (textEditingValue.text
+                                                    .trim()
+                                                    .length <
+                                                3) {
+                                              return [];
                                             }
-                                          });
-                                        },
-                                      );
-                                    }),
+                                            if (widget.vm.servers.containsKey(
+                                              textEditingValue.text,
+                                            )) {
+                                              return [textEditingValue.text];
+                                            }
+                                            return [
+                                              ...Fuzzy(
+                                                    widget.vm.servers.keys
+                                                        .toList(),
+                                                    options:
+                                                        FuzzyOptions<String>(
+                                                          maxPatternLength: 256,
+                                                          tokenize: true,
+                                                        ),
+                                                  )
+                                                  .search(textEditingValue.text)
+                                                  .take(15)
+                                                  .map((e) => e.item),
+                                              l10n.text('login.otherSchool'),
+                                            ];
+                                          },
+                                          onSelected: (option) {
+                                            _schoolFocusNode.unfocus();
+                                            setState(() {
+                                              selectedPresetServer = Tuple2(
+                                                option,
+                                                widget.vm.servers[option],
+                                              );
+                                              if (option ==
+                                                  l10n.text(
+                                                    'login.otherSchool',
+                                                  )) {
+                                                selectedPresetServer = null;
+                                                _customSchoolSelected = true;
+                                                _urlController.text =
+                                                    ".digitalesregister.it";
+                                                _urlController.selection =
+                                                    TextSelection.fromPosition(
+                                                      const TextPosition(
+                                                        offset: 0,
+                                                      ),
+                                                    );
+                                              } else {
+                                                _customSchoolSelected = false;
+                                                _urlController.text =
+                                                    selectedPresetServer!
+                                                        .item2!;
+                                              }
+                                            });
+                                          },
+                                        );
+                                      },
+                                    ),
                                     const SizedBox(height: 12),
                                     TextField(
                                       decoration: fieldDecoration(
@@ -440,8 +464,9 @@ class _LoginPageContentState extends State<LoginPageContent> {
                                           color: naturalBlueBg.withValues(
                                             alpha: 0.35,
                                           ),
-                                          borderRadius:
-                                              BorderRadius.circular(12),
+                                          borderRadius: BorderRadius.circular(
+                                            12,
+                                          ),
                                         ),
                                         padding: const EdgeInsets.all(12),
                                         child: Text(
@@ -452,10 +477,11 @@ class _LoginPageContentState extends State<LoginPageContent> {
                                     Container(
                                       decoration: BoxDecoration(
                                         color: theme
-                                            .colorScheme.surfaceContainerHighest
+                                            .colorScheme
+                                            .surfaceContainerHighest
                                             .withValues(
-                                          alpha: isDark ? 0.35 : 0.55,
-                                        ),
+                                              alpha: isDark ? 0.35 : 0.55,
+                                            ),
                                         borderRadius: BorderRadius.circular(12),
                                       ),
                                       padding: const EdgeInsets.all(12),
@@ -482,7 +508,7 @@ class _LoginPageContentState extends State<LoginPageContent> {
                                         setState(() {
                                           newPasswordsMatch =
                                               _newPassword1Controller.text ==
-                                                  _newPassword2Controller.text;
+                                              _newPassword2Controller.text;
                                         });
                                       },
                                     ),
@@ -507,7 +533,7 @@ class _LoginPageContentState extends State<LoginPageContent> {
                                         setState(() {
                                           newPasswordsMatch =
                                               _newPassword1Controller.text ==
-                                                  _newPassword2Controller.text;
+                                              _newPassword2Controller.text;
                                         });
                                       },
                                     ),
@@ -524,8 +550,8 @@ class _LoginPageContentState extends State<LoginPageContent> {
                                         borderRadius: BorderRadius.circular(14),
                                       ),
                                     ),
-                                    onPressed: widget.vm.loading ||
-                                            !newPasswordsMatch
+                                    onPressed:
+                                        widget.vm.loading || !newPasswordsMatch
                                         ? null
                                         : () {
                                             widget.setSaveNoPass(safeMode);
@@ -544,12 +570,16 @@ class _LoginPageContentState extends State<LoginPageContent> {
                                               );
                                             }
                                           },
-                                    icon: Icon(widget.vm.changePass
-                                        ? Icons.key_rounded
-                                        : Icons.login_rounded),
-                                    label: Text(widget.vm.changePass
-                                        ? l10n.text('login.changePassword')
-                                        : l10n.text('login.login')),
+                                    icon: Icon(
+                                      widget.vm.changePass
+                                          ? Icons.key_rounded
+                                          : Icons.login_rounded,
+                                    ),
+                                    label: Text(
+                                      widget.vm.changePass
+                                          ? l10n.text('login.changePassword')
+                                          : l10n.text('login.login'),
+                                    ),
                                   ),
                                   const SizedBox(height: 8),
                                   SwitchListTile.adaptive(
@@ -563,8 +593,9 @@ class _LoginPageContentState extends State<LoginPageContent> {
                                     ),
                                     contentPadding: EdgeInsets.zero,
                                     activeThumbColor: naturalBlue,
-                                    activeTrackColor:
-                                        naturalBlue.withValues(alpha: 0.42),
+                                    activeTrackColor: naturalBlue.withValues(
+                                      alpha: 0.42,
+                                    ),
                                     value: !safeMode,
                                     onChanged: widget.vm.loading
                                         ? null
@@ -593,8 +624,9 @@ class _LoginPageContentState extends State<LoginPageContent> {
                                             ),
                                           );
                                         },
-                                        icon:
-                                            const Icon(Icons.feedback_outlined),
+                                        icon: const Icon(
+                                          Icons.feedback_outlined,
+                                        ),
                                         label: Text(
                                           l10n.text('login.feedback'),
                                         ),
@@ -614,8 +646,9 @@ class _LoginPageContentState extends State<LoginPageContent> {
                             shape: RoundedRectangleBorder(
                               borderRadius: BorderRadius.circular(18),
                               side: BorderSide(
-                                color:
-                                    theme.dividerColor.withValues(alpha: 0.2),
+                                color: theme.dividerColor.withValues(
+                                  alpha: 0.2,
+                                ),
                               ),
                             ),
                             child: Padding(
@@ -628,13 +661,16 @@ class _LoginPageContentState extends State<LoginPageContent> {
                                       style: theme.textTheme.titleMedium,
                                     ),
                                   ),
-                                  for (var index = 0;
-                                      index < widget.vm.otherAccounts.length;
-                                      index++)
+                                  for (
+                                    var index = 0;
+                                    index < widget.vm.otherAccounts.length;
+                                    index++
+                                  )
                                     ListTile(
                                       leading: const Icon(Icons.person_outline),
-                                      title:
-                                          Text(widget.vm.otherAccounts[index]),
+                                      title: Text(
+                                        widget.vm.otherAccounts[index],
+                                      ),
                                       onTap: () =>
                                           widget.onSelectAccount(index),
                                     ),
@@ -658,8 +694,9 @@ class _LoginPageContentState extends State<LoginPageContent> {
                                       'login.noConnectionHint',
                                       args: {
                                         'url': widget.vm.url ?? '',
-                                        'otherSchool':
-                                            l10n.text('login.otherSchool'),
+                                        'otherSchool': l10n.text(
+                                          'login.otherSchool',
+                                        ),
                                       },
                                     )
                                   : l10n.translateAuthServerText(
