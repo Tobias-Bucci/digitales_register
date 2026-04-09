@@ -67,7 +67,7 @@
   "settings.advanced.licenses": "Licenses",
   "settings.about.appName": "Digital Register",
   "settings.about.title": "Digital Register (Client) - Tobias Bucci Fork",
-  "settings.about.version": "v1.5.1",
+  "settings.about.version": "v1.6.0",
   "settings.about.copyright": "Original Copyright: Michael Debertol and Simon Wachtler 2019-2022\nThis version Copyright: Tobias Bucci 2026",
   "settings.about.description": "A client for the Digital Register. This version was adapted and further developed by Tobias Bucci.",
   "settings.about.gpl": "This is free software, and you are welcome to redistribute it under certain conditions (GPLv3).",
