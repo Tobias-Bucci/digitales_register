@@ -91,6 +91,10 @@ bool _isBlacklisted(Homework homework, BuiltList<HomeworkType> blacklist) {
     return true;
   }
 
+  if (homework.type != HomeworkType.unknown) {
+    return false;
+  }
+
   return blacklist.any(
     (blacklisted) => _typesToTitles[blacklisted]!.any(
       (blacklistedTitle) => homework.title.contains(blacklistedTitle),

@@ -155,6 +155,10 @@ bool isBlacklisted(Homework homework, BuiltList<HomeworkType> blacklist) {
     return true;
   }
 
+  if (homework.type != HomeworkType.unknown) {
+    return false;
+  }
+
   // Fallback for legacy/misclassified items where title text is the only clue.
   return blacklist.any((blacklisted) {
     return typesToTitles[blacklisted]!

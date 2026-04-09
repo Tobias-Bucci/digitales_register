@@ -80,6 +80,118 @@ void main() {
     expect(days.single.homework.single.title, 'Hausaufgabe');
   });
 
+  test(
+      'dashboardDays keeps homework and reminders visible when only grades and tests are hidden',
+      () {
+    final state = AppState(
+      (b) {
+        b.dashboardState
+          ..future = false
+          ..blacklist = ListBuilder<HomeworkType>(<HomeworkType>[
+            HomeworkType.grade,
+            HomeworkType.gradeGroup,
+          ])
+          ..allDays = ListBuilder<Day>(<Day>[
+            Day(
+              (b) => b
+                ..date = UtcDateTime(2026, 3, 27)
+                ..lastRequested = UtcDateTime(2026, 3, 28)
+                ..deletedHomework = ListBuilder<Homework>()
+                ..homework = ListBuilder<Homework>(<Homework>[
+                  Homework(
+                    (b) => b
+                      ..id = 1
+                      ..title = 'Test lernen'
+                      ..subtitle = 'Soll sichtbar bleiben'
+                      ..type = HomeworkType.lessonHomework
+                      ..checkable = false
+                      ..checked = false
+                      ..deleteable = false
+                      ..deleted = false
+                      ..warning = false
+                      ..firstSeen = UtcDateTime(2026, 3, 28)
+                      ..lastNotSeen = UtcDateTime(2026, 3, 28),
+                  ),
+                  Homework(
+                    (b) => b
+                      ..id = 2
+                      ..title = 'Erinnerung an Test'
+                      ..subtitle = 'Soll sichtbar bleiben'
+                      ..type = HomeworkType.homework
+                      ..checkable = false
+                      ..checked = false
+                      ..deleteable = false
+                      ..deleted = false
+                      ..warning = false
+                      ..firstSeen = UtcDateTime(2026, 3, 28)
+                      ..lastNotSeen = UtcDateTime(2026, 3, 28),
+                  ),
+                  Homework(
+                    (b) => b
+                      ..id = 3
+                      ..title = 'Testarbeit'
+                      ..subtitle = 'Soll ausgeblendet werden'
+                      ..type = HomeworkType.gradeGroup
+                      ..checkable = false
+                      ..checked = false
+                      ..deleteable = false
+                      ..deleted = false
+                      ..warning = false
+                      ..firstSeen = UtcDateTime(2026, 3, 28)
+                      ..lastNotSeen = UtcDateTime(2026, 3, 28),
+                  ),
+                ]),
+            ),
+          ]);
+      },
+    );
+
+    final days = appSelectors.dashboardDays(state);
+
+    expect(days, hasLength(1));
+    expect(days.single.homework.map((hw) => hw.id), <int>[1, 2]);
+  });
+
+  test('dashboardDays still uses title fallback for unknown legacy entries', () {
+    final state = AppState(
+      (b) {
+        b.dashboardState
+          ..future = false
+          ..blacklist = ListBuilder<HomeworkType>(<HomeworkType>[
+            HomeworkType.gradeGroup,
+          ])
+          ..allDays = ListBuilder<Day>(<Day>[
+            Day(
+              (b) => b
+                ..date = UtcDateTime(2026, 3, 27)
+                ..lastRequested = UtcDateTime(2026, 3, 28)
+                ..deletedHomework = ListBuilder<Homework>()
+                ..homework = ListBuilder<Homework>(<Homework>[
+                  Homework(
+                    (b) => b
+                      ..id = 1
+                      ..title = 'Testarbeit'
+                      ..subtitle = 'Legacy ohne Typ'
+                      ..type = HomeworkType.unknown
+                      ..checkable = false
+                      ..checked = false
+                      ..deleteable = false
+                      ..deleted = false
+                      ..warning = false
+                      ..firstSeen = UtcDateTime(2026, 3, 28)
+                      ..lastNotSeen = UtcDateTime(2026, 3, 28),
+                  ),
+                ]),
+            ),
+          ]);
+      },
+    );
+
+    final days = appSelectors.dashboardDays(state);
+
+    expect(days.single.homework, isEmpty);
+  });
+
   test('allSubjectsAverage ignores configured subjects case-insensitively', () {
     final state = AppState(
       (b) {
