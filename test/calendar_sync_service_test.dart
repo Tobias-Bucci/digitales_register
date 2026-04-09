@@ -234,6 +234,64 @@ void main() {
     expect(deletedIds, <int>[333]);
   });
 
+  test('checked dashboard items are removed from calendar sync and restored when unchecked', () async {
+    final deletedIds = <int>[];
+    final upserts = <CalendarSyncUpsertRequest>[];
+    CalendarSyncService.upsertEventOverride = (request) async {
+      upserts.add(request);
+      return 333;
+    };
+    CalendarSyncService.deleteEventOverride = (eventId) async {
+      deletedIds.add(eventId);
+    };
+
+    final activeState = AppState(
+      (b) {
+        b.settingsState.calendarSyncEnabled = true;
+        b.dashboardState.allDays = ListBuilder<Day>(<Day>[
+          buildDay(
+            date: UtcDateTime(2026, 4, 10),
+            homework: <Homework>[
+              buildHomework(
+                id: 7,
+                title: 'Worksheet',
+                type: HomeworkType.lessonHomework,
+                checked: false,
+              ),
+            ],
+          ),
+        ]);
+      },
+    );
+    final checkedState = AppState(
+      (b) {
+        b.settingsState.calendarSyncEnabled = true;
+        b.dashboardState.allDays = ListBuilder<Day>(<Day>[
+          buildDay(
+            date: UtcDateTime(2026, 4, 10),
+            homework: <Homework>[
+              buildHomework(
+                id: 7,
+                title: 'Worksheet',
+                type: HomeworkType.lessonHomework,
+                checked: true,
+              ),
+            ],
+          ),
+        ]);
+      },
+    );
+
+    await CalendarSyncService.reconcile(activeState);
+    await CalendarSyncService.reconcile(checkedState);
+    await CalendarSyncService.reconcile(activeState);
+
+    expect(upserts, hasLength(2));
+    expect(upserts.first.eventId, isNull);
+    expect(upserts.last.eventId, isNull);
+    expect(deletedIds, <int>[333]);
+  });
+
   test('disabled sync does not create calendar events', () async {
     var upsertCalls = 0;
     CalendarSyncService.upsertEventOverride = (_) async {

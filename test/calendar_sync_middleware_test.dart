@@ -21,6 +21,7 @@ import 'package:dr/calendar_sync_service.dart';
 import 'package:dr/data.dart';
 import 'package:dr/platform_adapter.dart';
 import 'package:dr/utc_date_time.dart';
+import 'package:dr/actions/dashboard_actions.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 
@@ -87,5 +88,70 @@ void main() {
     await store.actions.settingsActions.calendarSyncEnabled(true);
 
     expect(store.state.settingsState.calendarSyncEnabled, isFalse);
+  });
+
+  testWidgets('toggling a dashboard item done state reconciles calendar sync',
+      (tester) async {
+    final upserts = <CalendarSyncUpsertRequest>[];
+    final deletedIds = <int>[];
+    CalendarSyncService.upsertEventOverride = (request) async {
+      upserts.add(request);
+      return 100;
+    };
+    CalendarSyncService.deleteEventOverride = (eventId) async {
+      deletedIds.add(eventId);
+    };
+
+    final store = createStore(
+      initialState: AppState((b) {
+        b.settingsState.calendarSyncEnabled = true;
+        b.dashboardState.allDays = ListBuilder<Day>(<Day>[
+          buildDay(
+            date: UtcDateTime(2026, 4, 10),
+            homework: <Homework>[
+              buildHomework(
+                id: 4,
+                title: 'Reminder',
+                type: HomeworkType.homework,
+                checkable: true,
+                checked: false,
+              ),
+            ],
+          ),
+        ]);
+      }),
+      withMiddleware: true,
+    );
+
+    await pumpApp(
+      tester,
+      store: store,
+      home: const Scaffold(),
+    );
+
+    await CalendarSyncService.reconcile(store.state);
+    await store.actions.dashboardActions.toggleDone(
+      ToggleDonePayload(
+        (b) => b
+          ..homeworkId = 4
+          ..type = HomeworkType.homework.name
+          ..done = true,
+      ),
+    );
+    await tester.pump();
+    await store.actions.dashboardActions.toggleDone(
+      ToggleDonePayload(
+        (b) => b
+          ..homeworkId = 4
+          ..type = HomeworkType.homework.name
+          ..done = false,
+      ),
+    );
+    await tester.pump();
+
+    expect(deletedIds, <int>[100]);
+    expect(upserts, hasLength(2));
+    expect(upserts.first.eventId, isNull);
+    expect(upserts.last.eventId, isNull);
   });
 }

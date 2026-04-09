@@ -341,6 +341,9 @@ class CalendarSyncService {
   }
 
   static bool _shouldSyncDashboardHomework(Homework homework) {
+    if (homework.checked) {
+      return false;
+    }
     return homework.type == HomeworkType.homework ||
         homework.type == HomeworkType.lessonHomework ||
         homework.type == HomeworkType.gradeGroup;

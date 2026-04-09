@@ -28,6 +28,7 @@ final _settingsMiddleware =
       ..add(DashboardActionsNames.homeworkAdded, _reconcileCalendarSync)
       ..add(DashboardActionsNames.reminderEdited, _reconcileCalendarSync)
       ..add(DashboardActionsNames.deleteHomework, _reconcileCalendarSync)
+      ..add(DashboardActionsNames.toggleDone, _reconcileCalendarSync)
       ..add(SettingsActionsNames.setLanguage, _setLanguage)
       ..add(SettingsActionsNames.pushNotificationsEnabled,
           _setPushNotificationsEnabled)
