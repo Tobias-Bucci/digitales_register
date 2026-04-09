@@ -17,6 +17,7 @@
 // along with digitales_register.  If not, see <http://www.gnu.org/licenses/>.
 
 import 'dart:io';
+import 'package:dr/platform_adapter.dart';
 
 import 'package:deleteable_tile/deleteable_tile.dart';
 import 'package:dr/app_state.dart';
@@ -60,6 +61,8 @@ class SettingsPageWidget extends StatefulWidget {
   final OnSettingChanged<bool> onSetCalenderColorBackground;
   final OnSettingChanged<bool> onSetDashboardColorTestsInRed;
   final OnSettingChanged<bool> onSetPushNotificationsEnabled;
+  final Future<void> Function(bool enabled) onSetCalendarSyncEnabled;
+  final Future<void> Function() onRemoveCalendarSyncEvents;
   final OnSettingChanged<bool> onSetAmoledMode;
   final OnSettingChanged<Color> onSetContrastColor;
   final OnSettingChanged<MapEntry<String, SubjectTheme>> onSetSubjectTheme;
@@ -94,6 +97,8 @@ class SettingsPageWidget extends StatefulWidget {
     required this.onSetSubjectTheme,
     required this.onSetDashboardColorTestsInRed,
     required this.onSetPushNotificationsEnabled,
+    required this.onSetCalendarSyncEnabled,
+    required this.onRemoveCalendarSyncEvents,
     required this.onSetAmoledMode,
     required this.onSetContrastColor,
     required this.onSetFavoriteSubjects,
@@ -422,6 +427,31 @@ class _SettingsPageWidgetState extends State<SettingsPageWidget> {
             onChanged: widget.onSetPushNotificationsEnabled,
             value: widget.vm.pushNotificationsEnabled,
           ),
+          if (isAndroidPlatform)
+            SwitchListTile.adaptive(
+              key: const Key('calendar-sync-toggle'),
+              title: Text(l10n.text('settings.calendarSync.title')),
+              subtitle: Text(l10n.text('settings.calendarSync.subtitle')),
+              value: widget.vm.calendarSyncEnabled,
+              onChanged: (enabled) async {
+                if (enabled) {
+                  await widget.onSetCalendarSyncEnabled(true);
+                  return;
+                }
+
+                final disableAction = await _showCalendarSyncDisableDialog(
+                  context,
+                );
+                if (disableAction == null) {
+                  return;
+                }
+
+                await widget.onSetCalendarSyncEnabled(false);
+                if (disableAction == _CalendarSyncDisableAction.remove) {
+                  await widget.onRemoveCalendarSyncEvents();
+                }
+              },
+            ),
           SwitchListTile.adaptive(
             title: Text(l10n.text('settings.dashboard.markChanged')),
             onChanged: (bool value) {
@@ -928,6 +958,39 @@ class _SettingsPageWidgetState extends State<SettingsPageWidget> {
     );
   }
 
+  Future<_CalendarSyncDisableAction?> _showCalendarSyncDisableDialog(
+    BuildContext context,
+  ) {
+    final l10n = context.l10n;
+    return showDialog<_CalendarSyncDisableAction>(
+      context: context,
+      builder: (context) => InfoDialog(
+        title: Text(l10n.text('settings.calendarSync.disable.title')),
+        content: Text(l10n.text('settings.calendarSync.disable.body')),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(),
+            child: Text(l10n.text('common.cancel')),
+          ),
+          TextButton(
+            key: const Key('calendar-sync-keep-events'),
+            onPressed: () => Navigator.of(context).pop(
+              _CalendarSyncDisableAction.keep,
+            ),
+            child: Text(l10n.text('settings.calendarSync.disable.keep')),
+          ),
+          ElevatedButton(
+            key: const Key('calendar-sync-remove-events'),
+            onPressed: () => Navigator.of(context).pop(
+              _CalendarSyncDisableAction.remove,
+            ),
+            child: Text(l10n.text('settings.calendarSync.disable.remove')),
+          ),
+        ],
+      ),
+    );
+  }
+
   Future<MapEntry<String, String>?> showEditSubjectNick(BuildContext context,
       String key, String? value, List<String> suggestions) {
     return showDialog(
@@ -939,6 +1002,11 @@ class _SettingsPageWidgetState extends State<SettingsPageWidget> {
       ),
     );
   }
+}
+
+enum _CalendarSyncDisableAction {
+  keep,
+  remove,
 }
 
 class EditSubjectsNicks extends StatefulWidget {

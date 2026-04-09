@@ -17,6 +17,7 @@
 
 import 'package:built_collection/built_collection.dart';
 import 'package:dr/app_state.dart';
+import 'package:dr/platform_adapter.dart';
 import 'package:dr/container/settings_page.dart';
 import 'package:dr/i18n/app_language.dart';
 import 'package:dr/ui/dialog.dart';
@@ -27,6 +28,8 @@ import '../../support/fixtures.dart';
 import '../../support/test_harness.dart';
 
 void main() {
+  final settingsList = find.byType(ListView);
+
   setUp(() async {
     await bootstrapTestEnvironment();
   });
@@ -64,7 +67,11 @@ void main() {
       );
       await settleFor(tester, duration: const Duration(milliseconds: 400));
 
-      await tester.scrollUntilVisible(find.text('Fächerkürzel'), 200);
+      await tester.scrollUntilVisible(
+        find.text('Fächerkürzel'),
+        200,
+        scrollable: settingsList,
+      );
       await tester.tap(find.text('Fächerkürzel'));
       await tester.pumpAndSettle();
       tester.widget<IconButton>(
@@ -103,7 +110,11 @@ void main() {
       );
       await settleFor(tester, duration: const Duration(milliseconds: 400));
 
-      await tester.scrollUntilVisible(find.text('Fächerkürzel'), 200);
+      await tester.scrollUntilVisible(
+        find.text('Fächerkürzel'),
+        200,
+        scrollable: settingsList,
+      );
       await tester.tap(find.text('Fächerkürzel'));
       await tester.pump();
       await settleFor(tester);
@@ -124,6 +135,79 @@ void main() {
     });
   });
 
+  group('calendar sync', () {
+    testWidgets('shows the Android-only calendar sync toggle', (tester) async {
+      isAndroidOverride = () => true;
+      final store = createStore(
+        initialState: AppState((b) => b.settingsState.languageCode = 'en'),
+      );
+
+      await pumpApp(
+        tester,
+        store: store,
+        home: SettingsPageContainer(),
+      );
+      await settleFor(tester);
+
+      await tester.scrollUntilVisible(
+        find.text('Sync school items to calendar'),
+        150,
+        scrollable: settingsList,
+      );
+
+      expect(find.text('Sync school items to calendar'), findsOneWidget);
+    });
+
+    testWidgets('hides the calendar sync toggle on non-Android platforms',
+        (tester) async {
+      isAndroidOverride = () => false;
+      final store = createStore(
+        initialState: AppState((b) => b.settingsState.languageCode = 'en'),
+      );
+
+      await pumpApp(
+        tester,
+        store: store,
+        home: SettingsPageContainer(),
+      );
+      await settleFor(tester);
+
+      expect(find.text('Sync school items to calendar'), findsNothing);
+    });
+
+    testWidgets('disabling calendar sync opens the keep/remove dialog',
+        (tester) async {
+      isAndroidOverride = () => true;
+      final store = createStore(
+        initialState: AppState((b) {
+          b.settingsState
+            ..languageCode = 'en'
+            ..calendarSyncEnabled = true;
+        }),
+      );
+
+      await pumpApp(
+        tester,
+        store: store,
+        home: SettingsPageContainer(),
+      );
+      await settleFor(tester);
+
+      await tester.scrollUntilVisible(
+        find.text('Sync school items to calendar'),
+        150,
+        scrollable: settingsList,
+      );
+      await tester.tap(find.text('Sync school items to calendar'));
+      await tester.pump();
+      await settleFor(tester);
+
+      expect(find.text('Turn off calendar sync?'), findsOneWidget);
+      expect(find.text('Keep events'), findsOneWidget);
+      expect(find.text('Remove events'), findsOneWidget);
+    });
+  });
+
   group('grades average ignore list', () {
     testWidgets('adds and removes an ignored subject', (tester) async {
       final store = createStore();
@@ -138,6 +222,7 @@ void main() {
       await tester.scrollUntilVisible(
         find.text('Fächer aus dem Notendurchschnitt ausschließen'),
         150,
+        scrollable: settingsList,
       );
       tester.widget<IconButton>(
         find.ancestor(
@@ -192,7 +277,11 @@ void main() {
       );
       await settleFor(tester);
 
-      await tester.scrollUntilVisible(find.text('Fokusfächer verwalten'), 150);
+      await tester.scrollUntilVisible(
+        find.text('Fokusfächer verwalten'),
+        150,
+        scrollable: settingsList,
+      );
       tester.widget<IconButton>(
         find.descendant(
           of: find.ancestor(
@@ -219,7 +308,11 @@ void main() {
         BuiltList<String>(const <String>['Fach1']),
       );
 
-      await tester.scrollUntilVisible(find.text('Fach1'), 100);
+      await tester.scrollUntilVisible(
+        find.text('Fach1'),
+        100,
+        scrollable: settingsList,
+      );
       tester.widget<IconButton>(
         find.descendant(
           of: find.ancestor(of: find.text('Fach1').last, matching: find.byType(ListTile)),
@@ -247,7 +340,11 @@ void main() {
       );
       await settleFor(tester);
 
-      await tester.scrollUntilVisible(find.text('Fokusfächer verwalten'), 150);
+      await tester.scrollUntilVisible(
+        find.text('Fokusfächer verwalten'),
+        150,
+        scrollable: settingsList,
+      );
 
       final addButton = tester.widget<IconButton>(
         find.descendant(
@@ -273,7 +370,11 @@ void main() {
     );
     await settleFor(tester);
 
-    await tester.scrollUntilVisible(find.text('Sprache auswählen'), 150);
+    await tester.scrollUntilVisible(
+      find.text('Sprache auswählen'),
+      150,
+      scrollable: settingsList,
+    );
     await tester.tap(find.byType(DropdownButton<AppLanguage>));
     await tester.pumpAndSettle();
     await tester.tap(find.text('Englisch').last);

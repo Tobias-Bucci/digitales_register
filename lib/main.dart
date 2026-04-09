@@ -329,7 +329,11 @@ class _RegisterAppViewModel {
 
 /// Utility to show a global Snack Bar
 void showSnackBar(String message) {
-  scaffoldMessengerKey!.currentState!.showSnackBar(
+  final messengerState = scaffoldMessengerKey?.currentState;
+  if (messengerState == null) {
+    return;
+  }
+  messengerState.showSnackBar(
     SnackBar(
       content: Text(message),
     ),

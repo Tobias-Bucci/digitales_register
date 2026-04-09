@@ -327,6 +327,7 @@ abstract class SettingsState
   // whether to color the background of widgets in the calendar in the color specified by subjectThemes
   bool get calendarColorBackground;
   bool get pushNotificationsEnabled;
+  bool get calendarSyncEnabled;
   bool get dashboardColorTestsInRed;
   bool get amoledMode;
   bool get biometricAppLockEnabled;
@@ -364,6 +365,7 @@ abstract class SettingsState
       ..dashboardColorBorders = false
       ..calendarColorBackground = false
       ..pushNotificationsEnabled = false
+      ..calendarSyncEnabled = false
       ..dashboardColorTestsInRed = true
       ..amoledMode = false
       ..biometricAppLockEnabled = false

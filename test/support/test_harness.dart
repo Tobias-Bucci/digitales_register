@@ -26,6 +26,8 @@ import 'package:dr/i18n/app_localizations.dart';
 import 'package:dr/main.dart';
 import 'package:dr/middleware/middleware.dart';
 import 'package:dr/notification_background_service.dart';
+import 'package:dr/platform_adapter.dart';
+import 'package:dr/calendar_sync_service.dart';
 import 'package:dr/reducer/reducer.dart';
 import 'package:dr/theme_controller.dart';
 import 'package:dr/utc_date_time.dart';
@@ -177,6 +179,8 @@ Future<void> bootstrapTestEnvironment({
   scaffoldMessengerKey = GlobalKey<ScaffoldMessengerState>();
   mockNow = fixedNow;
   await NotificationBackgroundService.resetForTest();
+  await CalendarSyncService.resetForTest();
+  isAndroidOverride = null;
   await _ensurePathProviderMocks();
 }
 
@@ -216,6 +220,8 @@ Future<void> resetTestState() async {
   passDio = null;
   resetNoInternetRetryForTest();
   await NotificationBackgroundService.resetForTest();
+  await CalendarSyncService.resetForTest();
+  isAndroidOverride = null;
 }
 
 Store<AppState, AppStateBuilder, AppActions> createStore({

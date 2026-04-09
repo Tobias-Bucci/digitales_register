@@ -23,9 +23,17 @@ final _settingsMiddleware =
       ..add(GradesActionsNames.loaded, _updateSubjectThemes)
       ..add(DashboardActionsNames.loaded, _updateSubjectThemes)
       ..add(CalendarActionsNames.loaded, _updateSubjectThemes)
+      ..add(DashboardActionsNames.loaded, _reconcileCalendarSync)
+      ..add(CalendarActionsNames.loaded, _reconcileCalendarSync)
+      ..add(DashboardActionsNames.homeworkAdded, _reconcileCalendarSync)
+      ..add(DashboardActionsNames.reminderEdited, _reconcileCalendarSync)
+      ..add(DashboardActionsNames.deleteHomework, _reconcileCalendarSync)
       ..add(SettingsActionsNames.setLanguage, _setLanguage)
       ..add(SettingsActionsNames.pushNotificationsEnabled,
-          _setPushNotificationsEnabled);
+          _setPushNotificationsEnabled)
+      ..add(SettingsActionsNames.calendarSyncEnabled, _setCalendarSyncEnabled)
+      ..add(SettingsActionsNames.removeCalendarSyncEvents,
+          _removeCalendarSyncEvents);
 
 Future<void> _updateSubjectThemes(
     MiddlewareApi<AppState, AppStateBuilder, AppActions> api,
@@ -52,6 +60,64 @@ Future<void> _setPushNotificationsEnabled(
       await api.actions.settingsActions.pushNotificationsEnabled(false);
     }
   }
+}
+
+Future<void> _setCalendarSyncEnabled(
+    MiddlewareApi<AppState, AppStateBuilder, AppActions> api,
+    ActionHandler next,
+    Action<bool> action) async {
+  await next(action);
+  if (!isAndroidPlatform) {
+    return;
+  }
+
+  if (!action.payload) {
+    return;
+  }
+
+  final enableResult = await CalendarSyncService.prepareForEnable();
+  if (enableResult != CalendarSyncEnableResult.ready) {
+    showSnackBar(
+      switch (enableResult) {
+        CalendarSyncEnableResult.permissionDenied =>
+          'Kalenderberechtigung wurde nicht erteilt.',
+        CalendarSyncEnableResult.noWritableCalendar =>
+          'Kein beschreibbarer Standardkalender gefunden.',
+        _ => 'Kalendersynchronisierung ist auf diesem Geraet nicht verfuegbar.',
+      },
+    );
+    if (api.state.settingsState.calendarSyncEnabled) {
+      await api.actions.settingsActions.calendarSyncEnabled(false);
+    }
+    return;
+  }
+
+  final success = await CalendarSyncService.reconcile(api.state);
+  if (!success) {
+    showSnackBar('Kalenderereignisse konnten nicht vollstaendig synchronisiert werden.');
+  }
+}
+
+Future<void> _removeCalendarSyncEvents(
+    MiddlewareApi<AppState, AppStateBuilder, AppActions> api,
+    ActionHandler next,
+    Action<void> action) async {
+  await next(action);
+  final success = await CalendarSyncService.deleteTrackedEvents();
+  if (!success) {
+    showSnackBar('Nicht alle synchronisierten Kalenderereignisse konnten entfernt werden.');
+  }
+}
+
+Future<void> _reconcileCalendarSync(
+    MiddlewareApi<AppState, AppStateBuilder, AppActions> api,
+    ActionHandler next,
+    Action action) async {
+  await next(action);
+  if (!api.state.settingsState.calendarSyncEnabled) {
+    return;
+  }
+  await CalendarSyncService.reconcile(api.state);
 }
 
 Future<void> _setLanguage(

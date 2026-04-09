@@ -58,6 +58,7 @@ final settingsReducerBuilder = NestedReducerBuilder<AppState, AppStateBuilder,
   ..add(SettingsActionsNames.calendarColorBackground, _calendarColorBackground)
   ..add(
       SettingsActionsNames.pushNotificationsEnabled, _pushNotificationsEnabled)
+  ..add(SettingsActionsNames.calendarSyncEnabled, _calendarSyncEnabled)
   ..add(SettingsActionsNames.amoledMode, _amoledMode)
   ..add(SettingsActionsNames.biometricAppLockEnabled, _biometricAppLockEnabled)
   ..add(
@@ -184,6 +185,11 @@ void _calendarColorBackground(
 void _pushNotificationsEnabled(
     SettingsState state, Action<bool> action, SettingsStateBuilder builder) {
   builder.pushNotificationsEnabled = action.payload;
+}
+
+void _calendarSyncEnabled(
+    SettingsState state, Action<bool> action, SettingsStateBuilder builder) {
+  builder.calendarSyncEnabled = action.payload;
 }
 
 void _dashboardColorTestsInRed(
