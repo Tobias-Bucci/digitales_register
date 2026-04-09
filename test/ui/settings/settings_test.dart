@@ -20,6 +20,7 @@ import 'package:dr/app_state.dart';
 import 'package:dr/platform_adapter.dart';
 import 'package:dr/container/settings_page.dart';
 import 'package:dr/i18n/app_language.dart';
+import 'package:dr/theme_controller.dart';
 import 'package:dr/ui/dialog.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -32,6 +33,7 @@ void main() {
 
   setUp(() async {
     await bootstrapTestEnvironment();
+    await themeController.setThemePreference(AppThemePreference.system);
   });
 
   tearDown(resetTestState);
@@ -205,6 +207,44 @@ void main() {
       expect(find.text('Turn off calendar sync?'), findsOneWidget);
       expect(find.text('Keep events'), findsOneWidget);
       expect(find.text('Remove events'), findsOneWidget);
+    });
+  });
+
+  group('theme selection', () {
+    testWidgets('selected radio follows the active theme preference',
+        (tester) async {
+      final store = createStore();
+
+      await pumpApp(
+        tester,
+        store: store,
+        home: SettingsPageContainer(),
+      );
+      await settleFor(tester);
+
+      Finder activeThemeGroup(String themeName) {
+        return find.byWidgetPredicate(
+          (widget) =>
+              widget.runtimeType.toString().startsWith('RadioGroup') &&
+              (widget as dynamic).groupValue.toString() == '_Theme.$themeName',
+        );
+      }
+
+      expect(activeThemeGroup('followDevice'), findsOneWidget);
+
+      await themeController.setThemePreference(AppThemePreference.light);
+      await tester.pumpAndSettle();
+
+      expect(themeController.themePreference, AppThemePreference.light);
+      expect(activeThemeGroup('light'), findsOneWidget);
+      expect(activeThemeGroup('followDevice'), findsNothing);
+
+      await themeController.setThemePreference(AppThemePreference.dark);
+      await tester.pumpAndSettle();
+
+      expect(themeController.themePreference, AppThemePreference.dark);
+      expect(activeThemeGroup('dark'), findsOneWidget);
+      expect(activeThemeGroup('light'), findsNothing);
     });
   });
 

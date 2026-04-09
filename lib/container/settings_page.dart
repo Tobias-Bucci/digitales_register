@@ -33,54 +33,58 @@ class SettingsPageContainer extends StatelessWidget {
   Widget build(BuildContext context) {
     return StoreConnection<AppState, AppActions, SettingsViewModel>(
       builder: (context, vm, actions) {
-        return SettingsPageWidget(
-          vm: vm,
-          currentThemePreference: themeController.themePreference,
-          platformOverride: themeController.platformOverride,
-          onSetThemePreference: themeController.setThemePreference,
-          onSetPlatformOverride: themeController.setPlatformOverride,
-          onSetLanguage: (language) =>
-              actions.settingsActions.setLanguage(language.code),
-          onSetNoPassSaving: actions.settingsActions.saveNoPass.call,
-          onSetNoDataSaving: actions.settingsActions.saveNoData.call,
-          onSetAskWhenDelete:
-              actions.settingsActions.askWhenDeleteReminder.call,
-          onSetDeleteDataOnLogout:
-              actions.settingsActions.deleteDataOnLogout.call,
-          onSetSubjectNicks: (map) =>
-              actions.settingsActions.subjectNicks(BuiltMap(map)),
-          onSetShowCalendarEditNicksBar:
-              actions.settingsActions.showCalendarSubjectNicksBar.call,
-          onSetShowGradesDiagram:
-              actions.settingsActions.showGradesDiagram.call,
-          onSetShowAllSubjectsAverage:
-              actions.settingsActions.showAllSubjectsAverage.call,
-          onSetDashboardMarkNewOrChangedEntries:
-              actions.settingsActions.markNotSeenDashboardEntries.call,
-          onSetDashboardDeduplicateEntries:
-              actions.settingsActions.deduplicateDashboardEntries.call,
-          onShowProfile: actions.routingActions.showProfile.call,
-          onSetIgnoreForGradesAverage: (list) =>
-              actions.settingsActions.ignoreSubjectsForAverage(BuiltList(list)),
-          onSetFavoriteSubjects: (list) =>
-              actions.settingsActions.favoriteSubjects(BuiltList(list)),
-          onSetDashboardColorBorders:
-              actions.settingsActions.dashboardColorBorders.call,
-          onSetCalenderColorBackground:
-              actions.settingsActions.calendarColorBackground.call,
-          onSetDashboardColorTestsInRed:
-              actions.settingsActions.dashboardColorTestsInRed.call,
-          onSetPushNotificationsEnabled:
-              actions.settingsActions.pushNotificationsEnabled.call,
-          onSetCalendarSyncEnabled:
-              actions.settingsActions.calendarSyncEnabled.call,
-          onRemoveCalendarSyncEvents:
-              actions.settingsActions.removeCalendarSyncEvents.call,
-          onSetAmoledMode: actions.settingsActions.amoledMode.call,
-          onSetSubjectTheme: actions.settingsActions.setSubjectTheme.call,
-          onSetContrastColor: (color) {
-            unawaited(setGlobalContrastColor(color));
-          },
+        return AnimatedBuilder(
+          animation: themeController,
+          builder: (context, _) => SettingsPageWidget(
+            vm: vm,
+            currentThemePreference: themeController.themePreference,
+            platformOverride: themeController.platformOverride,
+            onSetThemePreference: themeController.setThemePreference,
+            onSetPlatformOverride: themeController.setPlatformOverride,
+            onSetLanguage: (language) =>
+                actions.settingsActions.setLanguage(language.code),
+            onSetNoPassSaving: actions.settingsActions.saveNoPass.call,
+            onSetNoDataSaving: actions.settingsActions.saveNoData.call,
+            onSetAskWhenDelete:
+                actions.settingsActions.askWhenDeleteReminder.call,
+            onSetDeleteDataOnLogout:
+                actions.settingsActions.deleteDataOnLogout.call,
+            onSetSubjectNicks: (map) =>
+                actions.settingsActions.subjectNicks(BuiltMap(map)),
+            onSetShowCalendarEditNicksBar:
+                actions.settingsActions.showCalendarSubjectNicksBar.call,
+            onSetShowGradesDiagram:
+                actions.settingsActions.showGradesDiagram.call,
+            onSetShowAllSubjectsAverage:
+                actions.settingsActions.showAllSubjectsAverage.call,
+            onSetDashboardMarkNewOrChangedEntries:
+                actions.settingsActions.markNotSeenDashboardEntries.call,
+            onSetDashboardDeduplicateEntries:
+                actions.settingsActions.deduplicateDashboardEntries.call,
+            onShowProfile: actions.routingActions.showProfile.call,
+            onSetIgnoreForGradesAverage: (list) => actions
+                .settingsActions
+                .ignoreSubjectsForAverage(BuiltList(list)),
+            onSetFavoriteSubjects: (list) =>
+                actions.settingsActions.favoriteSubjects(BuiltList(list)),
+            onSetDashboardColorBorders:
+                actions.settingsActions.dashboardColorBorders.call,
+            onSetCalenderColorBackground:
+                actions.settingsActions.calendarColorBackground.call,
+            onSetDashboardColorTestsInRed:
+                actions.settingsActions.dashboardColorTestsInRed.call,
+            onSetPushNotificationsEnabled:
+                actions.settingsActions.pushNotificationsEnabled.call,
+            onSetCalendarSyncEnabled:
+                actions.settingsActions.calendarSyncEnabled.call,
+            onRemoveCalendarSyncEvents:
+                actions.settingsActions.removeCalendarSyncEvents.call,
+            onSetAmoledMode: actions.settingsActions.amoledMode.call,
+            onSetSubjectTheme: actions.settingsActions.setSubjectTheme.call,
+            onSetContrastColor: (color) {
+              unawaited(setGlobalContrastColor(color));
+            },
+          ),
         );
       },
       connect: (state) {
