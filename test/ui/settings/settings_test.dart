@@ -17,9 +17,9 @@
 
 import 'package:built_collection/built_collection.dart';
 import 'package:dr/app_state.dart';
-import 'package:dr/platform_adapter.dart';
 import 'package:dr/container/settings_page.dart';
 import 'package:dr/i18n/app_language.dart';
+import 'package:dr/platform_adapter.dart';
 import 'package:dr/theme_controller.dart';
 import 'package:dr/ui/dialog.dart';
 import 'package:flutter/material.dart';

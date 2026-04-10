@@ -111,7 +111,7 @@ typedef CalendarSyncUpsertOverride = Future<int?> Function(
 );
 typedef CalendarSyncDeleteOverride = Future<void> Function(int eventId);
 
-class CalendarSyncService {
+extension CalendarSyncService on Never {
   static CalendarSyncPermissionOverride? requestPermissionOverride;
   static CalendarSyncDefaultCalendarOverride? getDefaultCalendarIdOverride;
   static CalendarSyncUpsertOverride? upsertEventOverride;
@@ -371,7 +371,7 @@ class CalendarSyncService {
     return granted ?? false;
   }
 
-  static Future<int?> _getDefaultCalendarId() async {
+  static Future<int?> _getDefaultCalendarId() {
     if (getDefaultCalendarIdOverride != null) {
       return getDefaultCalendarIdOverride!();
     }
@@ -379,7 +379,7 @@ class CalendarSyncService {
     return _calendarSyncMethodChannel.invokeMethod<int>('getDefaultCalendarId');
   }
 
-  static Future<int?> _upsertEvent(CalendarSyncUpsertRequest request) async {
+  static Future<int?> _upsertEvent(CalendarSyncUpsertRequest request) {
     if (upsertEventOverride != null) {
       return upsertEventOverride!(request);
     }

@@ -18,6 +18,7 @@
 
 import 'package:deleteable_tile/deleteable_tile.dart';
 import 'package:dr/data.dart';
+import 'package:dr/i18n/app_localizations.dart';
 import 'package:dr/main.dart';
 import 'package:dr/ui/last_fetched_overlay.dart';
 import 'package:dr/utc_date_time.dart';
@@ -44,9 +45,10 @@ class NotificationPage extends StatelessWidget {
   });
   @override
   Widget build(BuildContext context) {
+    final l10n = context.l10n;
     return Scaffold(
       appBar: AppBar(
-        title: const Text("Benachrichtigungen"),
+        title: Text(l10n.text('notifications.title')),
       ),
       body: LastFetchedOverlay(
         lastFetched: lastFetched,
@@ -56,7 +58,7 @@ class NotificationPage extends StatelessWidget {
           child: notifications.isEmpty
               ? Center(
                   child: Text(
-                    "Keine Benachrichtigungen",
+                    l10n.text('notifications.none'),
                     style: Theme.of(context).textTheme.headlineMedium,
                     textAlign: TextAlign.center,
                   ),
@@ -71,12 +73,12 @@ class NotificationPage extends StatelessWidget {
                         alignment: Alignment.centerRight,
                         child: TextButton(
                           onPressed: noInternet ? null : deleteAllNotifications,
-                          child: const Row(
+                          child: Row(
                             mainAxisSize: MainAxisSize.min,
                             children: [
-                              Text("Alle gelesen"),
-                              SizedBox(width: 8),
-                              Icon(Icons.done_all),
+                              Text(l10n.text('notifications.markAllRead')),
+                              const SizedBox(width: 8),
+                              const Icon(Icons.done_all),
                             ],
                           ),
                         ),
@@ -167,7 +169,7 @@ class NotificationWidget extends StatelessWidget {
                   icon: const Icon(
                     Icons.done,
                   ),
-                  tooltip: "Gelesen",
+                  tooltip: context.l10n.text('notifications.markRead'),
                   onPressed: noInternet!
                       ? null
                       : () async {
@@ -180,7 +182,7 @@ class NotificationWidget extends StatelessWidget {
                   icon: const Icon(
                     Icons.exit_to_app,
                   ),
-                  tooltip: "Zu Mitteilungen wechseln",
+                  tooltip: context.l10n.text('notifications.openMessages'),
                   onPressed: () => goToMessage(notification.objectId!),
                 )
             ],

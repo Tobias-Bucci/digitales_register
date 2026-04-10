@@ -122,6 +122,7 @@ class _CalendarState extends State<Calendar> with TickerProviderStateMixin {
 
   @override
   void dispose() {
+    _controller.dispose();
     _chevronOpacityController.dispose();
     _dateRangeOpacityController.dispose();
     super.dispose();

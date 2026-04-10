@@ -16,12 +16,12 @@
 // along with digitales_register.  If not, see <http://www.gnu.org/licenses/>.
 
 import 'package:built_collection/built_collection.dart';
+import 'package:dr/actions/dashboard_actions.dart';
 import 'package:dr/app_state.dart';
 import 'package:dr/calendar_sync_service.dart';
 import 'package:dr/data.dart';
 import 'package:dr/platform_adapter.dart';
 import 'package:dr/utc_date_time.dart';
-import 'package:dr/actions/dashboard_actions.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 
@@ -114,7 +114,6 @@ void main() {
                 title: 'Reminder',
                 type: HomeworkType.homework,
                 checkable: true,
-                checked: false,
               ),
             ],
           ),

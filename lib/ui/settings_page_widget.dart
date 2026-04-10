@@ -17,7 +17,6 @@
 // along with digitales_register.  If not, see <http://www.gnu.org/licenses/>.
 
 import 'dart:io';
-import 'package:dr/platform_adapter.dart';
 
 import 'package:deleteable_tile/deleteable_tile.dart';
 import 'package:dr/app_state.dart';
@@ -25,6 +24,7 @@ import 'package:dr/app_subject_translation_controller.dart';
 import 'package:dr/container/settings_page.dart';
 import 'package:dr/i18n/app_language.dart';
 import 'package:dr/i18n/app_localizations.dart';
+import 'package:dr/platform_adapter.dart';
 import 'package:dr/theme_controller.dart';
 import 'package:dr/ui/autocomplete_options.dart';
 import 'package:dr/ui/dialog.dart';
@@ -818,7 +818,7 @@ class _SettingsPageWidgetState extends State<SettingsPageWidget> {
             trailing: const Icon(Icons.open_in_new),
             title: Text(l10n.text('settings.advanced.sourceOriginal')),
             onTap: () => launchUrl(
-              Uri.parse("https://github.com/Tobias-Bucci/digitales_register"),
+              Uri.parse("https://github.com/miDeb/digitales_register"),
             ),
           ),
           ListTile(

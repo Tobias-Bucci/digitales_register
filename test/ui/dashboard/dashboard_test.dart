@@ -325,7 +325,7 @@ void main() {
       initialState: AppState(
         (b) => b.dashboardState.allDays = ListBuilder<Day>(<Day>[
           buildDay(
-            date: UtcDateTime(2050, 1, 1),
+            date: UtcDateTime(2050),
             homework: <Homework>[
               buildHomework(
                 id: 7,

@@ -57,14 +57,62 @@ Future<void> _loadProfile(
     result = await wrapper.send("api/profile/get");
   } on UnexpectedLogoutException {
     _showProfileRequestFailedMessage(
-      'Profil konnte nicht geladen werden. Bitte versuche es erneut.',
+      tr('profile.loadFailed'),
     );
     return;
   }
   if (result == null) {
     return;
   }
+  final resultMap = getMap(result);
+  if (resultMap != null) {
+    await _syncServerLanguageToApp(
+      api: api,
+      profile: resultMap,
+    );
+  }
   await api.actions.profileActions.loaded(result as Object);
+}
+
+Future<void> _syncServerLanguageToApp({
+  required MiddlewareApi<AppState, AppStateBuilder, AppActions> api,
+  required Map profile,
+}) async {
+  final targetLanguage =
+      _preferredServerLanguageForApp(api.state.settingsState.languageCode);
+  if (targetLanguage == null) {
+    return;
+  }
+
+  final serverLanguage = getString(profile['language'])?.trim().toLowerCase();
+  if (serverLanguage == null || serverLanguage == targetLanguage) {
+    return;
+  }
+
+  try {
+    await wrapper.send(
+      'api/profile/updateProfile',
+      args: <String, Object?>{
+        'language': targetLanguage,
+      },
+    );
+  } catch (_) {
+    // Best effort only. If the server rejects this, keep the local app language.
+  }
+}
+
+bool _isServerLanguageSupported(String languageCode) {
+  return languageCode == 'de' || languageCode == 'it' || languageCode == 'en';
+}
+
+String? _preferredServerLanguageForApp(String languageCode) {
+  if (_isServerLanguageSupported(languageCode)) {
+    return languageCode;
+  }
+  if (languageCode == 'lld') {
+    return 'de';
+  }
+  return null;
 }
 
 Future<void> _setSendNotificationEmails(
@@ -81,7 +129,7 @@ Future<void> _setSendNotificationEmails(
     );
   } on UnexpectedLogoutException {
     _showProfileRequestFailedMessage(
-      'Benachrichtigungseinstellungen konnten nicht gespeichert werden.',
+      tr('profile.notificationSettingsFailed'),
     );
     return;
   }
@@ -107,7 +155,7 @@ Future<void> _changeEmail(
     );
   } on UnexpectedLogoutException {
     _showProfileRequestFailedMessage(
-      'Profil konnte nicht gespeichert werden. Bitte versuche es erneut.',
+      tr('profile.saveFailed'),
     );
     return;
   }
@@ -143,7 +191,7 @@ Future<void> _pickAndUploadProfilePicture(
     );
   } on UnexpectedLogoutException {
     _showProfileRequestFailedMessage(
-      'Profilbild konnte nicht hochgeladen werden. Bitte versuche es erneut.',
+      tr('profile.pictureUploadFailed'),
     );
     return;
   }
@@ -153,12 +201,12 @@ Future<void> _pickAndUploadProfilePicture(
 
   final resultMap = getMap(result);
   if (resultMap == null) {
-    showSnackBar('Profilbild konnte nicht hochgeladen werden.');
+    showSnackBar(tr('profile.pictureUploadFailed'));
     return;
   }
 
   if (resultMap["error"] == null) {
-    showSnackBar('Profilbild wurde aktualisiert.');
+    showSnackBar(tr('profile.pictureUpdated'));
     await api.actions.profileActions.load();
   } else {
     showSnackBar("[${resultMap["error"]}] ${resultMap["message"]}");
@@ -172,7 +220,7 @@ Future<void> _updateCodiceFiscale(
   await next(action);
   if (api.state.profileState.codiceFiscale?.trim().isNotEmpty ?? false) {
     showSnackBar(
-      'Steuernummer bereits vorhanden; diese kann nur vom Schulsekretariat geändert werden.',
+      tr('profile.taxIdLocked'),
     );
     return;
   }
@@ -192,7 +240,7 @@ Future<void> _updateCodiceFiscale(
     );
   } on UnexpectedLogoutException {
     _showProfileRequestFailedMessage(
-      'Steuernummer konnte nicht gespeichert werden. Bitte versuche es erneut.',
+      tr('profile.taxIdSaveFailed'),
     );
     return;
   }
@@ -202,13 +250,13 @@ Future<void> _updateCodiceFiscale(
 
   final resultMap = getMap(result);
   if (resultMap == null) {
-    showSnackBar('Steuernummer konnte nicht gespeichert werden.');
+    showSnackBar(tr('profile.taxIdSaveFailed'));
     return;
   }
 
   if (resultMap["error"] == null) {
     showSnackBar(
-      getString(resultMap["message"]) ?? 'Steuernummer wurde geändert',
+      getString(resultMap["message"]) ?? tr('profile.taxIdUpdated'),
     );
     await api.actions.profileActions.load();
   } else {

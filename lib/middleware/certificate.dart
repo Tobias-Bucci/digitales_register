@@ -27,9 +27,29 @@ Future<void> _loadCertificate(
     Action<void> action) async {
   if (api.state.noInternet) return;
   await next(action);
+  await _syncCertificateLanguageToApp(api);
   final dynamic response =
       await wrapper.send("student/certificate", method: "GET");
   if (response != null) {
     await api.actions.certificateActions.loaded(response as String);
+  }
+}
+
+Future<void> _syncCertificateLanguageToApp(
+  MiddlewareApi<AppState, AppStateBuilder, AppActions> api,
+) async {
+  try {
+    final profile = await wrapper.send("api/profile/get");
+    final profileMap = getMap(profile);
+    if (profileMap == null) {
+      return;
+    }
+    await _syncServerLanguageToApp(
+      api: api,
+      profile: profileMap,
+    );
+  } catch (_) {
+    // Best effort only. Certificate loading should continue even if the sync
+    // attempt fails.
   }
 }

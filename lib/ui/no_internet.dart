@@ -16,12 +16,14 @@
 // You should have received a copy of the GNU General Public License
 // along with digitales_register.  If not, see <http://www.gnu.org/licenses/>.
 
+import 'package:dr/i18n/app_localizations.dart';
 import 'package:flutter/material.dart';
 
 class NoInternet extends StatelessWidget {
   const NoInternet({super.key});
   @override
   Widget build(BuildContext context) {
+    final l10n = context.l10n;
     final theme = Theme.of(context);
     final scheme = theme.colorScheme;
 
@@ -62,7 +64,7 @@ class NoInternet extends StatelessWidget {
                 ),
                 const SizedBox(height: 18),
                 Text(
-                  "Keine Verbindung",
+                  l10n.text('offline.title'),
                   textAlign: TextAlign.center,
                   style: theme.textTheme.headlineSmall?.copyWith(
                     fontWeight: FontWeight.w700,
@@ -71,7 +73,7 @@ class NoInternet extends StatelessWidget {
                 ),
                 const SizedBox(height: 8),
                 Text(
-                  "Aktuell kann keine Verbindung zum digitalen Register hergestellt werden.",
+                  l10n.text('offline.body'),
                   textAlign: TextAlign.center,
                   style: theme.textTheme.bodyMedium?.copyWith(
                     color: scheme.onSurfaceVariant,
@@ -97,7 +99,7 @@ class NoInternet extends StatelessWidget {
                       const SizedBox(width: 10),
                       Expanded(
                         child: Text(
-                          "Bitte spaeter erneut versuchen.",
+                          l10n.text('offline.retryLater'),
                           style: theme.textTheme.bodyMedium?.copyWith(
                             color: scheme.onPrimaryContainer,
                             fontWeight: FontWeight.w600,

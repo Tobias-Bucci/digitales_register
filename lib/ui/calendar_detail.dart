@@ -19,6 +19,7 @@ import 'package:dr/app_state.dart';
 import 'package:dr/container/calendar_card_container.dart';
 import 'package:dr/container/calendar_detail_container.dart';
 import 'package:dr/data.dart';
+import 'package:dr/i18n/app_localizations.dart';
 import 'package:dr/main.dart';
 import 'package:dr/ui/calendar_week.dart';
 import 'package:dr/ui/last_fetched_overlay.dart';
@@ -63,6 +64,12 @@ class _RightSidebarState extends State<RightSidebar>
         curve: Curves.ease,
       );
     }
+  }
+
+  @override
+  void dispose() {
+    _animationController.dispose();
+    super.dispose();
   }
 
   @override
@@ -191,7 +198,14 @@ class _CalendarDetailPageState extends State<CalendarDetailPage> {
   }
 
   @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
+
+  @override
   Widget build(BuildContext context) {
+    final l10n = context.l10n;
     return maybeWrap(
       Scaffold(
         appBar: AppBar(
@@ -207,8 +221,10 @@ class _CalendarDetailPageState extends State<CalendarDetailPage> {
             duration: const Duration(milliseconds: 250),
             child: Text(
               selectedDate != null
-                  ? DateFormat.MMMEd("de").format(selectedDate!)
-                  : "Detailansicht",
+                  ? DateFormat.MMMEd(
+                      Localizations.localeOf(context).toLanguageTag(),
+                    ).format(selectedDate!)
+                  : l10n.text('calendar.detailTitle'),
               key: ValueKey(selectedDate),
             ),
           ),
@@ -379,7 +395,7 @@ class _NoSchool extends StatelessWidget {
           150,
         ),
         Text(
-          "Keine Schule",
+          context.l10n.text('calendar.noSchool'),
           style: Theme.of(context).textTheme.headlineMedium,
         ),
       ],

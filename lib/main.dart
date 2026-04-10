@@ -54,6 +54,7 @@ GlobalKey<NavigatorState>? navigatorKey;
 GlobalKey<NavigatorState> nestedNavKey = GlobalKey();
 GlobalKey<ResponsiveScaffoldState<Pages>>? scaffoldKey;
 GlobalKey<ScaffoldMessengerState>? scaffoldMessengerKey;
+StreamSubscription<Uri?>? _uriLinkSubscription;
 
 typedef SingleArgumentVoidCallback<T> = void Function(T arg);
 
@@ -96,7 +97,8 @@ Future<void> main() async {
       Uri? uri;
       if (Platform.isAndroid) {
         uri = await getInitialUri();
-        uriLinkStream.listen((event) {
+        await _uriLinkSubscription?.cancel();
+        _uriLinkSubscription = uriLinkStream.listen((event) {
           store.actions.start(event);
         });
       }
@@ -262,7 +264,12 @@ class RegisterApp extends StatelessWidget {
                       fullscreenDialog: true,
                     );
                   default:
-                    throw Exception("Unknown Route ${pathElements[1]}");
+                    return MaterialPageRoute<void>(
+                      settings: settings,
+                      builder: (_) => _UnknownRoutePage(
+                        routeName: settings.name ?? '',
+                      ),
+                    );
                 }
               },
               themeMode: themeController.themeMode,
@@ -327,6 +334,14 @@ class _RegisterAppViewModel {
   final Locale locale;
 }
 
+String tr(String key, {Map<String, String> args = const {}}) {
+  final context = navigatorKey?.currentContext;
+  if (context == null) {
+    return key;
+  }
+  return AppLocalizations.of(context).text(key, args: args);
+}
+
 /// Utility to show a global Snack Bar
 void showSnackBar(String message) {
   final messengerState = scaffoldMessengerKey?.currentState;
@@ -338,6 +353,52 @@ void showSnackBar(String message) {
       content: Text(message),
     ),
   );
+}
+
+class _UnknownRoutePage extends StatelessWidget {
+  const _UnknownRoutePage({
+    required this.routeName,
+  });
+
+  final String routeName;
+
+  @override
+  Widget build(BuildContext context) {
+    final l10n = context.l10n;
+    return Scaffold(
+      appBar: AppBar(
+        title: Text(l10n.text('navigation.unknownRoute.title')),
+      ),
+      body: Center(
+        child: Padding(
+          padding: const EdgeInsets.all(24),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Icon(
+                Icons.link_off_rounded,
+                size: 56,
+                color: Theme.of(context).colorScheme.primary,
+              ),
+              const SizedBox(height: 16),
+              Text(
+                l10n.text(
+                  'navigation.unknownRoute.body',
+                  args: {'route': routeName},
+                ),
+                textAlign: TextAlign.center,
+              ),
+              const SizedBox(height: 20),
+              FilledButton(
+                onPressed: () => Navigator.of(context).pushReplacementNamed('/'),
+                child: Text(l10n.text('navigation.unknownRoute.action')),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
 }
 
 /*

@@ -39,8 +39,8 @@ import 'package:dr/actions/save_pass_actions.dart';
 import 'package:dr/actions/settings_actions.dart';
 import 'package:dr/app_language_controller.dart';
 import 'package:dr/app_state.dart';
-import 'package:dr/container/absences_page_container.dart';
 import 'package:dr/calendar_sync_service.dart';
+import 'package:dr/container/absences_page_container.dart';
 import 'package:dr/container/calendar_container.dart';
 import 'package:dr/container/certificate_container.dart';
 import 'package:dr/container/grades_page_container.dart';
@@ -278,14 +278,10 @@ Future<void> _noInternet(
   if (prevNoInternet != noInternet) {
     if (noInternet) {
       _scheduleNoInternetRetry();
-      showSnackBar("Keine Verbindung");
-
-      wrapper.logout(
-        hard: false,
-        logoutForcedByServer: true,
-      );
+      showSnackBar(tr('offline.title'));
     } else {
       _cancelNoInternetRetry();
+      showSnackBar(tr('offline.reconnected'));
       await api.actions.dashboardActions.refresh();
     }
   }
@@ -310,12 +306,12 @@ Future<void> _load(MiddlewareApi<AppState, AppStateBuilder, AppActions> api,
     login = json.decode(await secureStorage.read(key: "login") ?? "{}");
   } catch (e) {
     login = const <Never, Never>{};
-    showSnackBar("Fehler beim Laden der gespeicherten Daten");
+    showSnackBar(tr('error.savedDataLoadFailed'));
     log("Failed to load login credentials", error: e);
     try {
       await secureStorage.deleteAll();
     } catch (e) {
-      showSnackBar("Bitte versuche, die App neu zu installieren.");
+      showSnackBar(tr('error.reinstallSuggested'));
     }
   }
 
@@ -426,7 +422,7 @@ Future<void> _loggedIn(MiddlewareApi<AppState, AppStateBuilder, AppActions> api,
         await api.actions.settingsActions
             .saveNoPass(api.state.settingsState.noPasswordSaving);
       } catch (e) {
-        showSnackBar("Fehler beim Laden der gespeicherten Daten");
+        showSnackBar(tr('error.savedDataLoadFailed'));
         log("Failed to load data", error: e);
         await next(action);
       }
@@ -446,7 +442,7 @@ Future<void> _loggedIn(MiddlewareApi<AppState, AppStateBuilder, AppActions> api,
   if (!notificationsEnabled &&
       api.state.settingsState.pushNotificationsEnabled) {
     showSnackBar(
-      "Benachrichtigungen sind nicht erlaubt und wurden deaktiviert.",
+      tr('notifications.permissionDeniedDisabled'),
     );
     await api.actions.settingsActions.pushNotificationsEnabled(false);
   }
@@ -520,7 +516,7 @@ Future<String?> _readFromStorage(String key) async {
     try {
       await secureStorage.deleteAll();
     } catch (e) {
-      showSnackBar("Fehler: Bitte versuche, die App neu zu installieren.");
+      showSnackBar(tr('error.reinstallSuggestedDetailed'));
     }
     return null;
   }
@@ -608,7 +604,7 @@ Future<void> _start(
               parameters["redirect"]!.replaceFirst("#", ""), api);
         }
       default:
-        showSnackBar("Dieser Link konnte nicht geöffnet werden");
+        showSnackBar(tr('navigation.linkOpenFailed'));
     }
     await redirectAfterLogin(action.payload!.fragment, api);
   }
@@ -642,7 +638,7 @@ Future<void> redirectAfterLogin(String location,
         api.actions.routingActions.showMessages.call,
       );
     default:
-      showSnackBar("Dieser Link konnte nicht geöffnet werden");
+      showSnackBar(tr('navigation.linkOpenFailed'));
   }
 }
 
@@ -763,19 +759,21 @@ Future<bool?> askShouldOverwriteFile(String fileName) {
     DialogRoute(
       builder: (context) {
         return InfoDialog(
-          title: const Text("Datei existiert bereits"),
+          title: Text(tr('files.overwrite.title')),
           content: Text(
-            "Die Datei \"$fileName\" ist bereits im Downloads-Ordner vorhanden.\n\n"
-            "Wenn die Datei erneut heruntergeladen wird, wird die bestehende Datei ersetzt.",
+            tr(
+              'files.overwrite.body',
+              args: {'fileName': fileName},
+            ),
           ),
           actions: [
             TextButton(
               onPressed: () => Navigator.pop(context, false),
-              child: const Text("Bestehende Datei verwenden"),
+              child: Text(tr('files.overwrite.keep')),
             ),
             TextButton(
               onPressed: () => Navigator.pop(context, true),
-              child: const Text("Erneut herunterladen"),
+              child: Text(tr('files.overwrite.redownload')),
             ),
           ],
         );
@@ -807,12 +805,10 @@ Future<void> _checkShowUnmaintainedAlert() async {
     context: navigatorKey!.currentContext!,
     builder: (context) {
       return InfoDialog(
-        title: const Text("Willkommen!"),
+        title: Text(tr('about.welcome.title')),
         content: Text.rich(
           TextSpan(
-            text:
-                "Diese App ist ein Fork des Originals. In der App findest du sowohl das Original-Projekt als auch diesen Fork verlinkt.\n\n"
-                "Das Original stammt von miDeb: ",
+            text: tr('about.welcome.bodyPrefix'),
             children: [
               TextSpan(
                 text: "github.com/mideb/digitales_register",
@@ -820,14 +816,13 @@ Future<void> _checkShowUnmaintainedAlert() async {
                 recognizer: TapGestureRecognizer()
                   ..onTap = () {
                     launchUrl(
-                      Uri.parse(
-                          "https://github.com/Tobias-Bucci/digitales_register"),
+                      Uri.parse("https://github.com/miDeb/digitales_register"),
                       mode: LaunchMode.externalApplication,
                     );
                   },
               ),
-              const TextSpan(
-                text: "\n\nMein Fork ist hier zu finden: ",
+              TextSpan(
+                text: tr('about.welcome.bodyMiddle'),
               ),
               TextSpan(
                 text: "github.com/Tobias-Bucci/digitales_register",
@@ -841,8 +836,8 @@ Future<void> _checkShowUnmaintainedAlert() async {
                     );
                   },
               ),
-              const TextSpan(
-                text: "\n\nJede und jeder darf daran mitarbeiten.",
+              TextSpan(
+                text: tr('about.welcome.bodySuffix'),
               ),
             ],
           ),
@@ -850,7 +845,7 @@ Future<void> _checkShowUnmaintainedAlert() async {
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context),
-            child: const Text("OK"),
+            child: Text(tr('common.done')),
           ),
         ],
       );

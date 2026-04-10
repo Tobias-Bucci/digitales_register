@@ -55,7 +55,7 @@ Future<void> _setPushNotificationsEnabled(
   );
   if (action.payload && !enabled) {
     showSnackBar(
-      "Benachrichtigungen sind nicht erlaubt und wurden deaktiviert.",
+      tr('notifications.permissionDeniedDisabled'),
     );
     if (api.state.settingsState.pushNotificationsEnabled) {
       await api.actions.settingsActions.pushNotificationsEnabled(false);
@@ -80,11 +80,13 @@ Future<void> _setCalendarSyncEnabled(
   if (enableResult != CalendarSyncEnableResult.ready) {
     showSnackBar(
       switch (enableResult) {
-        CalendarSyncEnableResult.permissionDenied =>
-          'Kalenderberechtigung wurde nicht erteilt.',
-        CalendarSyncEnableResult.noWritableCalendar =>
-          'Kein beschreibbarer Standardkalender gefunden.',
-        _ => 'Kalendersynchronisierung ist auf diesem Geraet nicht verfuegbar.',
+        CalendarSyncEnableResult.permissionDenied => tr(
+            'calendarSync.permissionDenied',
+          ),
+        CalendarSyncEnableResult.noWritableCalendar => tr(
+            'calendarSync.noWritableCalendar',
+          ),
+        _ => tr('calendarSync.unavailable'),
       },
     );
     if (api.state.settingsState.calendarSyncEnabled) {
@@ -95,7 +97,7 @@ Future<void> _setCalendarSyncEnabled(
 
   final success = await CalendarSyncService.reconcile(api.state);
   if (!success) {
-    showSnackBar('Kalenderereignisse konnten nicht vollstaendig synchronisiert werden.');
+    showSnackBar(tr('calendarSync.partialSyncFailure'));
   }
 }
 
@@ -106,7 +108,7 @@ Future<void> _removeCalendarSyncEvents(
   await next(action);
   final success = await CalendarSyncService.deleteTrackedEvents();
   if (!success) {
-    showSnackBar('Nicht alle synchronisierten Kalenderereignisse konnten entfernt werden.');
+    showSnackBar(tr('calendarSync.partialDeleteFailure'));
   }
 }
 
@@ -127,4 +129,21 @@ Future<void> _setLanguage(
     Action<String> action) async {
   await next(action);
   await appLanguageController.setLanguage(AppLanguage.fromCode(action.payload));
+  if (!api.state.loginState.loggedIn) {
+    return;
+  }
+  final targetLanguage = _preferredServerLanguageForApp(action.payload);
+  if (targetLanguage == null) {
+    return;
+  }
+  try {
+    await wrapper.send(
+      'api/profile/updateProfile',
+      args: <String, Object?>{
+        'language': targetLanguage,
+      },
+    );
+  } catch (_) {
+    // Keep local language selection even if the server-side sync fails.
+  }
 }

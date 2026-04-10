@@ -21,13 +21,13 @@ import 'package:built_redux/built_redux.dart';
 import 'package:dio/dio.dart';
 import 'package:dr/actions/app_actions.dart';
 import 'package:dr/app_state.dart';
+import 'package:dr/calendar_sync_service.dart';
 import 'package:dr/i18n/app_language.dart';
 import 'package:dr/i18n/app_localizations.dart';
 import 'package:dr/main.dart';
 import 'package:dr/middleware/middleware.dart';
 import 'package:dr/notification_background_service.dart';
 import 'package:dr/platform_adapter.dart';
-import 'package:dr/calendar_sync_service.dart';
 import 'package:dr/reducer/reducer.dart';
 import 'package:dr/theme_controller.dart';
 import 'package:dr/utc_date_time.dart';
@@ -284,7 +284,8 @@ Future<void> pumpApp(
   ThemeMode themeMode = ThemeMode.light,
   RouteFactory? onGenerateRoute,
 }) {
-  return tester.pumpWidget(
+  return tester
+      .pumpWidget(
     buildTestApp(
       store: store,
       home: home,
@@ -293,7 +294,8 @@ Future<void> pumpApp(
       themeMode: themeMode,
       onGenerateRoute: onGenerateRoute,
     ),
-  );
+  )
+      .then((_) => tester.pump());
 }
 
 Future<void> pumpFrames(

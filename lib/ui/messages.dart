@@ -16,6 +16,7 @@
 // You should have received a copy of the GNU General Public License
 // along with digitales_register.  If not, see <http://www.gnu.org/licenses/>.
 
+import 'dart:collection';
 import 'dart:convert';
 
 import 'package:badges/badges.dart' as badge;
@@ -32,8 +33,9 @@ import 'package:quill_delta/quill_delta.dart';
 import 'package:quill_delta_viewer/quill_delta_viewer.dart';
 import 'package:responsive_scaffold/responsive_scaffold.dart';
 
-final Map<int, _CachedMessageDelta> _messageDeltaCache =
-    <int, _CachedMessageDelta>{};
+final LinkedHashMap<int, _CachedMessageDelta> _messageDeltaCache =
+    LinkedHashMap<int, _CachedMessageDelta>();
+const _messageDeltaCacheLimit = 200;
 
 class MessagesPage extends StatefulWidget {
   final MessagesState? state;
@@ -392,6 +394,8 @@ bool _isRenderableMessageDelta(Delta delta) {
 _ResolvedMessageDelta _resolveMessageDelta(Message message) {
   final cached = _messageDeltaCache[message.id];
   if (cached != null && cached.source == message.text) {
+    _messageDeltaCache.remove(message.id);
+    _messageDeltaCache[message.id] = cached;
     return _ResolvedMessageDelta(
       delta: cached.delta,
       fromCache: true,
@@ -412,6 +416,9 @@ _ResolvedMessageDelta _resolveMessageDelta(Message message) {
     source: message.text,
     delta: delta,
   );
+  while (_messageDeltaCache.length > _messageDeltaCacheLimit) {
+    _messageDeltaCache.remove(_messageDeltaCache.keys.first);
+  }
   return _ResolvedMessageDelta(
     delta: delta,
     fromCache: false,

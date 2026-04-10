@@ -16,8 +16,8 @@
 // along with digitales_register.  If not, see <http://www.gnu.org/licenses/>.
 
 import 'package:dr/app_state.dart';
-import 'package:dr/platform_adapter.dart';
 import 'package:dr/container/settings_page.dart';
+import 'package:dr/platform_adapter.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 

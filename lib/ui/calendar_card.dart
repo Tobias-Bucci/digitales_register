@@ -19,6 +19,7 @@
 import 'package:dr/app_state.dart';
 import 'package:dr/data.dart';
 import 'package:dr/i18n/app_localizations.dart';
+import 'package:dr/main.dart';
 import 'package:dr/ui/animated_linear_progress_indicator.dart';
 import 'package:dr/utc_date_time.dart';
 import 'package:flutter/material.dart';
@@ -43,12 +44,86 @@ class CalendarCard extends StatelessWidget {
   });
 
   String formatTime(UtcDateTime dateTime) {
-    return DateFormat.Hm("de").format(dateTime);
+    final context = navigatorKey?.currentContext;
+    final locale =
+        context == null ? 'de' : Localizations.localeOf(context).toLanguageTag();
+    return DateFormat.Hm(locale).format(dateTime);
   }
 
   @override
   Widget build(BuildContext context) {
     final localizedSubject = context.l10n.translateSubjectName(hour.subject);
+    final l10n = context.l10n;
+    final contentRows = <Widget>[];
+    final seenRows = <String>{};
+
+    void addContentRow({
+      required String title,
+      required String content,
+      required IconData icon,
+      Color iconColor = Colors.grey,
+    }) {
+      final normalizedTitle = title.trim().toLowerCase();
+      final normalizedContent = content.trim().toLowerCase();
+      final dedupeKey = '$normalizedTitle|$normalizedContent';
+      if (normalizedContent.isEmpty || !seenRows.add(dedupeKey)) {
+        return;
+      }
+      contentRows.add(
+        _ContentItem(
+          title: title,
+          content: content,
+          icon: icon,
+          iconColor: iconColor,
+        ),
+      );
+    }
+
+    if (hour.teachers.isNotEmpty) {
+      addContentRow(
+        title: hour.teachers.length == 1
+            ? l10n.text('calendar.teacher.single')
+            : l10n.text('calendar.teacher.multiple'),
+        content:
+            hour.teachers.map((t) => "${t.firstName} ${t.lastName}").join(", "),
+        icon: hour.teachers.length == 1 ? Icons.person : Icons.people,
+      );
+    }
+    if (hour.rooms.isNotEmpty) {
+      addContentRow(
+        title: l10n.text('calendar.rooms'),
+        content: hour.rooms.join(", "),
+        icon: Icons.meeting_room,
+      );
+    }
+    for (final lessonContent in hour.lessonContents) {
+      addContentRow(
+        title: lessonContent.typeName,
+        content: lessonContent.name,
+        icon: Icons.school,
+      );
+      for (final submission in lessonContent.submissions) {
+        contentRows.add(
+          _SubmissionWidget(
+            submission: submission,
+            noInternet: noInternet,
+            onOpenFile: onOpenFile,
+          ),
+        );
+      }
+    }
+    for (final homeworkExam in hour.homeworkExams) {
+      final title = homeworkExam.homework
+          ? l10n.text('dashboard.homework')
+          : l10n.translateSchoolTerm(homeworkExam.typeName);
+      addContentRow(
+        title: title,
+        content: homeworkExam.name,
+        icon: homeworkExam.warning ? Icons.grade : Icons.assignment,
+        iconColor: homeworkExam.warning ? Colors.red : Colors.grey,
+      );
+    }
+
     return Card(
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.circular(10),
@@ -85,57 +160,24 @@ class CalendarCard extends StatelessWidget {
             // Time (index and time)
             _ContentItem(
               title: hour.fromHour == hour.toHour
-                  ? "${hour.fromHour}. Stunde"
-                  : "${hour.fromHour}. – ${hour.toHour}. Stunde",
+                  ? l10n.text(
+                      'calendar.period.single',
+                      args: {'from': hour.fromHour.toString()},
+                    )
+                  : l10n.text(
+                      'calendar.period.range',
+                      args: {
+                        'from': hour.fromHour.toString(),
+                        'to': hour.toHour.toString(),
+                      },
+                    ),
               content: hour.timeSpans
                   .map((span) =>
                       "${formatTime(span.from)} – ${formatTime(span.to)}")
                   .join(", "),
               icon: Icons.schedule,
             ),
-
-            // Content
-            if (hour.teachers.isNotEmpty)
-              _ContentItem(
-                title: hour.teachers.length == 1 ? "Lehrer*in" : "Lehrer*innen",
-                content: hour.teachers
-                    .map((t) => "${t.firstName} ${t.lastName}")
-                    .join(", "),
-                icon: hour.teachers.length == 1 ? Icons.person : Icons.people,
-              ),
-            if (hour.rooms.isNotEmpty)
-              _ContentItem(
-                title: "Räume",
-                content: hour.rooms.join(", "),
-                icon: Icons.meeting_room,
-              ),
-            for (final lessonContent in hour.lessonContents) ...[
-              _ContentItem(
-                title: lessonContent.typeName,
-                content: lessonContent.name,
-                icon: Icons.school,
-              ),
-              for (final submission in lessonContent.submissions)
-                _SubmissionWidget(
-                  submission: submission,
-                  noInternet: noInternet,
-                  onOpenFile: onOpenFile,
-                )
-            ],
-            for (final HomeworkExam homeworkExam in hour.homeworkExams)
-              if (homeworkExam.warning)
-                _ContentItem(
-                  title: homeworkExam.typeName,
-                  content: homeworkExam.name,
-                  icon: Icons.grade,
-                  iconColor: Colors.red,
-                )
-              else
-                _ContentItem(
-                  title: homeworkExam.typeName,
-                  content: homeworkExam.name,
-                  icon: Icons.assignment,
-                ),
+            ...contentRows,
           ]
               .expand(
                 (element) => [
@@ -255,9 +297,9 @@ class _SubmissionWidget extends StatelessWidget {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              const Text(
-                "Anhang",
-                style: TextStyle(fontWeight: FontWeight.bold),
+              Text(
+                context.l10n.attachmentLabel(1),
+                style: const TextStyle(fontWeight: FontWeight.bold),
               ),
               Text(
                 submission.originalName,
@@ -271,9 +313,9 @@ class _SubmissionWidget extends StatelessWidget {
                       : () {
                           onOpenFile(submission);
                         },
-                  child: const Align(
+                  child: Align(
                     alignment: Alignment.centerLeft,
-                    child: Text("Öffnen"),
+                    child: Text(context.l10n.text('common.open')),
                   ),
                 ),
               ),

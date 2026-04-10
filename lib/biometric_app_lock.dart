@@ -18,6 +18,7 @@
 import 'dart:async';
 
 import 'package:biometric_storage/biometric_storage.dart';
+import 'package:dr/main.dart';
 import 'package:flutter/material.dart';
 
 const _appLockStorageName = 'biometric_app_lock';
@@ -44,19 +45,19 @@ const _appLockPromptInfo = PromptInfo(
 String biometricAvailabilityMessage(CanAuthenticateResponse response) {
   switch (response) {
     case CanAuthenticateResponse.success:
-      return "Beim erneuten Öffnen der App ist Fingerabdruck oder Face ID erforderlich.";
+      return tr('profile.biometricAvailable');
     case CanAuthenticateResponse.errorHwUnavailable:
-      return "Die biometrische Entsperrung ist auf diesem Gerät aktuell nicht verfügbar.";
+      return tr('profile.biometricHwUnavailable');
     case CanAuthenticateResponse.errorNoBiometricEnrolled:
-      return "Auf diesem Gerät ist keine Biometrie eingerichtet.";
+      return tr('profile.biometricNoEnrolled');
     case CanAuthenticateResponse.errorNoHardware:
-      return "Dieses Gerät unterstützt keine biometrische Entsperrung.";
+      return tr('profile.biometricNoHardware');
     case CanAuthenticateResponse.errorPasscodeNotSet:
-      return "Bitte richte zuerst einen Gerätecode und Biometrie ein.";
+      return tr('profile.biometricPasscodeMissing');
     case CanAuthenticateResponse.statusUnknown:
-      return "Die Verfügbarkeit der Biometrie konnte nicht sicher erkannt werden.";
+      return tr('profile.biometricUnknown');
     case CanAuthenticateResponse.unsupported:
-      return "Biometrische Entsperrung wird auf diesem Gerät nicht unterstützt.";
+      return tr('profile.biometricUnsupported');
   }
 }
 
@@ -121,16 +122,16 @@ class BiometricAppLockController extends ChangeNotifier {
     } on AuthException catch (error) {
       if (error.code == AuthExceptionCode.userCanceled ||
           error.code == AuthExceptionCode.canceled) {
-        throw const BiometricAppLockSetupException(
-          "Biometrische Aktivierung abgebrochen.",
+        throw BiometricAppLockSetupException(
+          tr('profile.biometricSetupCancelled'),
         );
       }
-      throw const BiometricAppLockSetupException(
-        "Die biometrische Sperre konnte nicht aktiviert werden.",
+      throw BiometricAppLockSetupException(
+        tr('profile.biometricSetupFailed'),
       );
     } catch (_) {
-      throw const BiometricAppLockSetupException(
-        "Die biometrische Sperre konnte nicht aktiviert werden.",
+      throw BiometricAppLockSetupException(
+        tr('profile.biometricSetupFailed'),
       );
     }
   }
@@ -285,14 +286,14 @@ class BiometricAppLockOverlay extends StatelessWidget {
                                 ),
                                 const SizedBox(height: 16),
                                 Text(
-                                  "App gesperrt",
+                                  tr('profile.locked.title'),
                                   style:
                                       Theme.of(context).textTheme.headlineSmall,
                                   textAlign: TextAlign.center,
                                 ),
                                 const SizedBox(height: 8),
-                                const Text(
-                                  "Diese App kann nur mit biometrischer Entsperrung geöffnet werden.",
+                                Text(
+                                  tr('profile.locked.body'),
                                   textAlign: TextAlign.center,
                                 ),
                                 const SizedBox(height: 20),
@@ -318,8 +319,8 @@ class BiometricAppLockOverlay extends StatelessWidget {
                                       : const Icon(Icons.lock_open_rounded),
                                   label: Text(
                                     biometricAppLockController.isAuthenticating
-                                        ? "Prüft Biometrie..."
-                                        : "Mit Biometrie entsperren",
+                                        ? tr('profile.locked.checking')
+                                        : tr('profile.locked.unlock'),
                                   ),
                                 ),
                               ],

@@ -63,7 +63,6 @@ void main() {
                 title: 'Worksheet',
                 subtitle: 'Page 12',
                 label: 'Mathematics',
-                type: HomeworkType.lessonHomework,
               ),
             ],
           ),
@@ -255,8 +254,6 @@ void main() {
               buildHomework(
                 id: 7,
                 title: 'Worksheet',
-                type: HomeworkType.lessonHomework,
-                checked: false,
               ),
             ],
           ),
@@ -273,7 +270,6 @@ void main() {
               buildHomework(
                 id: 7,
                 title: 'Worksheet',
-                type: HomeworkType.lessonHomework,
                 checked: true,
               ),
             ],
