@@ -19,11 +19,14 @@ import 'package:dr/container/network_protocol_container.dart';
 import 'package:flutter/material.dart';
 
 class NetworkProtocolPage extends StatelessWidget {
+  const NetworkProtocolPage({super.key});
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
         title: const Text("Netzwerkprotokoll"),
+        centerTitle: false,
       ),
       body: NetworkProtocolContainer(),
     );
