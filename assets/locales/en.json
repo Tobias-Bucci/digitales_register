@@ -124,6 +124,7 @@
   "schoolTerm.observation": "Observation",
   "schoolTerm.plus": "Plus",
   "schoolTerm.minus": "Minus",
+  "schoolTerm.subjectLesson": "Subject lesson",
   "schoolTerm.participation": "Participation",
   "schoolTerm.createdByOn": "Entered by {name} on {date}",
   "schoolTerm.noGradeEntered": "no grade entered",

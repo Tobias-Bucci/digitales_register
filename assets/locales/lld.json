@@ -124,6 +124,7 @@
   "schoolTerm.observation": "Osservaziun",
   "schoolTerm.plus": "Plü",
   "schoolTerm.minus": "Minus",
+  "schoolTerm.subjectLesson": "Ura de matera",
   "schoolTerm.participation": "Colaboraziun",
   "schoolTerm.createdByOn": "Inserì da {name} ai {date}",
   "schoolTerm.noGradeEntered": "degün pro inserì",

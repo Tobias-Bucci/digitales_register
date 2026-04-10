@@ -623,6 +623,7 @@ class AppLocalizations {
       'Beobachtung': text('schoolTerm.observation'),
       'Plus': text('schoolTerm.plus'),
       'Minus': text('schoolTerm.minus'),
+      'Fachunterricht': text('schoolTerm.subjectLesson'),
       'Hausaufgabe': text('dashboard.homework'),
       'Mitarbeit': text('schoolTerm.participation'),
     };
@@ -667,6 +668,13 @@ class AppLocalizations {
     return text(
       count == 1 ? 'messages.attachment.one' : 'messages.attachment.other',
     );
+  }
+
+  String capitalize(String input) {
+    if (input.isEmpty) {
+      return input;
+    }
+    return '${input[0].toUpperCase()}${input.substring(1)}';
   }
 
   String absenceJustificationLabel(AbsenceJustified justified) {

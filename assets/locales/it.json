@@ -124,6 +124,7 @@
   "schoolTerm.observation": "Osservazione",
   "schoolTerm.plus": "Più",
   "schoolTerm.minus": "Meno",
+  "schoolTerm.subjectLesson": "Lezione curricolare",
   "schoolTerm.participation": "Partecipazione",
   "schoolTerm.createdByOn": "Inserito da {name} il {date}",
   "schoolTerm.noGradeEntered": "nessun voto inserito",

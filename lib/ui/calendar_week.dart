@@ -233,7 +233,11 @@ class CalendarDayWidget extends StatelessWidget {
     }
     return Column(
       children: <Widget>[
-        Text(DateFormat("E", localeTag).format(calendarDay.date)),
+        Text(
+          context.l10n.capitalize(
+            DateFormat("E", localeTag).format(calendarDay.date),
+          ),
+        ),
         Text(
           DateFormat("dd.MM", localeTag).format(calendarDay.date),
           style: DefaultTextStyle.of(context).style.copyWith(fontSize: 12),
