@@ -571,13 +571,23 @@ class AppLocalizations {
       'Samstag': text('weekday.saturday'),
       'Sonntag': text('weekday.sunday'),
       'Erinnerung': text('dashboard.reminder'),
+      'Promemoria': text('dashboard.reminder'),
+      'Reminder': text('dashboard.reminder'),
       'Hausaufgabe': text('dashboard.homework'),
+      'Compito': text('dashboard.homework'),
+      'Compiti': text('dashboard.homework'),
+      'Homework': text('dashboard.homework'),
       'Beobachtung': text('dashboard.observation'),
+      'Osservazione': text('dashboard.observation'),
       'Bewertung': text('dashboard.grade'),
+      'Valutazione': text('dashboard.grade'),
       'Testarbeit': text('dashboard.testwork'),
       'Schularbeit': text('dashboard.schoolwork'),
+      'Compito in classe': text('dashboard.schoolwork'),
       'Prüfung': text('dashboard.exam'),
+      'Esame': text('dashboard.exam'),
       'Test': text('dashboard.test'),
+      'Verifica': text('dashboard.test'),
     };
 
     var result = input;

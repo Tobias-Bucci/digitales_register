@@ -20,6 +20,8 @@ import 'dart:developer';
 
 import 'package:dr/app_state.dart';
 import 'package:dr/data.dart';
+import 'package:dr/i18n/app_language.dart';
+import 'package:dr/i18n/app_localizations.dart';
 import 'package:dr/platform_adapter.dart';
 import 'package:dr/utc_date_time.dart';
 import 'package:dr/util.dart';
@@ -140,12 +142,14 @@ extension CalendarSyncService on Never {
       return true;
     }
 
+    final l10n =
+        await AppLocalizations.load(AppLanguage.fromCode(state.settingsState.languageCode).locale);
     final calendarId = await _getDefaultCalendarId();
     if (calendarId == null) {
       return false;
     }
 
-    final desiredItems = collectDesiredItems(state);
+    final desiredItems = collectDesiredItems(state, l10n);
     final desiredByKey = <String, CalendarSyncDesiredItem>{
       for (final item in desiredItems) item.syncKey: item,
     };
@@ -249,7 +253,10 @@ extension CalendarSyncService on Never {
     return success;
   }
 
-  static List<CalendarSyncDesiredItem> collectDesiredItems(AppState state) {
+  static List<CalendarSyncDesiredItem> collectDesiredItems(
+    AppState state,
+    AppLocalizations l10n,
+  ) {
     final today = UtcDateTime(now.year, now.month, now.day);
     final items = <String, CalendarSyncDesiredItem>{};
 
@@ -264,18 +271,23 @@ extension CalendarSyncService on Never {
         if (!_shouldSyncDashboardHomework(homework)) {
           continue;
         }
+        if (homework.type == HomeworkType.gradeGroup &&
+            _hasMatchingCalendarExam(state, dueDate, homework)) {
+          continue;
+        }
 
         final syncKey = homework.type == HomeworkType.homework
             ? 'reminder:${homework.id}'
             : 'dashboard:${_dateKey(dueDate)}:${homework.type.name}:${homework.id > 0 ? homework.id : _stableHash('${homework.title}|${homework.subtitle}|${homework.label ?? ''}')}';
         items[syncKey] = _buildDesiredItem(
           syncKey: syncKey,
-          title: homework.title,
+          title: l10n.translateDashboardServerText(homework.title),
           date: dueDate,
           details: <String>[
             if (homework.label != null && homework.label!.isNotEmpty)
-              homework.label!,
-            if (homework.subtitle.isNotEmpty) homework.subtitle,
+              l10n.translateSubjectName(homework.label!),
+            if (homework.subtitle.isNotEmpty)
+              l10n.translateDashboardServerText(homework.subtitle),
           ],
         );
       }
@@ -284,6 +296,9 @@ extension CalendarSyncService on Never {
     for (final day in state.calendarState.days.values) {
       for (final hour in day.hours) {
         for (final homeworkExam in hour.homeworkExams) {
+          if (homeworkExam.homework) {
+            continue;
+          }
           final dueDate = UtcDateTime(
             homeworkExam.deadline.year,
             homeworkExam.deadline.month,
@@ -295,11 +310,12 @@ extension CalendarSyncService on Never {
           final syncKey = 'calendar:${homeworkExam.id}';
           items[syncKey] = _buildDesiredItem(
             syncKey: syncKey,
-            title: homeworkExam.name,
+            title: l10n.translateSchoolTerm(homeworkExam.name),
             date: dueDate,
             details: <String>[
-              if (homeworkExam.typeName.isNotEmpty) homeworkExam.typeName,
-              if (hour.subject.isNotEmpty) hour.subject,
+              if (homeworkExam.typeName.isNotEmpty)
+                l10n.translateSchoolTerm(homeworkExam.typeName),
+              if (hour.subject.isNotEmpty) l10n.translateSubjectName(hour.subject),
             ],
           );
         }
@@ -347,6 +363,80 @@ extension CalendarSyncService on Never {
     return homework.type == HomeworkType.homework ||
         homework.type == HomeworkType.lessonHomework ||
         homework.type == HomeworkType.gradeGroup;
+  }
+
+  static bool _hasMatchingCalendarExam(
+    AppState state,
+    UtcDateTime dueDate,
+    Homework homework,
+  ) {
+    final calendarDay = state.calendarState.days[dueDate];
+    if (calendarDay == null) {
+      return false;
+    }
+
+    for (final hour in calendarDay.hours) {
+      for (final homeworkExam in hour.homeworkExams) {
+        if (homeworkExam.homework) {
+          continue;
+        }
+        if (_isDuplicateGradeGroupEntry(
+          homework: homework,
+          homeworkExam: homeworkExam,
+          subject: hour.subject,
+        )) {
+          return true;
+        }
+      }
+    }
+    return false;
+  }
+
+  static bool _isDuplicateGradeGroupEntry({
+    required Homework homework,
+    required HomeworkExam homeworkExam,
+    required String subject,
+  }) {
+    final homeworkSubject = _normalizeCalendarSyncText(homework.label);
+    final examSubject = _normalizeCalendarSyncText(subject);
+    if (homeworkSubject.isNotEmpty &&
+        examSubject.isNotEmpty &&
+        homeworkSubject != examSubject) {
+      return false;
+    }
+
+    final homeworkLabels = <String>{
+      _normalizeCalendarSyncText(homework.title),
+      _normalizeCalendarSyncText(homework.subtitle),
+    }..removeWhere((value) => value.isEmpty);
+    final examLabels = <String>{
+      _normalizeCalendarSyncText(homeworkExam.typeName),
+      _normalizeCalendarSyncText(homeworkExam.name),
+    }..removeWhere((value) => value.isEmpty);
+
+    if (homeworkLabels.isNotEmpty && homeworkLabels.length == examLabels.length) {
+      if (homeworkLabels.containsAll(examLabels)) {
+        return true;
+      }
+    }
+
+    final homeworkSubtitle = _normalizeCalendarSyncText(homework.subtitle);
+    final examName = _normalizeCalendarSyncText(homeworkExam.name);
+    if (homeworkSubtitle.isNotEmpty && homeworkSubtitle == examName) {
+      return true;
+    }
+
+    return false;
+  }
+
+  static String _normalizeCalendarSyncText(String? value) {
+    if (value == null) {
+      return '';
+    }
+    return value
+        .trim()
+        .toLowerCase()
+        .replaceAll(RegExp(r'\s+'), ' ');
   }
 
   static String _appendMarker(String description, String syncKey) {

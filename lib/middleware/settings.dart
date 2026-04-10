@@ -129,21 +129,25 @@ Future<void> _setLanguage(
     Action<String> action) async {
   await next(action);
   await appLanguageController.setLanguage(AppLanguage.fromCode(action.payload));
-  if (!api.state.loginState.loggedIn) {
-    return;
+  if (api.state.loginState.loggedIn) {
+    final targetLanguage = _preferredServerLanguageForApp(action.payload);
+    if (targetLanguage != null) {
+      try {
+        await wrapper.send(
+          'api/profile/updateProfile',
+          args: <String, Object?>{
+            'language': targetLanguage,
+          },
+        );
+      } catch (_) {
+        // Keep local language selection even if the server-side sync fails.
+      }
+    }
   }
-  final targetLanguage = _preferredServerLanguageForApp(action.payload);
-  if (targetLanguage == null) {
-    return;
-  }
-  try {
-    await wrapper.send(
-      'api/profile/updateProfile',
-      args: <String, Object?>{
-        'language': targetLanguage,
-      },
-    );
-  } catch (_) {
-    // Keep local language selection even if the server-side sync fails.
+  if (api.state.settingsState.calendarSyncEnabled && isAndroidPlatform) {
+    final success = await CalendarSyncService.reconcile(api.state);
+    if (!success) {
+      showSnackBar(tr('calendarSync.partialSyncFailure'));
+    }
   }
 }

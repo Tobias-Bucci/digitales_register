@@ -77,6 +77,7 @@ void main() {
                   buildHomeworkExam(
                     id: 22,
                     name: 'Chapter test',
+                    homework: false,
                     typeName: 'Exam',
                     deadline: UtcDateTime(2026, 4, 11, 9),
                   ),
@@ -93,7 +94,7 @@ void main() {
     expect(success, isTrue);
     expect(upserts, hasLength(3));
     expect(upserts.map((request) => request.title), containsAll(<String>[
-      'Reminder',
+      'Erinnerung',
       'Worksheet',
       'Chapter test',
     ]));
@@ -139,6 +140,59 @@ void main() {
     expect(upserts, hasLength(1));
     expect(upserts.single.title, 'Schularbeit');
     expect(upserts.single.description, contains('Kapitel 3 und 4'));
+  });
+
+  test('reconcile deduplicates dashboard schoolwork against matching calendar exams', () async {
+    final upserts = <CalendarSyncUpsertRequest>[];
+    CalendarSyncService.upsertEventOverride = (request) async {
+      upserts.add(request);
+      return upserts.length;
+    };
+
+    final state = AppState(
+      (b) {
+        b.settingsState.calendarSyncEnabled = true;
+        b.dashboardState.allDays = ListBuilder<Day>(<Day>[
+          buildDay(
+            date: UtcDateTime(2026, 4, 10),
+            homework: <Homework>[
+              buildHomework(
+                id: 91,
+                title: 'Schularbeit',
+                subtitle: '1. Schularbeit',
+                label: 'Deutsch',
+                type: HomeworkType.gradeGroup,
+              ),
+            ],
+          ),
+        ]);
+        b.calendarState.days = MapBuilder<UtcDateTime, CalendarDay>({
+          UtcDateTime(2026, 4, 10): buildCalendarDay(
+            date: UtcDateTime(2026, 4, 10),
+            hours: <CalendarHour>[
+              buildCalendarHour(
+                subject: 'Deutsch',
+                homeworkExams: <HomeworkExam>[
+                  buildHomeworkExam(
+                    id: 55,
+                    name: '1. Schularbeit',
+                    homework: false,
+                    typeName: 'Schularbeit',
+                    deadline: UtcDateTime(2026, 4, 10, 9),
+                  ),
+                ],
+              ),
+            ],
+          ),
+        });
+      },
+    );
+
+    final success = await CalendarSyncService.reconcile(state);
+
+    expect(success, isTrue);
+    expect(upserts, hasLength(1));
+    expect(upserts.single.title, '1. Schularbeit');
   });
 
   test('editing a reminder updates the existing tracked event', () async {
@@ -231,6 +285,65 @@ void main() {
     await CalendarSyncService.reconcile(withoutReminder);
 
     expect(deletedIds, <int>[333]);
+  });
+
+  test('reconcile skips calendar homework entries that are already covered by dashboard sync', () async {
+    final upserts = <CalendarSyncUpsertRequest>[];
+    CalendarSyncService.upsertEventOverride = (request) async {
+      upserts.add(request);
+      return upserts.length;
+    };
+
+    final state = AppState(
+      (b) {
+        b.settingsState.calendarSyncEnabled = true;
+        b.dashboardState.allDays = ListBuilder<Day>(<Day>[
+          buildDay(
+            date: UtcDateTime(2026, 4, 10),
+            homework: <Homework>[
+              buildHomework(
+                id: 7,
+                title: 'Arbeitsblatt',
+                subtitle: 'Seite 12',
+              ),
+            ],
+          ),
+        ]);
+        b.calendarState.days = MapBuilder<UtcDateTime, CalendarDay>({
+          UtcDateTime(2026, 4, 10): buildCalendarDay(
+            date: UtcDateTime(2026, 4, 10),
+            hours: <CalendarHour>[
+              buildCalendarHour(
+                subject: 'Mathematik',
+                homeworkExams: <HomeworkExam>[
+                  buildHomeworkExam(
+                    id: 22,
+                    name: 'Arbeitsblatt',
+                    deadline: UtcDateTime(2026, 4, 10, 9),
+                  ),
+                  buildHomeworkExam(
+                    id: 23,
+                    name: 'Kapiteltest',
+                    homework: false,
+                    typeName: 'Pruefung',
+                    deadline: UtcDateTime(2026, 4, 11, 9),
+                  ),
+                ],
+              ),
+            ],
+          ),
+        });
+      },
+    );
+
+    final success = await CalendarSyncService.reconcile(state);
+
+    expect(success, isTrue);
+    expect(upserts, hasLength(2));
+    expect(upserts.map((request) => request.title), <String>[
+      'Arbeitsblatt',
+      'Kapiteltest',
+    ]);
   });
 
   test('checked dashboard items are removed from calendar sync and restored when unchecked', () async {
@@ -390,8 +503,45 @@ void main() {
     final upsertCall = calls.firstWhere((call) => call.method == 'upsertCalendarEvent');
     final args = Map<String, Object?>.from(upsertCall.arguments as Map);
     expect(args['calendarId'], 41);
-    expect(args['title'], 'Reminder');
+    expect(args['title'], 'Erinnerung');
     expect(args['description'], contains('Read chapter'));
     expect(args['description'], contains('[Digitales Register Sync: reminder:7]'));
+  });
+
+  test('reconcile localizes calendar entry text to the selected app language', () async {
+    final upserts = <CalendarSyncUpsertRequest>[];
+    CalendarSyncService.upsertEventOverride = (request) async {
+      upserts.add(request);
+      return upserts.length;
+    };
+
+    final state = AppState(
+      (b) {
+        b.settingsState
+          ..calendarSyncEnabled = true
+          ..languageCode = 'en';
+        b.dashboardState.allDays = ListBuilder<Day>(<Day>[
+          buildDay(
+            date: UtcDateTime(2026, 4, 10),
+            homework: <Homework>[
+              buildHomework(
+                id: 7,
+                title: 'Erinnerung',
+                subtitle: 'Hausaufgabe',
+                label: 'Deutsch',
+                type: HomeworkType.homework,
+              ),
+            ],
+          ),
+        ]);
+      },
+    );
+
+    final success = await CalendarSyncService.reconcile(state);
+
+    expect(success, isTrue);
+    expect(upserts, hasLength(1));
+    expect(upserts.single.title, 'Reminder');
+    expect(upserts.single.description, contains('Homework'));
   });
 }

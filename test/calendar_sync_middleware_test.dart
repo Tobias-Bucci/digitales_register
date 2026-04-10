@@ -20,6 +20,7 @@ import 'package:dr/actions/dashboard_actions.dart';
 import 'package:dr/app_state.dart';
 import 'package:dr/calendar_sync_service.dart';
 import 'package:dr/data.dart';
+import 'package:dr/i18n/app_language.dart';
 import 'package:dr/platform_adapter.dart';
 import 'package:dr/utc_date_time.dart';
 import 'package:flutter/material.dart';
@@ -152,5 +153,48 @@ void main() {
     expect(upserts, hasLength(2));
     expect(upserts.first.eventId, isNull);
     expect(upserts.last.eventId, isNull);
+  });
+
+  testWidgets('changing the app language reconciles calendar sync entries',
+      (tester) async {
+    final upsertedTitles = <String>[];
+    CalendarSyncService.upsertEventOverride = (request) async {
+      upsertedTitles.add(request.title);
+      return 100;
+    };
+
+    final store = createStore(
+      initialState: AppState((b) {
+        b.settingsState
+          ..calendarSyncEnabled = true
+          ..languageCode = 'de';
+        b.dashboardState.allDays = ListBuilder<Day>(<Day>[
+          buildDay(
+            date: UtcDateTime(2026, 4, 10),
+            homework: <Homework>[
+              buildHomework(
+                id: 4,
+                title: 'Erinnerung',
+                subtitle: 'Hausaufgabe',
+                type: HomeworkType.homework,
+              ),
+            ],
+          ),
+        ]);
+      }),
+      withMiddleware: true,
+    );
+
+    await pumpApp(
+      tester,
+      store: store,
+      home: const Scaffold(),
+    );
+
+    await CalendarSyncService.reconcile(store.state);
+    await store.actions.settingsActions.setLanguage(AppLanguage.en.code);
+    await tester.pump();
+
+    expect(upsertedTitles, containsAllInOrder(<String>['Erinnerung', 'Reminder']));
   });
 }
