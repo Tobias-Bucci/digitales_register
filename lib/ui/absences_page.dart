@@ -1,4 +1,4 @@
-﻿// Copyright (C) 2021 Michael Debertol
+// Copyright (C) 2021 Michael Debertol
 // Copyright (C) 2026 Tobias Bucci
 //
 // This file is part of digitales_register.
@@ -166,6 +166,19 @@ class _FutureAbsenceDialog extends StatefulWidget {
 }
 
 class _FutureAbsenceDialogState extends State<_FutureAbsenceDialog> {
+  static const Map<int, String> _lessonStartTimes = <int, String>{
+    1: '7:50',
+    2: '8:40',
+    3: '9:35',
+    4: '10:25',
+    5: '11:30',
+    6: '12:20',
+    7: '14:10',
+    8: '15:00',
+    9: '15:50',
+    10: '16:40',
+  };
+
   final TextEditingController _reasonController = TextEditingController();
   final TextEditingController _signatureController = TextEditingController();
   DateTime _startDate = DateTime.now();
@@ -230,7 +243,8 @@ class _FutureAbsenceDialogState extends State<_FutureAbsenceDialog> {
             ListTile(
               contentPadding: EdgeInsets.zero,
               title: Text(l10n.text('absences.dialog.startDate')),
-              subtitle: Text(DateFormat('dd.MM.yyyy', localeTag).format(_startDate)),
+              subtitle:
+                  Text(DateFormat('dd.MM.yyyy', localeTag).format(_startDate)),
               trailing: const Icon(Icons.calendar_today),
               onTap: () async {
                 final picked = await showDatePicker(
@@ -261,7 +275,8 @@ class _FutureAbsenceDialogState extends State<_FutureAbsenceDialog> {
             ListTile(
               contentPadding: EdgeInsets.zero,
               title: Text(l10n.text('absences.dialog.endDate')),
-              subtitle: Text(DateFormat('dd.MM.yyyy', localeTag).format(_endDate)),
+              subtitle:
+                  Text(DateFormat('dd.MM.yyyy', localeTag).format(_endDate)),
               trailing: const Icon(Icons.calendar_today),
               onTap: () async {
                 final picked = await showDatePicker(
@@ -291,16 +306,26 @@ class _FutureAbsenceDialogState extends State<_FutureAbsenceDialog> {
                 Expanded(
                   child: DropdownButtonFormField<int>(
                     initialValue: _startTime,
+                    isExpanded: true,
                     decoration: InputDecoration(
                       labelText: l10n.text('absences.dialog.startHour'),
                     ),
-                    items: List.generate(
-                      20,
-                      (i) => DropdownMenuItem(
-                        value: i + 1,
-                        child: Text('${i + 1}'),
-                      ),
-                    ),
+                    items: _lessonStartTimes.entries
+                        .map(
+                          (entry) => DropdownMenuItem(
+                            value: entry.key,
+                            child: Text('${entry.key} (von ${entry.value})'),
+                          ),
+                        )
+                        .toList(),
+                    selectedItemBuilder: (context) => _lessonStartTimes.entries
+                        .map(
+                          (entry) => Text(
+                            '${entry.key} (${entry.value})',
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                        )
+                        .toList(),
                     onChanged: (value) {
                       if (value != null) {
                         setState(() => _startTime = value);
@@ -312,16 +337,26 @@ class _FutureAbsenceDialogState extends State<_FutureAbsenceDialog> {
                 Expanded(
                   child: DropdownButtonFormField<int>(
                     initialValue: _endTime,
+                    isExpanded: true,
                     decoration: InputDecoration(
                       labelText: l10n.text('absences.dialog.endHour'),
                     ),
-                    items: List.generate(
-                      20,
-                      (i) => DropdownMenuItem(
-                        value: i + 1,
-                        child: Text('${i + 1}'),
-                      ),
-                    ),
+                    items: _lessonStartTimes.entries
+                        .map(
+                          (entry) => DropdownMenuItem(
+                            value: entry.key,
+                            child: Text('${entry.key} (von ${entry.value})'),
+                          ),
+                        )
+                        .toList(),
+                    selectedItemBuilder: (context) => _lessonStartTimes.entries
+                        .map(
+                          (entry) => Text(
+                            '${entry.key} (${entry.value})',
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                        )
+                        .toList(),
                     onChanged: (value) {
                       if (value != null) {
                         setState(() => _endTime = value);

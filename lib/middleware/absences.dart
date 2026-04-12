@@ -1,4 +1,4 @@
-﻿// Copyright (C) 2021 Michael Debertol
+// Copyright (C) 2021 Michael Debertol
 // Copyright (C) 2026 Tobias Bucci
 //
 // This file is part of digitales_register.
@@ -74,7 +74,7 @@ Future<void> _addFutureAbsence(
     return;
   }
   _absencesDebug('add <- response=$response');
-  if (response != null && response['success'] == true) {
+  if (_responseSucceeded(response)) {
     _absencesDebug('add -> success, reloading absences');
     await api.actions.absencesActions.load();
     if (!wrapper.noInternet) {
@@ -116,7 +116,7 @@ Future<void> _removeFutureAbsence(
     return;
   }
   _absencesDebug('remove <- response=$response');
-  if (response != null && response['success'] == true) {
+  if (_responseSucceeded(response)) {
     _absencesDebug('remove -> success, reloading absences');
     await api.actions.absencesActions.load();
   } else if (!wrapper.noInternet) {
@@ -128,6 +128,22 @@ Future<void> _removeFutureAbsence(
           : 'Absenz konnte nicht gelöscht werden: $message',
     );
   }
+}
+
+bool _responseSucceeded(dynamic response) {
+  final map = getMap(response);
+  final success = map?['success'];
+  if (success is bool) {
+    return success;
+  }
+  if (success is int) {
+    return success != 0;
+  }
+  if (success is String) {
+    final normalized = success.trim().toLowerCase();
+    return normalized == 'true' || normalized == '1' || normalized == 'ok';
+  }
+  return false;
 }
 
 void _absencesDebug(String message) {
