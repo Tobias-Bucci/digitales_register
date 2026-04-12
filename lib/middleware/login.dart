@@ -1,4 +1,4 @@
-﻿// Copyright (C) 2021 Michael Debertol
+// Copyright (C) 2021 Michael Debertol
 // Copyright (C) 2026 Tobias Bucci
 //
 // This file is part of digitales_register.
@@ -34,7 +34,8 @@ Future<String> _loginText(
   String key, {
   Map<String, String> args = const {},
 }) async {
-  final l10n = await AppLocalizations.load(appLanguageController.language.locale);
+  final l10n =
+      await AppLocalizations.load(appLanguageController.language.locale);
   return l10n.text(key, args: args);
 }
 
@@ -75,6 +76,7 @@ Future<void> _logout(MiddlewareApi<AppState, AppStateBuilder, AppActions> api,
   await next(action);
   if (action.payload.hard) {
     statePersistenceService.clear();
+    await androidWidgetSnapshotService.clear();
     wrapper = Wrapper();
     await api.actions.mountAppState(AppState());
     await api.actions.load();
@@ -275,8 +277,7 @@ Future<void> _requestPassReset(
         'login.noConnectionWithUrl',
         args: {'url': api.state.url!},
       );
-      await api.actions.loginActions
-          .passResetFailed(noConnectionMessage);
+      await api.actions.loginActions.passResetFailed(noConnectionMessage);
     } else {
       rethrow;
     }

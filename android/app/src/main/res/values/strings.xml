@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="widget_dashboard_title">Dashboard</string>
+    <string name="widget_dashboard_subtitle">Kommende Eintraege</string>
+    <string name="widget_today_title">Heute</string>
+    <string name="widget_today_subtitle">Stundenplan</string>
+    <string name="widget_grades_title">Noten</string>
+    <string name="widget_grades_subtitle">Aktuelles Semester</string>
+    <string name="widget_state_open_app">App oeffnen, um Daten zu laden</string>
+    <string name="widget_state_logged_out">Bitte in der App anmelden</string>
+    <string name="widget_state_data_disabled">Datenspeicherung ist deaktiviert</string>
+    <string name="widget_state_locked">Inhalt ist durch App-Sperre geschuetzt</string>
+    <string name="widget_average_label">Schnitt</string>
+    <string name="widget_placeholder_dash">-</string>
+</resources>

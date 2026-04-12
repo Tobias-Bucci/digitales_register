@@ -37,6 +37,7 @@ import 'package:dr/actions/profile_actions.dart';
 import 'package:dr/actions/routing_actions.dart';
 import 'package:dr/actions/save_pass_actions.dart';
 import 'package:dr/actions/settings_actions.dart';
+import 'package:dr/android_widget_service.dart';
 import 'package:dr/app_language_controller.dart';
 import 'package:dr/app_state.dart';
 import 'package:dr/calendar_sync_service.dart';
@@ -85,6 +86,8 @@ part 'settings.dart';
 late FlutterSecureStorage secureStorage;
 final AppStatePersistenceService statePersistenceService =
     AppStatePersistenceService();
+final AndroidWidgetSnapshotService androidWidgetSnapshotService =
+    AndroidWidgetSnapshotService();
 
 @visibleForTesting
 Duration noInternetRetryInterval = const Duration(seconds: 5);
@@ -298,6 +301,7 @@ Future<void> _load(MiddlewareApi<AppState, AppStateBuilder, AppActions> api,
   _cancelNoInternetRetry();
   _noInternetRetryInFlight = false;
   statePersistenceService.clear();
+  await androidWidgetSnapshotService.clear();
   wrapper.noInternet = api.state.noInternet;
   await next(action);
   if (!api.state.noInternet) _popAll();
@@ -479,6 +483,7 @@ NextActionHandler _saveStateMiddleware(
                 writer: _writeToStorage,
                 keyFactory: getStorageKey,
               );
+              await androidWidgetSnapshotService.flush(state: api.state);
             } else {
               statePersistenceService.schedule(
                 state: api.state,
@@ -487,6 +492,7 @@ NextActionHandler _saveStateMiddleware(
                 writer: _writeToStorage,
                 keyFactory: getStorageKey,
               );
+              androidWidgetSnapshotService.scheduleSync(api.state);
             }
           }
         };
@@ -538,6 +544,7 @@ Future<void> _deleteData(
 ) async {
   await next(action);
   deletedData = true;
+  await androidWidgetSnapshotService.clear();
   await api.actions.saveState();
 }
 
@@ -607,6 +614,15 @@ Future<void> _start(
         showSnackBar(tr('navigation.linkOpenFailed'));
     }
     await redirectAfterLogin(action.payload!.fragment, api);
+  }
+  final widgetDestination =
+      await AndroidWidgetPlatformBridge().consumeLaunchDestination();
+  if (widgetDestination != null) {
+    await handleAndroidWidgetLaunchDestination(
+      api.actions,
+      widgetDestination,
+      deferUntilLogin: true,
+    );
   }
   await api.actions.load();
 }

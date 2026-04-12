@@ -24,6 +24,7 @@ import 'package:dr/actions/app_actions.dart';
 import 'package:dr/app_language_controller.dart';
 import 'package:dr/app_state.dart';
 import 'package:dr/app_subject_translation_controller.dart';
+import 'package:dr/android_widget_service.dart';
 import 'package:dr/biometric_app_lock.dart';
 import 'package:dr/container/change_email_container.dart';
 import 'package:dr/container/home_page.dart';
@@ -81,6 +82,13 @@ Future<void> main() async {
     ),
     actions,
     middleware: middleware(),
+  );
+  await AndroidWidgetPlatformBridge().registerLaunchHandler(
+    (destination) => handleAndroidWidgetLaunchDestination(
+      store.actions,
+      destination,
+      deferUntilLogin: !store.state.loginState.loggedIn,
+    ),
   );
   runApp(RegisterApp(store: store));
   unawaited(_loadThemeController());
@@ -169,8 +177,8 @@ class RegisterApp extends StatelessWidget {
             amoledMode: state.settingsState.amoledMode,
             biometricAppLockEnabled:
                 state.settingsState.biometricAppLockEnabled,
-            locale: AppLanguage.fromCode(state.settingsState.languageCode)
-                .locale,
+            locale:
+                AppLanguage.fromCode(state.settingsState.languageCode).locale,
           ),
           builder: (context, vm, actions) => AnimatedBuilder(
             animation: themeController,
@@ -190,7 +198,8 @@ class RegisterApp extends StatelessWidget {
                 for (final supported in supportedLocales) {
                   final sameLanguage =
                       supported.languageCode == locale.languageCode;
-                  final sameCountry = supported.countryCode == locale.countryCode;
+                  final sameCountry =
+                      supported.countryCode == locale.countryCode;
                   if (sameLanguage && sameCountry) {
                     return supported;
                   }
@@ -390,7 +399,8 @@ class _UnknownRoutePage extends StatelessWidget {
               ),
               const SizedBox(height: 20),
               FilledButton(
-                onPressed: () => Navigator.of(context).pushReplacementNamed('/'),
+                onPressed: () =>
+                    Navigator.of(context).pushReplacementNamed('/'),
                 child: Text(l10n.text('navigation.unknownRoute.action')),
               ),
             ],

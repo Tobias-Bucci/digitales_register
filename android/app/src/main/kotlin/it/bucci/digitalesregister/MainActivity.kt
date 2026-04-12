@@ -3,6 +3,7 @@ package it.bucci.digitalesregister
 import android.Manifest
 import android.content.ContentUris
 import android.content.Context
+import android.content.Intent
 import android.content.pm.PackageManager
 import android.os.Build
 import android.os.Bundle
@@ -16,9 +17,12 @@ import io.flutter.plugin.common.MethodChannel
 
 class MainActivity: FlutterFragmentActivity() {
     private var pendingCalendarPermissionResult: MethodChannel.Result? = null
+    private var pendingLaunchDestination: String? = null
+    private var widgetMethodChannel: MethodChannel? = null
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        pendingLaunchDestination = extractLaunchDestination(intent)
     }
 
     override fun configureFlutterEngine(flutterEngine: FlutterEngine) {
@@ -52,6 +56,36 @@ class MainActivity: FlutterFragmentActivity() {
                 else -> result.notImplemented()
             }
         }
+        widgetMethodChannel = MethodChannel(
+            flutterEngine.dartExecutor.binaryMessenger,
+            DigitalesRegisterWidgetContract.METHOD_CHANNEL,
+        ).also { channel ->
+            channel.setMethodCallHandler { call, result ->
+                when (call.method) {
+                    "refreshWidgets" -> {
+                        DigitalesRegisterWidgetUpdater.refreshAllWidgets(applicationContext)
+                        result.success(null)
+                    }
+                    "consumeLaunchDestination" -> {
+                        val destination = pendingLaunchDestination
+                        pendingLaunchDestination = null
+                        result.success(destination)
+                    }
+                    else -> result.notImplemented()
+                }
+            }
+        }
+    }
+
+    override fun onNewIntent(intent: Intent) {
+        super.onNewIntent(intent)
+        setIntent(intent)
+        val destination = extractLaunchDestination(intent) ?: return
+        pendingLaunchDestination = destination
+        widgetMethodChannel?.invokeMethod(
+            "onLaunchDestination",
+            mapOf("destination" to destination),
+        )
     }
 
     private fun cancelNotificationSafely(id: Int) {
@@ -241,5 +275,9 @@ class MainActivity: FlutterFragmentActivity() {
         const val CALENDAR_SYNC_METHOD_CHANNEL = "dr/calendar_sync"
         const val SCHEDULED_NOTIFICATIONS_PREFS = "scheduled_notifications"
         const val CALENDAR_PERMISSION_REQUEST_CODE = 4821
+    }
+
+    private fun extractLaunchDestination(intent: Intent?): String? {
+        return intent?.getStringExtra(DigitalesRegisterWidgetContract.EXTRA_DESTINATION)
     }
 }
