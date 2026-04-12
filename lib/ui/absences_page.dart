@@ -17,6 +17,7 @@
 // along with digitales_register.  If not, see <http://www.gnu.org/licenses/>.
 
 import 'package:charts_flutter/flutter.dart' as charts;
+import 'package:dr/actions/app_actions.dart';
 import 'package:dr/app_selectors.dart';
 import 'package:dr/app_state.dart';
 import 'package:dr/container/absence_group_container.dart';
@@ -26,9 +27,12 @@ import 'package:dr/ui/absence.dart';
 import 'package:dr/ui/last_fetched_overlay.dart';
 import 'package:dr/ui/no_internet.dart';
 import 'package:dr/utc_date_time.dart';
+import 'package:dr/util.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter_built_redux/flutter_built_redux.dart';
 import 'package:intl/intl.dart';
 import 'package:responsive_scaffold/responsive_scaffold.dart';
+import 'package:tuple/tuple.dart';
 
 class AbsencesPage extends StatelessWidget {
   final AbsencesState state;
@@ -106,7 +110,7 @@ class AbsencesBody extends StatelessWidget {
                                       await showDialog<Map<String, dynamic>>(
                                     context: context,
                                     builder: (_) =>
-                                        const _FutureAbsenceDialog(),
+                                        const _FutureAbsenceDialogContainer(),
                                   );
                                   if (payload != null) {
                                     onAddFutureAbsence(payload);
@@ -158,8 +162,60 @@ class AbsencesBody extends StatelessWidget {
   }
 }
 
+class _FutureAbsenceDialogContainer extends StatelessWidget {
+  const _FutureAbsenceDialogContainer();
+
+  @override
+  Widget build(BuildContext context) {
+    return StoreConnection<
+        AppState,
+        AppActions,
+        Tuple4<
+            Map<UtcDateTime, Map<int, String>>,
+            Map<UtcDateTime, Map<int, String>>,
+            Map<int, Map<int, String>>,
+            Map<int, Map<int, String>>>>(
+      builder: (context, vm, actions) {
+        return _FutureAbsenceDialog(
+          lessonStartTimesByDate: vm.item1,
+          lessonEndTimesByDate: vm.item2,
+          lessonStartTimesByWeekday: vm.item3,
+          lessonEndTimesByWeekday: vm.item4,
+          onLoadCalendarWeek: (date) {
+            final monday = toMonday(UtcDateTime.makeUtc(date));
+            actions.calendarActions.setCurrentMonday(monday);
+            actions.calendarActions.load(monday);
+          },
+        );
+      },
+      connect: (state) {
+        final lessonTimesByDate = _collectLessonTimesByDate(state);
+        final lessonTimesByWeekday = _collectLessonTimesByWeekday(state);
+        return Tuple4(
+          lessonTimesByDate.item1,
+          lessonTimesByDate.item2,
+          lessonTimesByWeekday.item1,
+          lessonTimesByWeekday.item2,
+        );
+      },
+    );
+  }
+}
+
 class _FutureAbsenceDialog extends StatefulWidget {
-  const _FutureAbsenceDialog();
+  final Map<UtcDateTime, Map<int, String>> lessonStartTimesByDate;
+  final Map<UtcDateTime, Map<int, String>> lessonEndTimesByDate;
+  final Map<int, Map<int, String>> lessonStartTimesByWeekday;
+  final Map<int, Map<int, String>> lessonEndTimesByWeekday;
+  final void Function(DateTime date) onLoadCalendarWeek;
+
+  const _FutureAbsenceDialog({
+    required this.lessonStartTimesByDate,
+    required this.lessonEndTimesByDate,
+    required this.lessonStartTimesByWeekday,
+    required this.lessonEndTimesByWeekday,
+    required this.onLoadCalendarWeek,
+  });
 
   @override
   State<_FutureAbsenceDialog> createState() => _FutureAbsenceDialogState();
@@ -178,6 +234,18 @@ class _FutureAbsenceDialogState extends State<_FutureAbsenceDialog> {
     9: '15:50',
     10: '16:40',
   };
+  static const Map<int, String> _lessonEndTimes = <int, String>{
+    1: '8:40',
+    2: '9:30',
+    3: '10:25',
+    4: '11:15',
+    5: '12:20',
+    6: '13:10',
+    7: '15:00',
+    8: '15:50',
+    9: '16:40',
+    10: '17:30',
+  };
 
   final TextEditingController _reasonController = TextEditingController();
   final TextEditingController _signatureController = TextEditingController();
@@ -185,25 +253,83 @@ class _FutureAbsenceDialogState extends State<_FutureAbsenceDialog> {
   DateTime _endDate = DateTime.now();
   int _startTime = 1;
   int _endTime = 1;
+  bool _wholeDay = false;
+  final Set<UtcDateTime> _requestedMondays = <UtcDateTime>{};
 
   bool get _validInput =>
       _reasonController.text.trim().isNotEmpty &&
       _signatureController.text.trim().isNotEmpty;
+
+  Map<int, String> get _fallbackLessonStartTimes => _lessonStartTimes;
+
+  Map<int, String> get _fallbackLessonEndTimes => _lessonEndTimes;
+
+  Map<int, String> get _effectiveLessonStartTimes {
+    final dateTimes = widget.lessonStartTimesByDate[
+        UtcDateTime(_startDate.year, _startDate.month, _startDate.day)];
+    if (dateTimes != null && dateTimes.isNotEmpty) {
+      return _sortedLessonTimes(dateTimes);
+    }
+    final weekdayTimes = widget.lessonStartTimesByWeekday[_startDate.weekday];
+    if (weekdayTimes != null && weekdayTimes.isNotEmpty) {
+      return _sortedLessonTimes(weekdayTimes);
+    }
+    return _fallbackLessonStartTimes;
+  }
+
+  Map<int, String> get _effectiveLessonEndTimes {
+    final dateTimes = widget.lessonEndTimesByDate[
+        UtcDateTime(_startDate.year, _startDate.month, _startDate.day)];
+    if (dateTimes != null && dateTimes.isNotEmpty) {
+      return _sortedLessonTimes(dateTimes);
+    }
+    final weekdayTimes = widget.lessonEndTimesByWeekday[_startDate.weekday];
+    if (weekdayTimes != null && weekdayTimes.isNotEmpty) {
+      return _sortedLessonTimes(weekdayTimes);
+    }
+    return _fallbackLessonEndTimes;
+  }
+
+  List<int> get _availableLessonHours =>
+      _effectiveLessonStartTimes.keys.toList();
+
+  int get _submittedStartTime => _wholeDay ? 1 : _startTime;
+
+  int get _submittedEndTime => _wholeDay ? 20 : _endTime;
+
+  bool get _hasWeekendSelection =>
+      _startDate.weekday == DateTime.saturday ||
+      _startDate.weekday == DateTime.sunday ||
+      _endDate.weekday == DateTime.saturday ||
+      _endDate.weekday == DateTime.sunday;
 
   bool get _validRange {
     final start = DateTime(
       _startDate.year,
       _startDate.month,
       _startDate.day,
-      _startTime,
+      _submittedStartTime,
     );
     final end = DateTime(
       _endDate.year,
       _endDate.month,
       _endDate.day,
-      _endTime,
+      _submittedEndTime,
     );
     return !start.isAfter(end);
+  }
+
+  @override
+  void initState() {
+    super.initState();
+    _ensureCalendarWeekLoaded();
+    _syncSelectedHoursToAvailableRange();
+  }
+
+  @override
+  void didUpdateWidget(covariant _FutureAbsenceDialog oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    _syncSelectedHoursToAvailableRange();
   }
 
   @override
@@ -218,6 +344,8 @@ class _FutureAbsenceDialogState extends State<_FutureAbsenceDialog> {
     final l10n = context.l10n;
     final localeTag = Localizations.localeOf(context).toLanguageTag();
     final dateFormat = DateFormat('yyyy-MM-dd', localeTag);
+    final fromLabel = l10n.text('absences.dialog.from');
+    final toLabel = l10n.text('absences.dialog.to');
     return AlertDialog(
       title: Text(l10n.text('absences.dialog.title')),
       content: SingleChildScrollView(
@@ -268,6 +396,8 @@ class _FutureAbsenceDialogState extends State<_FutureAbsenceDialog> {
                     if (_endDate.isBefore(_startDate)) {
                       _endDate = _startDate;
                     }
+                    _ensureCalendarWeekLoaded();
+                    _syncSelectedHoursToAvailableRange();
                   });
                 }
               },
@@ -301,67 +431,117 @@ class _FutureAbsenceDialogState extends State<_FutureAbsenceDialog> {
                 }
               },
             ),
+            SwitchListTile.adaptive(
+              contentPadding: EdgeInsets.zero,
+              title: Text(l10n.text('absences.dialog.wholeDay')),
+              value: _wholeDay,
+              onChanged: (value) {
+                setState(() {
+                  _wholeDay = value;
+                });
+              },
+            ),
+            if (_hasWeekendSelection)
+              Container(
+                width: double.infinity,
+                margin: const EdgeInsets.only(bottom: 12),
+                padding: const EdgeInsets.all(12),
+                decoration: BoxDecoration(
+                  color: Theme.of(context).colorScheme.errorContainer,
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                child: Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Icon(
+                      Icons.warning_amber_rounded,
+                      color: Theme.of(context).colorScheme.onErrorContainer,
+                    ),
+                    const SizedBox(width: 10),
+                    Expanded(
+                      child: Text(
+                        l10n.text('absences.dialog.weekendWarning'),
+                        style: TextStyle(
+                          color: Theme.of(context).colorScheme.onErrorContainer,
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
             Row(
               children: [
                 Expanded(
                   child: DropdownButtonFormField<int>(
+                    key: ValueKey<String>(
+                      'start-hour-${_startDate.weekday}-$_startTime-$_wholeDay',
+                    ),
                     initialValue: _startTime,
                     isExpanded: true,
                     decoration: InputDecoration(
                       labelText: l10n.text('absences.dialog.startHour'),
                     ),
-                    items: _lessonStartTimes.entries
+                    items: _availableLessonHours
                         .map(
-                          (entry) => DropdownMenuItem(
-                            value: entry.key,
-                            child: Text('${entry.key} (von ${entry.value})'),
+                          (lessonHour) => DropdownMenuItem(
+                            value: lessonHour,
+                            child: Text(
+                                '$lessonHour ($fromLabel ${_effectiveLessonStartTimes[lessonHour]})'),
                           ),
                         )
                         .toList(),
-                    selectedItemBuilder: (context) => _lessonStartTimes.entries
+                    selectedItemBuilder: (context) => _availableLessonHours
                         .map(
-                          (entry) => Text(
-                            '${entry.key} (${entry.value})',
+                          (lessonHour) => Text(
+                            '$lessonHour (${_effectiveLessonStartTimes[lessonHour]})',
                             overflow: TextOverflow.ellipsis,
                           ),
                         )
                         .toList(),
-                    onChanged: (value) {
-                      if (value != null) {
-                        setState(() => _startTime = value);
-                      }
-                    },
+                    onChanged: _wholeDay
+                        ? null
+                        : (value) {
+                            if (value != null) {
+                              setState(() => _startTime = value);
+                            }
+                          },
                   ),
                 ),
                 const SizedBox(width: 12),
                 Expanded(
                   child: DropdownButtonFormField<int>(
+                    key: ValueKey<String>(
+                      'end-hour-${_startDate.weekday}-$_endTime-$_wholeDay',
+                    ),
                     initialValue: _endTime,
                     isExpanded: true,
                     decoration: InputDecoration(
                       labelText: l10n.text('absences.dialog.endHour'),
                     ),
-                    items: _lessonStartTimes.entries
+                    items: _availableLessonHours
                         .map(
-                          (entry) => DropdownMenuItem(
-                            value: entry.key,
-                            child: Text('${entry.key} (von ${entry.value})'),
+                          (lessonHour) => DropdownMenuItem(
+                            value: lessonHour,
+                            child: Text(
+                                '$lessonHour ($toLabel ${_effectiveLessonEndTimes[lessonHour]})'),
                           ),
                         )
                         .toList(),
-                    selectedItemBuilder: (context) => _lessonStartTimes.entries
+                    selectedItemBuilder: (context) => _availableLessonHours
                         .map(
-                          (entry) => Text(
-                            '${entry.key} (${entry.value})',
+                          (lessonHour) => Text(
+                            '$lessonHour (${_effectiveLessonEndTimes[lessonHour]})',
                             overflow: TextOverflow.ellipsis,
                           ),
                         )
                         .toList(),
-                    onChanged: (value) {
-                      if (value != null) {
-                        setState(() => _endTime = value);
-                      }
-                    },
+                    onChanged: _wholeDay
+                        ? null
+                        : (value) {
+                            if (value != null) {
+                              setState(() => _endTime = value);
+                            }
+                          },
                   ),
                 ),
               ],
@@ -388,9 +568,9 @@ class _FutureAbsenceDialogState extends State<_FutureAbsenceDialog> {
                   final payload = {
                     'futureAbsence': {
                       'startDateObject': _startDate.toUtc().toIso8601String(),
-                      'startTime': _startTime,
+                      'startTime': _submittedStartTime,
                       'endDateObject': _endDate.toUtc().toIso8601String(),
-                      'endTime': _endTime,
+                      'endTime': _submittedEndTime,
                       'reason': _reasonController.text.trim(),
                       'reason_signature': _signatureController.text.trim(),
                       'startDate': dateFormat.format(_startDate),
@@ -404,6 +584,37 @@ class _FutureAbsenceDialogState extends State<_FutureAbsenceDialog> {
         ),
       ],
     );
+  }
+
+  void _syncSelectedHoursToAvailableRange() {
+    final availableHours = _availableLessonHours;
+    if (availableHours.isEmpty) {
+      _startTime = 1;
+      _endTime = 1;
+      return;
+    }
+
+    if (!availableHours.contains(_startTime)) {
+      _startTime = availableHours.first;
+    }
+    if (!availableHours.contains(_endTime)) {
+      _endTime = availableHours.last;
+    }
+  }
+
+  Map<int, String> _sortedLessonTimes(Map<int, String> lessonTimes) {
+    final sortedEntries = lessonTimes.entries.toList()
+      ..sort((a, b) => a.key.compareTo(b.key));
+    return Map<int, String>.fromEntries(sortedEntries);
+  }
+
+  void _ensureCalendarWeekLoaded() {
+    final monday = toMonday(
+      UtcDateTime(_startDate.year, _startDate.month, _startDate.day),
+    );
+    if (_requestedMondays.add(monday)) {
+      widget.onLoadCalendarWeek(_startDate);
+    }
   }
 }
 
@@ -1137,4 +1348,112 @@ class _PieSliceData {
     required this.value,
     required this.color,
   });
+}
+
+Tuple2<Map<UtcDateTime, Map<int, String>>, Map<UtcDateTime, Map<int, String>>>
+    _collectLessonTimesByDate(AppState state) {
+  final lessonStarts = <UtcDateTime, Map<int, String>>{};
+  final lessonEnds = <UtcDateTime, Map<int, String>>{};
+
+  final calendarDays = state.calendarState.days.values.toList()
+    ..sort((a, b) => a.date.compareTo(b.date));
+
+  for (final day in calendarDays) {
+    final date = UtcDateTime(day.date.year, day.date.month, day.date.day);
+    final dayStarts = lessonStarts.putIfAbsent(date, () => {});
+    final dayEnds = lessonEnds.putIfAbsent(date, () => {});
+    for (final hour in day.hours) {
+      final spans = hour.timeSpans.toList()
+        ..sort((a, b) => a.from.compareTo(b.from));
+      if (spans.isEmpty) {
+        continue;
+      }
+
+      final expectedLength = hour.toHour - hour.fromHour + 1;
+      if (spans.length == expectedLength) {
+        for (var i = 0; i < spans.length; i++) {
+          final lessonHour = hour.fromHour + i;
+          dayStarts.putIfAbsent(
+            lessonHour,
+            () => _formatLessonTime(spans[i].from),
+          );
+          dayEnds.putIfAbsent(
+            lessonHour,
+            () => _formatLessonTime(spans[i].to),
+          );
+        }
+        continue;
+      }
+
+      dayStarts.putIfAbsent(
+        hour.fromHour,
+        () => _formatLessonTime(spans.first.from),
+      );
+      dayEnds.putIfAbsent(
+        hour.toHour,
+        () => _formatLessonTime(spans.last.to),
+      );
+    }
+  }
+
+  return Tuple2(lessonStarts, lessonEnds);
+}
+
+Tuple2<Map<int, Map<int, String>>, Map<int, Map<int, String>>>
+    _collectLessonTimesByWeekday(AppState state) {
+  final lessonStarts = <int, Map<int, String>>{};
+  final lessonEnds = <int, Map<int, String>>{};
+
+  final calendarDays = state.calendarState.days.values.toList()
+    ..sort((a, b) => a.date.compareTo(b.date));
+
+  for (final day in calendarDays) {
+    final weekdayStarts = lessonStarts.putIfAbsent(day.date.weekday, () => {});
+    final weekdayEnds = lessonEnds.putIfAbsent(day.date.weekday, () => {});
+    for (final hour in day.hours) {
+      final spans = hour.timeSpans.toList()
+        ..sort((a, b) => a.from.compareTo(b.from));
+      if (spans.isEmpty) {
+        continue;
+      }
+
+      final expectedLength = hour.toHour - hour.fromHour + 1;
+      if (spans.length == expectedLength) {
+        for (var i = 0; i < spans.length; i++) {
+          final lessonHour = hour.fromHour + i;
+          weekdayStarts.putIfAbsent(
+            lessonHour,
+            () => _formatLessonTime(spans[i].from),
+          );
+          weekdayEnds.putIfAbsent(
+            lessonHour,
+            () => _formatLessonTime(spans[i].to),
+          );
+        }
+        continue;
+      }
+
+      weekdayStarts.putIfAbsent(
+        hour.fromHour,
+        () => _formatLessonTime(spans.first.from),
+      );
+      weekdayEnds.putIfAbsent(
+        hour.toHour,
+        () => _formatLessonTime(spans.last.to),
+      );
+    }
+  }
+
+  return Tuple2(lessonStarts, lessonEnds);
+}
+
+String _formatLessonTime(DateTime time) {
+  final hour = time.hour.toString().padLeft(2, '0');
+  final minute = time.minute.toString().padLeft(2, '0');
+  return '$hour:$minute';
+}
+
+Tuple2<Map<int, Map<int, String>>, Map<int, Map<int, String>>>
+    collectLessonTimesByWeekday(AppState state) {
+  return _collectLessonTimesByWeekday(state);
 }

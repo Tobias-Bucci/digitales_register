@@ -1,4 +1,4 @@
-﻿// Copyright (C) 2021 Michael Debertol
+// Copyright (C) 2021 Michael Debertol
 // Copyright (C) 2026 Tobias Bucci
 //
 // This file is part of digitales_register.
@@ -693,7 +693,8 @@ class _SettingsPageWidgetState extends State<SettingsPageWidget> {
                         context: context,
                         builder: (context) => AddSubject(
                           availableSubjects: notYetFavoriteSubjects,
-                          title: l10n.text('settings.calendar.favoriteSubjects'),
+                          title:
+                              l10n.text('settings.calendar.favoriteSubjects'),
                           requireSuggestionMatch: true,
                         ),
                       );
@@ -778,7 +779,7 @@ class _SettingsPageWidgetState extends State<SettingsPageWidget> {
                 context,
                 MaterialPageRoute<void>(
                   builder: (context) {
-                    return NetworkProtocolPage();
+                    return const NetworkProtocolPage();
                   },
                 ),
               );

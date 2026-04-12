@@ -4,6 +4,7 @@ import 'package:dr/app_state.dart';
 import 'package:dr/container/absences_page_container.dart';
 import 'package:dr/data.dart';
 import 'package:dr/ui/absence.dart';
+import 'package:dr/ui/absences_page.dart';
 import 'package:dr/utc_date_time.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -118,6 +119,83 @@ void main() {
     expect(find.text('Noch keine Absenzen'), findsOneWidget);
   });
 
+  testWidgets('future absence dialog shows end hour with end time',
+      (tester) async {
+    final store = createStore(
+      initialState: _buildAbsencesStateWithCalendarTimes(),
+    );
+
+    await pumpApp(
+      tester,
+      store: store,
+      home: AbsencesPageContainer(),
+    );
+    await settleFor(tester);
+
+    await tester.tap(find.byType(FilledButton));
+    await settleFor(tester);
+
+    expect(find.text('1 (07:50)'), findsOneWidget);
+    expect(find.text('1 (08:40)'), findsOneWidget);
+    expect(find.text('1 (von 07:50)'), findsNothing);
+    expect(find.text('1 (bis 08:40)'), findsNothing);
+  });
+
+  test('collectLessonTimesByWeekday groups lessons by weekday', () {
+    final state = _buildAbsencesStateWithDifferentWeekdayHours();
+
+    final lessonTimes = collectLessonTimesByWeekday(state);
+
+    expect(
+      lessonTimes.item1[DateTime.monday]!.keys.toList(),
+      <int>[1, 2, 3, 4, 5, 6, 7, 8],
+    );
+    expect(
+      lessonTimes.item1[DateTime.tuesday]!.keys.toList(),
+      <int>[1, 2, 3, 4, 5, 6],
+    );
+    expect(lessonTimes.item1[DateTime.monday]![8], '15:00');
+    expect(lessonTimes.item2[DateTime.monday]![8], '15:50');
+    expect(lessonTimes.item1[DateTime.tuesday]![6], '12:20');
+    expect(lessonTimes.item2[DateTime.tuesday]![6], '13:10');
+  });
+
+  testWidgets('whole day sends 1 to 20 to the api payload', (tester) async {
+    Map<String, dynamic>? submittedPayload;
+    final store = createStore(initialState: _buildAbsencesState());
+
+    await pumpApp(
+      tester,
+      store: store,
+      home: AbsencesPage(
+        state: _buildAbsencesState().absencesState,
+        noInternet: false,
+        onAddFutureAbsence: (payload) {
+          submittedPayload = payload;
+        },
+        onRemoveFutureAbsence: (_) {},
+      ),
+    );
+    await settleFor(tester);
+
+    await tester.tap(find.byType(FilledButton));
+    await settleFor(tester);
+
+    await tester.enterText(find.byType(TextField).at(0), 'Arzttermin');
+    await tester.enterText(find.byType(TextField).at(1), 'Max Mustermann');
+    await settleFor(tester);
+
+    await tester.tap(find.text('Ganzer Tag'));
+    await settleFor(tester);
+
+    await tester.tap(find.text('Speichern'));
+    await settleFor(tester);
+
+    expect(submittedPayload, isNotNull);
+    expect(submittedPayload!['futureAbsence']['startTime'], 1);
+    expect(submittedPayload!['futureAbsence']['endTime'], 20);
+  });
+
   testWidgets('matches absences page golden', (tester) async {
     addTearDown(() => tester.binding.setSurfaceSize(null));
     await tester.binding.setSurfaceSize(const Size(800, 600));
@@ -215,6 +293,110 @@ AppState _buildAbsencesState({
                 ),
               ]
             : const <FutureAbsence>[],
+      ),
+  );
+}
+
+AppState _buildAbsencesStateWithCalendarTimes() {
+  return _buildAbsencesState().rebuild(
+    (b) => b.calendarState
+      ..days[UtcDateTime(2026, 4, 7)] = CalendarDay(
+        (day) => day
+          ..date = UtcDateTime(2026, 4, 7)
+          ..lastFetched = UtcDateTime(2026, 4, 7, 12)
+          ..hours = ListBuilder<CalendarHour>(<CalendarHour>[
+            CalendarHour(
+              (hour) => hour
+                ..subject = 'Deutsch'
+                ..fromHour = 1
+                ..toHour = 1
+                ..rooms = ListBuilder<String>()
+                ..teachers = ListBuilder<Teacher>()
+                ..homeworkExams = ListBuilder<HomeworkExam>()
+                ..lessonContents = ListBuilder<LessonContent>()
+                ..timeSpans = ListBuilder<TimeSpan>(<TimeSpan>[
+                  TimeSpan(
+                    (span) => span
+                      ..from = UtcDateTime(2026, 4, 7, 7, 50)
+                      ..to = UtcDateTime(2026, 4, 7, 8, 40),
+                  ),
+                ]),
+            ),
+          ]),
+      ),
+  );
+}
+
+AppState _buildAbsencesStateWithDifferentWeekdayHours() {
+  return _buildAbsencesState().rebuild(
+    (b) => b.calendarState
+      ..days[UtcDateTime(2026, 4, 13)] = _buildCalendarDayWithHours(
+        date: UtcDateTime(2026, 4, 13),
+        hourTimes: const <int, List<int>>{
+          1: <int>[7, 50, 8, 40],
+          2: <int>[8, 40, 9, 30],
+          3: <int>[9, 35, 10, 25],
+          4: <int>[10, 25, 11, 15],
+          5: <int>[11, 30, 12, 20],
+          6: <int>[12, 20, 13, 10],
+          7: <int>[14, 10, 15, 00],
+          8: <int>[15, 00, 15, 50],
+        },
+      )
+      ..days[UtcDateTime(2026, 4, 14)] = _buildCalendarDayWithHours(
+        date: UtcDateTime(2026, 4, 14),
+        hourTimes: const <int, List<int>>{
+          1: <int>[7, 50, 8, 40],
+          2: <int>[8, 40, 9, 30],
+          3: <int>[9, 35, 10, 25],
+          4: <int>[10, 25, 11, 15],
+          5: <int>[11, 30, 12, 20],
+          6: <int>[12, 20, 13, 10],
+        },
+      ),
+  );
+}
+
+CalendarDay _buildCalendarDayWithHours({
+  required UtcDateTime date,
+  required Map<int, List<int>> hourTimes,
+}) {
+  return CalendarDay(
+    (day) => day
+      ..date = date
+      ..lastFetched = date
+      ..hours = ListBuilder<CalendarHour>(
+        hourTimes.entries.map(
+          (entry) => CalendarHour(
+            (hour) => hour
+              ..subject = 'Deutsch'
+              ..fromHour = entry.key
+              ..toHour = entry.key
+              ..rooms = ListBuilder<String>()
+              ..teachers = ListBuilder<Teacher>()
+              ..homeworkExams = ListBuilder<HomeworkExam>()
+              ..lessonContents = ListBuilder<LessonContent>()
+              ..timeSpans = ListBuilder<TimeSpan>(<TimeSpan>[
+                TimeSpan(
+                  (span) => span
+                    ..from = UtcDateTime(
+                      date.year,
+                      date.month,
+                      date.day,
+                      entry.value[0],
+                      entry.value[1],
+                    )
+                    ..to = UtcDateTime(
+                      date.year,
+                      date.month,
+                      date.day,
+                      entry.value[2],
+                      entry.value[3],
+                    ),
+                ),
+              ]),
+          ),
+        ),
       ),
   );
 }

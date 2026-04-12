@@ -1,5 +1,3 @@
-import 'package:dr/app_state.dart';
-import 'package:dr/middleware/middleware.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:mocktail/mocktail.dart';
