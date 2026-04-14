@@ -74,17 +74,14 @@ void main() {
             hours: <CalendarHour>[
               buildCalendarHour(
                 subject: 'Mathematik',
-                fromHour: 1,
                 toHour: 2,
                 rooms: const <String>['A101'],
               ),
             ],
           ),
         })
-        ..settingsState.subjectNicks = MapBuilder<String, String>({
-          ...defaultSubjectNicks,
-          'Mathematik': 'Mat',
-        }),
+        ..settingsState.subjectNicks = MapBuilder<String, String>(
+            {...defaultSubjectNicks, 'Mathematik': 'Mat'}),
     );
 
     final snapshot = buildAndroidWidgetSnapshot(state);

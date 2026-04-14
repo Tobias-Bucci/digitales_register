@@ -23,6 +23,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter_built_redux/flutter_built_redux.dart';
 
 class AbsencesPageContainer extends StatelessWidget {
+  const AbsencesPageContainer({super.key});
+
   @override
   Widget build(BuildContext context) {
     return StoreConnection<AppState, AppActions, (AbsencesState, bool)>(

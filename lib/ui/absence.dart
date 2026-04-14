@@ -1,4 +1,4 @@
-﻿// Copyright (C) 2021 Michael Debertol
+// Copyright (C) 2021 Michael Debertol
 // Copyright (C) 2026 Tobias Bucci
 //
 // This file is part of digitales_register.
@@ -78,6 +78,26 @@ class AbsenceGroupWidget extends StatelessWidget {
               style: bodyStyle,
               textAlign: TextAlign.center,
             ),
+            if (vm.onJustify != null) ...[
+              const SizedBox(height: 12),
+              FilledButton.tonalIcon(
+                onPressed: () async {
+                  final submission =
+                      await showDialog<_AbsenceJustificationSubmission>(
+                    context: context,
+                    builder: (_) => const _AbsenceJustificationDialog(),
+                  );
+                  if (submission != null) {
+                    vm.onJustify!(
+                      submission.reason,
+                      submission.signature,
+                    );
+                  }
+                },
+                icon: const Icon(Icons.verified_outlined),
+                label: Text(context.t('absences.justification.action')),
+              ),
+            ],
           ],
         ),
       ),
@@ -197,4 +217,88 @@ class FutureAbsenceWidget extends StatelessWidget {
       ),
     );
   }
+}
+
+class _AbsenceJustificationDialog extends StatefulWidget {
+  const _AbsenceJustificationDialog();
+
+  @override
+  State<_AbsenceJustificationDialog> createState() =>
+      _AbsenceJustificationDialogState();
+}
+
+class _AbsenceJustificationDialogState
+    extends State<_AbsenceJustificationDialog> {
+  final TextEditingController _reasonController = TextEditingController();
+  final TextEditingController _signatureController = TextEditingController();
+
+  bool get _validInput =>
+      _reasonController.text.trim().isNotEmpty &&
+      _signatureController.text.trim().isNotEmpty;
+
+  @override
+  void dispose() {
+    _reasonController.dispose();
+    _signatureController.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final l10n = context.l10n;
+    return AlertDialog(
+      title: Text(l10n.text('absences.justification.dialog.title')),
+      content: SingleChildScrollView(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            TextField(
+              controller: _reasonController,
+              decoration: InputDecoration(
+                labelText: l10n.text('absences.justification.dialog.reason'),
+              ),
+              onChanged: (_) => setState(() {}),
+            ),
+            const SizedBox(height: 8),
+            TextField(
+              controller: _signatureController,
+              decoration: InputDecoration(
+                labelText: l10n.text('absences.justification.dialog.signature'),
+              ),
+              onChanged: (_) => setState(() {}),
+            ),
+          ],
+        ),
+      ),
+      actions: [
+        TextButton(
+          onPressed: () => Navigator.of(context).pop(),
+          child: Text(l10n.text('common.cancel')),
+        ),
+        ElevatedButton(
+          onPressed: _validInput
+              ? () {
+                  Navigator.of(context).pop(
+                    _AbsenceJustificationSubmission(
+                      reason: _reasonController.text.trim(),
+                      signature: _signatureController.text.trim(),
+                    ),
+                  );
+                }
+              : null,
+          child: Text(l10n.text('button.save')),
+        ),
+      ],
+    );
+  }
+}
+
+class _AbsenceJustificationSubmission {
+  final String reason;
+  final String signature;
+
+  const _AbsenceJustificationSubmission({
+    required this.reason,
+    required this.signature,
+  });
 }

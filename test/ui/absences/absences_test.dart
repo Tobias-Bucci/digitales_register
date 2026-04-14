@@ -1,6 +1,24 @@
+// Copyright (C) 2026 Tobias Bucci
+//
+// This file is part of digitales_register.
+//
+// digitales_register is free software: you can redistribute it and/or modify
+// it under the terms of the GNU General Public License as published by
+// the Free Software Foundation, either version 3 of the License, or
+// (at your option) any later version.
+//
+// digitales_register is distributed in the hope that it will be useful,
+// but WITHOUT ANY WARRANTY; without even the implied warranty of
+// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+// GNU General Public License for more details.
+//
+// You should have received a copy of the GNU General Public License
+// along with digitales_register.  If not, see <http://www.gnu.org/licenses/>.
+
 import 'package:built_collection/built_collection.dart';
 import 'package:charts_flutter/flutter.dart' as charts;
 import 'package:dr/app_state.dart';
+import 'package:dr/container/absence_group_container.dart';
 import 'package:dr/container/absences_page_container.dart';
 import 'package:dr/data.dart';
 import 'package:dr/ui/absence.dart';
@@ -24,7 +42,7 @@ void main() {
     await pumpApp(
       tester,
       store: store,
-      home: AbsencesPageContainer(),
+      home: const AbsencesPageContainer(),
     );
     await settleFor(tester);
 
@@ -59,7 +77,7 @@ void main() {
     await pumpApp(
       tester,
       store: store,
-      home: AbsencesPageContainer(),
+      home: const AbsencesPageContainer(),
     );
     await settleFor(tester);
 
@@ -79,7 +97,7 @@ void main() {
     await pumpApp(
       tester,
       store: store,
-      home: AbsencesPageContainer(),
+      home: const AbsencesPageContainer(),
     );
     await settleFor(tester);
 
@@ -113,7 +131,7 @@ void main() {
     await pumpApp(
       tester,
       store: store,
-      home: AbsencesPageContainer(),
+      home: const AbsencesPageContainer(),
     );
 
     expect(find.text('Noch keine Absenzen'), findsOneWidget);
@@ -128,7 +146,7 @@ void main() {
     await pumpApp(
       tester,
       store: store,
-      home: AbsencesPageContainer(),
+      home: const AbsencesPageContainer(),
     );
     await settleFor(tester);
 
@@ -196,6 +214,120 @@ void main() {
     expect(submittedPayload!['futureAbsence']['endTime'], 20);
   });
 
+  testWidgets('absence justification dialog requires reason and signature',
+      (tester) async {
+    String? submittedReason;
+    String? submittedSignature;
+    final store = createStore();
+
+    await pumpApp(
+      tester,
+      store: store,
+      home: Material(
+        child: AbsenceGroupWidget(
+          vm: AbsencesViewModel(
+            fromTo: 'Mo. 13.4.2026, 8. - 9. Stunde',
+            duration: '2 Unterrichtseinheiten',
+            justifiedString: 'Noch nicht entschuldigt',
+            reason: null,
+            justified: AbsenceJustified.notYetJustified,
+            note: null,
+            onJustify: (reason, signature) {
+              submittedReason = reason;
+              submittedSignature = signature;
+            },
+          ),
+        ),
+      ),
+    );
+    await settleFor(tester);
+
+    await tester.tap(find.text('Absenz entschuldigen'));
+    await settleFor(tester);
+
+    expect(find.text('Absenz entschuldigen'), findsNWidgets(2));
+    expect(
+      tester
+          .widget<ElevatedButton>(
+              find.widgetWithText(ElevatedButton, 'Speichern'))
+          .onPressed,
+      isNull,
+    );
+
+    await tester.enterText(find.byType(TextField).at(0), 'Bauchschmerzen');
+    await settleFor(tester);
+    expect(
+      tester
+          .widget<ElevatedButton>(
+              find.widgetWithText(ElevatedButton, 'Speichern'))
+          .onPressed,
+      isNull,
+    );
+
+    await tester.enterText(find.byType(TextField).at(1), 'Tobias Bucci');
+    await settleFor(tester);
+
+    await tester.tap(find.widgetWithText(ElevatedButton, 'Speichern'));
+    await settleFor(tester);
+
+    expect(submittedReason, 'Bauchschmerzen');
+    expect(submittedSignature, 'Tobias Bucci');
+  });
+
+  testWidgets('does not show justify button when reason already exists',
+      (tester) async {
+    final store = createStore(
+      initialState: AppState(
+        (b) => b.absencesState
+          ..canEdit = true
+          ..statistic = AbsenceStatisticBuilder()
+          ..absences = ListBuilder<AbsenceGroup>(<AbsenceGroup>[
+            AbsenceGroup(
+              (b) => b
+                ..date = UtcDateTime(2026, 4, 13)
+                ..reason = 'Bauchschmerzen'
+                ..reasonSignature = 'Tobias Bucci'
+                ..reasonTimestamp = UtcDateTime(2026, 4, 14, 7, 11, 27)
+                ..reasonUser = 3649
+                ..justified = AbsenceJustified.notYetJustified
+                ..hours = 2
+                ..minutes = 0
+                ..absences = ListBuilder<Absence>(<Absence>[
+                  Absence(
+                    (b) => b
+                      ..id = 44533
+                      ..date = UtcDateTime(2026, 4, 13)
+                      ..hour = 8
+                      ..minutes = 50
+                      ..minutesCameTooLate = 0
+                      ..minutesLeftTooEarly = 0,
+                  ),
+                  Absence(
+                    (b) => b
+                      ..id = 44509
+                      ..date = UtcDateTime(2026, 4, 13)
+                      ..hour = 9
+                      ..minutes = 50
+                      ..minutesCameTooLate = 0
+                      ..minutesLeftTooEarly = 0,
+                  ),
+                ]),
+            ),
+          ])
+          ..futureAbsences = ListBuilder<FutureAbsence>(),
+      ),
+    );
+
+    await pumpApp(
+      tester,
+      store: store,
+      home: const AbsencesPageContainer(),
+    );
+    await settleFor(tester);
+
+    expect(find.text('Absenz entschuldigen'), findsNothing);
+  });
+
   testWidgets('matches absences page golden', (tester) async {
     addTearDown(() => tester.binding.setSurfaceSize(null));
     await tester.binding.setSurfaceSize(const Size(800, 600));
@@ -205,7 +337,7 @@ void main() {
     await pumpApp(
       tester,
       store: store,
-      home: AbsencesPageContainer(),
+      home: const AbsencesPageContainer(),
     );
     await settleFor(tester);
 

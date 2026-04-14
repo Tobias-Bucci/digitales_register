@@ -1,4 +1,4 @@
-﻿// Copyright (C) 2026 Tobias Bucci
+// Copyright (C) 2026 Tobias Bucci
 //
 // This file is part of digitales_register.
 //
@@ -27,5 +27,6 @@ abstract class AbsencesActions extends ReduxActions {
   abstract final VoidActionDispatcher load;
   abstract final ActionDispatcher<dynamic> loaded;
   abstract final ActionDispatcher<Map<String, dynamic>> addFutureAbsence;
+  abstract final ActionDispatcher<Map<String, dynamic>> justifyAbsence;
   abstract final ActionDispatcher<FutureAbsence> removeFutureAbsence;
 }

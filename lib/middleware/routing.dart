@@ -1,4 +1,5 @@
 // Copyright (C) 2021 Michael Debertol
+// Copyright (C) 2026 Tobias Bucci
 //
 // This file is part of digitales_register.
 //
@@ -162,7 +163,7 @@ Future<void> _showAbsences(
     ActionHandler next,
     Action<void> action) async {
   scaffoldKey!.currentState!
-      .selectContentWidget(AbsencesPageContainer(), Pages.absences);
+      .selectContentWidget(const AbsencesPageContainer(), Pages.absences);
   await api.actions.absencesActions.load();
   await next(action);
 }

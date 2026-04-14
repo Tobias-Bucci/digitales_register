@@ -1,4 +1,4 @@
-﻿// Copyright (C) 2021 Michael Debertol
+// Copyright (C) 2021 Michael Debertol
 // Copyright (C) 2026 Tobias Bucci
 //
 // This file is part of digitales_register.
@@ -105,6 +105,9 @@ AbsencesState _parseAbsences(Map json) {
 AbsenceGroup _parseAbsence(dynamic g) {
   return AbsenceGroup(
     (b) => b
+      ..date = getString(g["date"]) != null
+          ? UtcDateTime.parse(getString(g["date"])!.replaceFirst(" ", "T"))
+          : null
       ..justified = AbsenceJustified.fromInt(getInt(g["justified"])!)
       ..reasonSignature = getString(g["reason_signature"])
       ..reasonTimestamp = g["reason_timestamp"] is String
@@ -112,20 +115,39 @@ AbsenceGroup _parseAbsence(dynamic g) {
               (g["reason_timestamp"] as String).replaceFirst(" ", "T"),
             )
           : null
+      ..reasonUser = getInt(g["reason_user"])
       ..reason = getString(g["reason"])
       ..note = getString(g["note"])
+      ..selfdeclId = getInt(g["selfdecl_id"])
+      ..selfdeclInput = getString(g["selfdecl_input"])
       ..absences = ListBuilder(
         (g["group"] as List).map<Absence>(
           (dynamic a) {
             return Absence(
               (b) => b
+                ..id = getInt(a["id"])
                 ..minutes = getInt(a["minutes"])
                 ..date = UtcDateTime.parse(
                   getString(a["date"])!.replaceFirst(" ", "T"),
                 )
                 ..hour = getInt(a["hour"])
                 ..minutesCameTooLate = getInt(a["minutes_begin"])
-                ..minutesLeftTooEarly = getInt(a["minutes_end"]),
+                ..minutesLeftTooEarly = getInt(a["minutes_end"])
+                ..justified = getInt(a["justified"]) != null
+                    ? AbsenceJustified.fromInt(getInt(a["justified"])!)
+                    : null
+                ..note = getString(a["note"])
+                ..reason = getString(a["reason"])
+                ..reasonSignature = getString(a["reason_signature"])
+                ..reasonTimestamp = a["reason_timestamp"] is String
+                    ? UtcDateTime.tryParse(
+                        (a["reason_timestamp"] as String)
+                            .replaceFirst(" ", "T"),
+                      )
+                    : null
+                ..reasonUser = getInt(a["reason_user"])
+                ..selfdeclId = getInt(a["selfdecl_id"])
+                ..selfdeclInput = getString(a["selfdecl_input"]),
             );
           },
         ),

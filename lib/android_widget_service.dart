@@ -23,7 +23,6 @@ import 'package:dr/actions/app_actions.dart';
 import 'package:dr/android_widget_snapshot.dart';
 import 'package:dr/app_state.dart';
 import 'package:dr/main.dart';
-import 'package:flutter/foundation.dart';
 import 'package:flutter/services.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 

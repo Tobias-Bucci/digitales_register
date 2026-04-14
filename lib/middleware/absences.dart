@@ -22,6 +22,7 @@ final _absencesMiddleware =
     MiddlewareBuilder<AppState, AppStateBuilder, AppActions>()
       ..add(AbsencesActionsNames.load, _loadAbsences)
       ..add(AbsencesActionsNames.addFutureAbsence, _addFutureAbsence)
+      ..add(AbsencesActionsNames.justifyAbsence, _justifyAbsence)
       ..add(AbsencesActionsNames.removeFutureAbsence, _removeFutureAbsence);
 
 Future<void> _loadAbsences(
@@ -130,6 +131,54 @@ Future<void> _removeFutureAbsence(
   }
 }
 
+Future<void> _justifyAbsence(
+    MiddlewareApi<AppState, AppStateBuilder, AppActions> api,
+    ActionHandler next,
+    Action<Map<String, dynamic>> action) async {
+  if (api.state.noInternet) return;
+  await next(action);
+  final payload = _buildJustifyAbsencePayload(api.state, action.payload);
+  _absencesDebug('justify -> payload=$payload');
+  if (payload == null) {
+    if (!wrapper.noInternet) {
+      final l10n = await _loadMiddlewareLocalizations(api.state);
+      showSnackBar(l10n.text('absences.justification.error.invalidPayload'));
+    }
+    return;
+  }
+  dynamic response;
+  try {
+    response = await wrapper.send(
+      'api/student/dashboard/absence_reason',
+      args: payload,
+    );
+  } on UnexpectedLogoutException {
+    await _handleUnexpectedLogout(api, 'justify');
+    return;
+  }
+  _absencesDebug('justify <- response=$response');
+  if (_responseSucceeded(response)) {
+    _absencesDebug('justify -> success, reloading absences');
+    await api.actions.absencesActions.load();
+    if (!wrapper.noInternet) {
+      final l10n = await _loadMiddlewareLocalizations(api.state);
+      showSnackBar(l10n.text('absences.justification.success'));
+    }
+  } else if (!wrapper.noInternet) {
+    _absencesDebug('justify -> failed');
+    final l10n = await _loadMiddlewareLocalizations(api.state);
+    final message = _responseMessage(response);
+    showSnackBar(
+      message == null
+          ? l10n.text('absences.justification.error.submit')
+          : l10n.text(
+              'absences.justification.error.submitWithMessage',
+              args: {'message': message},
+            ),
+    );
+  }
+}
+
 bool _responseSucceeded(dynamic response) {
   final map = getMap(response);
   final success = map?['success'];
@@ -222,3 +271,245 @@ int _justifiedToInt(AbsenceJustified justified) {
   }
   return 1;
 }
+
+Future<AppLocalizations> _loadMiddlewareLocalizations(AppState state) {
+  final locale = AppLanguage.fromCode(state.settingsState.languageCode).locale;
+  return AppLocalizations.load(locale);
+}
+
+Map<String, dynamic>? _buildJustifyAbsencePayload(
+  AppState state,
+  Map<String, dynamic> input,
+) {
+  final absenceGroup = input['absenceGroup'];
+  final reason = (input['reason'] as String?)?.trim();
+  final signature = (input['signature'] as String?)?.trim();
+  if (absenceGroup is! AbsenceGroup ||
+      reason == null ||
+      reason.isEmpty ||
+      signature == null ||
+      signature.isEmpty ||
+      absenceGroup.absences.isEmpty) {
+    return null;
+  }
+
+  final dateFormat = DateFormat('yyyy-MM-dd');
+  final timestamp = UtcDateTime.now();
+  final groupDate = absenceGroup.date ?? absenceGroup.absences.first.date;
+  final locale = AppLanguage.fromCode(state.settingsState.languageCode)
+      .locale
+      .toLanguageTag();
+
+  final groupItems = absenceGroup.absences
+      .map(
+        (absence) => <String, dynamic>{
+          'id': absence.id,
+          'minutes': absence.minutes,
+          'minutes_begin': absence.minutesCameTooLate,
+          'minutes_end': absence.minutesLeftTooEarly,
+          'justified':
+              _justifiedToInt(absence.justified ?? absenceGroup.justified),
+          'note': absence.note,
+          'date': dateFormat.format(absence.date),
+          'hour': absence.hour,
+          'reason': absence.reason,
+          'reason_signature': absence.reasonSignature,
+          'reason_timestamp': absence.reasonTimestamp?.toIso8601String(),
+          'reason_user': absence.reasonUser,
+          'selfdecl_id': absence.selfdeclId,
+          'selfdecl_input': absence.selfdeclInput,
+        },
+      )
+      .toList();
+
+  final orderedAbsences = absenceGroup.absences.toList()
+    ..sort((a, b) {
+      final dateOrder = a.date.compareTo(b.date);
+      if (dateOrder != 0) {
+        return dateOrder;
+      }
+      return a.hour.compareTo(b.hour);
+    });
+  final startAbsence = orderedAbsences.first;
+  final endAbsence = orderedAbsences.last;
+  final startTime = _lookupLessonTime(
+    state: state,
+    date: startAbsence.date,
+    hour: startAbsence.hour,
+    endTime: false,
+  );
+  final endTime = _lookupLessonTime(
+    state: state,
+    date: endAbsence.date,
+    hour: endAbsence.hour,
+    endTime: true,
+  );
+
+  return <String, dynamic>{
+    'absenceGroup': <String, dynamic>{
+      'group': groupItems,
+      'date': dateFormat.format(groupDate),
+      'note': absenceGroup.note,
+      'reason': reason,
+      'reason_signature': signature,
+      'reason_timestamp': timestamp.toIso8601String(),
+      'reason_user': absenceGroup.reasonUser,
+      'justified': _justifiedToInt(absenceGroup.justified),
+      'selfdecl_id': absenceGroup.selfdeclId ?? 0,
+      'selfdecl_input': absenceGroup.selfdeclInput ?? '',
+      'formattedDateObject': <String, dynamic>{
+        'startDate':
+            DateFormat('EEE dd.MM.yyyy', locale).format(startAbsence.date),
+        'startHour': startAbsence.hour,
+        'startTimeObj': _buildTimeObject(startTime),
+        'endDate': DateFormat('EEE dd.MM.yyyy', locale).format(endAbsence.date),
+        'endHour': endAbsence.hour,
+        'endTimeObj': _buildTimeObject(endTime),
+        'type': 2,
+      },
+      'showDetails': false,
+      'error': false,
+      'details': _buildAbsenceDetails(absenceGroup),
+      'selfdecl_item': null,
+    },
+  };
+}
+
+String _buildAbsenceDetails(AbsenceGroup group) {
+  final units = group.hours + (group.minutes > 0 ? 1 : 0);
+  if (units <= 0) {
+    return '0 Einheiten';
+  }
+  return units == 1 ? '1 Einheit' : '$units Einheiten';
+}
+
+Map<String, dynamic> _buildTimeObject(String text) {
+  final parts = text.split(':');
+  final hour = parts.first.padLeft(2, '0');
+  final minute = parts.length > 1 ? parts[1].padLeft(2, '0') : '00';
+  final ts = (int.parse(hour) * 3600) + (int.parse(minute) * 60);
+  return <String, dynamic>{
+    'h': hour,
+    'm': minute,
+    'ts': ts,
+    'text': '$hour:$minute',
+    'html': '$hour<sup>$minute</sup>',
+  };
+}
+
+String _lookupLessonTime({
+  required AppState state,
+  required DateTime date,
+  required int hour,
+  required bool endTime,
+}) {
+  final exactDate = UtcDateTime(date.year, date.month, date.day);
+  final exact = _collectLessonTimesByDate(state, exactDate, hour, endTime);
+  if (exact != null) {
+    return exact;
+  }
+  final weekday =
+      _collectLessonTimesByWeekday(state, date.weekday, hour, endTime);
+  if (weekday != null) {
+    return weekday;
+  }
+  return endTime
+      ? _defaultLessonEndTimes[hour] ?? '00:00'
+      : _defaultLessonStartTimes[hour] ?? '00:00';
+}
+
+String? _collectLessonTimesByDate(
+  AppState state,
+  UtcDateTime date,
+  int lessonHour,
+  bool endTime,
+) {
+  final day = state.calendarState.days[date];
+  if (day == null) {
+    return null;
+  }
+  return _collectLessonTimeFromDay(day, lessonHour, endTime);
+}
+
+String? _collectLessonTimesByWeekday(
+  AppState state,
+  int weekday,
+  int lessonHour,
+  bool endTime,
+) {
+  final days = state.calendarState.days.values.toList()
+    ..sort((a, b) => a.date.compareTo(b.date));
+  for (final day in days) {
+    if (day.date.weekday != weekday) {
+      continue;
+    }
+    final match = _collectLessonTimeFromDay(day, lessonHour, endTime);
+    if (match != null) {
+      return match;
+    }
+  }
+  return null;
+}
+
+String? _collectLessonTimeFromDay(
+  CalendarDay day,
+  int lessonHour,
+  bool endTime,
+) {
+  for (final hour in day.hours) {
+    if (lessonHour < hour.fromHour || lessonHour > hour.toHour) {
+      continue;
+    }
+    final spans = hour.timeSpans.toList()
+      ..sort((a, b) => a.from.compareTo(b.from));
+    if (spans.isEmpty) {
+      continue;
+    }
+
+    final expectedLength = hour.toHour - hour.fromHour + 1;
+    if (spans.length == expectedLength) {
+      final span = spans[lessonHour - hour.fromHour];
+      return _formatClockTime(endTime ? span.to : span.from);
+    }
+
+    if (lessonHour == hour.fromHour && !endTime) {
+      return _formatClockTime(spans.first.from);
+    }
+    if (lessonHour == hour.toHour && endTime) {
+      return _formatClockTime(spans.last.to);
+    }
+  }
+  return null;
+}
+
+String _formatClockTime(DateTime time) {
+  final hour = time.hour.toString().padLeft(2, '0');
+  final minute = time.minute.toString().padLeft(2, '0');
+  return '$hour:$minute';
+}
+
+const Map<int, String> _defaultLessonStartTimes = <int, String>{
+  1: '07:50',
+  2: '08:40',
+  3: '09:35',
+  4: '10:25',
+  5: '11:30',
+  6: '12:20',
+  7: '14:10',
+  8: '15:00',
+  9: '15:50',
+  10: '16:40',
+};
+
+const Map<int, String> _defaultLessonEndTimes = <int, String>{
+  1: '08:40',
+  2: '09:30',
+  3: '10:25',
+  4: '11:15',
+  5: '12:20',
+  6: '13:10',
+  7: '15:00',
+  8: '15:50',
+  9: '16:40',
+  10: '17:30',
+};

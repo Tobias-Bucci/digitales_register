@@ -1,4 +1,4 @@
-﻿// Copyright (C) 2021 Michael Debertol
+// Copyright (C) 2021 Michael Debertol
 // Copyright (C) 2026 Tobias Bucci
 //
 // This file is part of digitales_register.
@@ -497,12 +497,16 @@ abstract class Competence implements Built<Competence, CompetenceBuilder> {
 
 abstract class AbsenceGroup
     implements Built<AbsenceGroup, AbsenceGroupBuilder> {
+  UtcDateTime? get date;
   String? get reason;
   String? get note;
 
   String? get reasonSignature;
 
   UtcDateTime? get reasonTimestamp;
+  int? get reasonUser;
+  int? get selfdeclId;
+  String? get selfdeclInput;
   AbsenceJustified get justified;
   int get hours;
   int get minutes;
@@ -554,6 +558,8 @@ abstract class AbsenceStatistic
 }
 
 abstract class Absence implements Built<Absence, AbsenceBuilder> {
+  int? get id;
+
   /// Full hour = 50 min,
   /// seems not to be used when
   /// [minutesCameTooLate] or [minutesLeftTooEarly] is not 0
@@ -562,6 +568,14 @@ abstract class Absence implements Built<Absence, AbsenceBuilder> {
   int get minutesLeftTooEarly;
   UtcDateTime get date;
   int get hour;
+  AbsenceJustified? get justified;
+  String? get note;
+  String? get reason;
+  String? get reasonSignature;
+  UtcDateTime? get reasonTimestamp;
+  int? get reasonUser;
+  int? get selfdeclId;
+  String? get selfdeclInput;
   factory Absence([Function(AbsenceBuilder b)? updates]) = _$Absence;
   Absence._();
   static Serializer<Absence> get serializer => _$absenceSerializer;
