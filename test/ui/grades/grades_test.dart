@@ -1,4 +1,5 @@
 import 'package:dr/container/grades_page_container.dart';
+import 'package:dr/app_state.dart';
 import 'package:dr/ui/animated_linear_progress_indicator.dart';
 import 'package:dr/ui/favorite_subject_filter.dart';
 import 'package:dr/ui/sorted_grades_widget.dart';
@@ -18,8 +19,11 @@ void main() {
   testWidgets('shows circular loading state when there are no grades yet',
       (tester) async {
     final store = createStore(
-      initialState: buildGradesPageState(loading: true).rebuild(
-        (b) => b.gradesState.subjects.clear(),
+      initialState: AppState(
+        (b) => b.gradesState
+          ..loading = true
+          ..semester = Semester.first.toBuilder()
+          ..subjects.clear(),
       ),
     );
 
@@ -139,6 +143,7 @@ void main() {
             grade: 400,
             name: 'Schularbeit',
           ),
+          colorGrades: true,
         ),
       ),
       theme: ThemeData(colorSchemeSeed: Colors.deepOrange),
@@ -150,6 +155,35 @@ void main() {
     expect(
       find.ancestor(of: find.text('4'), matching: find.byType(DecoratedBox)),
       findsOneWidget,
+    );
+  });
+
+  testWidgets('grades are not colorized by default on the grades page',
+      (tester) async {
+    final store = createStore(initialState: buildGradesPageState());
+
+    await pumpApp(
+      tester,
+      store: store,
+      home: const GradesPageContainer(),
+      theme: ThemeData(colorSchemeSeed: Colors.deepOrange),
+    );
+    await settleFor(tester);
+
+    expect(find.text('Noten farbig anzeigen'), findsOneWidget);
+
+    final colorSwitch = tester.widget<SwitchListTile>(
+      find.widgetWithText(SwitchListTile, 'Noten farbig anzeigen'),
+    );
+    expect(colorSwitch.value, isFalse);
+
+    await tester.tap(find.text('Fach2'));
+    await tester.pump();
+    await settleFor(tester);
+
+    expect(
+      find.ancestor(of: find.text('4'), matching: find.byType(DecoratedBox)),
+      findsNothing,
     );
   });
 }

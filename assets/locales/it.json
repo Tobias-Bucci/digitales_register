@@ -130,6 +130,7 @@
   "schoolTerm.noGradeEntered": "nessun voto inserito",
   "grades.sortByType": "Ordina voti per tipo",
   "grades.showDeleted": "Mostra voti eliminati",
+  "grades.colorGrades": "Mostra voti a colori",
   "grades.calculator": "Calcolatore voti",
   "grades.calculator.subtitle": "Calcola la media di voti a scelta",
   "grades.excludedAverageInfo": "* Hai escluso questa materia dalla media voti",

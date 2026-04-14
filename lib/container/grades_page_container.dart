@@ -1,4 +1,4 @@
-﻿// Copyright (C) 2021 Michael Debertol
+// Copyright (C) 2021 Michael Debertol
 // Copyright (C) 2026 Tobias Bucci
 //
 // This file is part of digitales_register.
@@ -59,6 +59,7 @@ abstract class GradesPageViewModel
   bool get loading;
   bool get showGradesDiagram;
   bool get showAllSubjectsAverage;
+  bool get colorGrades;
   bool get hasData;
   bool get noInternet;
 
@@ -80,6 +81,7 @@ abstract class GradesPageViewModel
         ..noInternet = state.noInternet
         ..showGradesDiagram = state.settingsState.showGradesDiagram
         ..showAllSubjectsAverage = state.settingsState.showAllSubjectsAverage
+        ..colorGrades = state.settingsState.colorGrades
         ..lastFetchedMessage = _lastFetchedMessage(state, localizations),
     );
   }

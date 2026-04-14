@@ -307,6 +307,7 @@ abstract class SettingsState
   bool get typeSorted;
   bool get askWhenDelete;
   bool get showCancelled;
+  bool get colorGrades;
   bool get deleteDataOnLogout;
   BuiltMap<String, String> get subjectNicks;
 
@@ -351,6 +352,7 @@ abstract class SettingsState
       ..typeSorted = false
       ..askWhenDelete = false
       ..showCancelled = false
+      ..colorGrades = false
       ..deleteDataOnLogout = false
       ..subjectNicks = MapBuilder<String, String>(defaultSubjectNicks)
       ..showCalendarNicksBar = true

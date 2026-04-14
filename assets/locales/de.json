@@ -130,6 +130,7 @@
   "schoolTerm.noGradeEntered": "keine Note eingetragen",
   "grades.sortByType": "Noten nach Art sortieren",
   "grades.showDeleted": "Gelöschte Noten anzeigen",
+  "grades.colorGrades": "Noten farbig anzeigen",
   "grades.calculator": "Notenrechner",
   "grades.calculator.subtitle": "Berechne den Durchschnitt von beliebigen Noten",
   "grades.excludedAverageInfo": "* Du hast dieses Fach aus dem Notendurchschnitt ausgeschlossen",

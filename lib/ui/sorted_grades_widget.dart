@@ -31,6 +31,7 @@ typedef ViewSubjectDetailCallback = void Function(Subject s);
 typedef SetBoolCallback = void Function(bool byType);
 
 bool _isFailingGrade(int? grade) => grade != null && grade < 600;
+bool _isPassingGrade(int? grade) => grade != null && grade >= 600;
 
 TextStyle? _cancelledStyle(TextStyle? baseStyle, bool cancelled) {
   if (!cancelled) {
@@ -45,17 +46,22 @@ TextStyle? _gradeTextStyle(
   TextStyle? baseStyle, {
   required bool cancelled,
   required bool failing,
+  required bool passing,
+  required bool colorized,
 }) {
   final style = _cancelledStyle(baseStyle, cancelled);
-  if (!failing) {
+  if (!colorized || (!failing && !passing)) {
     return style;
   }
+  final foreground = failing
+      ? Theme.of(context).colorScheme.onErrorContainer
+      : Colors.green.shade900;
   return style?.copyWith(
-        color: Theme.of(context).colorScheme.onErrorContainer,
+        color: foreground,
         fontWeight: FontWeight.w700,
       ) ??
       TextStyle(
-        color: Theme.of(context).colorScheme.onErrorContainer,
+        color: foreground,
         fontWeight: FontWeight.w700,
         decoration:
             cancelled ? TextDecoration.lineThrough : TextDecoration.none,
@@ -67,22 +73,28 @@ class _GradeBadge extends StatelessWidget {
     required this.text,
     required this.textStyle,
     required this.failing,
+    required this.passing,
+    required this.colorized,
   });
 
   final String text;
   final TextStyle? textStyle;
   final bool failing;
+  final bool passing;
+  final bool colorized;
 
   @override
   Widget build(BuildContext context) {
     final content = Text(text, style: textStyle);
-    if (!failing) {
+    if (!colorized || (!failing && !passing)) {
       return content;
     }
 
     return DecoratedBox(
       decoration: ShapeDecoration(
-        color: Theme.of(context).colorScheme.errorContainer,
+        color: failing
+            ? Theme.of(context).colorScheme.errorContainer
+            : Colors.green.shade100,
         shape: const StadiumBorder(),
       ),
       child: Padding(
@@ -96,7 +108,9 @@ class _GradeBadge extends StatelessWidget {
 class SortedGradesWidget extends StatefulWidget {
   final SortedGradesViewModel vm;
   final ViewSubjectDetailCallback viewSubjectDetail;
-  final SetBoolCallback sortByTypeCallback, showCancelledCallback;
+  final SetBoolCallback sortByTypeCallback;
+  final SetBoolCallback showCancelledCallback;
+  final SetBoolCallback colorGradesCallback;
   final VoidCallback showGradeCalculator;
 
   const SortedGradesWidget({
@@ -105,6 +119,7 @@ class SortedGradesWidget extends StatefulWidget {
     required this.viewSubjectDetail,
     required this.sortByTypeCallback,
     required this.showCancelledCallback,
+    required this.colorGradesCallback,
     required this.showGradeCalculator,
   });
 
@@ -162,6 +177,11 @@ class _SortedGradesWidgetState extends State<SortedGradesWidget> {
           onChanged: widget.showCancelledCallback,
           value: widget.vm.showCancelled!,
         ),
+        SwitchListTile.adaptive(
+          title: Text(context.t('grades.colorGrades')),
+          onChanged: widget.colorGradesCallback,
+          value: widget.vm.colorGrades,
+        ),
         const Divider(
           height: 0,
         ),
@@ -177,6 +197,7 @@ class _SortedGradesWidgetState extends State<SortedGradesWidget> {
             ignoredForAverage: widget.vm.ignoredSubjectsForAverage.any(
               (element) => element.toLowerCase() == s.name.toLowerCase(),
             ),
+            colorGrades: widget.vm.colorGrades,
             expanded: _expandedSubjectKey == _subjectExpansionKey(s),
             onExpansionChanged: (expanded) {
               setState(() {
@@ -248,7 +269,11 @@ class _SortedGradesWidgetState extends State<SortedGradesWidget> {
 }
 
 class SubjectWidget extends StatefulWidget {
-  final bool sortByType, showCancelled, noInternet, ignoredForAverage;
+  final bool sortByType;
+  final bool showCancelled;
+  final bool noInternet;
+  final bool ignoredForAverage;
+  final bool colorGrades;
   final Subject subject;
   final Semester semester;
   final VoidCallback viewSubjectDetail;
@@ -264,6 +289,7 @@ class SubjectWidget extends StatefulWidget {
       required this.semester,
       required this.noInternet,
       required this.ignoredForAverage,
+      required this.colorGrades,
       required this.expanded,
       required this.onExpansionChanged});
 
@@ -326,6 +352,7 @@ class _SubjectWidgetState extends State<SubjectWidget> {
     final averageStyle = Theme.of(context).textTheme.titleMedium;
     final average = widget.subject.average(widget.semester);
     final failingAverage = _isFailingGrade(average);
+    final passingAverage = _isPassingGrade(average);
     return AbsorbPointer(
       absorbing: widget.noInternet && entries == null,
       child: ExpansionTile(
@@ -352,11 +379,15 @@ class _SubjectWidgetState extends State<SubjectWidget> {
             _GradeBadge(
               text: widget.subject.averageFormatted(widget.semester),
               failing: failingAverage,
+              passing: passingAverage,
+              colorized: widget.colorGrades,
               textStyle: _gradeTextStyle(
                 context,
                 averageStyle,
                 cancelled: false,
                 failing: failingAverage,
+                passing: passingAverage,
+                colorized: widget.colorGrades,
               ),
             ),
           ],
@@ -411,6 +442,7 @@ class _SubjectWidgetState extends State<SubjectWidget> {
                               .map(
                                 (entry) => GradeTypeWidget(
                                   typeName: entry.key,
+                                  colorGrades: widget.colorGrades,
                                   entries: entry.value
                                       .where((g) =>
                                           widget.showCancelled || !g.cancelled)
@@ -423,7 +455,10 @@ class _SubjectWidgetState extends State<SubjectWidget> {
                                   (g) => widget.showCancelled || !g.cancelled)
                               .map(
                                 (g) => g is GradeDetail
-                                    ? GradeWidget(grade: g)
+                                    ? GradeWidget(
+                                        grade: g,
+                                        colorGrades: widget.colorGrades,
+                                      )
                                     : ObservationWidget(
                                         observation: g as Observation,
                                       ),
@@ -441,12 +476,18 @@ class _SubjectWidgetState extends State<SubjectWidget> {
 
 class GradeWidget extends StatelessWidget {
   final GradeDetail grade;
+  final bool colorGrades;
 
-  const GradeWidget({super.key, required this.grade});
+  const GradeWidget({
+    super.key,
+    required this.grade,
+    this.colorGrades = false,
+  });
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context).textTheme;
     final failing = _isFailingGrade(grade.grade);
+    final passing = _isPassingGrade(grade.grade);
     return Column(
       children: <Widget>[
         ListTile(
@@ -480,11 +521,15 @@ class GradeWidget extends StatelessWidget {
           trailing: _GradeBadge(
             text: grade.gradeFormatted,
             failing: failing,
+            passing: passing,
+            colorized: colorGrades,
             textStyle: _gradeTextStyle(
               context,
               theme.titleMedium,
               cancelled: grade.cancelled,
               failing: failing,
+              passing: passing,
+              colorized: colorGrades,
             ),
           ),
           isThreeLine: true,
@@ -564,15 +609,19 @@ class Star extends StatelessWidget {
 class GradeTypeWidget extends StatelessWidget {
   final String typeName;
   final List<DetailEntry> entries;
+  final bool colorGrades;
 
   const GradeTypeWidget(
-      {super.key, required this.typeName, required this.entries});
+      {super.key,
+      required this.typeName,
+      required this.entries,
+      required this.colorGrades});
   @override
   Widget build(BuildContext context) {
     final displayGrades = entries
         .map(
           (g) => g is GradeDetail
-              ? GradeWidget(grade: g)
+              ? GradeWidget(grade: g, colorGrades: colorGrades)
               : ObservationWidget(
                   observation: g as Observation,
                 ),

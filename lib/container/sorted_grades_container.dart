@@ -1,4 +1,4 @@
-﻿// Copyright (C) 2021 Michael Debertol
+// Copyright (C) 2021 Michael Debertol
 // Copyright (C) 2026 Tobias Bucci
 //
 // This file is part of digitales_register.
@@ -40,6 +40,7 @@ class SortedGradesContainer extends StatelessWidget {
           vm: vm,
           showCancelledCallback:
               actions.settingsActions.showCancelledGrades.call,
+          colorGradesCallback: actions.settingsActions.colorGrades.call,
           sortByTypeCallback: actions.settingsActions.gradesTypeSorted.call,
           showGradeCalculator: actions.routingActions.showGradeCalculator.call,
           viewSubjectDetail: (s) => actions.gradesActions.loadDetails(
@@ -66,6 +67,7 @@ abstract class SortedGradesViewModel
   Semester get semester;
   bool get sortByType;
   bool? get showCancelled;
+  bool get colorGrades;
   bool get noInternet;
   BuiltMap<String, SubjectTheme> get subjectThemes;
 
@@ -81,6 +83,7 @@ abstract class SortedGradesViewModel
         ..sortByType = state.settingsState.typeSorted
         ..semester = state.gradesState.semester.toBuilder()
         ..showCancelled = state.settingsState.showCancelled
+        ..colorGrades = state.settingsState.colorGrades
         ..noInternet = state.noInternet
         ..favoriteSubjects = state.settingsState.favoriteSubjects.toBuilder()
         ..subjectThemes = state.settingsState.subjectThemes.toBuilder()

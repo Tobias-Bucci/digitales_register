@@ -33,6 +33,7 @@ final settingsReducerBuilder = NestedReducerBuilder<AppState, AppStateBuilder,
   ..add(SettingsActionsNames.saveNoPass, _saveNoPass)
   ..add(SettingsActionsNames.askWhenDeleteReminder, _askWhenDeleteReminder)
   ..add(SettingsActionsNames.showCancelledGrades, _showCancelledGrades)
+  ..add(SettingsActionsNames.colorGrades, _colorGrades)
   ..add(SettingsActionsNames.gradesTypeSorted, _gradesTypeSorted)
   ..add(SettingsActionsNames.deleteDataOnLogout, _deleteDataOnLogout)
   ..add(SettingsActionsNames.subjectNicks, _subjectNicks)
@@ -77,6 +78,11 @@ void _askWhenDeleteReminder(
 void _showCancelledGrades(
     SettingsState state, Action<bool> action, SettingsStateBuilder builder) {
   builder.showCancelled = action.payload;
+}
+
+void _colorGrades(
+    SettingsState state, Action<bool> action, SettingsStateBuilder builder) {
+  builder.colorGrades = action.payload;
 }
 
 void _gradesTypeSorted(

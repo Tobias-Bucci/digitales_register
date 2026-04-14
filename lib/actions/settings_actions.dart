@@ -40,6 +40,7 @@ abstract class SettingsActions extends ReduxActions {
   abstract final ActionDispatcher<bool> askWhenDeleteReminder;
   abstract final ActionDispatcher<bool> gradesTypeSorted;
   abstract final ActionDispatcher<bool> showCancelledGrades;
+  abstract final ActionDispatcher<bool> colorGrades;
   abstract final ActionDispatcher<bool> showGradesDiagram;
   abstract final ActionDispatcher<bool> showAllSubjectsAverage;
   abstract final ActionDispatcher<bool> markNotSeenDashboardEntries;

@@ -130,6 +130,7 @@
   "schoolTerm.noGradeEntered": "no grade entered",
   "grades.sortByType": "Sort grades by type",
   "grades.showDeleted": "Show deleted grades",
+  "grades.colorGrades": "Color grades",
   "grades.calculator": "Grade calculator",
   "grades.calculator.subtitle": "Calculate the average of any grades",
   "grades.excludedAverageInfo": "* You excluded this subject from the grade average",

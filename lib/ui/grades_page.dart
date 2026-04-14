@@ -33,28 +33,46 @@ bool _isFailingAverage(String gradeText) {
   return parsed != null && parsed < 6;
 }
 
+bool _isPassingAverage(String gradeText) {
+  final parsed = double.tryParse(gradeText.replaceAll(',', '.'));
+  return parsed != null && parsed >= 6;
+}
+
 Widget _buildAverageValue(
-    BuildContext context, String value, TextStyle? style) {
+  BuildContext context,
+  String value,
+  TextStyle? style,
+  bool colorGrades,
+) {
+  if (!colorGrades) {
+    return Text(value, style: style);
+  }
   final failing = _isFailingAverage(value);
+  final passing = _isPassingAverage(value);
+  final foreground = failing
+      ? Theme.of(context).colorScheme.onErrorContainer
+      : Colors.green.shade900;
   final text = Text(
     value,
-    style: failing
+    style: (failing || passing)
         ? style?.copyWith(
-              color: Theme.of(context).colorScheme.onErrorContainer,
+              color: foreground,
               fontWeight: FontWeight.w700,
             ) ??
             TextStyle(
-              color: Theme.of(context).colorScheme.onErrorContainer,
+              color: foreground,
               fontWeight: FontWeight.w700,
             )
         : style,
   );
-  if (!failing) {
+  if (!failing && !passing) {
     return text;
   }
   return DecoratedBox(
     decoration: ShapeDecoration(
-      color: Theme.of(context).colorScheme.errorContainer,
+      color: failing
+          ? Theme.of(context).colorScheme.errorContainer
+          : Colors.green.shade100,
       shape: const StadiumBorder(),
     ),
     child: Padding(
@@ -127,6 +145,7 @@ class GradesPage extends StatelessWidget {
                                 context,
                                 vm.allSubjectsAverage,
                                 averageStyle,
+                                vm.colorGrades,
                               ),
                             ),
                             const Divider(
