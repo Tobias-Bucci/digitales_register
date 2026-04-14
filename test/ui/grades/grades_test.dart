@@ -1,5 +1,5 @@
-import 'package:dr/container/grades_page_container.dart';
 import 'package:dr/app_state.dart';
+import 'package:dr/container/grades_page_container.dart';
 import 'package:dr/ui/animated_linear_progress_indicator.dart';
 import 'package:dr/ui/favorite_subject_filter.dart';
 import 'package:dr/ui/sorted_grades_widget.dart';

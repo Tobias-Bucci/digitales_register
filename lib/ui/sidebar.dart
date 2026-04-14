@@ -1,4 +1,4 @@
-﻿// Copyright (C) 2021 Michael Debertol
+// Copyright (C) 2021 Michael Debertol
 // Copyright (C) 2026 Tobias Bucci
 //
 // This file is part of digitales_register.
@@ -72,6 +72,7 @@ class Sidebar extends StatelessWidget {
     final l10n = context.l10n;
     final theme = Theme.of(context);
     final scheme = theme.colorScheme;
+    final showExpandedHeader = !tabletMode || drawerExpanded;
     final accountEntries = <AppPopupButtonEntry<int>>[
       AppPopupButtonEntry<int>(
         value: 0,
@@ -86,10 +87,9 @@ class Sidebar extends StatelessWidget {
         ),
       AppPopupButtonEntry<int>(
         value: otherAccounts.length + 1,
-        label:
-            passwordSavingEnabled
-                ? l10n.text('sidebar.addAccount')
-                : l10n.text('sidebar.switchAccount'),
+        label: passwordSavingEnabled
+            ? l10n.text('sidebar.addAccount')
+            : l10n.text('sidebar.switchAccount'),
         leading: Icon(
           passwordSavingEnabled ? Icons.person_add_alt_1 : Icons.login_rounded,
           size: 20,
@@ -107,26 +107,29 @@ class Sidebar extends StatelessWidget {
       borderRadius: 0,
       minWidth: 74,
       screenPadding: 0,
-      title: Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 8),
-        child: AppPopupButton<int>(
-          selectedValue: 0,
-          expand: true,
-          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-          borderRadius: const BorderRadius.all(Radius.circular(16)),
-          entries: accountEntries,
-          labelBuilder: (_) => username ?? "?",
-          onSelected: (value) {
-            scaffoldKey?.currentState?.closeDrawerIfOpen();
-            if (value == otherAccounts.length + 1) {
-              addAccount();
-            } else if (value != 0) {
-              selectAccount(value - 1);
-            }
-          },
-        ),
-      ),
-      titleTooltip: username ?? "?",
+      title: showExpandedHeader
+          ? Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 8),
+              child: AppPopupButton<int>(
+                selectedValue: 0,
+                expand: true,
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                borderRadius: const BorderRadius.all(Radius.circular(16)),
+                entries: accountEntries,
+                labelBuilder: (_) => username ?? "?",
+                onSelected: (value) {
+                  scaffoldKey?.currentState?.closeDrawerIfOpen();
+                  if (value == otherAccounts.length + 1) {
+                    addAccount();
+                  } else if (value != 0) {
+                    selectAccount(value - 1);
+                  }
+                },
+              ),
+            )
+          : const SizedBox.shrink(),
+      titleTooltip: showExpandedHeader ? username ?? "?" : "",
       toggleTooltipCollapsed: l10n.text('sidebar.expand'),
       toggleTooltipExpanded: l10n.text('sidebar.collapse'),
       toggleTitle: const SizedBox(),
