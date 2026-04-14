@@ -1,4 +1,4 @@
-﻿// Copyright (C) 2021 Michael Debertol
+// Copyright (C) 2021 Michael Debertol
 // Copyright (C) 2026 Tobias Bucci
 //
 // This file is part of digitales_register.
@@ -30,12 +30,67 @@ import 'package:intl/intl.dart';
 typedef ViewSubjectDetailCallback = void Function(Subject s);
 typedef SetBoolCallback = void Function(bool byType);
 
+bool _isFailingGrade(int? grade) => grade != null && grade < 600;
+
 TextStyle? _cancelledStyle(TextStyle? baseStyle, bool cancelled) {
   if (!cancelled) {
     return baseStyle;
   }
   return baseStyle?.copyWith(decoration: TextDecoration.lineThrough) ??
       const TextStyle(decoration: TextDecoration.lineThrough);
+}
+
+TextStyle? _gradeTextStyle(
+  BuildContext context,
+  TextStyle? baseStyle, {
+  required bool cancelled,
+  required bool failing,
+}) {
+  final style = _cancelledStyle(baseStyle, cancelled);
+  if (!failing) {
+    return style;
+  }
+  return style?.copyWith(
+        color: Theme.of(context).colorScheme.onErrorContainer,
+        fontWeight: FontWeight.w700,
+      ) ??
+      TextStyle(
+        color: Theme.of(context).colorScheme.onErrorContainer,
+        fontWeight: FontWeight.w700,
+        decoration:
+            cancelled ? TextDecoration.lineThrough : TextDecoration.none,
+      );
+}
+
+class _GradeBadge extends StatelessWidget {
+  const _GradeBadge({
+    required this.text,
+    required this.textStyle,
+    required this.failing,
+  });
+
+  final String text;
+  final TextStyle? textStyle;
+  final bool failing;
+
+  @override
+  Widget build(BuildContext context) {
+    final content = Text(text, style: textStyle);
+    if (!failing) {
+      return content;
+    }
+
+    return DecoratedBox(
+      decoration: ShapeDecoration(
+        color: Theme.of(context).colorScheme.errorContainer,
+        shape: const StadiumBorder(),
+      ),
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+        child: content,
+      ),
+    );
+  }
 }
 
 class SortedGradesWidget extends StatefulWidget {
@@ -59,7 +114,10 @@ class SortedGradesWidget extends StatefulWidget {
 
 class _SortedGradesWidgetState extends State<SortedGradesWidget> {
   String? _favoriteSubject;
-  int? _expandedSubjectId;
+  String? _expandedSubjectKey;
+
+  String _subjectExpansionKey(Subject subject) =>
+      subject.id?.toString() ?? subject.name.toLowerCase();
 
   @override
   Widget build(BuildContext context) {
@@ -109,7 +167,7 @@ class _SortedGradesWidgetState extends State<SortedGradesWidget> {
         ),
         for (final s in visibleSubjects)
           SubjectWidget(
-            key: ValueKey(s.id),
+            key: ValueKey(_subjectExpansionKey(s)),
             subject: s,
             sortByType: widget.vm.sortByType,
             viewSubjectDetail: () => widget.viewSubjectDetail(s),
@@ -119,13 +177,13 @@ class _SortedGradesWidgetState extends State<SortedGradesWidget> {
             ignoredForAverage: widget.vm.ignoredSubjectsForAverage.any(
               (element) => element.toLowerCase() == s.name.toLowerCase(),
             ),
-            expanded: _expandedSubjectId == s.id,
+            expanded: _expandedSubjectKey == _subjectExpansionKey(s),
             onExpansionChanged: (expanded) {
               setState(() {
                 if (expanded) {
-                  _expandedSubjectId = s.id;
-                } else if (_expandedSubjectId == s.id) {
-                  _expandedSubjectId = null;
+                  _expandedSubjectKey = _subjectExpansionKey(s);
+                } else if (_expandedSubjectKey == _subjectExpansionKey(s)) {
+                  _expandedSubjectKey = null;
                 }
               });
             },
@@ -160,7 +218,7 @@ class _SortedGradesWidgetState extends State<SortedGradesWidget> {
   @override
   void didUpdateWidget(covariant SortedGradesWidget oldWidget) {
     if (oldWidget.vm.semester != widget.vm.semester) {
-      _expandedSubjectId = null;
+      _expandedSubjectKey = null;
     }
     if (_favoriteSubject != null &&
         findSubjectIgnoreCase(
@@ -180,9 +238,10 @@ class _SortedGradesWidgetState extends State<SortedGradesWidget> {
                     matchesFavoriteSubject(subject.name, _favoriteSubject!),
               ))
         .toList();
-    if (_expandedSubjectId != null &&
-        !visibleSubjects.any((subject) => subject.id == _expandedSubjectId)) {
-      _expandedSubjectId = null;
+    if (_expandedSubjectKey != null &&
+        !visibleSubjects.any((subject) =>
+            _subjectExpansionKey(subject) == _expandedSubjectKey)) {
+      _expandedSubjectKey = null;
     }
     super.didUpdateWidget(oldWidget);
   }
@@ -265,6 +324,8 @@ class _SubjectWidgetState extends State<SubjectWidget> {
   Widget build(BuildContext context) {
     final entries = widget.subject.detailEntries(widget.semester);
     final averageStyle = Theme.of(context).textTheme.titleMedium;
+    final average = widget.subject.average(widget.semester);
+    final failingAverage = _isFailingGrade(average);
     return AbsorbPointer(
       absorbing: widget.noInternet && entries == null,
       child: ExpansionTile(
@@ -284,17 +345,21 @@ class _SubjectWidgetState extends State<SubjectWidget> {
           ),
         ),
         subtitle: _lastFetchedMessage(),
-        leading: Text.rich(
-          TextSpan(
-            text: 'Ø ',
-            style: averageStyle,
-            children: <TextSpan>[
-              TextSpan(
-                text: widget.subject.averageFormatted(widget.semester),
-                style: averageStyle,
+        leading: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Text('Ø ', style: averageStyle),
+            _GradeBadge(
+              text: widget.subject.averageFormatted(widget.semester),
+              failing: failingAverage,
+              textStyle: _gradeTextStyle(
+                context,
+                averageStyle,
+                cancelled: false,
+                failing: failingAverage,
               ),
-            ],
-          ),
+            ),
+          ],
         ),
         trailing:
             widget.noInternet && entries == null ? const SizedBox() : null,
@@ -381,6 +446,7 @@ class GradeWidget extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context).textTheme;
+    final failing = _isFailingGrade(grade.grade);
     return Column(
       children: <Widget>[
         ListTile(
@@ -411,9 +477,15 @@ class GradeWidget extends StatelessWidget {
                 ),
             ],
           ),
-          trailing: Text(
-            grade.gradeFormatted,
-            style: _cancelledStyle(theme.titleMedium, grade.cancelled),
+          trailing: _GradeBadge(
+            text: grade.gradeFormatted,
+            failing: failing,
+            textStyle: _gradeTextStyle(
+              context,
+              theme.titleMedium,
+              cancelled: grade.cancelled,
+              failing: failing,
+            ),
           ),
           isThreeLine: true,
         ),

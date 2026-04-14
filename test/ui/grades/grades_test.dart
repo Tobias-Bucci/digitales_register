@@ -1,4 +1,5 @@
 import 'package:dr/container/grades_page_container.dart';
+import 'package:dr/ui/animated_linear_progress_indicator.dart';
 import 'package:dr/ui/favorite_subject_filter.dart';
 import 'package:dr/ui/sorted_grades_widget.dart';
 import 'package:flutter/material.dart';
@@ -35,7 +36,8 @@ void main() {
 
   testWidgets('shows linear loading state when grades already exist',
       (tester) async {
-    final store = createStore(initialState: buildGradesPageState(loading: true));
+    final store =
+        createStore(initialState: buildGradesPageState(loading: true));
 
     await pumpApp(
       tester,
@@ -43,10 +45,10 @@ void main() {
       home: const GradesPageContainer(),
       theme: ThemeData(primarySwatch: Colors.deepOrange),
     );
-    await settleFor(tester, duration: const Duration(milliseconds: 150));
+    await tester.pump();
 
     expect(find.byType(CircularProgressIndicator), findsNothing);
-    expect(find.byType(LinearProgressIndicator), findsOneWidget);
+    expect(find.byType(AnimatedLinearProgressIndicator), findsOneWidget);
   });
 
   testWidgets('opening a subject and sorting by type reveals grouped grades',
@@ -120,5 +122,34 @@ void main() {
 
     expect(find.text('Fach1'), findsWidgets);
     expect(find.text('Fach2'), findsNothing);
+  });
+
+  testWidgets('failing grades are highlighted with an error badge',
+      (tester) async {
+    final store = createStore(initialState: buildGradesPageState());
+
+    await pumpApp(
+      tester,
+      store: store,
+      home: Scaffold(
+        body: GradeWidget(
+          grade: buildGradeDetail(
+            id: 99,
+            date: fixtureNow,
+            grade: 400,
+            name: 'Schularbeit',
+          ),
+        ),
+      ),
+      theme: ThemeData(colorSchemeSeed: Colors.deepOrange),
+    );
+    await settleFor(tester);
+
+    final textWidget = tester.widget<Text>(find.text('4'));
+    expect(textWidget.style?.fontWeight, FontWeight.w700);
+    expect(
+      find.ancestor(of: find.text('4'), matching: find.byType(DecoratedBox)),
+      findsOneWidget,
+    );
   });
 }

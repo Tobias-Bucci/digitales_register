@@ -1,4 +1,4 @@
-﻿// Copyright (C) 2021 Michael Debertol
+// Copyright (C) 2021 Michael Debertol
 // Copyright (C) 2026 Tobias Bucci
 //
 // This file is part of digitales_register.
@@ -27,6 +27,42 @@ import 'package:dr/ui/last_fetched_overlay.dart';
 import 'package:dr/ui/no_internet.dart';
 import 'package:flutter/material.dart';
 import 'package:responsive_scaffold/responsive_scaffold.dart';
+
+bool _isFailingAverage(String gradeText) {
+  final parsed = double.tryParse(gradeText.replaceAll(',', '.'));
+  return parsed != null && parsed < 6;
+}
+
+Widget _buildAverageValue(
+    BuildContext context, String value, TextStyle? style) {
+  final failing = _isFailingAverage(value);
+  final text = Text(
+    value,
+    style: failing
+        ? style?.copyWith(
+              color: Theme.of(context).colorScheme.onErrorContainer,
+              fontWeight: FontWeight.w700,
+            ) ??
+            TextStyle(
+              color: Theme.of(context).colorScheme.onErrorContainer,
+              fontWeight: FontWeight.w700,
+            )
+        : style,
+  );
+  if (!failing) {
+    return text;
+  }
+  return DecoratedBox(
+    decoration: ShapeDecoration(
+      color: Theme.of(context).colorScheme.errorContainer,
+      shape: const StadiumBorder(),
+    ),
+    child: Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+      child: text,
+    ),
+  );
+}
 
 class GradesPage extends StatelessWidget {
   final GradesPageViewModel vm;
@@ -87,9 +123,10 @@ class GradesPage extends StatelessWidget {
                                   ),
                                 ],
                               ),
-                              trailing: Text(
+                              trailing: _buildAverageValue(
+                                context,
                                 vm.allSubjectsAverage,
-                                style: averageStyle,
+                                averageStyle,
                               ),
                             ),
                             const Divider(
