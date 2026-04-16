@@ -1,4 +1,4 @@
-﻿// Copyright (C) 2021 Michael Debertol
+// Copyright (C) 2021 Michael Debertol
 // Copyright (C) 2026 Tobias Bucci
 //
 // This file is part of digitales_register.
@@ -18,23 +18,24 @@
 
 part of 'middleware.dart';
 
-final _settingsMiddleware =
-    MiddlewareBuilder<AppState, AppStateBuilder, AppActions>()
-      ..add(GradesActionsNames.loaded, _updateSubjectThemes)
-      ..add(DashboardActionsNames.loaded, _updateSubjectThemes)
-      ..add(CalendarActionsNames.loaded, _updateSubjectThemes)
-      ..add(DashboardActionsNames.loaded, _reconcileCalendarSync)
-      ..add(CalendarActionsNames.loaded, _reconcileCalendarSync)
-      ..add(DashboardActionsNames.homeworkAdded, _reconcileCalendarSync)
-      ..add(DashboardActionsNames.reminderEdited, _reconcileCalendarSync)
-      ..add(DashboardActionsNames.deleteHomework, _reconcileCalendarSync)
-      ..add(DashboardActionsNames.toggleDone, _reconcileCalendarSync)
-      ..add(SettingsActionsNames.setLanguage, _setLanguage)
-      ..add(SettingsActionsNames.pushNotificationsEnabled,
-          _setPushNotificationsEnabled)
-      ..add(SettingsActionsNames.calendarSyncEnabled, _setCalendarSyncEnabled)
-      ..add(SettingsActionsNames.removeCalendarSyncEvents,
-          _removeCalendarSyncEvents);
+final _settingsMiddleware = MiddlewareBuilder<AppState, AppStateBuilder,
+    AppActions>()
+  ..add(GradesActionsNames.loaded, _updateSubjectThemes)
+  ..add(DashboardActionsNames.loaded, _updateSubjectThemes)
+  ..add(CalendarActionsNames.loaded, _updateSubjectThemes)
+  ..add(DashboardActionsNames.loaded, _reconcileCalendarSync)
+  ..add(CalendarActionsNames.loaded, _reconcileCalendarSync)
+  ..add(DashboardActionsNames.homeworkAdded, _reconcileCalendarSync)
+  ..add(DashboardActionsNames.reminderEdited, _reconcileCalendarSync)
+  ..add(DashboardActionsNames.deleteHomework, _reconcileCalendarSync)
+  ..add(DashboardActionsNames.toggleDone, _reconcileCalendarSync)
+  ..add(SettingsActionsNames.setLanguage, _setLanguage)
+  ..add(SettingsActionsNames.pushNotificationsEnabled,
+      _setPushNotificationsEnabled)
+  ..add(SettingsActionsNames.calendarSyncEnabled, _setCalendarSyncEnabled)
+  ..add(SettingsActionsNames.calendarSyncCalendarId, _setCalendarSyncCalendarId)
+  ..add(
+      SettingsActionsNames.removeCalendarSyncEvents, _removeCalendarSyncEvents);
 
 Future<void> _updateSubjectThemes(
     MiddlewareApi<AppState, AppStateBuilder, AppActions> api,
@@ -76,7 +77,9 @@ Future<void> _setCalendarSyncEnabled(
     return;
   }
 
-  final enableResult = await CalendarSyncService.prepareForEnable();
+  final enableResult = await CalendarSyncService.prepareForEnable(
+    preferredCalendarId: api.state.settingsState.calendarSyncCalendarId,
+  );
   if (enableResult != CalendarSyncEnableResult.ready) {
     showSnackBar(
       switch (enableResult) {
@@ -95,6 +98,20 @@ Future<void> _setCalendarSyncEnabled(
     return;
   }
 
+  final success = await CalendarSyncService.reconcile(api.state);
+  if (!success) {
+    showSnackBar(tr('calendarSync.partialSyncFailure'));
+  }
+}
+
+Future<void> _setCalendarSyncCalendarId(
+    MiddlewareApi<AppState, AppStateBuilder, AppActions> api,
+    ActionHandler next,
+    Action<int?> action) async {
+  await next(action);
+  if (!api.state.settingsState.calendarSyncEnabled || !isAndroidPlatform) {
+    return;
+  }
   final success = await CalendarSyncService.reconcile(api.state);
   if (!success) {
     showSnackBar(tr('calendarSync.partialSyncFailure'));

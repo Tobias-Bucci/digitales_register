@@ -329,6 +329,7 @@ abstract class SettingsState
   bool get calendarColorBackground;
   bool get pushNotificationsEnabled;
   bool get calendarSyncEnabled;
+  int? get calendarSyncCalendarId;
   bool get dashboardColorTestsInRed;
   bool get amoledMode;
   bool get biometricAppLockEnabled;
@@ -368,6 +369,7 @@ abstract class SettingsState
       ..calendarColorBackground = false
       ..pushNotificationsEnabled = false
       ..calendarSyncEnabled = false
+      ..calendarSyncCalendarId = null
       ..dashboardColorTestsInRed = true
       ..amoledMode = false
       ..biometricAppLockEnabled = false

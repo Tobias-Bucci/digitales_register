@@ -34,6 +34,23 @@ void main() {
     await bootstrapTestEnvironment(fixedNow: UtcDateTime(2026, 4, 9));
     isAndroidOverride = () => true;
     CalendarSyncService.getDefaultCalendarIdOverride = () async => 55;
+    CalendarSyncService.getWritableCalendarsOverride =
+        () async => const <CalendarSyncCalendar>[
+              CalendarSyncCalendar(
+                id: 55,
+                displayName: 'School',
+                accountName: 'school@example.com',
+                ownerAccount: 'school@example.com',
+                isPrimary: true,
+              ),
+              CalendarSyncCalendar(
+                id: 77,
+                displayName: 'Private',
+                accountName: 'private@example.com',
+                ownerAccount: 'private@example.com',
+                isPrimary: false,
+              ),
+            ];
   });
 
   tearDown(resetTestState);
@@ -72,7 +89,7 @@ void main() {
     await store.actions.settingsActions.calendarSyncEnabled(true);
 
     expect(store.state.settingsState.calendarSyncEnabled, isTrue);
-    expect(upsertedTitles, <String>['Reminder']);
+    expect(upsertedTitles, <String>['Erinnerung']);
   });
 
   testWidgets('permission denial reverts the calendar sync toggle',
@@ -195,6 +212,51 @@ void main() {
     await store.actions.settingsActions.setLanguage(AppLanguage.en.code);
     await tester.pump();
 
-    expect(upsertedTitles, containsAllInOrder(<String>['Erinnerung', 'Reminder']));
+    expect(
+        upsertedTitles, containsAllInOrder(<String>['Erinnerung', 'Reminder']));
+  });
+
+  testWidgets('changing the selected sync calendar reconciles entries again',
+      (tester) async {
+    final upserts = <CalendarSyncUpsertRequest>[];
+    CalendarSyncService.upsertEventOverride = (request) async {
+      upserts.add(request);
+      return 100;
+    };
+
+    final store = createStore(
+      initialState: AppState((b) {
+        b.settingsState
+          ..calendarSyncEnabled = true
+          ..calendarSyncCalendarId = 55;
+        b.dashboardState.allDays = ListBuilder<Day>(<Day>[
+          buildDay(
+            date: UtcDateTime(2026, 4, 10),
+            homework: <Homework>[
+              buildHomework(
+                id: 4,
+                title: 'Reminder',
+                type: HomeworkType.homework,
+              ),
+            ],
+          ),
+        ]);
+      }),
+      withMiddleware: true,
+    );
+
+    await pumpApp(
+      tester,
+      store: store,
+      home: const Scaffold(),
+    );
+
+    await CalendarSyncService.reconcile(store.state);
+    await store.actions.settingsActions.calendarSyncCalendarId(77);
+    await tester.pump();
+
+    expect(upserts, hasLength(2));
+    expect(upserts.first.calendarId, 55);
+    expect(upserts.last.calendarId, 77);
   });
 }

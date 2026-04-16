@@ -50,7 +50,9 @@ class MainActivity: FlutterFragmentActivity() {
         ).setMethodCallHandler { call, result ->
             when (call.method) {
                 "requestCalendarPermission" -> requestCalendarPermission(result)
+                "hasCalendarPermission" -> result.success(hasCalendarPermissions())
                 "getDefaultCalendarId" -> result.success(findDefaultWritableCalendarId())
+                "getWritableCalendars" -> result.success(listWritableCalendars())
                 "upsertCalendarEvent" -> upsertCalendarEvent(call, result)
                 "deleteCalendarEvent" -> deleteCalendarEvent(call, result)
                 else -> result.notImplemented()
@@ -203,18 +205,28 @@ class MainActivity: FlutterFragmentActivity() {
     }
 
     private fun findDefaultWritableCalendarId(): Int? {
+        return listWritableCalendars()
+            .sortedWith(compareByDescending<Map<String, Any>> { it["isPrimary"] as Boolean }.thenBy { (it["id"] as Int) })
+            .firstOrNull()
+            ?.get("id") as? Int
+    }
+
+    private fun listWritableCalendars(): List<Map<String, Any>> {
         if (!hasCalendarPermissions()) {
-            return null
+            return emptyList()
         }
 
         val projection = arrayOf(
             CalendarContract.Calendars._ID,
+            CalendarContract.Calendars.CALENDAR_DISPLAY_NAME,
+            CalendarContract.Calendars.ACCOUNT_NAME,
+            CalendarContract.Calendars.OWNER_ACCOUNT,
             CalendarContract.Calendars.IS_PRIMARY,
             CalendarContract.Calendars.VISIBLE,
             CalendarContract.Calendars.CALENDAR_ACCESS_LEVEL,
         )
 
-        val calendars = mutableListOf<CalendarCandidate>()
+        val calendars = mutableListOf<Map<String, Any>>()
         contentResolver.query(
             CalendarContract.Calendars.CONTENT_URI,
             projection,
@@ -223,6 +235,9 @@ class MainActivity: FlutterFragmentActivity() {
             null,
         )?.use { cursor ->
             val idIndex = cursor.getColumnIndexOrThrow(CalendarContract.Calendars._ID)
+            val nameIndex = cursor.getColumnIndexOrThrow(CalendarContract.Calendars.CALENDAR_DISPLAY_NAME)
+            val accountNameIndex = cursor.getColumnIndexOrThrow(CalendarContract.Calendars.ACCOUNT_NAME)
+            val ownerAccountIndex = cursor.getColumnIndexOrThrow(CalendarContract.Calendars.OWNER_ACCOUNT)
             val primaryIndex = cursor.getColumnIndexOrThrow(CalendarContract.Calendars.IS_PRIMARY)
             val visibleIndex = cursor.getColumnIndexOrThrow(CalendarContract.Calendars.VISIBLE)
             val accessIndex = cursor.getColumnIndexOrThrow(CalendarContract.Calendars.CALENDAR_ACCESS_LEVEL)
@@ -234,19 +249,19 @@ class MainActivity: FlutterFragmentActivity() {
                     continue
                 }
                 calendars.add(
-                    CalendarCandidate(
-                        id = cursor.getLong(idIndex),
-                        isPrimary = cursor.getInt(primaryIndex) == 1,
+                    mapOf(
+                        "id" to cursor.getLong(idIndex).toInt(),
+                        "displayName" to (cursor.getString(nameIndex) ?: ""),
+                        "accountName" to (cursor.getString(accountNameIndex) ?: ""),
+                        "ownerAccount" to (cursor.getString(ownerAccountIndex) ?: ""),
+                        "isPrimary" to (cursor.getInt(primaryIndex) == 1),
                     ),
                 )
             }
         }
 
         return calendars
-            .sortedWith(compareByDescending<CalendarCandidate> { it.isPrimary }.thenBy { it.id })
-            .firstOrNull()
-            ?.id
-            ?.toInt()
+            .sortedWith(compareByDescending<Map<String, Any>> { it["isPrimary"] as Boolean }.thenBy { it["id"] as Int })
     }
 
     override fun onRequestPermissionsResult(
@@ -264,12 +279,6 @@ class MainActivity: FlutterFragmentActivity() {
         pendingCalendarPermissionResult?.success(granted)
         pendingCalendarPermissionResult = null
     }
-
-    private data class CalendarCandidate(
-        val id: Long,
-        val isPrimary: Boolean,
-    )
-
     private companion object {
         const val NOTIFICATION_METHOD_CHANNEL = "dr/notification_background_service"
         const val CALENDAR_SYNC_METHOD_CHANNEL = "dr/calendar_sync"

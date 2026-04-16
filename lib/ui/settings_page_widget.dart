@@ -21,6 +21,7 @@ import 'dart:io';
 import 'package:deleteable_tile/deleteable_tile.dart';
 import 'package:dr/app_state.dart';
 import 'package:dr/app_subject_translation_controller.dart';
+import 'package:dr/calendar_sync_service.dart';
 import 'package:dr/container/settings_page.dart';
 import 'package:dr/i18n/app_language.dart';
 import 'package:dr/i18n/app_localizations.dart';
@@ -62,6 +63,7 @@ class SettingsPageWidget extends StatefulWidget {
   final OnSettingChanged<bool> onSetDashboardColorTestsInRed;
   final OnSettingChanged<bool> onSetPushNotificationsEnabled;
   final Future<void> Function(bool enabled) onSetCalendarSyncEnabled;
+  final Future<void> Function(int? calendarId) onSetCalendarSyncCalendarId;
   final Future<void> Function() onRemoveCalendarSyncEvents;
   final OnSettingChanged<bool> onSetAmoledMode;
   final OnSettingChanged<Color> onSetContrastColor;
@@ -98,6 +100,7 @@ class SettingsPageWidget extends StatefulWidget {
     required this.onSetDashboardColorTestsInRed,
     required this.onSetPushNotificationsEnabled,
     required this.onSetCalendarSyncEnabled,
+    required this.onSetCalendarSyncCalendarId,
     required this.onRemoveCalendarSyncEvents,
     required this.onSetAmoledMode,
     required this.onSetContrastColor,
@@ -113,6 +116,7 @@ class SettingsPageWidget extends StatefulWidget {
 class _SettingsPageWidgetState extends State<SettingsPageWidget> {
   final controller = AutoScrollController(suggestedRowHeight: 250);
   late bool _translateSubjectsEnabled;
+  late Future<List<CalendarSyncCalendar>> _calendarSyncCalendarsFuture;
 
   List<String> get subjectsWithoutNick => widget.vm.allSubjects
       .where((element) => !widget.vm.subjectNicks.keys.contains(element))
@@ -130,6 +134,7 @@ class _SettingsPageWidgetState extends State<SettingsPageWidget> {
   @override
   void initState() {
     _translateSubjectsEnabled = appSubjectTranslationController.enabled;
+    _calendarSyncCalendarsFuture = _loadCalendarSyncCalendars();
     if (widget.vm.showSubjectNicks) {
       WidgetsBinding.instance.addPostFrameCallback((_) async {
         await controller.scrollToIndex(4,
@@ -151,6 +156,150 @@ class _SettingsPageWidgetState extends State<SettingsPageWidget> {
       });
     }
     super.initState();
+  }
+
+  Future<List<CalendarSyncCalendar>> _loadCalendarSyncCalendars() {
+    return CalendarSyncService.loadWritableCalendars();
+  }
+
+  void _refreshCalendarSyncCalendars() {
+    setState(() {
+      _calendarSyncCalendarsFuture = _loadCalendarSyncCalendars();
+    });
+  }
+
+  void _showCalendarSyncError(String message) {
+    final messenger = ScaffoldMessenger.maybeOf(context);
+    messenger
+      ?..clearSnackBars()
+      ..showSnackBar(SnackBar(content: Text(message)));
+  }
+
+  String _calendarSyncMessageForResult(
+    AppLocalizations l10n,
+    CalendarSyncEnableResult result,
+  ) {
+    return switch (result) {
+      CalendarSyncEnableResult.permissionDenied => l10n.text(
+          'calendarSync.permissionDenied',
+        ),
+      CalendarSyncEnableResult.noWritableCalendar => l10n.text(
+          'calendarSync.noWritableCalendar',
+        ),
+      _ => l10n.text('calendarSync.unavailable'),
+    };
+  }
+
+  Future<CalendarSyncCalendar?> _showCalendarSyncCalendarDialog(
+    List<CalendarSyncCalendar> calendars,
+  ) {
+    final defaultCalendar = calendars.firstWhere(
+      (calendar) => calendar.isPrimary,
+      orElse: () => calendars.first,
+    );
+    var selectedId = widget.vm.calendarSyncCalendarId ?? defaultCalendar.id;
+    final l10n = context.l10n;
+    return showDialog<CalendarSyncCalendar>(
+      context: context,
+      builder: (context) => StatefulBuilder(
+        builder: (context, setDialogState) => InfoDialog(
+          title: Text(l10n.text('settings.calendarSync.select.title')),
+          content: SizedBox(
+            width: 420,
+            child: SingleChildScrollView(
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Text(
+                    l10n.text('settings.calendarSync.select.subtitle'),
+                  ),
+                  const SizedBox(height: 12),
+                  RadioGroup<int>(
+                    groupValue: selectedId,
+                    onChanged: (value) {
+                      if (value == null) {
+                        return;
+                      }
+                      setDialogState(() {
+                        selectedId = value;
+                      });
+                    },
+                    child: Column(
+                      children: [
+                        for (final calendar in calendars)
+                          RadioListTile<int>(
+                            value: calendar.id,
+                            contentPadding: EdgeInsets.zero,
+                            title: Text(calendar.displayName),
+                            subtitle: Text(calendar.accountLabel),
+                          ),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(context).pop(),
+              child: Text(l10n.text('common.cancel')),
+            ),
+            ElevatedButton(
+              onPressed: () => Navigator.of(context).pop(
+                calendars.firstWhere((calendar) => calendar.id == selectedId),
+              ),
+              child: Text(l10n.text('common.select')),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Future<void> _enableCalendarSync() async {
+    final l10n = context.l10n;
+    final enableResult = await CalendarSyncService.prepareForEnable();
+    if (!mounted) {
+      return;
+    }
+    if (enableResult != CalendarSyncEnableResult.ready) {
+      _showCalendarSyncError(_calendarSyncMessageForResult(l10n, enableResult));
+      return;
+    }
+
+    final calendars = await CalendarSyncService.loadWritableCalendars();
+    if (!mounted) {
+      return;
+    }
+    if (calendars.isEmpty) {
+      _showCalendarSyncError(
+        l10n.text('calendarSync.noWritableCalendar'),
+      );
+      return;
+    }
+
+    final selectedCalendar = await _showCalendarSyncCalendarDialog(calendars);
+    if (!mounted || selectedCalendar == null) {
+      return;
+    }
+
+    await widget.onSetCalendarSyncCalendarId(selectedCalendar.id);
+    await widget.onSetCalendarSyncEnabled(true);
+    _refreshCalendarSyncCalendars();
+  }
+
+  Future<void> _changeCalendarSyncCalendar() async {
+    final calendars = await _calendarSyncCalendarsFuture;
+    if (!mounted || calendars.isEmpty) {
+      return;
+    }
+    final selectedCalendar = await _showCalendarSyncCalendarDialog(calendars);
+    if (!mounted || selectedCalendar == null) {
+      return;
+    }
+    await widget.onSetCalendarSyncCalendarId(selectedCalendar.id);
+    _refreshCalendarSyncCalendars();
   }
 
   void _selectTheme(_Theme? theme) {
@@ -435,7 +584,7 @@ class _SettingsPageWidgetState extends State<SettingsPageWidget> {
               value: widget.vm.calendarSyncEnabled,
               onChanged: (enabled) async {
                 if (enabled) {
-                  await widget.onSetCalendarSyncEnabled(true);
+                  await _enableCalendarSync();
                   return;
                 }
 
@@ -450,6 +599,46 @@ class _SettingsPageWidgetState extends State<SettingsPageWidget> {
                 if (disableAction == _CalendarSyncDisableAction.remove) {
                   await widget.onRemoveCalendarSyncEvents();
                 }
+              },
+            ),
+          if (isAndroidPlatform && widget.vm.calendarSyncEnabled)
+            FutureBuilder<List<CalendarSyncCalendar>>(
+              future: _calendarSyncCalendarsFuture,
+              builder: (context, snapshot) {
+                final calendars =
+                    snapshot.data ?? const <CalendarSyncCalendar>[];
+                CalendarSyncCalendar? selectedCalendar;
+                for (final calendar in calendars) {
+                  if (calendar.id == widget.vm.calendarSyncCalendarId) {
+                    selectedCalendar = calendar;
+                    break;
+                  }
+                }
+                selectedCalendar ??= calendars.isEmpty
+                    ? null
+                    : calendars.firstWhere(
+                        (calendar) => calendar.isPrimary,
+                        orElse: () => calendars.first,
+                      );
+                return ListTile(
+                  key: const Key('calendar-sync-calendar-picker'),
+                  enabled: calendars.isNotEmpty,
+                  title: Text(l10n.text('settings.calendarSync.select.title')),
+                  subtitle: Text(
+                    selectedCalendar == null
+                        ? l10n.text('settings.calendarSync.select.none')
+                        : '${selectedCalendar.displayName}\n${selectedCalendar.accountLabel}',
+                  ),
+                  isThreeLine: selectedCalendar != null,
+                  trailing: snapshot.connectionState == ConnectionState.waiting
+                      ? const SizedBox(
+                          width: 20,
+                          height: 20,
+                          child: CircularProgressIndicator(strokeWidth: 2),
+                        )
+                      : const Icon(Icons.chevron_right),
+                  onTap: calendars.isEmpty ? null : _changeCalendarSyncCalendar,
+                );
               },
             ),
           SwitchListTile.adaptive(

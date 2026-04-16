@@ -1,4 +1,4 @@
-﻿// Copyright (C) 2021 Michael Debertol
+// Copyright (C) 2021 Michael Debertol
 // Copyright (C) 2026 Tobias Bucci
 //
 // This file is part of digitales_register.
@@ -62,8 +62,7 @@ class SettingsPageContainer extends StatelessWidget {
             onSetDashboardDeduplicateEntries:
                 actions.settingsActions.deduplicateDashboardEntries.call,
             onShowProfile: actions.routingActions.showProfile.call,
-            onSetIgnoreForGradesAverage: (list) => actions
-                .settingsActions
+            onSetIgnoreForGradesAverage: (list) => actions.settingsActions
                 .ignoreSubjectsForAverage(BuiltList(list)),
             onSetFavoriteSubjects: (list) =>
                 actions.settingsActions.favoriteSubjects(BuiltList(list)),
@@ -77,6 +76,8 @@ class SettingsPageContainer extends StatelessWidget {
                 actions.settingsActions.pushNotificationsEnabled.call,
             onSetCalendarSyncEnabled:
                 actions.settingsActions.calendarSyncEnabled.call,
+            onSetCalendarSyncCalendarId:
+                actions.settingsActions.calendarSyncCalendarId.call,
             onRemoveCalendarSyncEvents:
                 actions.settingsActions.removeCalendarSyncEvents.call,
             onSetAmoledMode: actions.settingsActions.amoledMode.call,
@@ -115,6 +116,7 @@ class SettingsViewModel {
   final bool dashboardColorTestsInRed;
   final bool pushNotificationsEnabled;
   final bool calendarSyncEnabled;
+  final int? calendarSyncCalendarId;
   final bool amoledMode;
   final bool demoMode;
   final List<String> allSubjects;
@@ -142,6 +144,7 @@ class SettingsViewModel {
         dashboardColorTestsInRed = state.settingsState.dashboardColorTestsInRed,
         pushNotificationsEnabled = state.settingsState.pushNotificationsEnabled,
         calendarSyncEnabled = state.settingsState.calendarSyncEnabled,
+        calendarSyncCalendarId = state.settingsState.calendarSyncCalendarId,
         amoledMode = state.settingsState.amoledMode,
         allSubjects = state.extractAllSubjects(),
         ignoreForGradesAverage =

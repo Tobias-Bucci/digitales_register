@@ -31,14 +31,25 @@ void main() {
   const methodChannel = MethodChannel('dr/calendar_sync');
 
   setUp(() async {
-    await bootstrapTestEnvironment();
+    await bootstrapTestEnvironment(fixedNow: UtcDateTime(2026, 4, 9));
     isAndroidOverride = () => true;
     CalendarSyncService.getDefaultCalendarIdOverride = () async => 41;
+    CalendarSyncService.getWritableCalendarsOverride =
+        () async => const <CalendarSyncCalendar>[
+              CalendarSyncCalendar(
+                id: 41,
+                displayName: 'School',
+                accountName: 'school@example.com',
+                ownerAccount: 'school@example.com',
+                isPrimary: true,
+              ),
+            ];
   });
 
   tearDown(resetTestState);
 
-  test('reconcile imports current future dashboard and calendar items', () async {
+  test('reconcile imports current future dashboard and calendar items',
+      () async {
     final upserts = <CalendarSyncUpsertRequest>[];
     CalendarSyncService.upsertEventOverride = (request) async {
       upserts.add(request);
@@ -93,21 +104,25 @@ void main() {
 
     expect(success, isTrue);
     expect(upserts, hasLength(3));
-    expect(upserts.map((request) => request.title), containsAll(<String>[
-      'Erinnerung',
-      'Worksheet',
-      'Chapter test',
-    ]));
+    expect(
+        upserts.map((request) => request.title),
+        containsAll(<String>[
+          'Erinnerung',
+          'Worksheet',
+          'Chapter test',
+        ]));
     expect(
       upserts.every(
-        (request) => request.endMillisUtc - request.startMillisUtc ==
+        (request) =>
+            request.endMillisUtc - request.startMillisUtc ==
             const Duration(days: 1).inMilliseconds,
       ),
       isTrue,
     );
   });
 
-  test('reconcile also imports existing dashboard schoolwork entries', () async {
+  test('reconcile also imports existing dashboard schoolwork entries',
+      () async {
     final upserts = <CalendarSyncUpsertRequest>[];
     CalendarSyncService.upsertEventOverride = (request) async {
       upserts.add(request);
@@ -142,7 +157,9 @@ void main() {
     expect(upserts.single.description, contains('Kapitel 3 und 4'));
   });
 
-  test('reconcile deduplicates dashboard schoolwork against matching calendar exams', () async {
+  test(
+      'reconcile deduplicates dashboard schoolwork against matching calendar exams',
+      () async {
     final upserts = <CalendarSyncUpsertRequest>[];
     CalendarSyncService.upsertEventOverride = (request) async {
       upserts.add(request);
@@ -287,7 +304,9 @@ void main() {
     expect(deletedIds, <int>[333]);
   });
 
-  test('reconcile skips calendar homework entries that are already covered by dashboard sync', () async {
+  test(
+      'reconcile skips calendar homework entries that are already covered by dashboard sync',
+      () async {
     final upserts = <CalendarSyncUpsertRequest>[];
     CalendarSyncService.upsertEventOverride = (request) async {
       upserts.add(request);
@@ -346,7 +365,9 @@ void main() {
     ]);
   });
 
-  test('checked dashboard items are removed from calendar sync and restored when unchecked', () async {
+  test(
+      'checked dashboard items are removed from calendar sync and restored when unchecked',
+      () async {
     final deletedIds = <int>[];
     final upserts = <CalendarSyncUpsertRequest>[];
     CalendarSyncService.upsertEventOverride = (request) async {
@@ -464,6 +485,16 @@ void main() {
       (call) async {
         calls.add(call);
         switch (call.method) {
+          case 'getWritableCalendars':
+            return <Map<String, Object?>>[
+              <String, Object?>{
+                'id': 41,
+                'displayName': 'School',
+                'accountName': 'school@example.com',
+                'ownerAccount': 'school@example.com',
+                'isPrimary': true,
+              },
+            ];
           case 'getDefaultCalendarId':
             return 41;
           case 'upsertCalendarEvent':
@@ -500,15 +531,69 @@ void main() {
 
     await CalendarSyncService.reconcile(state);
 
-    final upsertCall = calls.firstWhere((call) => call.method == 'upsertCalendarEvent');
+    final upsertCall =
+        calls.firstWhere((call) => call.method == 'upsertCalendarEvent');
     final args = Map<String, Object?>.from(upsertCall.arguments as Map);
     expect(args['calendarId'], 41);
     expect(args['title'], 'Erinnerung');
     expect(args['description'], contains('Read chapter'));
-    expect(args['description'], contains('[Digitales Register Sync: reminder:7]'));
+    expect(
+        args['description'], contains('[Digitales Register Sync: reminder:7]'));
   });
 
-  test('reconcile localizes calendar entry text to the selected app language', () async {
+  test('reconcile uses the selected calendar id from settings', () async {
+    final upserts = <CalendarSyncUpsertRequest>[];
+    CalendarSyncService.getWritableCalendarsOverride =
+        () async => const <CalendarSyncCalendar>[
+              CalendarSyncCalendar(
+                id: 41,
+                displayName: 'School',
+                accountName: 'school@example.com',
+                ownerAccount: 'school@example.com',
+                isPrimary: true,
+              ),
+              CalendarSyncCalendar(
+                id: 99,
+                displayName: 'Family',
+                accountName: 'family@example.com',
+                ownerAccount: 'family@example.com',
+                isPrimary: false,
+              ),
+            ];
+    CalendarSyncService.upsertEventOverride = (request) async {
+      upserts.add(request);
+      return upserts.length;
+    };
+
+    final state = AppState(
+      (b) {
+        b.settingsState
+          ..calendarSyncEnabled = true
+          ..calendarSyncCalendarId = 99;
+        b.dashboardState.allDays = ListBuilder<Day>(<Day>[
+          buildDay(
+            date: UtcDateTime(2026, 4, 10),
+            homework: <Homework>[
+              buildHomework(
+                id: 7,
+                title: 'Reminder',
+                type: HomeworkType.homework,
+              ),
+            ],
+          ),
+        ]);
+      },
+    );
+
+    final success = await CalendarSyncService.reconcile(state);
+
+    expect(success, isTrue);
+    expect(upserts, hasLength(1));
+    expect(upserts.single.calendarId, 99);
+  });
+
+  test('reconcile localizes calendar entry text to the selected app language',
+      () async {
     final upserts = <CalendarSyncUpsertRequest>[];
     CalendarSyncService.upsertEventOverride = (request) async {
       upserts.add(request);

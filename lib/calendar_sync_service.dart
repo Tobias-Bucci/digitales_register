@@ -40,6 +40,48 @@ enum CalendarSyncEnableResult {
   unsupported,
 }
 
+class CalendarSyncCalendar {
+  const CalendarSyncCalendar({
+    required this.id,
+    required this.displayName,
+    required this.accountName,
+    required this.ownerAccount,
+    required this.isPrimary,
+  });
+
+  factory CalendarSyncCalendar.fromJson(Map<dynamic, dynamic> json) {
+    return CalendarSyncCalendar(
+      id: getInt(json['id']) ?? 0,
+      displayName: getString(json['displayName']) ?? '',
+      accountName: getString(json['accountName']) ?? '',
+      ownerAccount: getString(json['ownerAccount']) ?? '',
+      isPrimary: json['isPrimary'] == true,
+    );
+  }
+
+  final int id;
+  final String displayName;
+  final String accountName;
+  final String ownerAccount;
+  final bool isPrimary;
+
+  String get accountLabel {
+    if (accountName.isNotEmpty && ownerAccount.isNotEmpty) {
+      if (accountName == ownerAccount) {
+        return accountName;
+      }
+      return '$accountName - $ownerAccount';
+    }
+    if (accountName.isNotEmpty) {
+      return accountName;
+    }
+    if (ownerAccount.isNotEmpty) {
+      return ownerAccount;
+    }
+    return displayName;
+  }
+}
+
 class CalendarSyncDesiredItem {
   const CalendarSyncDesiredItem({
     required this.syncKey,
@@ -108,6 +150,8 @@ class CalendarSyncUpsertRequest {
 
 typedef CalendarSyncPermissionOverride = Future<bool> Function();
 typedef CalendarSyncDefaultCalendarOverride = Future<int?> Function();
+typedef CalendarSyncCalendarsOverride = Future<List<CalendarSyncCalendar>>
+    Function();
 typedef CalendarSyncUpsertOverride = Future<int?> Function(
   CalendarSyncUpsertRequest request,
 );
@@ -116,10 +160,13 @@ typedef CalendarSyncDeleteOverride = Future<void> Function(int eventId);
 extension CalendarSyncService on Never {
   static CalendarSyncPermissionOverride? requestPermissionOverride;
   static CalendarSyncDefaultCalendarOverride? getDefaultCalendarIdOverride;
+  static CalendarSyncCalendarsOverride? getWritableCalendarsOverride;
   static CalendarSyncUpsertOverride? upsertEventOverride;
   static CalendarSyncDeleteOverride? deleteEventOverride;
 
-  static Future<CalendarSyncEnableResult> prepareForEnable() async {
+  static Future<CalendarSyncEnableResult> prepareForEnable({
+    int? preferredCalendarId,
+  }) async {
     if (!isAndroidPlatform) {
       return CalendarSyncEnableResult.unsupported;
     }
@@ -129,12 +176,23 @@ extension CalendarSyncService on Never {
       return CalendarSyncEnableResult.permissionDenied;
     }
 
-    final calendarId = await _getDefaultCalendarId();
-    if (calendarId == null) {
+    final calendars = await loadWritableCalendars();
+    if (calendars.isEmpty) {
+      return CalendarSyncEnableResult.noWritableCalendar;
+    }
+    if (preferredCalendarId != null &&
+        !calendars.any((calendar) => calendar.id == preferredCalendarId)) {
       return CalendarSyncEnableResult.noWritableCalendar;
     }
 
     return CalendarSyncEnableResult.ready;
+  }
+
+  static Future<List<CalendarSyncCalendar>> loadWritableCalendars() async {
+    if (!isAndroidPlatform || !await _hasCalendarPermission()) {
+      return const <CalendarSyncCalendar>[];
+    }
+    return _getWritableCalendars();
   }
 
   static Future<bool> reconcile(AppState state) async {
@@ -142,9 +200,11 @@ extension CalendarSyncService on Never {
       return true;
     }
 
-    final l10n =
-        await AppLocalizations.load(AppLanguage.fromCode(state.settingsState.languageCode).locale);
-    final calendarId = await _getDefaultCalendarId();
+    final l10n = await AppLocalizations.load(
+        AppLanguage.fromCode(state.settingsState.languageCode).locale);
+    final calendarId = await _resolveCalendarId(
+      state.settingsState.calendarSyncCalendarId,
+    );
     if (calendarId == null) {
       return false;
     }
@@ -197,8 +257,9 @@ extension CalendarSyncService on Never {
             title: item.title,
             description: _appendMarker(item.description, item.syncKey),
             startMillisUtc: _allDayStart(item.date).millisecondsSinceEpoch,
-            endMillisUtc:
-                _allDayStart(item.date).add(const Duration(days: 1)).millisecondsSinceEpoch,
+            endMillisUtc: _allDayStart(item.date)
+                .add(const Duration(days: 1))
+                .millisecondsSinceEpoch,
           ),
         );
 
@@ -315,7 +376,8 @@ extension CalendarSyncService on Never {
             details: <String>[
               if (homeworkExam.typeName.isNotEmpty)
                 l10n.translateSchoolTerm(homeworkExam.typeName),
-              if (hour.subject.isNotEmpty) l10n.translateSubjectName(hour.subject),
+              if (hour.subject.isNotEmpty)
+                l10n.translateSubjectName(hour.subject),
             ],
           );
         }
@@ -339,7 +401,8 @@ extension CalendarSyncService on Never {
     required UtcDateTime date,
     required List<String> details,
   }) {
-    final normalizedTitle = title.trim().isEmpty ? 'Digitales Register' : title.trim();
+    final normalizedTitle =
+        title.trim().isEmpty ? 'Digitales Register' : title.trim();
     final description = details
         .map((detail) => detail.trim())
         .where((detail) => detail.isNotEmpty)
@@ -414,7 +477,8 @@ extension CalendarSyncService on Never {
       _normalizeCalendarSyncText(homeworkExam.name),
     }..removeWhere((value) => value.isEmpty);
 
-    if (homeworkLabels.isNotEmpty && homeworkLabels.length == examLabels.length) {
+    if (homeworkLabels.isNotEmpty &&
+        homeworkLabels.length == examLabels.length) {
       if (homeworkLabels.containsAll(examLabels)) {
         return true;
       }
@@ -433,10 +497,7 @@ extension CalendarSyncService on Never {
     if (value == null) {
       return '';
     }
-    return value
-        .trim()
-        .toLowerCase()
-        .replaceAll(RegExp(r'\s+'), ' ');
+    return value.trim().toLowerCase().replaceAll(RegExp(r'\s+'), ' ');
   }
 
   static String _appendMarker(String description, String syncKey) {
@@ -461,12 +522,53 @@ extension CalendarSyncService on Never {
     return granted ?? false;
   }
 
+  static Future<bool> _hasCalendarPermission() async {
+    if (requestPermissionOverride != null) {
+      return true;
+    }
+    final permission = await _calendarSyncMethodChannel
+        .invokeMethod<bool>('hasCalendarPermission');
+    return permission ?? false;
+  }
+
   static Future<int?> _getDefaultCalendarId() {
     if (getDefaultCalendarIdOverride != null) {
       return getDefaultCalendarIdOverride!();
     }
 
     return _calendarSyncMethodChannel.invokeMethod<int>('getDefaultCalendarId');
+  }
+
+  static Future<List<CalendarSyncCalendar>> _getWritableCalendars() async {
+    if (getWritableCalendarsOverride != null) {
+      return getWritableCalendarsOverride!();
+    }
+
+    final raw = await _calendarSyncMethodChannel
+        .invokeMethod<List<dynamic>>('getWritableCalendars');
+    if (raw == null) {
+      return const <CalendarSyncCalendar>[];
+    }
+    return raw
+        .whereType<Map>()
+        .map((entry) => CalendarSyncCalendar.fromJson(entry))
+        .where((calendar) => calendar.id != 0)
+        .toList(growable: false);
+  }
+
+  static Future<int?> _resolveCalendarId(int? preferredCalendarId) async {
+    final calendars = await _getWritableCalendars();
+    if (calendars.isEmpty) {
+      return null;
+    }
+    if (preferredCalendarId != null) {
+      for (final calendar in calendars) {
+        if (calendar.id == preferredCalendarId) {
+          return calendar.id;
+        }
+      }
+    }
+    return _getDefaultCalendarId();
   }
 
   static Future<int?> _upsertEvent(CalendarSyncUpsertRequest request) {
@@ -535,7 +637,8 @@ extension CalendarSyncService on Never {
     }
   }
 
-  static Future<void> _writeRecords(Map<String, CalendarSyncRecord> records) async {
+  static Future<void> _writeRecords(
+      Map<String, CalendarSyncRecord> records) async {
     final prefs = await SharedPreferences.getInstance();
     await prefs.setString(
       _calendarSyncRecordsKey,
@@ -562,6 +665,7 @@ extension CalendarSyncService on Never {
   static Future<void> resetForTest() async {
     requestPermissionOverride = null;
     getDefaultCalendarIdOverride = null;
+    getWritableCalendarsOverride = null;
     upsertEventOverride = null;
     deleteEventOverride = null;
     final prefs = await SharedPreferences.getInstance();
