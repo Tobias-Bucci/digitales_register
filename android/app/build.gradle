@@ -76,10 +76,10 @@ android {
             // this is my (michael) release key. Used for dev purposes only.
             if (signingConfigs.release.keyAlias == "myandroidkey") {
                 applicationIdSuffix ".irelease"
-                resValue "string", "app_name", "Digitales Register"
+                resValue "string", "app_name", "Register"
             } else {
                 // This is the normal release build type
-                resValue "string", "app_name", "Digitales Register"
+                resValue "string", "app_name", "Register"
             }
         }
         debug {

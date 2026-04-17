@@ -78,7 +78,7 @@
   "settings.advanced.licenses": "Licenze",
   "settings.about.appName": "Registro Elettronico",
   "settings.about.title": "Registro Elettronico (Client) - Tobias Bucci Fork",
-  "settings.about.version": "v1.7.0",
+  "settings.about.version": "v1.8.0",
   "settings.about.copyright": "Copyright originale: Michael Debertol e Simon Wachtler 2019-2022\nCopyright di questa versione: Tobias Bucci 2026",
   "settings.about.description": "Client non ufficiale per il Registro Elettronico in Alto Adige. L'app facilita l'accesso mobile ai dati del registro ufficiale, ma viene sviluppata e mantenuta in modo indipendente.",
   "settings.about.disclaimer": "Questa app non è affiliata ufficialmente ad alcun ente pubblico, scuola o gestore della piattaforma e non rappresenta nessuno di essi. È un client indipendente e non ufficiale. Fanno fede esclusivamente le informazioni ufficiali fornite dal gestore della piattaforma.",
