@@ -139,6 +139,7 @@ class _HoursChunk extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final displayHours = _mergeDisplayHours(hours);
     return Stack(
       children: <Widget>[
         Card(
@@ -164,19 +165,25 @@ class _HoursChunk extends StatelessWidget {
           ),
           child: Column(
             children: List.generate(
-              hours.length * 2 - 1,
+              displayHours.length * 2 - 1,
               (n) => n.isEven
                   ? HourWidget(
-                      hour: hours[n ~/ 2],
+                      hour: displayHours[n ~/ 2],
                       subjectNicks: subjectNicks,
                       day: day,
-                      isSelected: selectedHour == hours[n ~/ 2].fromHour,
+                      isSelected: selectedHour != null &&
+                          displayHours[n ~/ 2].fromHour <= selectedHour! &&
+                          displayHours[n ~/ 2].toHour >= selectedHour!,
                       backgroundColor: colorBackground
-                          ? Color(subjectThemes[hours[n ~/ 2].subject]!.color)
+                          ? Color(
+                              subjectThemes[displayHours[n ~/ 2].subject]!.color,
+                            )
                               .withValues(alpha: 0.25)
                           : Colors.transparent,
                       selectedBackgroundColor: colorBackground
-                          ? Color(subjectThemes[hours[n ~/ 2].subject]!.color)
+                          ? Color(
+                              subjectThemes[displayHours[n ~/ 2].subject]!.color,
+                            )
                               .withValues(alpha: 0.5)
                           : Theme.of(context)
                               .colorScheme
@@ -193,6 +200,80 @@ class _HoursChunk extends StatelessWidget {
     );
   }
 }
+
+List<CalendarHour> _mergeDisplayHours(List<CalendarHour> hours) {
+  final merged = <CalendarHour>[];
+  for (final hour in hours) {
+    if (merged.isEmpty || !_canMergeDisplayHour(merged.last, hour)) {
+      merged.add(hour);
+      continue;
+    }
+    final previous = merged.removeLast();
+    merged.add(
+      previous.rebuild(
+        (b) => b
+          ..toHour = hour.toHour
+          ..timeSpans = ListBuilder<TimeSpan>([
+            ...previous.timeSpans,
+            ...hour.timeSpans,
+          ])
+          ..teachers = ListBuilder<Teacher>([
+            ...previous.teachers,
+            for (final teacher in hour.teachers)
+              if (!previous.teachers.any(
+                (existing) => equalsIgnoreCase(existing.fullName, teacher.fullName),
+              ))
+                teacher,
+          ])
+          ..homeworkExams = ListBuilder<HomeworkExam>([
+            ...previous.homeworkExams,
+            ...hour.homeworkExams,
+          ])
+          ..lessonContents = ListBuilder<LessonContent>([
+            ...previous.lessonContents,
+            ...hour.lessonContents,
+          ])
+          ..isDetectedSubstitute =
+              previous.isDetectedSubstitute || hour.isDetectedSubstitute,
+      ),
+    );
+  }
+  return merged;
+}
+
+bool _canMergeDisplayHour(CalendarHour previous, CalendarHour next) {
+  if (previous.toHour + 1 != next.fromHour) {
+    return false;
+  }
+  if (!equalsIgnoreCase(previous.subject, next.subject)) {
+    return false;
+  }
+  if (previous.classId != next.classId || previous.className != next.className) {
+    return false;
+  }
+  if (previous.subjectId != next.subjectId) {
+    return false;
+  }
+  if (!_sameStringList(previous.rooms, next.rooms)) {
+    return false;
+  }
+  return true;
+}
+
+bool _sameStringList(Iterable<String> a, Iterable<String> b) {
+  final aList = a.toList();
+  final bList = b.toList();
+  if (aList.length != bList.length) {
+    return false;
+  }
+  for (var i = 0; i < aList.length; i++) {
+    if (!equalsIgnoreCase(aList[i], bList[i])) {
+      return false;
+    }
+  }
+  return true;
+}
+
 
 class CalendarDayWidget extends StatelessWidget {
   final int max;

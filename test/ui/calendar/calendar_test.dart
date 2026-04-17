@@ -3,11 +3,13 @@ import 'package:built_redux/built_redux.dart';
 import 'package:dr/actions/app_actions.dart';
 import 'package:dr/app_state.dart';
 import 'package:dr/container/calendar_container.dart';
+import 'package:dr/container/calendar_week_container.dart';
 import 'package:dr/container/settings_page.dart';
 import 'package:dr/data.dart';
 import 'package:dr/middleware/middleware.dart';
 import 'package:dr/reducer/reducer.dart';
 import 'package:dr/ui/calendar.dart';
+import 'package:dr/ui/calendar_week.dart';
 import 'package:dr/ui/dialog.dart';
 import 'package:dr/utc_date_time.dart';
 import 'package:dr/util.dart';
@@ -15,6 +17,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 import '../../support/test_harness.dart';
+import '../../support/fixtures.dart';
 
 void main() {
   setUp(() async {
@@ -219,6 +222,137 @@ void main() {
 
     expect(find.text('Kein Fokusfach'), findsOneWidget);
     expect(store.state.calendarState.selection, isNull);
+  });
+
+  testWidgets(
+      'week view merges adjacent hours with same teacher despite different descriptions',
+      (tester) async {
+    final store = createStore();
+    await pumpApp(
+      tester,
+      store: store,
+      home: Material(
+        child: CalendarWeek(
+          vm: CalendarWeekViewModel(
+            (b) => b
+              ..days = ListBuilder<CalendarDay>([
+                buildCalendarDay(
+                  date: UtcDateTime(2026, 4, 17),
+                  hours: [
+                    buildCalendarHour(
+                      subject: 'Fach1',
+                      fromHour: 1,
+                      toHour: 1,
+                      teachers: [
+                        buildTeacher(firstName: 'Anna', lastName: 'Rossi'),
+                      ],
+                      lessonContents: [
+                        LessonContent(
+                          (b) => b
+                            ..name = 'Beschreibung 1'
+                            ..typeName = 'Fachunterricht'
+                            ..submissions = ListBuilder<LessonContentSubmission>(),
+                        ),
+                      ],
+                    ),
+                    buildCalendarHour(
+                      subject: 'Fach1',
+                      fromHour: 2,
+                      toHour: 2,
+                      teachers: [
+                        buildTeacher(firstName: 'Anna', lastName: 'Rossi'),
+                      ],
+                      lessonContents: [
+                        LessonContent(
+                          (b) => b
+                            ..name = 'Beschreibung 2'
+                            ..typeName = 'Fachunterricht'
+                            ..submissions = ListBuilder<LessonContentSubmission>(),
+                        ),
+                      ],
+                    ),
+                  ],
+                ),
+              ])
+              ..subjectNicks = MapBuilder<String, String>()
+              ..noInternet = false
+              ..selection = null
+              ..colorBackground = false
+              ..subjectThemes = MapBuilder<String, SubjectTheme>({
+                'Fach1': SubjectTheme(
+                  (b) => b
+                    ..color = Colors.red.toARGB32()
+                    ..thick = 2,
+                ),
+              }),
+          ),
+          favoriteSubject: null,
+        ),
+      ),
+    );
+    await settleFor(tester);
+
+    expect(find.text('Fach1'), findsOneWidget);
+    expect(find.text('Rossi'), findsOneWidget);
+    expect(find.byType(InkWell), findsOneWidget);
+  });
+
+  testWidgets(
+      'week view merges adjacent hours with different teachers',
+      (tester) async {
+    final store = createStore();
+    await pumpApp(
+      tester,
+      store: store,
+      home: Material(
+        child: CalendarWeek(
+          vm: CalendarWeekViewModel(
+            (b) => b
+              ..days = ListBuilder<CalendarDay>([
+                buildCalendarDay(
+                  date: UtcDateTime(2026, 4, 17),
+                  hours: [
+                    buildCalendarHour(
+                      subject: 'Fach1',
+                      fromHour: 1,
+                      toHour: 1,
+                      teachers: [
+                        buildTeacher(firstName: 'Anna', lastName: 'Rossi'),
+                      ],
+                    ),
+                    buildCalendarHour(
+                      subject: 'Fach1',
+                      fromHour: 2,
+                      toHour: 2,
+                      teachers: [
+                        buildTeacher(firstName: 'Bruno', lastName: 'Bianchi'),
+                      ],
+                    ),
+                  ],
+                ),
+              ])
+              ..subjectNicks = MapBuilder<String, String>()
+              ..noInternet = false
+              ..selection = null
+              ..colorBackground = false
+              ..subjectThemes = MapBuilder<String, SubjectTheme>({
+                'Fach1': SubjectTheme(
+                  (b) => b
+                    ..color = Colors.red.toARGB32()
+                    ..thick = 2,
+                ),
+              }),
+          ),
+          favoriteSubject: null,
+        ),
+      ),
+    );
+    await settleFor(tester);
+
+    expect(find.text('Fach1'), findsOneWidget);
+    expect(find.text('Rossi'), findsOneWidget);
+    expect(find.text('Bianchi'), findsOneWidget);
+    expect(find.byType(InkWell), findsOneWidget);
   });
 
 }
