@@ -1267,6 +1267,7 @@ class _SettingsPageWidgetState extends State<SettingsPageWidget> {
     final theme = Theme.of(context);
     final isDark = theme.brightness == Brightness.dark;
     final accent = theme.colorScheme.primary;
+    final officialSourceUrl = Uri.parse("https://digitalesregister.it");
     final accentBg = Color.alphaBlend(
       accent.withValues(alpha: isDark ? 0.24 : 0.14),
       theme.colorScheme.surface,
@@ -1335,6 +1336,30 @@ class _SettingsPageWidgetState extends State<SettingsPageWidget> {
                           Text(l10n.text('settings.about.copyright')),
                           const SizedBox(height: 12),
                           Text(l10n.text('settings.about.description')),
+                          const SizedBox(height: 12),
+                          Text(l10n.text('settings.about.disclaimer')),
+                          const SizedBox(height: 12),
+                          Text(
+                            l10n.text('settings.about.officialSourcesTitle'),
+                            style: theme.textTheme.titleSmall?.copyWith(
+                              fontWeight: FontWeight.w700,
+                            ),
+                          ),
+                          const SizedBox(height: 4),
+                          Text(l10n.text('settings.about.officialSourcesBody')),
+                          const SizedBox(height: 8),
+                          InkWell(
+                            onTap: () {
+                              launchUrl(
+                                officialSourceUrl,
+                                mode: LaunchMode.externalApplication,
+                              );
+                            },
+                            child: Text(
+                              l10n.text('settings.about.officialSourcesLink'),
+                              style: TextStyle(color: accent),
+                            ),
+                          ),
                           const SizedBox(height: 12),
                           Text(l10n.text('settings.about.gpl')),
                           const SizedBox(height: 4),
