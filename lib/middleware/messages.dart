@@ -1,4 +1,5 @@
 // Copyright (C) 2021 Michael Debertol
+// Copyright (C) 2026 Tobias Bucci
 //
 // This file is part of digitales_register.
 //
@@ -38,6 +39,20 @@ Future<void> _loadMessages(
 Future<void> _openFile(MiddlewareApi<AppState, AppStateBuilder, AppActions> api,
     ActionHandler next, Action<MessageAttachmentFile> action) async {
   await next(action);
+  if (action.payload.isLink) {
+    final link = action.payload.link;
+    if (link == null) {
+      return;
+    }
+    final launched = await launchUrl(
+      Uri.parse(link),
+      mode: LaunchMode.externalApplication,
+    );
+    if (!launched) {
+      showSnackBar(tr('navigation.linkOpenFailed'));
+    }
+    return;
+  }
 
   if (!action.payload.fileAvailable ||
       !await canOpenFile(action.payload.uniqueName)) {

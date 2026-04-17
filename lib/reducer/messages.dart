@@ -1,4 +1,5 @@
 // Copyright (C) 2021 Michael Debertol
+// Copyright (C) 2026 Tobias Bucci
 //
 // This file is part of digitales_register.
 //
@@ -137,17 +138,28 @@ Message _parseMessage(Map json, MessagesState state) {
 }
 
 MessageAttachmentFile? _parseAttachment(Map json, Message? oldMessage) {
-  if (getString(json["type"]) != "file" ||
-      getBool(json["isDownloadable"]) != true) {
+  if (getBool(json["isDownloadable"]) != true) {
     return null;
   }
 
+  final type = getString(json["type"]);
   final id = getInt(json["id"]);
   final messageId = getInt(json["messageId"]);
-  final originalName = getString(json["originalName"]);
+  final originalName =
+      getString(json["originalName"]) ?? getString(json["title"]);
   final file = getString(json["file"]);
+  final link = getString(json["link"]);
 
-  if ([id, messageId, originalName, file].contains(null)) {
+  if (id == null || messageId == null || originalName == null) {
+    return null;
+  }
+  if (type == "file" && file == null) {
+    return null;
+  }
+  if (type == "link" && link == null) {
+    return null;
+  }
+  if (type != "file" && type != "link") {
     return null;
   }
 
@@ -159,8 +171,12 @@ MessageAttachmentFile? _parseAttachment(Map json, Message? oldMessage) {
     ..id = id
     ..messageId = messageId
     ..originalName = originalName
-    ..file = file;
-  if (oldAttachment?.file == file) {
+    ..type = type
+    ..file = file
+    ..link = link;
+  if (oldAttachment?.type == type &&
+      oldAttachment?.file == file &&
+      oldAttachment?.link == link) {
     attachment.fileAvailable = oldAttachment!.fileAvailable;
   }
   return attachment.build();

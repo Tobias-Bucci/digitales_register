@@ -46,8 +46,7 @@ void main() {
     expect(firstDay.hours.single.timeSpans, hasLength(2));
     expect(firstDay.hours.single.homeworkExams.single.name, 'Arbeitsblatt');
 
-    final secondDay =
-        store.state.calendarState.days[UtcDateTime(2022, 9, 29)]!;
+    final secondDay = store.state.calendarState.days[UtcDateTime(2022, 9, 29)]!;
     expect(secondDay.hours.single.subject, 'Mathematik');
   });
 
@@ -80,7 +79,8 @@ void main() {
     expect(subject.detailEntries(Semester.first), hasLength(2));
     expect(subject.grades[Semester.first]!.single.name, 'Schularbeit 1');
     expect(subject.observations[Semester.first], hasLength(1));
-    expect(subject.observations[Semester.first]!.single.note, 'Gut vorbereitet');
+    expect(
+        subject.observations[Semester.first]!.single.note, 'Gut vorbereitet');
   });
 
   test('parse profile', () {
@@ -99,6 +99,45 @@ void main() {
           ..sendNotificationEmails = false,
       ),
     );
+  });
+
+  test('parse message link attachments from submissions', () {
+    store.actions.messagesActions.loaded(<Object>[
+      <String, Object?>{
+        'id': 2684,
+        'fromUserId': 5547,
+        'subject': 'Umfrage - sozialpädagogische Workshops',
+        'text': '{"ops":[{"insert":"Nachricht\\n"}]}',
+        'timeSent': '2026-04-16 15:44:30',
+        'recipientString': 'Alle Schüler/innen',
+        'fromName': 'Koch Marie Sophie',
+        'submissions': <Object>[
+          <String, Object?>{
+            'id': 938,
+            'messageId': 2684,
+            'title': 'Umfrage - sozialpädagogische Workshops',
+            'type': 'link',
+            'link': 'https://forms.office.com/Pages/ResponsePage.aspx?id=test',
+            'file': null,
+            'originalName': null,
+            'isDownloadable': true,
+          },
+        ],
+      },
+    ]);
+
+    final message = store.state.messagesState.messages.single;
+    final attachment = message.attachments.single;
+    expect(attachment.type, 'link');
+    expect(
+      attachment.originalName,
+      'Umfrage - sozialpädagogische Workshops',
+    );
+    expect(
+      attachment.link,
+      'https://forms.office.com/Pages/ResponsePage.aspx?id=test',
+    );
+    expect(attachment.file, isNull);
   });
 }
 

@@ -742,8 +742,10 @@ abstract class Message implements Built<Message, MessageBuilder> {
 
 abstract class MessageAttachmentFile
     implements Built<MessageAttachmentFile, MessageAttachmentFileBuilder> {
+  String get type;
   String get originalName;
-  String get file;
+  String? get file;
+  String? get link;
   int get messageId;
   int get id;
 
@@ -751,7 +753,10 @@ abstract class MessageAttachmentFile
   bool get downloading;
   bool get fileAvailable;
 
-  String get uniqueName => "msg_${messageId}_${id}_$originalName";
+  bool get isLink => type == "link";
+  bool get isFile => type == "file";
+
+  String get uniqueName => "msg_${messageId}_${id}_${file ?? originalName}";
 
   factory MessageAttachmentFile(
           [Function(MessageAttachmentFileBuilder b)? updates]) =
@@ -761,6 +766,7 @@ abstract class MessageAttachmentFile
       _$messageAttachmentFileSerializer;
 
   static void _initializeBuilder(MessageAttachmentFileBuilder b) => b
+    ..type = "file"
     ..fileAvailable = false
     ..downloading = false;
 }
