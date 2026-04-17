@@ -16,8 +16,8 @@ import 'package:dr/util.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 
-import '../../support/test_harness.dart';
 import '../../support/fixtures.dart';
+import '../../support/test_harness.dart';
 
 void main() {
   setUp(() async {
@@ -75,7 +75,8 @@ void main() {
     );
   });
 
-  testWidgets('jumping to the current week updates the selected monday', (tester) async {
+  testWidgets('jumping to the current week updates the selected monday',
+      (tester) async {
     mockNow = UtcDateTime(2021, 1, 27);
     final store = createStore(
       initialState: AppState(
@@ -241,8 +242,6 @@ void main() {
                   hours: [
                     buildCalendarHour(
                       subject: 'Fach1',
-                      fromHour: 1,
-                      toHour: 1,
                       teachers: [
                         buildTeacher(firstName: 'Anna', lastName: 'Rossi'),
                       ],
@@ -251,14 +250,14 @@ void main() {
                           (b) => b
                             ..name = 'Beschreibung 1'
                             ..typeName = 'Fachunterricht'
-                            ..submissions = ListBuilder<LessonContentSubmission>(),
+                            ..submissions =
+                                ListBuilder<LessonContentSubmission>(),
                         ),
                       ],
                     ),
                     buildCalendarHour(
                       subject: 'Fach1',
                       fromHour: 2,
-                      toHour: 2,
                       teachers: [
                         buildTeacher(firstName: 'Anna', lastName: 'Rossi'),
                       ],
@@ -267,7 +266,8 @@ void main() {
                           (b) => b
                             ..name = 'Beschreibung 2'
                             ..typeName = 'Fachunterricht'
-                            ..submissions = ListBuilder<LessonContentSubmission>(),
+                            ..submissions =
+                                ListBuilder<LessonContentSubmission>(),
                         ),
                       ],
                     ),
@@ -297,8 +297,7 @@ void main() {
     expect(find.byType(InkWell), findsOneWidget);
   });
 
-  testWidgets(
-      'week view merges adjacent hours with different teachers',
+  testWidgets('week view merges adjacent hours with different teachers',
       (tester) async {
     final store = createStore();
     await pumpApp(
@@ -314,8 +313,6 @@ void main() {
                   hours: [
                     buildCalendarHour(
                       subject: 'Fach1',
-                      fromHour: 1,
-                      toHour: 1,
                       teachers: [
                         buildTeacher(firstName: 'Anna', lastName: 'Rossi'),
                       ],
@@ -354,7 +351,6 @@ void main() {
     expect(find.text('Bianchi'), findsOneWidget);
     expect(find.byType(InkWell), findsOneWidget);
   });
-
 }
 
 AppState _calendarState({
@@ -386,7 +382,8 @@ AppState _calendarState({
                             ..to = UtcDateTime(2022, 9, 5, 23),
                         ),
                       ])
-                      ..homeworkExams = ListBuilder<HomeworkExam>(<HomeworkExam>[
+                      ..homeworkExams =
+                          ListBuilder<HomeworkExam>(<HomeworkExam>[
                         HomeworkExam(
                           (b) => b
                             ..deadline = UtcDateTime(2022, 9, 5)

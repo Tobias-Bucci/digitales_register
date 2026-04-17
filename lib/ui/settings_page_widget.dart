@@ -181,7 +181,6 @@ class _SettingsPageWidgetState extends State<SettingsPageWidget> {
     if (context != null) {
       await Scrollable.ensureVisible(
         context,
-        alignment: 0,
         duration: const Duration(milliseconds: 250),
         curve: Curves.easeInOut,
       );
@@ -999,11 +998,13 @@ class _SettingsPageWidgetState extends State<SettingsPageWidget> {
                       _showSubstituteSubjects = expanded;
                     });
                   },
-                  title: Text(l10n.text('settings.calendar.substituteTeachers.title')),
-                  subtitle:
-                      Text(l10n.text('settings.calendar.substituteTeachers.subtitle')),
+                  title: Text(
+                      l10n.text('settings.calendar.substituteTeachers.title')),
+                  subtitle: Text(l10n
+                      .text('settings.calendar.substituteTeachers.subtitle')),
                   children: [
-                    for (final entry in widget.vm.substitutePrimaryTeachers.entries)
+                    for (final entry
+                        in widget.vm.substitutePrimaryTeachers.entries)
                       ExpansionTile(
                         key: PageStorageKey<String>(
                           'substitute-subject-${entry.key}',
@@ -1061,11 +1062,12 @@ class _SettingsPageWidgetState extends State<SettingsPageWidget> {
                                 trailing: IconButton(
                                   icon: const Icon(Icons.close),
                                   onPressed: () {
-                                    final updated = Map<String, List<String>>.from(
+                                    final updated =
+                                        Map<String, List<String>>.from(
                                       widget.vm.substitutePrimaryTeachers,
                                     );
-                                    final teachers =
-                                        List<String>.from(updated[entry.key] ?? []);
+                                    final teachers = List<String>.from(
+                                        updated[entry.key] ?? []);
                                     teachers.removeWhere(
                                       (item) => equalsIgnoreCase(item, teacher),
                                     );
