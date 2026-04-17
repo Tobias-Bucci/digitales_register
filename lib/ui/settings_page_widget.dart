@@ -62,6 +62,10 @@ class SettingsPageWidget extends StatefulWidget {
   final OnSettingChanged<bool> onSetCalenderColorBackground;
   final OnSettingChanged<bool> onSetDashboardColorTestsInRed;
   final OnSettingChanged<bool> onSetPushNotificationsEnabled;
+  final OnSettingChanged<bool> onSetSubstituteDetectionEnabled;
+  final OnSettingChanged<Map<String, List<String>>>
+      onSetSubstitutePrimaryTeachers;
+  final OnSettingChanged<List<String>> onSetSubstituteKnownTeachers;
   final Future<void> Function(bool enabled) onSetCalendarSyncEnabled;
   final Future<void> Function(int? calendarId) onSetCalendarSyncCalendarId;
   final Future<void> Function() onRemoveCalendarSyncEvents;
@@ -99,6 +103,9 @@ class SettingsPageWidget extends StatefulWidget {
     required this.onSetSubjectTheme,
     required this.onSetDashboardColorTestsInRed,
     required this.onSetPushNotificationsEnabled,
+    required this.onSetSubstituteDetectionEnabled,
+    required this.onSetSubstitutePrimaryTeachers,
+    required this.onSetSubstituteKnownTeachers,
     required this.onSetCalendarSyncEnabled,
     required this.onSetCalendarSyncCalendarId,
     required this.onRemoveCalendarSyncEvents,
@@ -155,6 +162,14 @@ class _SettingsPageWidgetState extends State<SettingsPageWidget> {
         controller.scrollToIndex(3, preferPosition: AutoScrollPosition.begin);
       });
     }
+    if (widget.vm.showCalendarSubstituteSettings) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        controller.scrollToIndex(
+          5,
+          preferPosition: AutoScrollPosition.begin,
+        );
+      });
+    }
     super.initState();
   }
 
@@ -173,6 +188,66 @@ class _SettingsPageWidgetState extends State<SettingsPageWidget> {
     messenger
       ?..clearSnackBars()
       ..showSnackBar(SnackBar(content: Text(message)));
+  }
+
+  Future<void> _showAddSubstituteSubjectDialog() async {
+    final availableSubjects = widget.vm.allSubjects
+        .where(
+          (subject) => !widget.vm.substitutePrimaryTeachers.keys.any(
+            (existing) => equalsIgnoreCase(existing, subject),
+          ),
+        )
+        .toList();
+    final l10n = context.l10n;
+    final subject = await showDialog<String>(
+      context: context,
+      builder: (context) => AddSubject(
+        availableSubjects: availableSubjects,
+        title: l10n.text('settings.calendar.substituteTeachers.addSubject'),
+        requireSuggestionMatch: true,
+      ),
+    );
+    if (subject == null) {
+      return;
+    }
+    final updated = Map<String, List<String>>.from(widget.vm.substitutePrimaryTeachers)
+      ..putIfAbsent(subject, () => <String>[]);
+    widget.onSetSubstitutePrimaryTeachers(updated);
+  }
+
+  Future<void> _showAddTeacherDialog(String subject) async {
+    final l10n = context.l10n;
+    final currentTeachers = widget.vm.substitutePrimaryTeachers.entries
+        .firstWhere((entry) => equalsIgnoreCase(entry.key, subject))
+        .value;
+    final teacher = await showDialog<String>(
+      context: context,
+      builder: (context) => AddSubject(
+        availableSubjects: widget.vm.allTeachers,
+        title: l10n.text('settings.calendar.substituteTeachers.addTeacher'),
+      ),
+    );
+    if (teacher == null) {
+      return;
+    }
+
+    final updatedTeachers = <String>[...currentTeachers];
+    if (!containsStringIgnoreCase(updatedTeachers, teacher)) {
+      updatedTeachers.add(teacher);
+    }
+
+    final updatedSubjects =
+        Map<String, List<String>>.from(widget.vm.substitutePrimaryTeachers);
+    final resolvedSubject =
+        findStringIgnoreCase(updatedSubjects.keys, subject) ?? subject;
+    updatedSubjects[resolvedSubject] = updatedTeachers;
+    widget.onSetSubstitutePrimaryTeachers(updatedSubjects);
+
+    final knownTeachers = <String>[...widget.vm.allTeachers];
+    if (!containsStringIgnoreCase(knownTeachers, teacher)) {
+      knownTeachers.add(teacher);
+      widget.onSetSubstituteKnownTeachers(knownTeachers);
+    }
   }
 
   String _calendarSyncMessageForResult(
@@ -866,6 +941,133 @@ class _SettingsPageWidgetState extends State<SettingsPageWidget> {
             key: const ObjectKey(5),
             child: ListTile(
               title: Text(
+                l10n.text('settings.calendar.substituteTeachers.title'),
+                style: Theme.of(context).textTheme.headlineSmall,
+              ),
+            ),
+          ),
+          SwitchListTile.adaptive(
+            title: Text(l10n.text('settings.calendar.substituteDetection.title')),
+            subtitle:
+                Text(l10n.text('settings.calendar.substituteDetection.subtitle')),
+            onChanged: widget.onSetSubstituteDetectionEnabled,
+            value: widget.vm.substituteDetectionEnabled,
+          ),
+          ListTile(
+            title: Text(l10n.text('settings.calendar.substituteTeachers.title')),
+            subtitle:
+                Text(l10n.text('settings.calendar.substituteTeachers.subtitle')),
+            trailing: IconButton(
+              icon: const Icon(Icons.add),
+              onPressed: widget.vm.allSubjects
+                      .where(
+                        (subject) => !widget.vm.substitutePrimaryTeachers.keys.any(
+                          (existing) => equalsIgnoreCase(existing, subject),
+                        ),
+                      )
+                      .isEmpty
+                  ? null
+                  : _showAddSubstituteSubjectDialog,
+            ),
+          ),
+          AnimatedCrossFade(
+            duration: const Duration(milliseconds: 250),
+            crossFadeState: widget.vm.substitutePrimaryTeachers.isEmpty
+                ? CrossFadeState.showFirst
+                : CrossFadeState.showSecond,
+            firstChild: Padding(
+              padding: const EdgeInsets.only(left: 16),
+              child: ListTile(
+                title: Text(
+                  l10n.text('settings.calendar.substituteTeachers.none'),
+                  style: const TextStyle(color: Colors.grey),
+                ),
+              ),
+            ),
+            secondChild: Column(
+              children: [
+                for (final entry in widget.vm.substitutePrimaryTeachers.entries)
+                  ExpansionTile(
+                    key: ValueKey('substitute-subject-${entry.key}'),
+                    title: Text(entry.key),
+                    subtitle: Text(
+                      entry.value.isEmpty
+                          ? l10n.text(
+                              'settings.calendar.substituteTeachers.noTeachers',
+                            )
+                          : entry.value.join(', '),
+                    ),
+                    trailing: IconButton(
+                      icon: const Icon(Icons.delete),
+                      onPressed: () {
+                        final updated = Map<String, List<String>>.from(
+                          widget.vm.substitutePrimaryTeachers,
+                        )..remove(entry.key);
+                        widget.onSetSubstitutePrimaryTeachers(updated);
+                      },
+                    ),
+                    children: [
+                      ListTile(
+                        title: Text(
+                          l10n.text(
+                            'settings.calendar.substituteTeachers.addTeacher',
+                          ),
+                        ),
+                        trailing: IconButton(
+                          icon: const Icon(Icons.add),
+                          onPressed: () => _showAddTeacherDialog(entry.key),
+                        ),
+                      ),
+                      if (entry.value.isEmpty)
+                        Padding(
+                          padding: const EdgeInsets.only(left: 16),
+                          child: ListTile(
+                            title: Text(
+                              l10n.text(
+                                'settings.calendar.substituteTeachers.noTeachers',
+                              ),
+                              style: const TextStyle(color: Colors.grey),
+                            ),
+                          ),
+                        ),
+                      for (final teacher in entry.value)
+                        Padding(
+                          padding: const EdgeInsets.only(left: 16),
+                          child: ListTile(
+                            title: Text(teacher),
+                            trailing: IconButton(
+                              icon: const Icon(Icons.close),
+                              onPressed: () {
+                                final updated = Map<String, List<String>>.from(
+                                  widget.vm.substitutePrimaryTeachers,
+                                );
+                                final teachers =
+                                    List<String>.from(updated[entry.key] ?? []);
+                                teachers.removeWhere(
+                                  (item) => equalsIgnoreCase(item, teacher),
+                                );
+                                if (teachers.isEmpty) {
+                                  updated.remove(entry.key);
+                                } else {
+                                  updated[entry.key] = teachers;
+                                }
+                                widget.onSetSubstitutePrimaryTeachers(updated);
+                              },
+                            ),
+                          ),
+                        ),
+                    ],
+                  ),
+              ],
+            ),
+          ),
+          const Divider(),
+          AutoScrollTag(
+            controller: controller,
+            index: 6,
+            key: const ObjectKey(6),
+            child: ListTile(
+              title: Text(
                 l10n.text('settings.calendar.favoriteSubjects'),
                 style: Theme.of(context).textTheme.headlineSmall,
               ),
@@ -943,8 +1145,8 @@ class _SettingsPageWidgetState extends State<SettingsPageWidget> {
           const Divider(),
           AutoScrollTag(
             controller: controller,
-            index: 6,
-            key: const ObjectKey(6),
+            index: 7,
+            key: const ObjectKey(7),
             child: ListTile(
               title: Text(
                 l10n.text('settings.section.advanced'),

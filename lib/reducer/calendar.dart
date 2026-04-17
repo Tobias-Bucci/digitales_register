@@ -1,4 +1,5 @@
 // Copyright (C) 2021 Michael Debertol
+// Copyright (C) 2026 Tobias Bucci
 //
 // This file is part of digitales_register.
 //
@@ -33,12 +34,13 @@ final calendarReducerBuilder = NestedReducerBuilder<AppState, AppStateBuilder,
   ..add(CalendarActionsNames.loaded, _loaded)
   ..add(CalendarActionsNames.setCurrentMonday, _currentMonday)
   ..add(CalendarActionsNames.select, _selectedDay)
+  ..add(CalendarActionsNames.recalculateSubstitutes, _recalculateSubstitutes)
   ..add(CalendarActionsNames.onDownloadFile, _downloadFile)
   ..add(CalendarActionsNames.fileAvailable, _fileAvailable);
 
-void _loaded(CalendarState state, Action<Map<String, dynamic>> action,
+void _loaded(CalendarState state, Action<CalendarLoadedPayload> action,
     CalendarStateBuilder builder) {
-  final t = action.payload.map(
+  final loadedDays = action.payload.data.map(
     (k, dynamic e) {
       final date = UtcDateTime.parse(k);
       return MapEntry(
@@ -54,7 +56,9 @@ void _loaded(CalendarState state, Action<Map<String, dynamic>> action,
       );
     },
   );
-  builder.days.addAll(t);
+  final mergedDays = Map<UtcDateTime, CalendarDay>.from(state.days.toMap())
+    ..addAll(loadedDays);
+  builder.days.replace(_detectSubstitutes(mergedDays, action.payload.config));
 }
 
 void _currentMonday(CalendarState state, Action<UtcDateTime> action,
@@ -65,6 +69,18 @@ void _currentMonday(CalendarState state, Action<UtcDateTime> action,
 void _selectedDay(CalendarState state, Action<CalendarSelection?> action,
     CalendarStateBuilder builder) {
   builder.selection = action.payload?.toBuilder();
+}
+
+void _recalculateSubstitutes(
+    CalendarState state,
+    Action<SubstituteDetectionConfig> action,
+    CalendarStateBuilder builder) {
+  builder.days.replace(
+    _detectSubstitutes(
+      state.days.toMap(),
+      action.payload,
+    ),
+  );
 }
 
 CalendarDayBuilder _parseCalendarDay(
@@ -141,6 +157,9 @@ CalendarHourBuilder _parseHour(
   return CalendarHourBuilder()
     ..fromHour = fromHour
     ..toHour = toHour
+    ..classId = getInt(lesson["classId"])
+    ..className = getString(lesson["className"])
+    ..subjectId = getInt(lesson["subject"]["id"])
     ..timeSpans = timeSpans
     ..rooms = ListBuilder(
       getList(lesson["rooms"])!.map<String>((dynamic r) => r["name"] as String),
@@ -169,6 +188,169 @@ CalendarHourBuilder _parseHour(
         ),
       ),
     );
+}
+
+Map<UtcDateTime, CalendarDay> _detectSubstitutes(
+  Map<UtcDateTime, CalendarDay> days,
+  dynamic settings,
+) {
+  if (!_substituteDetectionEnabled(settings)) {
+    return {
+      for (final entry in days.entries)
+        entry.key: entry.value.rebuild(
+          (day) => day.hours = ListBuilder<CalendarHour>(
+            entry.value.hours.map(
+              (hour) => hour.rebuild((b) => b.isDetectedSubstitute = false),
+            ),
+          ),
+        ),
+    };
+  }
+
+  final teacherCountsBySlot = <String, Map<String, int>>{};
+
+  for (final entry in days.entries) {
+    final date = entry.key;
+    for (final hour in entry.value.hours) {
+      final teacherSignature = _teacherSignature(hour.teachers);
+      if (teacherSignature.isEmpty) {
+        continue;
+      }
+      for (final slotKey in _slotKeysForHour(date, hour)) {
+        final teacherCounts =
+            teacherCountsBySlot.putIfAbsent(slotKey, () => <String, int>{});
+        teacherCounts.update(
+          teacherSignature,
+          (value) => value + 1,
+          ifAbsent: () => 1,
+        );
+      }
+    }
+  }
+
+  return {
+    for (final entry in days.entries)
+      entry.key: entry.value.rebuild(
+        (day) => day.hours = ListBuilder<CalendarHour>(
+          entry.value.hours.map(
+            (hour) => hour.rebuild(
+              (b) => b.isDetectedSubstitute =
+                  _isDetectedSubstitute(
+                entry.key,
+                hour,
+                teacherCountsBySlot,
+                settings,
+              ),
+            ),
+          ),
+        ),
+      ),
+  };
+}
+
+bool _isDetectedSubstitute(
+  UtcDateTime date,
+  CalendarHour hour,
+  Map<String, Map<String, int>> teacherCountsBySlot,
+  dynamic settings,
+) {
+  if (hour.teachers.length != 1) {
+    return false;
+  }
+
+  final teacherSignature = _teacherSignature(hour.teachers);
+  if (teacherSignature.isEmpty) {
+    return false;
+  }
+  if (_isConfiguredPrimaryTeacher(settings, hour, teacherSignature)) {
+    return false;
+  }
+
+  for (final slotKey in _slotKeysForHour(date, hour)) {
+    final teacherCounts = teacherCountsBySlot[slotKey];
+    if (teacherCounts == null || teacherCounts.length < 2) {
+      continue;
+    }
+
+    final sortedCounts = teacherCounts.entries.toList()
+      ..sort((a, b) => b.value.compareTo(a.value));
+    final leader = sortedCounts.first;
+    final runnerUpCount = sortedCounts.length > 1 ? sortedCounts[1].value : 0;
+    final currentCount = teacherCounts[teacherSignature] ?? 0;
+    final hasStableBaseline = leader.value >= 2 && leader.value > runnerUpCount;
+
+    if (hasStableBaseline &&
+        leader.key != teacherSignature &&
+        leader.value > currentCount) {
+      return true;
+    }
+  }
+
+  return false;
+}
+
+bool _isConfiguredPrimaryTeacher(
+  dynamic settings,
+  CalendarHour hour,
+  String teacherSignature,
+) {
+  for (final entry in _substitutePrimaryTeachers(settings).entries) {
+    if (!equalsIgnoreCase(entry.key, hour.subject)) {
+      continue;
+    }
+    return entry.value.any(
+      (teacher) => equalsIgnoreCase(teacher, teacherSignature),
+    );
+  }
+  return false;
+}
+
+bool _substituteDetectionEnabled(dynamic settings) {
+  if (settings is SettingsState) {
+    return settings.substituteDetectionEnabled;
+  }
+  if (settings is SubstituteDetectionConfig) {
+    return settings.enabled;
+  }
+  throw ArgumentError.value(settings, 'settings');
+}
+
+BuiltMap<String, BuiltList<String>> _substitutePrimaryTeachers(
+  dynamic settings,
+) {
+  if (settings is SettingsState) {
+    return settings.substitutePrimaryTeachers;
+  }
+  if (settings is SubstituteDetectionConfig) {
+    return settings.primaryTeachers;
+  }
+  throw ArgumentError.value(settings, 'settings');
+}
+
+List<String> _slotKeysForHour(UtcDateTime date, CalendarHour hour) {
+  return [
+    for (var lessonHour = hour.fromHour; lessonHour <= hour.toHour; lessonHour++)
+      _slotKeyForLessonHour(date, hour, lessonHour),
+  ];
+}
+
+String _slotKeyForLessonHour(
+  UtcDateTime date,
+  CalendarHour hour,
+  int lessonHour,
+) {
+  final classPart = hour.classId?.toString() ?? hour.className ?? '';
+  final subjectPart = hour.subjectId?.toString() ?? hour.subject;
+  return '$classPart|$subjectPart|${date.weekday}|$lessonHour';
+}
+
+String _teacherSignature(BuiltList<Teacher> teachers) {
+  return (teachers.toList()
+        ..sort((a, b) => a.fullName.toLowerCase().compareTo(
+              b.fullName.toLowerCase(),
+            )))
+      .map((teacher) => teacher.fullName.toLowerCase())
+      .join('|');
 }
 
 HomeworkExam _parseHomeworkExam(Map homeworkExam) {

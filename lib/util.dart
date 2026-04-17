@@ -116,6 +116,19 @@ String? findSubjectIgnoreCase(Iterable<String> subjects, String subject) {
   return null;
 }
 
+bool containsStringIgnoreCase(Iterable<String> values, String value) {
+  return values.any((item) => equalsIgnoreCase(item, value));
+}
+
+String? findStringIgnoreCase(Iterable<String> values, String value) {
+  for (final item in values) {
+    if (equalsIgnoreCase(item, value)) {
+      return item;
+    }
+  }
+  return null;
+}
+
 List<String> filterAvailableFavoriteSubjects(
   Iterable<String> favoriteSubjects,
   Iterable<String?> visibleSubjects,

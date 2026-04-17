@@ -239,22 +239,30 @@ CalendarHour buildCalendarHour({
   required String subject,
   int fromHour = 1,
   int toHour = 1,
+  int? classId,
+  String? className,
+  int? subjectId,
   List<String> rooms = const <String>[],
   List<Teacher> teachers = const <Teacher>[],
   List<TimeSpan> timeSpans = const <TimeSpan>[],
   List<HomeworkExam> homeworkExams = const <HomeworkExam>[],
   List<LessonContent> lessonContents = const <LessonContent>[],
+  bool isDetectedSubstitute = false,
 }) {
   return CalendarHour(
     (b) => b
       ..subject = subject
       ..fromHour = fromHour
       ..toHour = toHour
+      ..classId = classId
+      ..className = className
+      ..subjectId = subjectId
       ..rooms = ListBuilder<String>(rooms)
       ..teachers = ListBuilder<Teacher>(teachers)
       ..timeSpans = ListBuilder<TimeSpan>(timeSpans)
       ..homeworkExams = ListBuilder<HomeworkExam>(homeworkExams)
-      ..lessonContents = ListBuilder<LessonContent>(lessonContents),
+      ..lessonContents = ListBuilder<LessonContent>(lessonContents)
+      ..isDetectedSubstitute = isDetectedSubstitute,
   );
 }
 

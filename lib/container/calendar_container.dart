@@ -35,6 +35,8 @@ class CalendarContainer extends StatelessWidget {
           vm: vm,
           showEditSubjectNicks:
               actions.routingActions.showEditCalendarSubjectNicks.call,
+          showEditSubstituteSettings:
+              actions.routingActions.showEditCalendarSubstituteSettings.call,
           closeEditNicksBar: () =>
               actions.settingsActions.showCalendarSubjectNicksBar(false),
           dayCallback: actions.calendarActions.load.call,
@@ -59,6 +61,7 @@ class CalendarViewModel {
   final List<CalendarDay> currentDays;
   final List<String> favoriteSubjects;
   final BuiltMap<String, SubjectTheme> subjectThemes;
+  final bool substituteDetectionEnabled;
 
   CalendarViewModel(AppState state)
       : first = state.calendarState.currentDays.isEmpty
@@ -71,6 +74,8 @@ class CalendarViewModel {
         currentDays = state.calendarState.currentDays.toList(),
         favoriteSubjects = state.settingsState.favoriteSubjects.toList(),
         subjectThemes = state.settingsState.subjectThemes,
+        substituteDetectionEnabled =
+            state.settingsState.substituteDetectionEnabled,
         showEditNicksBar = state.calendarState.currentDays.any(
               (day) => day.hours.any(
                 (hour) => !state.settingsState.subjectNicks.entries.any(

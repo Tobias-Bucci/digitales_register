@@ -20,11 +20,13 @@ import 'dart:async';
 
 import 'package:built_collection/built_collection.dart';
 import 'package:dr/actions/app_actions.dart';
+import 'package:dr/actions/calendar_actions.dart';
 import 'package:dr/app_state.dart';
 import 'package:dr/i18n/app_language.dart';
 import 'package:dr/main.dart';
 import 'package:dr/theme_controller.dart';
 import 'package:dr/ui/settings_page_widget.dart';
+import 'package:dr/util.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_built_redux/flutter_built_redux.dart';
 
@@ -74,6 +76,32 @@ class SettingsPageContainer extends StatelessWidget {
                 actions.settingsActions.dashboardColorTestsInRed.call,
             onSetPushNotificationsEnabled:
                 actions.settingsActions.pushNotificationsEnabled.call,
+            onSetSubstituteDetectionEnabled: (enabled) async {
+              await actions.settingsActions.substituteDetectionEnabled(enabled);
+              await actions.calendarActions.recalculateSubstitutes(
+                _substituteDetectionConfig(
+                  enabled: enabled,
+                  primaryTeachers: vm.substitutePrimaryTeachers,
+                ),
+              );
+            },
+            onSetSubstitutePrimaryTeachers: (map) async {
+              await actions.settingsActions.substitutePrimaryTeachers(
+                BuiltMap(map.map(
+                  (key, value) =>
+                      MapEntry(key, BuiltList<String>.from(value)),
+                )),
+              );
+              await actions.calendarActions.recalculateSubstitutes(
+                _substituteDetectionConfig(
+                  enabled: vm.substituteDetectionEnabled,
+                  primaryTeachers: map,
+                ),
+              );
+            },
+            onSetSubstituteKnownTeachers: (teachers) => actions
+                .settingsActions
+                .substituteKnownTeachers(BuiltList<String>.from(teachers)),
             onSetCalendarSyncEnabled:
                 actions.settingsActions.calendarSyncEnabled.call,
             onSetCalendarSyncCalendarId:
@@ -111,10 +139,12 @@ class SettingsViewModel {
   final bool dashboardDeduplicateEntries;
   final bool showSubjectNicks;
   final bool showGradesSettings;
+  final bool showCalendarSubstituteSettings;
   final bool dashboardColorBorders;
   final bool calendarColorBackground;
   final bool dashboardColorTestsInRed;
   final bool pushNotificationsEnabled;
+  final bool substituteDetectionEnabled;
   final bool calendarSyncEnabled;
   final int? calendarSyncCalendarId;
   final bool amoledMode;
@@ -122,6 +152,8 @@ class SettingsViewModel {
   final List<String> allSubjects;
   final List<String> ignoreForGradesAverage;
   final List<String> favoriteSubjects;
+  final Map<String, List<String>> substitutePrimaryTeachers;
+  final List<String> allTeachers;
   final BuiltMap<String, SubjectTheme> subjectThemes;
   SettingsViewModel(AppState state)
       : language = AppLanguage.fromCode(state.settingsState.languageCode),
@@ -132,6 +164,8 @@ class SettingsViewModel {
         subjectNicks = state.settingsState.subjectNicks.toMap(),
         showSubjectNicks = state.settingsState.scrollToSubjectNicks,
         showGradesSettings = state.settingsState.scrollToGrades,
+        showCalendarSubstituteSettings =
+            state.settingsState.scrollToCalendarSubstituteSettings,
         showCalendarEditNicksBar = state.settingsState.showCalendarNicksBar,
         showGradesDiagram = state.settingsState.showGradesDiagram,
         showAllSubjectsAverage = state.settingsState.showAllSubjectsAverage,
@@ -143,13 +177,51 @@ class SettingsViewModel {
         calendarColorBackground = state.settingsState.calendarColorBackground,
         dashboardColorTestsInRed = state.settingsState.dashboardColorTestsInRed,
         pushNotificationsEnabled = state.settingsState.pushNotificationsEnabled,
+        substituteDetectionEnabled =
+            state.settingsState.substituteDetectionEnabled,
         calendarSyncEnabled = state.settingsState.calendarSyncEnabled,
         calendarSyncCalendarId = state.settingsState.calendarSyncCalendarId,
         amoledMode = state.settingsState.amoledMode,
         allSubjects = state.extractAllSubjects(),
+        allTeachers = _mergedTeachers(
+          state.extractAllTeachers(),
+          state.settingsState.substituteKnownTeachers.toList(),
+        ),
         ignoreForGradesAverage =
             state.settingsState.ignoreForGradesAverage.toList(),
         favoriteSubjects = state.settingsState.favoriteSubjects.toList(),
+        substitutePrimaryTeachers = {
+          for (final entry in state.settingsState.substitutePrimaryTeachers.entries)
+            entry.key: entry.value.toList(),
+        },
         subjectThemes = state.settingsState.subjectThemes,
         demoMode = state.isDemo;
+}
+
+List<String> _mergedTeachers(
+  List<String> extractedTeachers,
+  List<String> storedTeachers,
+) {
+  final merged = <String>[];
+  for (final teacher in [...extractedTeachers, ...storedTeachers]) {
+    if (!merged.any((existing) => equalsIgnoreCase(existing, teacher))) {
+      merged.add(teacher);
+    }
+  }
+  return merged;
+}
+
+SubstituteDetectionConfig _substituteDetectionConfig({
+  required bool enabled,
+  required Map<String, List<String>> primaryTeachers,
+}) {
+  return SubstituteDetectionConfig(
+    (b) => b
+      ..enabled = enabled
+      ..primaryTeachers = MapBuilder<String, BuiltList<String>>(
+        primaryTeachers.map(
+          (key, value) => MapEntry(key, BuiltList<String>.from(value)),
+        ),
+      ),
+  );
 }

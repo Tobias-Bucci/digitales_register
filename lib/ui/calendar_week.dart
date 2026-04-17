@@ -355,11 +355,14 @@ class HourWidget extends StatelessWidget {
           },
           child: DecoratedBox(
             decoration: BoxDecoration(
-              border: hour.warning
-                  ? const Border(
-                      left: BorderSide(color: Colors.red, width: 5),
-                    )
-                  : null,
+              border: Border(
+                left: hour.warning
+                    ? const BorderSide(color: Colors.red, width: 5)
+                    : BorderSide.none,
+                right: hour.isDetectedSubstitute
+                    ? BorderSide(color: Colors.amber.shade700, width: 5)
+                    : BorderSide.none,
+              ),
               color: isSelected ? selectedBackgroundColor : backgroundColor,
             ),
             child: Center(

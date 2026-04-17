@@ -39,6 +39,8 @@ final settingsReducerBuilder = NestedReducerBuilder<AppState, AppStateBuilder,
   ..add(SettingsActionsNames.subjectNicks, _subjectNicks)
   ..add(
       RoutingActionsNames.showEditCalendarSubjectNicks, _showEditCalendarNicks)
+  ..add(RoutingActionsNames.showEditCalendarSubstituteSettings,
+      _showEditCalendarSubstituteSettings)
   ..add(RoutingActionsNames.showEditGradesAverageSettings,
       _showEditGradesAverageSettings)
   ..add(RoutingActionsNames.showSettings, _showSettings)
@@ -59,6 +61,11 @@ final settingsReducerBuilder = NestedReducerBuilder<AppState, AppStateBuilder,
   ..add(SettingsActionsNames.calendarColorBackground, _calendarColorBackground)
   ..add(
       SettingsActionsNames.pushNotificationsEnabled, _pushNotificationsEnabled)
+  ..add(SettingsActionsNames.substituteDetectionEnabled,
+      _substituteDetectionEnabled)
+  ..add(
+      SettingsActionsNames.substitutePrimaryTeachers, _substitutePrimaryTeachers)
+  ..add(SettingsActionsNames.substituteKnownTeachers, _substituteKnownTeachers)
   ..add(SettingsActionsNames.calendarSyncEnabled, _calendarSyncEnabled)
   ..add(SettingsActionsNames.calendarSyncCalendarId, _calendarSyncCalendarId)
   ..add(SettingsActionsNames.amoledMode, _amoledMode)
@@ -122,14 +129,24 @@ void _showEditGradesAverageSettings(
     SettingsState state, Action<void> action, SettingsStateBuilder builder) {
   builder
     ..scrollToGrades = true
-    ..scrollToSubjectNicks = false;
+    ..scrollToSubjectNicks = false
+    ..scrollToCalendarSubstituteSettings = false;
+}
+
+void _showEditCalendarSubstituteSettings(
+    SettingsState state, Action<void> action, SettingsStateBuilder builder) {
+  builder
+    ..scrollToGrades = false
+    ..scrollToSubjectNicks = false
+    ..scrollToCalendarSubstituteSettings = true;
 }
 
 void _showSettings(
     SettingsState state, Action<void> action, SettingsStateBuilder builder) {
   builder
     ..scrollToSubjectNicks = false
-    ..scrollToGrades = false;
+    ..scrollToGrades = false
+    ..scrollToCalendarSubstituteSettings = false;
 }
 
 void _calendarNicksBar(
@@ -192,6 +209,24 @@ void _calendarColorBackground(
 void _pushNotificationsEnabled(
     SettingsState state, Action<bool> action, SettingsStateBuilder builder) {
   builder.pushNotificationsEnabled = action.payload;
+}
+
+void _substituteDetectionEnabled(
+    SettingsState state, Action<bool> action, SettingsStateBuilder builder) {
+  builder.substituteDetectionEnabled = action.payload;
+}
+
+void _substitutePrimaryTeachers(
+    SettingsState state,
+    Action<BuiltMap<String, BuiltList<String>>> action,
+    SettingsStateBuilder builder) {
+  builder.substitutePrimaryTeachers.replace(action.payload);
+}
+
+void _substituteKnownTeachers(
+    SettingsState state, Action<BuiltList<String>> action,
+    SettingsStateBuilder builder) {
+  builder.substituteKnownTeachers.replace(action.payload);
 }
 
 void _calendarSyncEnabled(

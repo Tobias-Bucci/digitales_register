@@ -622,12 +622,16 @@ abstract class CalendarHour
     implements Built<CalendarHour, CalendarHourBuilder> {
   int get fromHour;
   int get toHour;
+  int? get classId;
+  String? get className;
+  int? get subjectId;
   BuiltList<TimeSpan> get timeSpans;
   BuiltList<String> get rooms;
 
   String get subject;
   BuiltList<HomeworkExam> get homeworkExams;
   BuiltList<LessonContent> get lessonContents;
+  bool get isDetectedSubstitute;
   int get length => toHour - fromHour + 1;
   bool get warning => homeworkExams.any((it) => it.warning == true);
 
@@ -635,7 +639,8 @@ abstract class CalendarHour
 
   static void _initializeBuilder(CalendarHourBuilder b) => b
     ..teachers = ListBuilder()
-    ..timeSpans = ListBuilder();
+    ..timeSpans = ListBuilder()
+    ..isDetectedSubstitute = false;
 
   static Serializer<CalendarHour> get serializer => _$calendarHourSerializer;
   factory CalendarHour([Function(CalendarHourBuilder b)? updates]) =

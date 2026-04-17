@@ -155,6 +155,16 @@ class CalendarCard extends StatelessWidget {
                     style: Theme.of(context).textTheme.titleLarge,
                   ),
                 ),
+                if (hour.isDetectedSubstitute)
+                  Container(
+                    key: const Key('calendar-substitute-chip'),
+                    width: 6,
+                    height: 38,
+                    decoration: BoxDecoration(
+                      color: Colors.amber.shade700,
+                      borderRadius: BorderRadius.circular(999),
+                    ),
+                  ),
               ],
             ),
             // Time (index and time)

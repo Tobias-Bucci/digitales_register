@@ -1,4 +1,5 @@
 // Copyright (C) 2021 Michael Debertol
+// Copyright (C) 2026 Tobias Bucci
 //
 // This file is part of digitales_register.
 //
@@ -36,7 +37,17 @@ Future<void> _loadCalendar(
       args: {"startDate": DateFormat("yyyy-MM-dd").format(action.payload)});
 
   if (data != null) {
-    await api.actions.calendarActions.loaded(data as Map<String, dynamic>);
+    await api.actions.calendarActions.loaded(
+      CalendarLoadedPayload(
+        data: data as Map<String, dynamic>,
+        config: SubstituteDetectionConfig(
+          (b) => b
+            ..enabled = api.state.settingsState.substituteDetectionEnabled
+            ..primaryTeachers =
+                api.state.settingsState.substitutePrimaryTeachers.toBuilder(),
+        ),
+      ),
+    );
   }
 }
 

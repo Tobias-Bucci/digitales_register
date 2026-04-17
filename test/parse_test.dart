@@ -1,7 +1,9 @@
 import 'dart:convert';
 
+import 'package:built_collection/built_collection.dart';
 import 'package:built_redux/built_redux.dart';
 import 'package:dr/actions/app_actions.dart';
+import 'package:dr/actions/calendar_actions.dart';
 import 'package:dr/actions/grades_actions.dart';
 import 'package:dr/app_state.dart';
 import 'package:dr/middleware/middleware.dart';
@@ -35,8 +37,8 @@ void main() {
   });
 
   test('parse calendar days and merge additional pages', () {
-    store.actions.calendarActions.loaded(calendarPageOne);
-    store.actions.calendarActions.loaded(calendarPageTwo);
+    store.actions.calendarActions.loaded(_calendarLoaded(calendarPageOne));
+    store.actions.calendarActions.loaded(_calendarLoaded(calendarPageTwo));
 
     expect(store.state.calendarState.days, hasLength(2));
 
@@ -48,6 +50,178 @@ void main() {
 
     final secondDay = store.state.calendarState.days[UtcDateTime(2022, 9, 29)]!;
     expect(secondDay.hours.single.subject, 'Mathematik');
+  });
+
+  test('detects substitute lessons from a stable teacher baseline', () {
+    store.actions.calendarActions.loaded(
+      _calendarLoaded(_calendarPayloadForDate(
+        date: '2026-04-03',
+        teacherFirstName: 'Christoph',
+        teacherLastName: 'Holzer',
+        hour: 3,
+        toHour: 4,
+      )),
+    );
+    store.actions.calendarActions.loaded(
+      _calendarLoaded(_calendarPayloadForDate(
+        date: '2026-04-10',
+        teacherFirstName: 'Christoph',
+        teacherLastName: 'Holzer',
+        hour: 3,
+        toHour: 4,
+      )),
+    );
+    store.actions.calendarActions.loaded(
+      _calendarLoaded(_calendarPayloadForDate(
+        date: '2026-04-17',
+        teacherFirstName: 'Doris',
+        teacherLastName: 'Hilpold',
+        hour: 3,
+        toHour: 3,
+      )),
+    );
+
+    final regularHour =
+        store.state.calendarState.days[UtcDateTime(2026, 4, 10)]!.hours.single;
+    final substituteHour =
+        store.state.calendarState.days[UtcDateTime(2026, 4, 17)]!.hours.single;
+
+    expect(regularHour.isDetectedSubstitute, isFalse);
+    expect(substituteHour.isDetectedSubstitute, isTrue);
+  });
+
+  test('does not mark lessons without a stable baseline as substitute', () {
+    store.actions.calendarActions.loaded(
+      _calendarLoaded(_calendarPayloadForDate(
+        date: '2026-04-17',
+        teacherFirstName: 'Doris',
+        teacherLastName: 'Hilpold',
+        hour: 3,
+        toHour: 3,
+      )),
+    );
+
+    final hour =
+        store.state.calendarState.days[UtcDateTime(2026, 4, 17)]!.hours.single;
+    expect(hour.isDetectedSubstitute, isFalse);
+  });
+
+  test('never marks lessons with multiple teachers as substitute', () {
+    store.actions.calendarActions.loaded(
+      _calendarLoaded(_calendarPayloadForDate(
+        date: '2026-04-03',
+        teacherFirstName: 'Anna',
+        teacherLastName: 'Auer',
+        additionalTeachers: const [
+          ('Berta', 'Bacher'),
+        ],
+      )),
+    );
+    store.actions.calendarActions.loaded(
+      _calendarLoaded(_calendarPayloadForDate(
+        date: '2026-04-10',
+        teacherFirstName: 'Berta',
+        teacherLastName: 'Bacher',
+        additionalTeachers: const [
+          ('Anna', 'Auer'),
+        ],
+      )),
+    );
+
+    final hour =
+        store.state.calendarState.days[UtcDateTime(2026, 4, 10)]!.hours.single;
+    expect(hour.isDetectedSubstitute, isFalse);
+  });
+
+  test('respects configured primary teachers for a subject', () async {
+    store.actions.calendarActions.loaded(
+      _calendarLoaded(_calendarPayloadForDate(
+        date: '2026-04-03',
+        teacherFirstName: 'Christoph',
+        teacherLastName: 'Holzer',
+      )),
+    );
+    store.actions.calendarActions.loaded(
+      _calendarLoaded(_calendarPayloadForDate(
+        date: '2026-04-10',
+        teacherFirstName: 'Christoph',
+        teacherLastName: 'Holzer',
+      )),
+    );
+    store.actions.calendarActions.loaded(
+      _calendarLoaded(_calendarPayloadForDate(
+        date: '2026-04-17',
+        teacherFirstName: 'Doris',
+        teacherLastName: 'Hilpold',
+      )),
+    );
+
+    expect(
+      store.state.calendarState.days[UtcDateTime(2026, 4, 17)]!
+          .hours
+          .single
+          .isDetectedSubstitute,
+      isTrue,
+    );
+
+    await store.actions.settingsActions.substitutePrimaryTeachers(
+      BuiltMap<String, BuiltList<String>>({
+        'Informatik': BuiltList<String>(const ['Doris Hilpold']),
+      }),
+    );
+    await _recalculateSubstitutesFromState(store);
+
+    expect(
+      store.state.calendarState.days[UtcDateTime(2026, 4, 17)]!
+          .hours
+          .single
+          .isDetectedSubstitute,
+      isFalse,
+    );
+  });
+
+  test('disabling substitute detection clears existing substitute markers',
+      () async {
+    store.actions.calendarActions.loaded(
+      _calendarLoaded(_calendarPayloadForDate(
+        date: '2026-04-03',
+        teacherFirstName: 'Christoph',
+        teacherLastName: 'Holzer',
+      )),
+    );
+    store.actions.calendarActions.loaded(
+      _calendarLoaded(_calendarPayloadForDate(
+        date: '2026-04-10',
+        teacherFirstName: 'Christoph',
+        teacherLastName: 'Holzer',
+      )),
+    );
+    store.actions.calendarActions.loaded(
+      _calendarLoaded(_calendarPayloadForDate(
+        date: '2026-04-17',
+        teacherFirstName: 'Doris',
+        teacherLastName: 'Hilpold',
+      )),
+    );
+
+    expect(
+      store.state.calendarState.days[UtcDateTime(2026, 4, 17)]!
+          .hours
+          .single
+          .isDetectedSubstitute,
+      isTrue,
+    );
+
+    await store.actions.settingsActions.substituteDetectionEnabled(false);
+    await _recalculateSubstitutesFromState(store);
+
+    expect(
+      store.state.calendarState.days[UtcDateTime(2026, 4, 17)]!
+          .hours
+          .single
+          .isDetectedSubstitute,
+      isFalse,
+    );
   });
 
   test('parse grades list, details, and observations', () {
@@ -139,6 +313,159 @@ void main() {
     );
     expect(attachment.file, isNull);
   });
+}
+
+Map<String, dynamic> _calendarPayloadForDate({
+  required String date,
+  required String teacherFirstName,
+  required String teacherLastName,
+  int hour = 3,
+  int toHour = 3,
+  List<(String, String)> additionalTeachers = const [],
+}) {
+  final teachers = <Map<String, dynamic>>[
+    {
+      'id': 67,
+      'firstName': teacherFirstName,
+      'lastName': teacherLastName,
+    },
+    for (final teacher in additionalTeachers)
+      {
+        'id': teacher.$1.hashCode ^ teacher.$2.hashCode,
+        'firstName': teacher.$1,
+        'lastName': teacher.$2,
+      },
+  ];
+
+  final linkedHours = <Map<String, dynamic>>[
+    for (var linkedHour = hour + 1; linkedHour <= toHour; linkedHour++)
+      _lessonPayload(
+        date: date,
+        hour: linkedHour,
+        toHour: linkedHour,
+        timeStart: _timeObjectForHour(linkedHour, start: true),
+        timeEnd: _timeObjectForHour(linkedHour, start: false),
+        timeToEnd: _timeObjectForHour(linkedHour, start: false),
+        teachers: teachers,
+        linkToPreviousHour: 1,
+      ),
+  ];
+
+  return {
+    date: {
+      '0': {
+        '0': {
+          '3': {
+            'isLesson': 1,
+            'lesson': _lessonPayload(
+              date: date,
+              hour: hour,
+              toHour: toHour,
+              timeStart: _timeObjectForHour(hour, start: true),
+              timeEnd: _timeObjectForHour(hour, start: false),
+              timeToEnd: _timeObjectForHour(toHour, start: false),
+              teachers: teachers,
+              linkedHours: linkedHours,
+            ),
+            'hour': hour,
+            'linkedHoursCount': linkedHours.length,
+          },
+        },
+      },
+    },
+  };
+}
+
+CalendarLoadedPayload _calendarLoaded(Map<String, dynamic> data) {
+  return CalendarLoadedPayload(
+    data: data,
+    config: _substituteDetectionConfig(
+      enabled: true,
+      primaryTeachers: const <String, BuiltList<String>>{},
+    ),
+  );
+}
+
+Future<void> _recalculateSubstitutesFromState(
+  Store<AppState, AppStateBuilder, AppActions> store,
+) async {
+  await store.actions.calendarActions.recalculateSubstitutes(
+    _substituteDetectionConfig(
+      enabled: store.state.settingsState.substituteDetectionEnabled,
+      primaryTeachers: store.state.settingsState.substitutePrimaryTeachers.toMap(),
+    ),
+  );
+}
+
+SubstituteDetectionConfig _substituteDetectionConfig({
+  required bool enabled,
+  required Map<String, BuiltList<String>> primaryTeachers,
+}) {
+  return SubstituteDetectionConfig(
+    (b) => b
+      ..enabled = enabled
+      ..primaryTeachers = MapBuilder<String, BuiltList<String>>(primaryTeachers),
+  );
+}
+
+Map<String, dynamic> _lessonPayload({
+  required String date,
+  required int hour,
+  required int toHour,
+  required Map<String, Object> timeStart,
+  required Map<String, Object> timeEnd,
+  required Map<String, Object> timeToEnd,
+  required List<Map<String, dynamic>> teachers,
+  List<Map<String, dynamic>> linkedHours = const [],
+  int linkToPreviousHour = 0,
+}) {
+  return {
+    'id': hour == toHour ? 26294 + hour : null,
+    'ttcid': 1113581 + hour,
+    'date': date,
+    'hour': hour,
+    'toHour': toHour,
+    'timeStartObject': timeStart,
+    'timeEndObject': timeEnd,
+    'timeToEndObject': timeToEnd,
+    'classId': 120,
+    'className': '5AT',
+    'teachers': teachers,
+    'teachersToNotify': [],
+    'teacherMyself': null,
+    'subject': {
+      'id': 16,
+      'name': 'Informatik',
+    },
+    'homeworkExams': [],
+    'lessonContents': [],
+    'rooms': [
+      {
+        'id': 5,
+        'name': 'PC 1',
+      }
+    ],
+    'readOnly': true,
+    'isSubstitute': 0,
+    'linkToPreviousHour': linkToPreviousHour,
+    'linkedHours': linkedHours,
+  };
+}
+
+Map<String, Object> _timeObjectForHour(int hour, {required bool start}) {
+  const baseStartMinutes = 9 * 60 + 35;
+  const lessonLengthMinutes = 50;
+  final totalMinutes =
+      baseStartMinutes + ((hour - 3) * lessonLengthMinutes) + (start ? 0 : 50);
+  final hours = (totalMinutes ~/ 60).toString().padLeft(2, '0');
+  final minutes = (totalMinutes % 60).toString().padLeft(2, '0');
+  return {
+    'h': hours,
+    'm': minutes,
+    'ts': totalMinutes * 60,
+    'text': '$hours:$minutes',
+    'html': '$hours<sup>$minutes</sup>',
+  };
 }
 
 final Map<String, Object?> absencesJson = <String, Object?>{

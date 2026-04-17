@@ -41,6 +41,8 @@ final routingMiddleware =
       ..add(RoutingActionsNames.showSettings, _showSettings)
       ..add(RoutingActionsNames.showEditCalendarSubjectNicks,
           _showEditCalendarSubjectNicks)
+      ..add(RoutingActionsNames.showEditCalendarSubstituteSettings,
+          _showEditCalendarSubstituteSettings)
       ..add(RoutingActionsNames.showEditGradesAverageSettings,
           _showEditGradesAverageSettings)
       ..add(RoutingActionsNames.showCalendar, _showCalendar)
@@ -135,6 +137,14 @@ Future<void> _showEditGradesAverageSettings(
     Action<void> action) async {
   unawaited(navigatorKey!.currentState!.pushNamed("/settings"));
   await next(action);
+}
+
+Future<void> _showEditCalendarSubstituteSettings(
+    MiddlewareApi<AppState, AppStateBuilder, AppActions> api,
+    ActionHandler next,
+    Action<void> action) async {
+  await next(action);
+  unawaited(navigatorKey!.currentState!.pushNamed("/settings"));
 }
 
 Future<void> _showCalendar(

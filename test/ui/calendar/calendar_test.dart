@@ -220,6 +220,7 @@ void main() {
     expect(find.text('Kein Fokusfach'), findsOneWidget);
     expect(store.state.calendarState.selection, isNull);
   });
+
 }
 
 AppState _calendarState({

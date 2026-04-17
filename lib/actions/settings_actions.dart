@@ -50,6 +50,10 @@ abstract class SettingsActions extends ReduxActions {
   abstract final ActionDispatcher<bool> dashboardColorBorders;
   abstract final ActionDispatcher<bool> calendarColorBackground;
   abstract final ActionDispatcher<bool> pushNotificationsEnabled;
+  abstract final ActionDispatcher<bool> substituteDetectionEnabled;
+  abstract final ActionDispatcher<BuiltMap<String, BuiltList<String>>>
+      substitutePrimaryTeachers;
+  abstract final ActionDispatcher<BuiltList<String>> substituteKnownTeachers;
   abstract final ActionDispatcher<bool> calendarSyncEnabled;
   abstract final ActionDispatcher<int?> calendarSyncCalendarId;
   abstract final VoidActionDispatcher removeCalendarSyncEvents;

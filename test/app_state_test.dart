@@ -1,6 +1,8 @@
 ﻿import 'package:built_collection/built_collection.dart';
+import 'package:built_value/serializer.dart';
 import 'package:dr/app_state.dart';
 import 'package:dr/data.dart';
+import 'package:dr/serializers.dart';
 import 'package:dr/utc_date_time.dart';
 import 'package:flutter_test/flutter_test.dart';
 
@@ -87,5 +89,34 @@ void main() {
     final second = state.extractAllSubjects();
 
     expect(identical(first, second), isTrue);
+  });
+
+  test('settings persist substitute detection configuration', () {
+    final state = AppState(
+      (b) => b.settingsState
+        ..substituteDetectionEnabled = false
+        ..substituteKnownTeachers =
+            ListBuilder<String>(const <String>['Doris Hilpold'])
+        ..substitutePrimaryTeachers = MapBuilder<String, BuiltList<String>>({
+          'Informatik': BuiltList<String>(const <String>['Doris Hilpold']),
+        }),
+    );
+
+    final serialized =
+        serializers.serialize(state, specifiedType: const FullType(AppState));
+    final deserialized = serializers.deserialize(
+      serialized,
+      specifiedType: const FullType(AppState),
+    )! as AppState;
+
+    expect(deserialized.settingsState.substituteDetectionEnabled, isFalse);
+    expect(
+      deserialized.settingsState.substituteKnownTeachers,
+      BuiltList<String>(const <String>['Doris Hilpold']),
+    );
+    expect(
+      deserialized.settingsState.substitutePrimaryTeachers['Informatik'],
+      BuiltList<String>(const <String>['Doris Hilpold']),
+    );
   });
 }

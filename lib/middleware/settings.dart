@@ -23,6 +23,7 @@ final _settingsMiddleware = MiddlewareBuilder<AppState, AppStateBuilder,
   ..add(GradesActionsNames.loaded, _updateSubjectThemes)
   ..add(DashboardActionsNames.loaded, _updateSubjectThemes)
   ..add(CalendarActionsNames.loaded, _updateSubjectThemes)
+  ..add(CalendarActionsNames.loaded, _recalculateSubstitutes)
   ..add(DashboardActionsNames.loaded, _reconcileCalendarSync)
   ..add(CalendarActionsNames.loaded, _reconcileCalendarSync)
   ..add(DashboardActionsNames.homeworkAdded, _reconcileCalendarSync)
@@ -32,6 +33,10 @@ final _settingsMiddleware = MiddlewareBuilder<AppState, AppStateBuilder,
   ..add(SettingsActionsNames.setLanguage, _setLanguage)
   ..add(SettingsActionsNames.pushNotificationsEnabled,
       _setPushNotificationsEnabled)
+  ..add(
+      SettingsActionsNames.substituteDetectionEnabled, _recalculateSubstitutes)
+  ..add(
+      SettingsActionsNames.substitutePrimaryTeachers, _recalculateSubstitutes)
   ..add(SettingsActionsNames.calendarSyncEnabled, _setCalendarSyncEnabled)
   ..add(SettingsActionsNames.calendarSyncCalendarId, _setCalendarSyncCalendarId)
   ..add(
@@ -62,6 +67,21 @@ Future<void> _setPushNotificationsEnabled(
       await api.actions.settingsActions.pushNotificationsEnabled(false);
     }
   }
+}
+
+Future<void> _recalculateSubstitutes(
+    MiddlewareApi<AppState, AppStateBuilder, AppActions> api,
+    ActionHandler next,
+    Action action) async {
+  await next(action);
+  await api.actions.calendarActions.recalculateSubstitutes(
+    SubstituteDetectionConfig(
+      (b) => b
+        ..enabled = api.state.settingsState.substituteDetectionEnabled
+        ..primaryTeachers =
+            api.state.settingsState.substitutePrimaryTeachers.toBuilder(),
+    ),
+  );
 }
 
 Future<void> _setCalendarSyncEnabled(

@@ -1,4 +1,5 @@
 // Copyright (C) 2021 Michael Debertol
+// Copyright (C) 2026 Tobias Bucci
 //
 // This file is part of digitales_register.
 //
@@ -40,6 +41,7 @@ abstract class RoutingActions extends ReduxActions {
   abstract final VoidActionDispatcher showMessages;
   abstract final ActionDispatcher<int> showMessage;
   abstract final VoidActionDispatcher showEditCalendarSubjectNicks;
+  abstract final VoidActionDispatcher showEditCalendarSubstituteSettings;
   abstract final VoidActionDispatcher showEditGradesAverageSettings;
 }
 

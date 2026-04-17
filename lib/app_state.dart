@@ -42,6 +42,8 @@ const Map<String, String> defaultSubjectNicks = {
 
 final Expando<List<String>> _allSubjectsCache =
     Expando<List<String>>('appStateAllSubjects');
+final Expando<List<String>> _allTeachersCache =
+    Expando<List<String>>('appStateAllTeachers');
 
 bool isDemoUser({required String? url, required String? username}) {
   return username == "demo-user-6540" &&
@@ -102,6 +104,24 @@ abstract class AppState implements Built<AppState, AppStateBuilder> {
     }
     final result = List<String>.unmodifiable(subjects);
     _allSubjectsCache[this] = result;
+    return result;
+  }
+
+  List<String> extractAllTeachers() {
+    final cached = _allTeachersCache[this];
+    if (cached != null) {
+      return cached;
+    }
+    final teachers = <String>{};
+    for (final day in calendarState.days.values) {
+      for (final hour in day.hours) {
+        for (final teacher in hour.teachers) {
+          teachers.add(teacher.fullName);
+        }
+      }
+    }
+    final result = List<String>.unmodifiable(teachers);
+    _allTeachersCache[this] = result;
     return result;
   }
 
@@ -317,6 +337,8 @@ abstract class SettingsState
   bool get scrollToSubjectNicks;
   @BuiltValueField(serialize: false)
   bool get scrollToGrades;
+  @BuiltValueField(serialize: false)
+  bool get scrollToCalendarSubstituteSettings;
   bool get showCalendarNicksBar;
   bool get showGradesDiagram;
   bool get showAllSubjectsAverage;
@@ -328,6 +350,7 @@ abstract class SettingsState
   // whether to color the background of widgets in the calendar in the color specified by subjectThemes
   bool get calendarColorBackground;
   bool get pushNotificationsEnabled;
+  bool get substituteDetectionEnabled;
   bool get calendarSyncEnabled;
   int? get calendarSyncCalendarId;
   bool get dashboardColorTestsInRed;
@@ -336,6 +359,8 @@ abstract class SettingsState
   BuiltMap<String, SubjectTheme> get subjectThemes;
   BuiltList<String> get ignoreForGradesAverage;
   BuiltList<String> get favoriteSubjects;
+  BuiltMap<String, BuiltList<String>> get substitutePrimaryTeachers;
+  BuiltList<String> get substituteKnownTeachers;
 
   // Whether to fully expand the drawer if in tablet mode
   // if not, only the icons are shown
@@ -368,13 +393,18 @@ abstract class SettingsState
       ..dashboardColorBorders = false
       ..calendarColorBackground = false
       ..pushNotificationsEnabled = false
+      ..substituteDetectionEnabled = true
       ..calendarSyncEnabled = false
       ..calendarSyncCalendarId = null
       ..dashboardColorTestsInRed = true
       ..amoledMode = false
       ..biometricAppLockEnabled = false
+      ..substitutePrimaryTeachers =
+          MapBuilder<String, BuiltList<String>>(<String, BuiltList<String>>{})
+      ..substituteKnownTeachers = ListBuilder<String>()
       ..scrollToGrades = false
-      ..scrollToSubjectNicks = false;
+      ..scrollToSubjectNicks = false
+      ..scrollToCalendarSubstituteSettings = false;
   }
 }
 

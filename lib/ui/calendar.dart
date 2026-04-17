@@ -39,6 +39,7 @@ class Calendar extends StatefulWidget {
   final DayCallback dayCallback;
   final DayCallback currentMondayCallback;
   final VoidCallback showEditSubjectNicks;
+  final VoidCallback showEditSubstituteSettings;
   final VoidCallback closeEditNicksBar;
 
   const Calendar({
@@ -47,6 +48,7 @@ class Calendar extends StatefulWidget {
     required this.dayCallback,
     required this.currentMondayCallback,
     required this.showEditSubjectNicks,
+    required this.showEditSubstituteSettings,
     required this.closeEditNicksBar,
   });
 
@@ -369,6 +371,11 @@ class _CalendarState extends State<Calendar> with TickerProviderStateMixin {
                         onShowEditNicks: widget.showEditSubjectNicks,
                         onClose: widget.closeEditNicksBar,
                       ),
+                      CalendarSubstituteBar(
+                        show: true,
+                        onOpenSettings: widget.showEditSubstituteSettings,
+                        enabled: widget.vm.substituteDetectionEnabled,
+                      ),
                     ],
                   ),
                 ),
@@ -475,6 +482,71 @@ class EditNickBar extends StatelessWidget {
       secondChild: Container(
         height: 8,
       ),
+      crossFadeState:
+          show ? CrossFadeState.showFirst : CrossFadeState.showSecond,
+    );
+  }
+}
+
+class CalendarSubstituteBar extends StatelessWidget {
+  final bool show;
+  final bool enabled;
+  final VoidCallback onOpenSettings;
+
+  const CalendarSubstituteBar({
+    super.key,
+    required this.show,
+    required this.onOpenSettings,
+    required this.enabled,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return AnimatedCrossFade(
+      duration: const Duration(milliseconds: 250),
+      firstChild: Column(
+        children: <Widget>[
+          const SizedBox(height: 8),
+          DecoratedBox(
+            decoration: BoxDecoration(
+              boxShadow: const [
+                BoxShadow(
+                  color: Colors.black12,
+                  offset: Offset(0, -1.5),
+                  spreadRadius: 1.5,
+                  blurRadius: 2,
+                ),
+              ],
+              color: Theme.of(context).scaffoldBackgroundColor,
+            ),
+            child: Material(
+              child: Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 8),
+                child: TextButton(
+                  onPressed: onOpenSettings,
+                  child: Row(
+                    children: [
+                      Padding(
+                        padding: const EdgeInsets.symmetric(horizontal: 8),
+                        child: Text(
+                          context.t(
+                            enabled
+                                ? 'calendar.reportSubstituteError'
+                                : 'calendar.configureSubstitute',
+                          ),
+                        ),
+                      ),
+                      const Spacer(),
+                      const Icon(Icons.chevron_right),
+                    ],
+                  ),
+                ),
+              ),
+            ),
+          ),
+        ],
+      ),
+      secondChild: Container(height: 8),
       crossFadeState:
           show ? CrossFadeState.showFirst : CrossFadeState.showSecond,
     );
