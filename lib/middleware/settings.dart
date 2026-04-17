@@ -145,7 +145,7 @@ String? generateAutomaticSubjectNick(String subject) {
       .split(RegExp(r'\s+'))
       .where((word) => word.isNotEmpty)
       .toList();
-  if (words.length != 3) {
+  if (words.length != 2 && words.length != 3) {
     return null;
   }
 

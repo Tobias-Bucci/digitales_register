@@ -54,12 +54,16 @@ void main() {
 
   test('generates automatic subject nick from first and last word', () {
     expect(
+      generateAutomaticSubjectNick('Soziale Bildung'),
+      'SB',
+    );
+    expect(
       generateAutomaticSubjectNick('Deutsch als Zweitsprache'),
       'DZ',
     );
   });
 
-  test('does not generate automatic subject nick for non-three-word subjects',
+  test('does not generate automatic subject nick outside two or three words',
       () {
     expect(generateAutomaticSubjectNick('Informatik'), isNull);
     expect(generateAutomaticSubjectNick('Ein Fach Name Test'), isNull);
