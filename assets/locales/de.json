@@ -55,7 +55,7 @@
   "settings.calendar.substituteTeachers.addSubject": "Fach für Hauptlehrer auswählen",
   "settings.calendar.substituteTeachers.addTeacher": "Hauptlehrer hinzufügen",
   "settings.calendar.substituteTeachers.none": "Keine Hauptlehrer für Supplenz hinterlegt",
-  "settings.calendar.substituteTeachers.noTeachers": "Keine Hauptlehrer eingetragen",
+  "settings.calendar.substituteTeachers.noTeachers": "Keine Lehrer ausgewählt",
   "settings.calendar.favoriteSubjects": "Fokusfächer verwalten",
   "settings.calendar.noFavoriteSubject": "Kein Fokusfach ausgewählt",
   "settings.calendarSync.title": "Schuleinträge mit Kalender synchronisieren",

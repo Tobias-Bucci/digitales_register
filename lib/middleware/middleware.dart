@@ -461,6 +461,7 @@ Future<void> _loggedIn(MiddlewareApi<AppState, AppStateBuilder, AppActions> api,
       api.actions.notificationsActions.load(),
       api.actions.profileActions.load(),
     ]);
+    unawaited(_ensureSubstituteTeacherHistoryLoaded(api));
   }
 }
 

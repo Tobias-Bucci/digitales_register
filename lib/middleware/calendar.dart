@@ -44,7 +44,10 @@ Future<void> _loadCalendar(
           (b) => b
             ..enabled = api.state.settingsState.substituteDetectionEnabled
             ..primaryTeachers =
-                api.state.settingsState.substitutePrimaryTeachers.toBuilder(),
+                api.state.settingsState.substitutePrimaryTeachers.toBuilder()
+            ..lockedSubjects = api
+                .state.settingsState.substitutePrimaryTeachersLockedSubjects
+                .toBuilder(),
         ),
       ),
     );

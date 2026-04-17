@@ -128,6 +128,8 @@ class _SettingsPageWidgetState extends State<SettingsPageWidget> {
   final GlobalKey _substituteSettingsKey = GlobalKey();
   late bool _translateSubjectsEnabled;
   late Future<List<CalendarSyncCalendar>> _calendarSyncCalendarsFuture;
+  bool _showSubstituteSubjects = false;
+  final Set<String> _expandedSubstituteSubjects = <String>{};
 
   List<String> get subjectsWithoutNick => widget.vm.allSubjects
       .where((element) => !widget.vm.subjectNicks.keys.contains(element))
@@ -227,40 +229,8 @@ class _SettingsPageWidgetState extends State<SettingsPageWidget> {
       ..showSnackBar(SnackBar(content: Text(message)));
   }
 
-  Future<void> _showAddSubstituteSubjectDialog() async {
-    final availableSubjects = widget.vm.allSubjects
-        .where(
-          (subject) => !widget.vm.substitutePrimaryTeachers.keys.any(
-            (existing) => equalsIgnoreCase(existing, subject),
-          ),
-        )
-        .toList();
-    final l10n = context.l10n;
-    final subject = await showDialog<String>(
-      context: context,
-      builder: (context) => AddSubject(
-        availableSubjects: availableSubjects,
-        title: l10n.text('settings.calendar.substituteTeachers.addSubject'),
-        requireSuggestionMatch: true,
-      ),
-    );
-    if (subject == null) {
-      return;
-    }
-    final updated =
-        Map<String, List<String>>.from(widget.vm.substitutePrimaryTeachers)
-          ..putIfAbsent(subject, () => <String>[]);
-    _applySubstituteTeachersUpdate(
-      updated,
-      manuallyLockedSubjects: [subject],
-    );
-  }
-
   Future<void> _showAddTeacherDialog(String subject) async {
     final l10n = context.l10n;
-    final currentTeachers = widget.vm.substitutePrimaryTeachers.entries
-        .firstWhere((entry) => equalsIgnoreCase(entry.key, subject))
-        .value;
     final teacher = await showDialog<String>(
       context: context,
       builder: (context) => AddSubject(
@@ -272,15 +242,16 @@ class _SettingsPageWidgetState extends State<SettingsPageWidget> {
       return;
     }
 
-    final updatedTeachers = <String>[...currentTeachers];
-    if (!containsStringIgnoreCase(updatedTeachers, teacher)) {
-      updatedTeachers.add(teacher);
-    }
-
     final updatedSubjects =
         Map<String, List<String>>.from(widget.vm.substitutePrimaryTeachers);
     final resolvedSubject =
         findStringIgnoreCase(updatedSubjects.keys, subject) ?? subject;
+    final updatedTeachers = <String>[
+      ...updatedSubjects[resolvedSubject] ?? const <String>[],
+    ];
+    if (!containsStringIgnoreCase(updatedTeachers, teacher)) {
+      updatedTeachers.add(teacher);
+    }
     updatedSubjects[resolvedSubject] = updatedTeachers;
     _applySubstituteTeachersUpdate(
       updatedSubjects,
@@ -1004,25 +975,6 @@ class _SettingsPageWidgetState extends State<SettingsPageWidget> {
             onChanged: widget.onSetSubstituteDetectionEnabled,
             value: widget.vm.substituteDetectionEnabled,
           ),
-          ListTile(
-            title:
-                Text(l10n.text('settings.calendar.substituteTeachers.title')),
-            subtitle: Text(
-                l10n.text('settings.calendar.substituteTeachers.subtitle')),
-            trailing: IconButton(
-              icon: const Icon(Icons.add),
-              onPressed: widget.vm.allSubjects
-                      .where(
-                        (subject) =>
-                            !widget.vm.substitutePrimaryTeachers.keys.any(
-                          (existing) => equalsIgnoreCase(existing, subject),
-                        ),
-                      )
-                      .isEmpty
-                  ? null
-                  : _showAddSubstituteSubjectDialog,
-            ),
-          ),
           AnimatedCrossFade(
             duration: const Duration(milliseconds: 250),
             crossFadeState: widget.vm.substitutePrimaryTeachers.isEmpty
@@ -1039,84 +991,97 @@ class _SettingsPageWidgetState extends State<SettingsPageWidget> {
             ),
             secondChild: Column(
               children: [
-                for (final entry in widget.vm.substitutePrimaryTeachers.entries)
-                  ExpansionTile(
-                    key: ValueKey('substitute-subject-${entry.key}'),
-                    title: Text(entry.key),
-                    subtitle: Text(
-                      entry.value.isEmpty
-                          ? l10n.text(
-                              'settings.calendar.substituteTeachers.noTeachers',
-                            )
-                          : entry.value.join(', '),
-                    ),
-                    trailing: IconButton(
-                      icon: const Icon(Icons.delete),
-                      onPressed: () {
-                        final updated = Map<String, List<String>>.from(
-                          widget.vm.substitutePrimaryTeachers,
-                        )..remove(entry.key);
-                        _applySubstituteTeachersUpdate(
-                          updated,
-                          manuallyLockedSubjects: [entry.key],
-                        );
-                      },
-                    ),
-                    children: [
-                      ListTile(
-                        title: Text(
-                          l10n.text(
-                            'settings.calendar.substituteTeachers.addTeacher',
-                          ),
+                ExpansionTile(
+                  key: const ValueKey('substitute-subjects-visibility'),
+                  initiallyExpanded: _showSubstituteSubjects,
+                  onExpansionChanged: (expanded) {
+                    setState(() {
+                      _showSubstituteSubjects = expanded;
+                    });
+                  },
+                  title: Text(l10n.text('settings.calendar.substituteTeachers.title')),
+                  subtitle:
+                      Text(l10n.text('settings.calendar.substituteTeachers.subtitle')),
+                  children: [
+                    for (final entry in widget.vm.substitutePrimaryTeachers.entries)
+                      ExpansionTile(
+                        key: PageStorageKey<String>(
+                          'substitute-subject-${entry.key}',
                         ),
-                        trailing: IconButton(
-                          icon: const Icon(Icons.add),
-                          onPressed: () => _showAddTeacherDialog(entry.key),
+                        initiallyExpanded: _expandedSubstituteSubjects.any(
+                          (subject) => equalsIgnoreCase(subject, entry.key),
                         ),
-                      ),
-                      if (entry.value.isEmpty)
-                        Padding(
-                          padding: const EdgeInsets.only(left: 16),
-                          child: ListTile(
+                        onExpansionChanged: (expanded) {
+                          setState(() {
+                            _expandedSubstituteSubjects.removeWhere(
+                              (subject) => equalsIgnoreCase(subject, entry.key),
+                            );
+                            if (expanded) {
+                              _expandedSubstituteSubjects.add(entry.key);
+                            }
+                          });
+                        },
+                        title: Text(entry.key),
+                        subtitle: Text(
+                          entry.value.isEmpty
+                              ? l10n.text(
+                                  'settings.calendar.substituteTeachers.noTeachers',
+                                )
+                              : entry.value.join(', '),
+                        ),
+                        children: [
+                          ListTile(
                             title: Text(
                               l10n.text(
-                                'settings.calendar.substituteTeachers.noTeachers',
+                                'settings.calendar.substituteTeachers.addTeacher',
                               ),
-                              style: const TextStyle(color: Colors.grey),
                             ),
-                          ),
-                        ),
-                      for (final teacher in entry.value)
-                        Padding(
-                          padding: const EdgeInsets.only(left: 16),
-                          child: ListTile(
-                            title: Text(teacher),
                             trailing: IconButton(
-                              icon: const Icon(Icons.close),
-                              onPressed: () {
-                                final updated = Map<String, List<String>>.from(
-                                  widget.vm.substitutePrimaryTeachers,
-                                );
-                                final teachers =
-                                    List<String>.from(updated[entry.key] ?? []);
-                                teachers.removeWhere(
-                                  (item) => equalsIgnoreCase(item, teacher),
-                                );
-                                if (teachers.isEmpty) {
-                                  updated.remove(entry.key);
-                                } else {
-                                  updated[entry.key] = teachers;
-                                }
-                                _applySubstituteTeachersUpdate(
-                                  updated,
-                                  manuallyLockedSubjects: [entry.key],
-                                );
-                              },
+                              icon: const Icon(Icons.add),
+                              onPressed: () => _showAddTeacherDialog(entry.key),
                             ),
                           ),
-                        ),
-                    ],
-                  ),
+                          if (entry.value.isEmpty)
+                            Padding(
+                              padding: const EdgeInsets.only(left: 16),
+                              child: ListTile(
+                                title: Text(
+                                  l10n.text(
+                                    'settings.calendar.substituteTeachers.noTeachers',
+                                  ),
+                                  style: const TextStyle(color: Colors.grey),
+                                ),
+                              ),
+                            ),
+                          for (final teacher in entry.value)
+                            Padding(
+                              padding: const EdgeInsets.only(left: 16),
+                              child: ListTile(
+                                title: Text(teacher),
+                                trailing: IconButton(
+                                  icon: const Icon(Icons.close),
+                                  onPressed: () {
+                                    final updated = Map<String, List<String>>.from(
+                                      widget.vm.substitutePrimaryTeachers,
+                                    );
+                                    final teachers =
+                                        List<String>.from(updated[entry.key] ?? []);
+                                    teachers.removeWhere(
+                                      (item) => equalsIgnoreCase(item, teacher),
+                                    );
+                                    updated[entry.key] = teachers;
+                                    _applySubstituteTeachersUpdate(
+                                      updated,
+                                      manuallyLockedSubjects: [entry.key],
+                                    );
+                                  },
+                                ),
+                              ),
+                            ),
+                        ],
+                      ),
+                  ],
+                ),
               ],
             ),
           ),

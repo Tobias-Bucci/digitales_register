@@ -56,6 +56,7 @@ abstract class SubstituteDetectionConfig
         Built<SubstituteDetectionConfig, SubstituteDetectionConfigBuilder> {
   bool get enabled;
   BuiltMap<String, BuiltList<String>> get primaryTeachers;
+  BuiltList<String> get lockedSubjects;
 
   factory SubstituteDetectionConfig(
           [void Function(SubstituteDetectionConfigBuilder)? updates]) =

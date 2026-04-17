@@ -144,6 +144,17 @@ void main() {
   });
 
   group('substitute settings', () {
+    Future<void> scrollSettingsToText(
+      WidgetTester tester,
+      String text,
+    ) async {
+      final listView = find.byType(ListView);
+      for (var i = 0; i < 8 && find.text(text).evaluate().isEmpty; i++) {
+        await tester.drag(listView, const Offset(0, -350));
+        await tester.pumpAndSettle();
+      }
+    }
+
     testWidgets(
         'scrollToCalendarSubstituteSettings brings the section into view',
         (tester) async {
@@ -161,6 +172,87 @@ void main() {
       await settleFor(tester, duration: const Duration(milliseconds: 400));
 
       expect(find.byKey(const ObjectKey(5)), findsOneWidget);
+    });
+
+    testWidgets('removing the last primary teacher keeps the subject entry',
+        (tester) async {
+      final store = createStore(
+        initialState: AppState(
+          (b) => b.settingsState.substitutePrimaryTeachers =
+              MapBuilder<String, BuiltList<String>>({
+            'Informatik': BuiltList<String>(const ['Doris Hilpold']),
+          }),
+        ),
+      );
+
+      await pumpApp(
+        tester,
+        store: store,
+        home: SettingsPageContainer(),
+      );
+      await settleFor(tester, duration: const Duration(milliseconds: 400));
+
+      await scrollSettingsToText(tester, 'Hauptlehrer für Supplenz');
+      expect(find.text('Hauptlehrer für Supplenz'), findsWidgets);
+      await tester.tap(find.byKey(const ValueKey('substitute-subjects-visibility')));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('Informatik'));
+      await tester.pumpAndSettle();
+
+      await tester.ensureVisible(find.byIcon(Icons.close).first);
+      await tester.pumpAndSettle();
+      await tester.tap(find.byIcon(Icons.close).first);
+      await tester.pump();
+      await settleFor(tester);
+
+      expect(
+        store.state.settingsState.substitutePrimaryTeachers['Informatik'],
+        BuiltList<String>(),
+      );
+      expect(find.text('Informatik'), findsOneWidget);
+      expect(find.text('Keine Lehrer ausgewählt'), findsWidgets);
+    });
+
+    testWidgets('shows a single collapsible area for all substitute subjects',
+        (tester) async {
+      final store = createStore(
+        initialState: buildStateWithSubjects(subjects: const ['Informatik']),
+      );
+
+      await pumpApp(
+        tester,
+        store: store,
+        home: SettingsPageContainer(),
+      );
+      await settleFor(tester, duration: const Duration(milliseconds: 400));
+
+      await scrollSettingsToText(tester, 'Hauptlehrer für Supplenz');
+
+      expect(find.text('Hauptlehrer für Supplenz'), findsWidgets);
+      expect(find.text('Informatik'), findsNothing);
+
+      await tester.tap(find.byKey(const ValueKey('substitute-subjects-visibility')));
+      await tester.pumpAndSettle();
+
+      expect(find.text('Informatik'), findsOneWidget);
+      expect(
+        find.descendant(
+          of: find.byKey(const ValueKey('substitute-subjects-visibility')),
+          matching: find.byIcon(Icons.add),
+        ),
+        findsNothing,
+      );
+
+      await tester.tap(find.text('Informatik'));
+      await tester.pumpAndSettle();
+
+      expect(
+        find.descendant(
+          of: find.byKey(const ValueKey('substitute-subjects-visibility')),
+          matching: find.byIcon(Icons.add),
+        ),
+        findsOneWidget,
+      );
     });
   });
 

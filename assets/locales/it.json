@@ -55,7 +55,7 @@
   "settings.calendar.substituteTeachers.addSubject": "Seleziona materia per docenti principali",
   "settings.calendar.substituteTeachers.addTeacher": "Aggiungi docente principale",
   "settings.calendar.substituteTeachers.none": "Nessun docente principale per supplenze configurato",
-  "settings.calendar.substituteTeachers.noTeachers": "Nessun docente principale inserito",
+  "settings.calendar.substituteTeachers.noTeachers": "Nessun docente selezionato",
   "settings.calendar.favoriteSubjects": "Gestisci materie preferite",
   "settings.calendar.noFavoriteSubject": "Nessuna materia preferita selezionata",
   "settings.calendarSync.title": "Sincronizza voci scolastiche con il calendario",

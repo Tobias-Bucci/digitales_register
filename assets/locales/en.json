@@ -55,7 +55,7 @@
   "settings.calendar.substituteTeachers.addSubject": "Choose subject for primary teachers",
   "settings.calendar.substituteTeachers.addTeacher": "Add primary teacher",
   "settings.calendar.substituteTeachers.none": "No primary teachers configured for substitutes",
-  "settings.calendar.substituteTeachers.noTeachers": "No primary teachers added",
+  "settings.calendar.substituteTeachers.noTeachers": "No teachers selected",
   "settings.calendar.favoriteSubjects": "Manage focus subjects",
   "settings.calendar.noFavoriteSubject": "No focus subject selected",
   "settings.calendarSync.title": "Sync school items to calendar",

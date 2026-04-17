@@ -181,8 +181,143 @@ void main() {
     );
   });
 
+  test('accepts multiple configured primary teachers for a subject', () async {
+    store.actions.calendarActions.loaded(
+      _calendarLoaded(_calendarPayloadForDate(
+        date: '2026-04-03',
+        teacherFirstName: 'Christoph',
+        teacherLastName: 'Holzer',
+      )),
+    );
+    store.actions.calendarActions.loaded(
+      _calendarLoaded(_calendarPayloadForDate(
+        date: '2026-04-10',
+        teacherFirstName: 'Christoph',
+        teacherLastName: 'Holzer',
+      )),
+    );
+    await _flushAsyncActions();
+
+    await store.actions.settingsActions.substitutePrimaryTeachers(
+      BuiltMap<String, BuiltList<String>>({
+        'Informatik': BuiltList<String>(
+          const ['Doris Hilpold', 'Christoph Holzer'],
+        ),
+      }),
+    );
+    await _recalculateSubstitutesFromState(store);
+    await _flushAsyncActions();
+
+    store.actions.calendarActions.loaded(
+      _calendarLoaded(_calendarPayloadForDate(
+        date: '2026-04-17',
+        teacherFirstName: 'Doris',
+        teacherLastName: 'Hilpold',
+      )),
+    );
+    await _flushAsyncActions();
+    await _recalculateSubstitutesFromState(store);
+    await _flushAsyncActions();
+
+    expect(
+      store.state.calendarState.days[UtcDateTime(2026, 4, 17)]!.hours.single
+          .isDetectedSubstitute,
+      isFalse,
+    );
+  });
+
+  test('ignores substitute detection for locked subjects without teachers',
+      () async {
+    store.actions.calendarActions.loaded(
+      _calendarLoaded(_calendarPayloadForDate(
+        date: '2026-04-03',
+        teacherFirstName: 'Christoph',
+        teacherLastName: 'Holzer',
+      )),
+    );
+    store.actions.calendarActions.loaded(
+      _calendarLoaded(_calendarPayloadForDate(
+        date: '2026-04-10',
+        teacherFirstName: 'Christoph',
+        teacherLastName: 'Holzer',
+      )),
+    );
+    await _flushAsyncActions();
+
+    await store.actions.settingsActions.substitutePrimaryTeachers(
+      BuiltMap<String, BuiltList<String>>({
+        'Informatik': BuiltList<String>(),
+      }),
+    );
+    await store.actions.settingsActions.substitutePrimaryTeachersLockedSubjects(
+      BuiltList<String>(const ['Informatik']),
+    );
+    await _recalculateSubstitutesFromState(store);
+    await _flushAsyncActions();
+
+    store.actions.calendarActions.loaded(
+      _calendarLoaded(_calendarPayloadForDate(
+        date: '2026-04-17',
+        teacherFirstName: 'Doris',
+        teacherLastName: 'Hilpold',
+      )),
+    );
+    await _flushAsyncActions();
+    await _recalculateSubstitutesFromState(store);
+    await _flushAsyncActions();
+
+    expect(
+      store.state.settingsState.substitutePrimaryTeachers['Informatik'],
+      BuiltList<String>(),
+    );
+    expect(
+      store.state.calendarState.days[UtcDateTime(2026, 4, 17)]!.hours.single
+          .isDetectedSubstitute,
+      isFalse,
+    );
+  });
+
   test('auto-populates stable primary teachers per subject', () {
     return _runAutoPopulatePrimaryTeachersTest(store);
+  });
+
+  test('auto-populate keeps only the most frequent single teacher per subject',
+      () async {
+    store.actions.calendarActions.loaded(
+      _calendarLoaded(_calendarPayloadForDate(
+        date: '2026-04-03',
+        teacherFirstName: 'Anna',
+        teacherLastName: 'Auer',
+      )),
+    );
+    store.actions.calendarActions.loaded(
+      _calendarLoaded(_calendarPayloadForDate(
+        date: '2026-04-10',
+        teacherFirstName: 'Anna',
+        teacherLastName: 'Auer',
+        additionalTeachers: const [('Berta', 'Bacher')],
+      )),
+    );
+    store.actions.calendarActions.loaded(
+      _calendarLoaded(_calendarPayloadForDate(
+        date: '2026-04-17',
+        teacherFirstName: 'Clara',
+        teacherLastName: 'Costa',
+      )),
+    );
+    store.actions.calendarActions.loaded(
+      _calendarLoaded(_calendarPayloadForDate(
+        date: '2026-04-24',
+        teacherFirstName: 'Clara',
+        teacherLastName: 'Costa',
+      )),
+    );
+    await _flushAsyncActions();
+
+    expect(
+      store.state.settingsState.substitutePrimaryTeachers['Informatik'],
+      BuiltList<String>(const <String>['Clara Costa']),
+    );
   });
 
   test('manual substitute teacher changes stay locked against auto updates',
@@ -225,6 +360,98 @@ void main() {
     expect(
       store.state.settingsState.substitutePrimaryTeachers['Informatik'],
       BuiltList<String>(const <String>['Doris Hilpold']),
+    );
+  });
+
+  test('auto-detected primary teacher is not replaced automatically later',
+      () async {
+    store.actions.calendarActions.loaded(
+      _calendarLoaded(_calendarPayloadForDate(
+        date: '2026-04-03',
+        teacherFirstName: 'Christoph',
+        teacherLastName: 'Holzer',
+      )),
+    );
+    store.actions.calendarActions.loaded(
+      _calendarLoaded(_calendarPayloadForDate(
+        date: '2026-04-10',
+        teacherFirstName: 'Christoph',
+        teacherLastName: 'Holzer',
+      )),
+    );
+    await _flushAsyncActions();
+
+    expect(
+      store.state.settingsState.substitutePrimaryTeachers['Informatik'],
+      BuiltList<String>(const <String>['Christoph Holzer']),
+    );
+
+    store.actions.calendarActions.loaded(
+      _calendarLoaded(_calendarPayloadForDate(
+        date: '2026-04-17',
+        teacherFirstName: 'Doris',
+        teacherLastName: 'Hilpold',
+      )),
+    );
+    store.actions.calendarActions.loaded(
+      _calendarLoaded(_calendarPayloadForDate(
+        date: '2026-04-24',
+        teacherFirstName: 'Doris',
+        teacherLastName: 'Hilpold',
+      )),
+    );
+    await _flushAsyncActions();
+
+    expect(
+      store.state.settingsState.substitutePrimaryTeachers['Informatik'],
+      BuiltList<String>(const <String>['Christoph Holzer']),
+    );
+  });
+
+  test('manual primary teacher override takes precedence over detected teacher',
+      () async {
+    store.actions.calendarActions.loaded(
+      _calendarLoaded(_calendarPayloadForDate(
+        date: '2026-04-03',
+        teacherFirstName: 'Christoph',
+        teacherLastName: 'Holzer',
+      )),
+    );
+    store.actions.calendarActions.loaded(
+      _calendarLoaded(_calendarPayloadForDate(
+        date: '2026-04-10',
+        teacherFirstName: 'Christoph',
+        teacherLastName: 'Holzer',
+      )),
+    );
+    await _flushAsyncActions();
+
+    await store.actions.settingsActions.substitutePrimaryTeachers(
+      BuiltMap<String, BuiltList<String>>({
+        'Informatik': BuiltList<String>(const ['Doris Hilpold']),
+      }),
+    );
+    await store.actions.settingsActions.substitutePrimaryTeachersLockedSubjects(
+      BuiltList<String>(const ['Informatik']),
+    );
+    await _recalculateSubstitutesFromState(store);
+    await _flushAsyncActions();
+
+    store.actions.calendarActions.loaded(
+      _calendarLoaded(_calendarPayloadForDate(
+        date: '2026-04-17',
+        teacherFirstName: 'Christoph',
+        teacherLastName: 'Holzer',
+      )),
+    );
+    await _flushAsyncActions();
+    await _recalculateSubstitutesFromState(store);
+    await _flushAsyncActions();
+
+    expect(
+      store.state.calendarState.days[UtcDateTime(2026, 4, 17)]!.hours.single
+          .isDetectedSubstitute,
+      isTrue,
     );
   });
 
@@ -428,6 +655,7 @@ CalendarLoadedPayload _calendarLoaded(Map<String, dynamic> data) {
     config: _substituteDetectionConfig(
       enabled: true,
       primaryTeachers: const <String, BuiltList<String>>{},
+      lockedSubjects: const <String>[],
     ),
   );
 }
@@ -440,6 +668,9 @@ Future<void> _recalculateSubstitutesFromState(
       enabled: store.state.settingsState.substituteDetectionEnabled,
       primaryTeachers:
           store.state.settingsState.substitutePrimaryTeachers.toMap(),
+      lockedSubjects:
+          store.state.settingsState.substitutePrimaryTeachersLockedSubjects
+              .toList(),
     ),
   );
 }
@@ -483,12 +714,14 @@ Future<void> _runAutoPopulatePrimaryTeachersTest(
 SubstituteDetectionConfig _substituteDetectionConfig({
   required bool enabled,
   required Map<String, BuiltList<String>> primaryTeachers,
+  required List<String> lockedSubjects,
 }) {
   return SubstituteDetectionConfig(
     (b) => b
       ..enabled = enabled
       ..primaryTeachers =
-          MapBuilder<String, BuiltList<String>>(primaryTeachers),
+          MapBuilder<String, BuiltList<String>>(primaryTeachers)
+      ..lockedSubjects = ListBuilder<String>(lockedSubjects),
   );
 }
 

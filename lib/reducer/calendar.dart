@@ -262,6 +262,17 @@ bool _isDetectedSubstitute(
   if (teacherSignature.isEmpty) {
     return false;
   }
+  final configuredPrimaryTeachers =
+      _configuredPrimaryTeachersForSubject(settings, hour.subject);
+  if ((configuredPrimaryTeachers == null || configuredPrimaryTeachers.isEmpty) &&
+      _isSubjectConfigurationLocked(settings, hour.subject)) {
+    return false;
+  }
+  if (configuredPrimaryTeachers != null) {
+    return !configuredPrimaryTeachers.any(
+      (teacher) => equalsIgnoreCase(teacher, teacherSignature),
+    );
+  }
   if (_isConfiguredPrimaryTeacher(settings, hour, teacherSignature)) {
     return false;
   }
@@ -286,6 +297,30 @@ bool _isDetectedSubstitute(
     }
   }
 
+  return false;
+}
+
+BuiltList<String>? _configuredPrimaryTeachersForSubject(
+  dynamic settings,
+  String subject,
+) {
+  for (final entry in _substitutePrimaryTeachers(settings).entries) {
+    if (equalsIgnoreCase(entry.key, subject)) {
+      return entry.value.isEmpty ? null : entry.value;
+    }
+  }
+  return null;
+}
+
+bool _isSubjectConfigurationLocked(
+  dynamic settings,
+  String subject,
+) {
+  for (final lockedSubject in _substitutePrimaryTeachersLockedSubjects(settings)) {
+    if (equalsIgnoreCase(lockedSubject, subject)) {
+      return true;
+    }
+  }
   return false;
 }
 
@@ -323,6 +358,16 @@ BuiltMap<String, BuiltList<String>> _substitutePrimaryTeachers(
   }
   if (settings is SubstituteDetectionConfig) {
     return settings.primaryTeachers;
+  }
+  throw ArgumentError.value(settings, 'settings');
+}
+
+BuiltList<String> _substitutePrimaryTeachersLockedSubjects(dynamic settings) {
+  if (settings is SettingsState) {
+    return settings.substitutePrimaryTeachersLockedSubjects;
+  }
+  if (settings is SubstituteDetectionConfig) {
+    return settings.lockedSubjects;
   }
   throw ArgumentError.value(settings, 'settings');
 }

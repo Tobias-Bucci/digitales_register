@@ -82,19 +82,25 @@ class SettingsPageContainer extends StatelessWidget {
                 _substituteDetectionConfig(
                   enabled: enabled,
                   primaryTeachers: vm.substitutePrimaryTeachers,
+                  lockedSubjects: vm.substitutePrimaryTeachersLockedSubjects,
                 ),
               );
             },
             onSetSubstitutePrimaryTeachers: (map) async {
+              final normalized = _normalizedSubstitutePrimaryTeachers(
+                vm.allSubjects,
+                map,
+              );
               await actions.settingsActions.substitutePrimaryTeachers(
-                BuiltMap(map.map(
+                BuiltMap(normalized.map(
                   (key, value) => MapEntry(key, BuiltList<String>.from(value)),
                 )),
               );
               await actions.calendarActions.recalculateSubstitutes(
                 _substituteDetectionConfig(
                   enabled: vm.substituteDetectionEnabled,
-                  primaryTeachers: map,
+                  primaryTeachers: normalized,
+                  lockedSubjects: vm.substitutePrimaryTeachersLockedSubjects,
                 ),
               );
             },
@@ -185,7 +191,7 @@ class SettingsViewModel {
         calendarSyncEnabled = state.settingsState.calendarSyncEnabled,
         calendarSyncCalendarId = state.settingsState.calendarSyncCalendarId,
         amoledMode = state.settingsState.amoledMode,
-        allSubjects = state.extractAllSubjects(),
+        allSubjects = _sortedIgnoreCase(state.extractAllSubjects()),
         allTeachers = _mergedTeachers(
           state.extractAllTeachers(),
           state.settingsState.substituteKnownTeachers.toList(),
@@ -193,11 +199,14 @@ class SettingsViewModel {
         ignoreForGradesAverage =
             state.settingsState.ignoreForGradesAverage.toList(),
         favoriteSubjects = state.settingsState.favoriteSubjects.toList(),
-        substitutePrimaryTeachers = {
-          for (final entry
-              in state.settingsState.substitutePrimaryTeachers.entries)
-            entry.key: entry.value.toList(),
-        },
+        substitutePrimaryTeachers = _normalizedSubstitutePrimaryTeachers(
+          state.extractAllSubjects(),
+          {
+            for (final entry
+                in state.settingsState.substitutePrimaryTeachers.entries)
+              entry.key: entry.value.toList(),
+          },
+        ),
         substitutePrimaryTeachersLockedSubjects = state
             .settingsState.substitutePrimaryTeachersLockedSubjects
             .toList(),
@@ -215,12 +224,51 @@ List<String> _mergedTeachers(
       merged.add(teacher);
     }
   }
-  return merged;
+  return _sortedIgnoreCase(merged);
+}
+
+Map<String, List<String>> _normalizedSubstitutePrimaryTeachers(
+  Iterable<String> allSubjects,
+  Map<String, List<String>> primaryTeachers,
+) {
+  final normalized = <String, List<String>>{};
+  final orderedSubjects = _sortedIgnoreCase({
+    ...allSubjects,
+    ...primaryTeachers.keys,
+  });
+  for (final subject in orderedSubjects) {
+    final resolvedKey = findStringIgnoreCase(primaryTeachers.keys, subject);
+    final teachers = resolvedKey == null
+        ? const <String>[]
+        : _normalizeTeacherList(primaryTeachers[resolvedKey] ?? const []);
+    normalized[resolvedKey ?? subject] = teachers;
+  }
+  return normalized;
+}
+
+List<String> _normalizeTeacherList(Iterable<String> teachers) {
+  final normalized = <String>[];
+  for (final teacher in teachers) {
+    if (teacher.trim().isEmpty) {
+      continue;
+    }
+    if (!containsStringIgnoreCase(normalized, teacher)) {
+      normalized.add(teacher);
+    }
+  }
+  return normalized;
+}
+
+List<String> _sortedIgnoreCase(Iterable<String> values) {
+  final result = values.toList();
+  result.sort((a, b) => a.toLowerCase().compareTo(b.toLowerCase()));
+  return result;
 }
 
 SubstituteDetectionConfig _substituteDetectionConfig({
   required bool enabled,
   required Map<String, List<String>> primaryTeachers,
+  required List<String> lockedSubjects,
 }) {
   return SubstituteDetectionConfig(
     (b) => b
@@ -229,6 +277,7 @@ SubstituteDetectionConfig _substituteDetectionConfig({
         primaryTeachers.map(
           (key, value) => MapEntry(key, BuiltList<String>.from(value)),
         ),
-      ),
+      )
+      ..lockedSubjects = ListBuilder<String>(lockedSubjects),
   );
 }
