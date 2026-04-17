@@ -78,7 +78,7 @@
   "settings.advanced.licenses": "Licenze",
   "settings.about.appName": "Registro Elettronico",
   "settings.about.title": "Registro Elettronico (Client) - Tobias Bucci Fork",
-  "settings.about.version": "v1.6.4",
+  "settings.about.version": "v1.7.0",
   "settings.about.copyright": "Copyright originale: Michael Debertol e Simon Wachtler 2019-2022\nCopyright di questa versione: Tobias Bucci 2026",
   "settings.about.description": "Un client per il Registro Elettronico. Questa versione è stata adattata e sviluppata ulteriormente da Tobias Bucci.",
   "settings.about.gpl": "Questo è un software libero; puoi ridistribuirlo secondo determinate condizioni (GPLv3).",
