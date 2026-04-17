@@ -298,8 +298,11 @@ void _homeworkAdded(DashboardState state, Action<HomeworkAddedPayload> action,
 
 void _homeworkRemoved(DashboardState state, Action<Homework> action,
     DashboardStateBuilder builder) {
-  builder.allDays
-      .map((day) => day.rebuild((b) => b..homework.remove(action.payload)));
+  builder.allDays.map(
+    (day) => day.rebuild(
+      (b) => b..homework.removeWhere((hw) => hw.id == action.payload.id),
+    ),
+  );
 }
 
 void _reminderEdited(DashboardState state, Action<HomeworkEditedPayload> action,

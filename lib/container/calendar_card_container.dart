@@ -1,4 +1,5 @@
 // Copyright (C) 2021 Michael Debertol
+// Copyright (C) 2026 Tobias Bucci
 //
 // This file is part of digitales_register.
 //
@@ -18,6 +19,7 @@
 import 'package:dr/actions/app_actions.dart';
 import 'package:dr/app_state.dart';
 import 'package:dr/data.dart';
+import 'package:dr/local_reminder_assessments.dart';
 import 'package:dr/ui/calendar_card.dart';
 import 'package:dr/utc_date_time.dart';
 import 'package:flutter/material.dart';
@@ -46,10 +48,18 @@ class CalendarCardContainer extends StatelessWidget {
         );
       },
       connect: (state) {
-        final hour = state.calendarState.days[day]!.hours[hourIndex];
+        final mergedDay = calendarDayWithLocalReminderAssessments(state, day) ??
+            state.calendarState.days[day]!;
+        final hour = mergedDay.hours[hourIndex];
+        final theme = state.settingsState.subjectThemes[hour.subject] ??
+            SubjectTheme(
+              (b) => b
+                ..color = Colors.grey.toARGB32()
+                ..thick = 1,
+            );
         return CalendarCardViewModel(
           hour: hour,
-          theme: state.settingsState.subjectThemes[hour.subject]!,
+          theme: theme,
           selected: state.calendarState.selection?.date == day &&
               state.calendarState.selection?.hour == hour.fromHour,
           noInternet: state.noInternet,

@@ -26,6 +26,7 @@ import 'package:dr/container/notification_icon_container.dart';
 import 'package:dr/container/sidebar_container.dart';
 import 'package:dr/data.dart';
 import 'package:dr/i18n/app_localizations.dart';
+import 'package:dr/local_reminder_assessments.dart';
 import 'package:dr/main.dart';
 import 'package:dr/middleware/middleware.dart';
 import 'package:dr/ui/animated_linear_progress_indicator.dart';
@@ -40,6 +41,7 @@ import 'package:flutter/rendering.dart';
 import 'package:intl/intl.dart';
 import 'package:responsive_scaffold/responsive_scaffold.dart';
 import 'package:scroll_to_index/scroll_to_index.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import 'package:tuple/tuple.dart';
 
 typedef AddReminderCallback = void Function(Day day, String reminder);
@@ -53,6 +55,8 @@ typedef RemoveReminderCallback = void Function(Homework hw, Day day);
 typedef ToggleDoneCallback = void Function(Homework hw, bool done);
 typedef MarkAsNotNewOrChangedCallback = void Function(Homework hw);
 typedef MarkDeletedHomeworkAsSeenCallback = void Function(Day day);
+
+const _localReminderAssessmentHintKey = 'localReminderAssessmentHintShown';
 
 class DaysWidget extends StatefulWidget {
   final DaysViewModel vm;
@@ -324,6 +328,7 @@ class _DaysWidgetState extends State<DaysWidget> {
       colorBorders: widget.vm.colorBorders,
       colorTestsInRed: widget.vm.colorTestsInRed,
       subjectThemes: widget.vm.subjectThemes,
+      allSubjects: widget.vm.allSubjects,
       showLastFetched: showLastFetched,
     );
   }
@@ -558,7 +563,16 @@ class _DaysWidgetState extends State<DaysWidget> {
 Future<String?> showEnterReminderDialog(
   BuildContext context, {
   String initialMessage = "",
-}) {
+}) async {
+  final prefs = await SharedPreferences.getInstance();
+  final showAssessmentHint =
+      !(prefs.getBool(_localReminderAssessmentHintKey) ?? false);
+  if (showAssessmentHint) {
+    await prefs.setBool(_localReminderAssessmentHintKey, true);
+  }
+  if (!context.mounted) {
+    return null;
+  }
   return showDialog(
     context: context,
     builder: (context) {
@@ -568,15 +582,95 @@ Future<String?> showEnterReminderDialog(
       return StatefulBuilder(
         builder: (context, setState) => InfoDialog(
           title: Text(l10n.text('dashboard.reminder')),
-          content: TextField(
-            controller: controller,
-            autofocus: true,
-            maxLines: null,
-            onChanged: (msg) {
-              setState(() => message = msg);
-            },
-            decoration: InputDecoration(
-              hintText: l10n.text('dashboard.reminderHint'),
+          content: ConstrainedBox(
+            constraints: const BoxConstraints(maxHeight: 320),
+            child: SingleChildScrollView(
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  if (showAssessmentHint)
+                    Container(
+                      width: double.infinity,
+                      margin: const EdgeInsets.only(bottom: 12),
+                      padding: const EdgeInsets.all(12),
+                      decoration: BoxDecoration(
+                        color: Theme.of(context)
+                            .colorScheme
+                            .secondaryContainer
+                            .withValues(alpha: 0.55),
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            l10n.text('dashboard.assessmentShortcutHintTitle'),
+                            style: Theme.of(context).textTheme.titleSmall,
+                          ),
+                          const SizedBox(height: 6),
+                          Text(
+                            l10n.text(
+                              'dashboard.assessmentShortcutHintBody',
+                              args: {
+                                'test': '/test',
+                                'classwork': '/cw',
+                                'exam': '/exam',
+                              },
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  TextField(
+                    controller: controller,
+                    autofocus: true,
+                    maxLines: null,
+                    onChanged: (msg) {
+                      setState(() => message = msg);
+                    },
+                    decoration: InputDecoration(
+                      hintText: l10n.text('dashboard.reminderHint'),
+                    ),
+                  ),
+                  if (localReminderAssessmentSuggestions(message)
+                      .isNotEmpty) ...[
+                    const SizedBox(height: 12),
+                    Text(
+                      l10n.text('dashboard.assessmentShortcutSuggestions'),
+                      style: Theme.of(context).textTheme.labelLarge,
+                    ),
+                    const SizedBox(height: 8),
+                    Wrap(
+                      spacing: 8,
+                      runSpacing: 8,
+                      children: [
+                        for (final suggestion
+                            in localReminderAssessmentSuggestions(message))
+                          ActionChip(
+                            label: Text(
+                              '/${suggestion.command} - ${_localizedAssessmentSuggestionLabel(l10n, suggestion.type)}',
+                            ),
+                            onPressed: () {
+                              final replaced =
+                                  applyLocalReminderAssessmentSuggestion(
+                                controller.text,
+                                suggestion,
+                              );
+                              controller.value = controller.value.copyWith(
+                                text: replaced,
+                                selection: TextSelection.collapsed(
+                                  offset: replaced.length,
+                                ),
+                              );
+                              setState(() => message = replaced);
+                            },
+                          ),
+                      ],
+                    ),
+                  ],
+                ],
+              ),
             ),
           ),
           actions: <Widget>[
@@ -599,6 +693,20 @@ Future<String?> showEnterReminderDialog(
       );
     },
   );
+}
+
+String _localizedAssessmentSuggestionLabel(
+  AppLocalizations l10n,
+  LocalReminderAssessmentType type,
+) {
+  switch (type) {
+    case LocalReminderAssessmentType.test:
+      return l10n.text('dashboard.test');
+    case LocalReminderAssessmentType.classwork:
+      return l10n.text('dashboard.schoolwork');
+    case LocalReminderAssessmentType.exam:
+      return l10n.text('dashboard.exam');
+  }
 }
 
 class DashboardHeader extends StatelessWidget {
@@ -722,6 +830,7 @@ class DayWidget extends StatelessWidget {
   final AttachmentCallback onOpenAttachment;
   final bool colorBorders, colorTestsInRed;
   final BuiltMap<String, SubjectTheme> subjectThemes;
+  final BuiltList<String> allSubjects;
 
   final Day day;
 
@@ -744,6 +853,7 @@ class DayWidget extends StatelessWidget {
     required this.onOpenAttachment,
     required this.colorBorders,
     required this.subjectThemes,
+    required this.allSubjects,
     required this.colorTestsInRed,
     required this.showLastFetched,
   });
@@ -819,6 +929,7 @@ class DayWidget extends StatelessWidget {
                                     .map(
                                       (i) => ItemWidget(
                                         item: i,
+                                        allSubjects: allSubjects,
                                         isDeletedView: true,
                                         colorBorder: colorBorders,
                                         subjectThemes: subjectThemes,
@@ -874,6 +985,7 @@ class DayWidget extends StatelessWidget {
             index: ++i,
             onOpenAttachment: onOpenAttachment,
             subjectThemes: subjectThemes,
+            allSubjects: allSubjects,
             colorBorder: colorBorders,
             colorTestsInRed: colorTestsInRed,
           ),
@@ -884,6 +996,7 @@ class DayWidget extends StatelessWidget {
 
 class ItemWidget extends StatelessWidget {
   final Homework item;
+  final BuiltList<String> allSubjects;
   final Future<void> Function()? editReminder;
   final VoidCallback? removeThis;
   final VoidCallback? toggleDone;
@@ -904,6 +1017,7 @@ class ItemWidget extends StatelessWidget {
   const ItemWidget({
     super.key,
     required this.item,
+    required this.allSubjects,
     this.editReminder,
     this.removeThis,
     this.toggleDone,
@@ -973,6 +1087,7 @@ class ItemWidget extends StatelessWidget {
                     children: <Widget>[
                       ItemWidget(
                         item: historyItem,
+                        allSubjects: allSubjects,
                         isHistory: true,
                         colorBorder: colorBorder,
                         subjectThemes: subjectThemes,
@@ -994,13 +1109,14 @@ class ItemWidget extends StatelessWidget {
     if (item.checked) {
       return Colors.green;
     }
-    if (item.warning && colorTestsInRed) {
+    if (displayedHomeworkWarning(item, allSubjects) && colorTestsInRed) {
       return Colors.red;
     }
+    final displayLabel = displayedHomeworkLabel(item, allSubjects);
     if (colorBorder &&
-        item.label != null &&
-        subjectThemes.containsKey(item.label!)) {
-      return Color(subjectThemes[item.label]!.color);
+        displayLabel != null &&
+        subjectThemes.containsKey(displayLabel)) {
+      return Color(subjectThemes[displayLabel]!.color);
     }
     return Theme.of(context).dividerColor.withValues(alpha: 0.3);
   }
@@ -1009,11 +1125,37 @@ class ItemWidget extends StatelessWidget {
   Widget build(BuildContext context) {
     final l10n = context.l10n;
     final isCompleted = item.checked && !isHistory && !isDeletedView;
+    final displayLabel = displayedHomeworkLabel(item, allSubjects);
+    final displayTitle = displayedHomeworkTitle(item, allSubjects);
+    final displaySubtitle = displayedHomeworkSubtitle(item, allSubjects);
+    final isSelfCreatedAssessment = parseLocalReminderAssessment(
+          item.subtitle.isNotEmpty ? item.subtitle : item.title,
+          allSubjects,
+        ) !=
+        null;
     final canEditReminder = !isHistory &&
         !isDeletedView &&
         item.type == HomeworkType.homework &&
         item.deleteable &&
         editReminder != null;
+    Future<void> handleDelete(Future<void> Function() delete) async {
+      if (askWhenDelete) {
+        final confirmationResult = await _showConfirmDelete(context);
+        final shouldDelete = confirmationResult.item1;
+        final ask = confirmationResult.item2;
+        if (shouldDelete == true) {
+          if (!ask) {
+            setDoNotAskWhenDelete!();
+          }
+          await delete();
+          removeThis!();
+        }
+      } else {
+        await delete();
+        removeThis!();
+      }
+    }
+
     Widget child = Deleteable(
       // this is a new entry or a reminder the user has just entered
       showEntryAnimation:
@@ -1044,15 +1186,13 @@ class ItemWidget extends StatelessWidget {
                       ),
                       child: Column(
                         children: <Widget>[
-                          if (item.label != null)
+                          if (displayLabel != null)
                             Stack(
                               clipBehavior: Clip.none,
                               children: <Widget>[
                                 Center(
                                   child: Text(
-                                    l10n.translateDashboardServerText(
-                                      item.label!,
-                                    ),
+                                    l10n.translateSubjectName(displayLabel),
                                     textAlign: TextAlign.center,
                                     overflow: TextOverflow.ellipsis,
                                   ),
@@ -1087,18 +1227,18 @@ class ItemWidget extends StatelessWidget {
                           ListTile(
                             contentPadding: EdgeInsets.zero,
                             title: Text(
-                              l10n.translateDashboardServerText(item.title),
+                              l10n.translateDashboardServerText(displayTitle),
                               style: TextStyle(
                                 decoration: isCompleted
                                     ? TextDecoration.lineThrough
                                     : null,
                               ),
                             ),
-                            subtitle: item.subtitle.isNullOrEmpty
+                            subtitle: displaySubtitle.isNullOrEmpty
                                 ? null
                                 : SelectableText(
                                     l10n.translateDashboardServerText(
-                                      item.subtitle,
+                                      displaySubtitle,
                                     ),
                                     style: TextStyle(
                                       decoration: isCompleted
@@ -1112,27 +1252,7 @@ class ItemWidget extends StatelessWidget {
                                         icon: const Icon(Icons.close),
                                         onPressed: noInternet
                                             ? null
-                                            : () async {
-                                                if (askWhenDelete) {
-                                                  final confirmationResult =
-                                                      await _showConfirmDelete(
-                                                          context);
-                                                  final shouldDelete =
-                                                      confirmationResult.item1;
-                                                  final ask =
-                                                      confirmationResult.item2;
-                                                  if (shouldDelete == true) {
-                                                    if (!ask) {
-                                                      setDoNotAskWhenDelete!();
-                                                    }
-                                                    await delete();
-                                                    removeThis!();
-                                                  }
-                                                } else {
-                                                  await delete();
-                                                  removeThis!();
-                                                }
-                                              },
+                                            : () => handleDelete(delete),
                                         padding: EdgeInsets.zero,
                                       )
                                     : null,
@@ -1153,7 +1273,9 @@ class ItemWidget extends StatelessWidget {
                                   await editReminder!();
                                 },
                         ),
-                      if (!isHistory && item.label != null)
+                      if (!isHistory &&
+                          displayLabel != null &&
+                          !isSelfCreatedAssessment)
                         IconButton(
                           icon: (isDeletedView
                                       ? item.previousVersion!.previousVersion
@@ -1261,6 +1383,7 @@ class ItemWidget extends StatelessWidget {
             isHistory: true,
             isCurrent: false,
             item: item.previousVersion!,
+            allSubjects: allSubjects,
             colorBorder: colorBorder,
             subjectThemes: subjectThemes,
             colorTestsInRed: colorTestsInRed,

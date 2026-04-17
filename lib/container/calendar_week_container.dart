@@ -1,4 +1,4 @@
-﻿// Copyright (C) 2021 Michael Debertol
+// Copyright (C) 2021 Michael Debertol
 // Copyright (C) 2026 Tobias Bucci
 //
 // This file is part of digitales_register.
@@ -21,6 +21,7 @@ import 'package:built_value/built_value.dart';
 import 'package:dr/actions/app_actions.dart';
 import 'package:dr/app_state.dart';
 import 'package:dr/data.dart';
+import 'package:dr/local_reminder_assessments.dart';
 import 'package:dr/ui/calendar_week.dart';
 import 'package:dr/utc_date_time.dart';
 import 'package:flutter/material.dart' hide Builder;
@@ -77,7 +78,9 @@ abstract class CalendarWeekViewModel
       AppState state, UtcDateTime monday) {
     return CalendarWeekViewModel(
       (b) => b
-        ..days = ListBuilder(state.calendarState.daysForWeek(monday))
+        ..days = ListBuilder(
+          calendarDaysForWeekWithLocalReminderAssessments(state, monday),
+        )
         // converting all keys (subject names) to lower case to make accessing cheaper
         ..subjectNicks = MapBuilder(
           state.settingsState.subjectNicks.toMap().map(

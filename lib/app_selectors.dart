@@ -1,4 +1,4 @@
-﻿// Copyright (C) 2026 Tobias Bucci
+// Copyright (C) 2026 Tobias Bucci
 //
 // This file is part of digitales_register.
 //
@@ -18,6 +18,7 @@
 import 'package:built_collection/built_collection.dart';
 import 'package:dr/app_state.dart';
 import 'package:dr/data.dart';
+import 'package:dr/local_reminder_assessments.dart';
 import 'package:dr/utc_date_time.dart';
 import 'package:dr/util.dart';
 import 'package:tuple/tuple.dart';
@@ -86,12 +87,17 @@ class SubjectGrades {
   SubjectGrades(this.grades, this.name);
 }
 
-bool _isBlacklisted(Homework homework, BuiltList<HomeworkType> blacklist) {
-  if (blacklist.contains(homework.type)) {
+bool _isBlacklisted(
+  Homework homework,
+  BuiltList<HomeworkType> blacklist,
+  Iterable<String> knownSubjects,
+) {
+  final effectiveType = effectiveHomeworkType(homework, knownSubjects);
+  if (blacklist.contains(effectiveType)) {
     return true;
   }
 
-  if (homework.type != HomeworkType.unknown) {
+  if (effectiveType != HomeworkType.unknown) {
     return false;
   }
 
@@ -104,15 +110,19 @@ bool _isBlacklisted(Homework homework, BuiltList<HomeworkType> blacklist) {
 
 class _DashboardDaysSelector {
   DashboardState? _dashboardState;
+  CalendarState? _calendarState;
   BuiltList<HomeworkType>? _blacklist;
   BuiltList<Day>? _lastResult;
 
   BuiltList<Day> select(AppState state) {
     if (identical(state.dashboardState, _dashboardState) &&
+        identical(state.calendarState, _calendarState) &&
         identical(state.dashboardState.blacklist, _blacklist) &&
         _lastResult != null) {
       return _lastResult!;
     }
+
+    final knownSubjects = state.extractAllSubjects();
 
     final unorderedDays = state.dashboardState.allDays
             ?.where((day) => day.future == state.dashboardState.future)
@@ -120,16 +130,40 @@ class _DashboardDaysSelector {
               (day) => day.rebuild(
                 (b) => b
                   ..deletedHomework.replace(
-                    day.deletedHomework.where(
-                      (hw) =>
-                          !_isBlacklisted(hw, state.dashboardState.blacklist!),
-                    ),
+                    day.deletedHomework
+                        .map(
+                          (hw) => _normalizeHomeworkForDashboard(
+                            state,
+                            day.date,
+                            hw,
+                            knownSubjects,
+                          ),
+                        )
+                        .where(
+                          (hw) => !_isBlacklisted(
+                            hw,
+                            state.dashboardState.blacklist!,
+                            knownSubjects,
+                          ),
+                        ),
                   )
                   ..homework.replace(
-                    day.homework.where(
-                      (hw) =>
-                          !_isBlacklisted(hw, state.dashboardState.blacklist!),
-                    ),
+                    day.homework
+                        .map(
+                          (hw) => _normalizeHomeworkForDashboard(
+                            state,
+                            day.date,
+                            hw,
+                            knownSubjects,
+                          ),
+                        )
+                        .where(
+                          (hw) => !_isBlacklisted(
+                            hw,
+                            state.dashboardState.blacklist!,
+                            knownSubjects,
+                          ),
+                        ),
                   ),
               ),
             )
@@ -140,10 +174,25 @@ class _DashboardDaysSelector {
       !state.dashboardState.future ? unorderedDays.reversed : unorderedDays,
     );
     _dashboardState = state.dashboardState;
+    _calendarState = state.calendarState;
     _blacklist = state.dashboardState.blacklist;
     _lastResult = result;
     return result;
   }
+}
+
+Homework _normalizeHomeworkForDashboard(
+  AppState state,
+  UtcDateTime date,
+  Homework homework,
+  Iterable<String> knownSubjects,
+) {
+  final resolvedLabel =
+      displayedHomeworkLabelForDate(state, date, homework, knownSubjects);
+  if (resolvedLabel == homework.label) {
+    return homework;
+  }
+  return homework.rebuild((b) => b.label = resolvedLabel);
 }
 
 class _AllSubjectsAverageSelector {

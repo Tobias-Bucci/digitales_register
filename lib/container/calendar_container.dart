@@ -20,6 +20,7 @@ import 'package:built_collection/built_collection.dart';
 import 'package:dr/actions/app_actions.dart';
 import 'package:dr/app_state.dart';
 import 'package:dr/data.dart';
+import 'package:dr/local_reminder_assessments.dart';
 import 'package:dr/ui/calendar.dart';
 import 'package:dr/utc_date_time.dart';
 import 'package:dr/util.dart';
@@ -64,19 +65,15 @@ class CalendarViewModel {
   final bool substituteDetectionEnabled;
 
   CalendarViewModel(AppState state)
-      : first = state.calendarState.currentDays.isEmpty
-            ? null
-            : state.calendarState.currentDays.first.date,
-        last = state.calendarState.currentDays.isEmpty
-            ? null
-            : state.calendarState.currentDays.last.date,
+      : currentDays = _calendarDays(state),
+        first = _calendarDays(state).isEmpty ? null : _calendarDays(state).first.date,
+        last = _calendarDays(state).isEmpty ? null : _calendarDays(state).last.date,
         currentMonday = state.calendarState.currentMonday!,
-        currentDays = state.calendarState.currentDays.toList(),
         favoriteSubjects = state.settingsState.favoriteSubjects.toList(),
         subjectThemes = state.settingsState.subjectThemes,
         substituteDetectionEnabled =
             state.settingsState.substituteDetectionEnabled,
-        showEditNicksBar = state.calendarState.currentDays.any(
+        showEditNicksBar = _calendarDays(state).any(
               (day) => day.hours.any(
                 (hour) => !state.settingsState.subjectNicks.entries.any(
                   (entry) => equalsIgnoreCase(entry.key, hour.subject),
@@ -86,4 +83,11 @@ class CalendarViewModel {
             state.settingsState.showCalendarNicksBar,
         noInternet = state.noInternet,
         selection = state.calendarState.selection;
+
+  static List<CalendarDay> _calendarDays(AppState state) {
+    return calendarDaysForWeekWithLocalReminderAssessments(
+      state,
+      state.calendarState.currentMonday!,
+    );
+  }
 }

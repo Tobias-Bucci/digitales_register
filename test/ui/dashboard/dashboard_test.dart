@@ -15,6 +15,8 @@
 // You should have received a copy of the GNU General Public License
 // along with digitales_register.  If not, see <http://www.gnu.org/licenses/>.
 
+import 'dart:async';
+
 import 'package:built_collection/built_collection.dart';
 import 'package:dr/app_state.dart';
 import 'package:dr/container/days_container.dart';
@@ -290,6 +292,63 @@ void main() {
   });
 
   testWidgets(
+      'deleting a reminder starts exit animation before the server responds',
+      (tester) async {
+    final mockWrapper = MockWrapper();
+    final completer = Completer<Map<String, Object?>>();
+    when(() => mockWrapper.noInternet).thenReturn(false);
+    when(
+      () => mockWrapper.send(
+        'api/student/dashboard/delete_reminder',
+        args: <String, Object?>{'id': 7},
+      ),
+    ).thenAnswer((_) => completer.future);
+    wrapper = mockWrapper;
+
+    final store = createStore(
+      initialState: AppState(
+        (b) {
+          b.settingsState.askWhenDelete = false;
+          b.dashboardState.allDays = ListBuilder<Day>(<Day>[
+            buildDay(
+              date: UtcDateTime(2050),
+              homework: <Homework>[
+                buildHomework(
+                  id: 7,
+                  title: 'Erinnerung',
+                  subtitle: 'Sofort weg',
+                  type: HomeworkType.homework,
+                  deleteable: true,
+                ),
+              ],
+            ),
+          ]);
+        },
+      ),
+      withMiddleware: true,
+    );
+
+    await pumpApp(
+      tester,
+      store: store,
+      home: DaysContainer(),
+    );
+    await settleFor(tester);
+
+    expect(find.text('Sofort weg'), findsOneWidget);
+
+    await tester.tap(find.byIcon(Icons.close));
+    await tester.pump();
+
+    expect(find.text('Sofort weg'), findsOneWidget);
+
+    completer.complete(<String, Object?>{'success': true});
+    await settleFor(tester, duration: const Duration(milliseconds: 400));
+
+    expect(find.text('Sofort weg'), findsNothing);
+  });
+
+  testWidgets(
       'editing a reminder deletes the old entry and adds the updated one',
       (tester) async {
     final mockWrapper = MockWrapper();
@@ -380,5 +439,42 @@ void main() {
 
     expect(find.text('Neu formulierte Erinnerung'), findsOneWidget);
     expect(find.text('Alte Erinnerung'), findsNothing);
+  });
+
+  testWidgets(
+      'self-created assessments use reminder action layout without info button',
+      (tester) async {
+    final store = createStore(
+      initialState: AppState(
+        (b) => b.dashboardState.allDays = ListBuilder<Day>(<Day>[
+          buildDay(
+            date: UtcDateTime(2050),
+            homework: <Homework>[
+              buildHomework(
+                id: 7,
+                title: 'Erinnerung',
+                subtitle: '/test@2 Italienisch Grammatik',
+                type: HomeworkType.homework,
+                deleteable: true,
+                checkable: true,
+              ),
+            ],
+          ),
+        ]),
+      ),
+    );
+
+    await pumpApp(
+      tester,
+      store: store,
+      home: DaysContainer(),
+    );
+    await settleFor(tester);
+
+    expect(find.byIcon(Icons.info_outline), findsNothing);
+    expect(find.byIcon(Icons.edit_outlined), findsOneWidget);
+
+    final listTile = tester.widget<ListTile>(find.byType(ListTile).first);
+    expect(listTile.leading, isNotNull);
   });
 }

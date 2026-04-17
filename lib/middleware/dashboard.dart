@@ -91,16 +91,20 @@ Future<void> _deleteHomework(
     MiddlewareApi<AppState, AppStateBuilder, AppActions> api,
     ActionHandler next,
     Action<Homework> action) async {
+  // Remove the entry from the dashboard immediately and reconcile with the
+  // server afterwards, so reminder deletes behave responsively.
+  await next(action);
   final dynamic result = await wrapper.send(
     "api/student/dashboard/delete_reminder",
     args: {
       "id": action.payload.id,
     },
   );
-  if (result != null && result["success"] == true) {
-    await next(action);
-  } else if (!wrapper.noInternet) {
-    showSnackBar("Beim Speichern ist ein Fehler aufgetreten");
+  if (result == null || result["success"] != true) {
+    if (!wrapper.noInternet) {
+      await api.actions.dashboardActions.load(api.state.dashboardState.future);
+      showSnackBar("Beim Speichern ist ein Fehler aufgetreten");
+    }
   }
 }
 

@@ -23,6 +23,7 @@ import 'package:dr/actions/dashboard_actions.dart';
 import 'package:dr/app_selectors.dart';
 import 'package:dr/app_state.dart';
 import 'package:dr/data.dart';
+import 'package:dr/local_reminder_assessments.dart';
 import 'package:dr/ui/days.dart';
 import 'package:flutter/material.dart' hide Builder;
 import 'package:flutter_built_redux/flutter_built_redux.dart';
@@ -114,6 +115,7 @@ abstract class DaysViewModel
   bool get showNotifications;
   BuiltList<Day> get days;
   BuiltList<String> get favoriteSubjects;
+  BuiltList<String> get allSubjects;
 
   factory DaysViewModel([void Function(DaysViewModelBuilder)? updates]) =
       _$DaysViewModel;
@@ -132,6 +134,7 @@ abstract class DaysViewModel
         ..showNotifications =
             (state.notificationState.notifications?.length ?? 0) > 0
         ..favoriteSubjects = state.settingsState.favoriteSubjects.toBuilder()
+        ..allSubjects = state.extractAllSubjects().toBuiltList().toBuilder()
         ..colorBorders = state.settingsState.dashboardColorBorders
         ..colorTestsInRed = state.settingsState.dashboardColorTestsInRed
         ..subjectThemes = state.settingsState.subjectThemes.toBuilder(),
@@ -151,11 +154,12 @@ const typesToTitles = {
 
 bool isBlacklisted(Homework homework, BuiltList<HomeworkType> blacklist) {
   // Primary rule: rely on explicit server-provided item type.
-  if (blacklist.contains(homework.type)) {
+  final effectiveType = effectiveHomeworkType(homework, const <String>[]);
+  if (blacklist.contains(effectiveType)) {
     return true;
   }
 
-  if (homework.type != HomeworkType.unknown) {
+  if (effectiveType != HomeworkType.unknown) {
     return false;
   }
 

@@ -1,4 +1,5 @@
 // Copyright (C) 2021 Michael Debertol
+// Copyright (C) 2026 Tobias Bucci
 //
 // This file is part of digitales_register.
 //
@@ -20,6 +21,7 @@ import 'package:collection/collection.dart';
 import 'package:dr/actions/app_actions.dart';
 import 'package:dr/app_state.dart';
 import 'package:dr/data.dart';
+import 'package:dr/local_reminder_assessments.dart';
 import 'package:dr/ui/calendar_detail.dart';
 import 'package:dr/utc_date_time.dart';
 import 'package:dr/util.dart';
@@ -88,7 +90,7 @@ class CalendarDetailItemContainer extends StatelessWidget {
         isSidebar: isSidebar,
       ),
       connect: (state) {
-        final day = state.calendarState.days[date];
+        final day = calendarDayWithLocalReminderAssessments(state, date);
         final hourIndex = state.calendarState.selection?.date == date
             ? state.calendarState.selection?.hour
             : null;

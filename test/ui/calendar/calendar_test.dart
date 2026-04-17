@@ -3,6 +3,7 @@ import 'package:built_redux/built_redux.dart';
 import 'package:dr/actions/app_actions.dart';
 import 'package:dr/app_state.dart';
 import 'package:dr/container/calendar_container.dart';
+import 'package:dr/container/calendar_detail_container.dart';
 import 'package:dr/container/calendar_week_container.dart';
 import 'package:dr/container/settings_page.dart';
 import 'package:dr/data.dart';
@@ -350,6 +351,80 @@ void main() {
     expect(find.text('Rossi'), findsOneWidget);
     expect(find.text('Bianchi'), findsOneWidget);
     expect(find.byType(InkWell), findsOneWidget);
+  });
+
+  testWidgets(
+      'calendar detail renders self-created assessment in an existing period',
+      (tester) async {
+    final date = UtcDateTime(2026, 4, 17);
+    final store = createStore(
+      initialState: AppState(
+        (b) {
+          b.calendarState
+            ..currentMonday = toMonday(date)
+            ..selection = CalendarSelection(
+              (b) => b
+                ..date = date
+                ..hour = 4,
+            ).toBuilder()
+            ..days = MapBuilder<UtcDateTime, CalendarDay>({
+              date: buildCalendarDay(
+                date: date,
+                hours: <CalendarHour>[
+                  buildCalendarHour(subject: 'Deutsch'),
+                  buildCalendarHour(
+                    subject: 'Mathematik',
+                    fromHour: 2,
+                    toHour: 2,
+                  ),
+                  buildCalendarHour(
+                    subject: 'Geschichte',
+                    fromHour: 3,
+                    toHour: 3,
+                  ),
+                  buildCalendarHour(
+                    subject: 'Italienisch',
+                    fromHour: 4,
+                    toHour: 4,
+                  ),
+                ],
+              ),
+            });
+          b.dashboardState.allDays = ListBuilder<Day>(<Day>[
+            buildDay(
+              date: date,
+              homework: <Homework>[
+                buildHomework(
+                  id: 77,
+                  title: 'Reminder',
+                  subtitle: '/cw@4 Italienisch',
+                  type: HomeworkType.homework,
+                ),
+              ],
+            ),
+          ]);
+          b.gradesState.subjects = ListBuilder<Subject>(<Subject>[
+            buildSubject(name: 'Italienisch'),
+          ]);
+        },
+      ),
+    );
+
+    await pumpApp(
+      tester,
+      store: store,
+      home: Material(
+        child: CalendarDetailItemContainer(
+          date: date,
+          isSidebar: false,
+        ),
+      ),
+    );
+    await settleFor(tester);
+
+    expect(find.text('Italienisch'), findsOneWidget);
+    expect(find.text('Selbst erstellt'), findsOneWidget);
+    expect(tester.takeException(), isNull);
   });
 }
 

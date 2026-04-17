@@ -22,6 +22,7 @@ import 'package:dr/app_state.dart';
 import 'package:dr/data.dart';
 import 'package:dr/i18n/app_language.dart';
 import 'package:dr/i18n/app_localizations.dart';
+import 'package:dr/local_reminder_assessments.dart';
 import 'package:dr/platform_adapter.dart';
 import 'package:dr/utc_date_time.dart';
 import 'package:dr/util.dart';
@@ -332,23 +333,46 @@ extension CalendarSyncService on Never {
         if (!_shouldSyncDashboardHomework(homework)) {
           continue;
         }
-        if (homework.type == HomeworkType.gradeGroup &&
+        final parsed = parseLocalReminderAssessment(
+          homework.subtitle.isNotEmpty ? homework.subtitle : homework.title,
+          state.extractAllSubjects(),
+        );
+        if (parsed != null &&
+            (parsed.period == null ||
+                !localReminderAssessmentHasCalendarSlot(
+                  state,
+                  dueDate,
+                  parsed,
+                ))) {
+          continue;
+        }
+        if ((homework.type == HomeworkType.gradeGroup ||
+                isLocalReminderAssessmentHomework(
+                  homework,
+                  state.extractAllSubjects(),
+                )) &&
             _hasMatchingCalendarExam(state, dueDate, homework)) {
           continue;
         }
-
         final syncKey = homework.type == HomeworkType.homework
             ? 'reminder:${homework.id}'
             : 'dashboard:${_dateKey(dueDate)}:${homework.type.name}:${homework.id > 0 ? homework.id : _stableHash('${homework.title}|${homework.subtitle}|${homework.label ?? ''}')}';
         items[syncKey] = _buildDesiredItem(
           syncKey: syncKey,
-          title: l10n.translateDashboardServerText(homework.title),
+          title: l10n.translateDashboardServerText(
+            parsed?.displaySubtitle ?? parsed?.displayTitle ?? homework.title,
+          ),
           date: dueDate,
           details: <String>[
-            if (homework.label != null && homework.label!.isNotEmpty)
-              l10n.translateSubjectName(homework.label!),
-            if (homework.subtitle.isNotEmpty)
-              l10n.translateDashboardServerText(homework.subtitle),
+            if ((parsed?.displayLabel ?? homework.label) != null &&
+                (parsed?.displayLabel ?? homework.label)!.isNotEmpty)
+              l10n.translateSubjectName(
+                  (parsed?.displayLabel ?? homework.label)!),
+            if (parsed != null) l10n.translateSchoolTerm(parsed.displayTitle),
+            if ((parsed?.displaySubtitle ?? homework.subtitle).isNotEmpty)
+              l10n.translateDashboardServerText(
+                parsed?.displaySubtitle ?? homework.subtitle,
+              ),
           ],
         );
       }
@@ -445,6 +469,7 @@ extension CalendarSyncService on Never {
         }
         if (_isDuplicateGradeGroupEntry(
           homework: homework,
+          knownSubjects: state.extractAllSubjects(),
           homeworkExam: homeworkExam,
           subject: hour.subject,
         )) {
@@ -457,10 +482,16 @@ extension CalendarSyncService on Never {
 
   static bool _isDuplicateGradeGroupEntry({
     required Homework homework,
+    required Iterable<String> knownSubjects,
     required HomeworkExam homeworkExam,
     required String subject,
   }) {
-    final homeworkSubject = _normalizeCalendarSyncText(homework.label);
+    final parsed = parseLocalReminderAssessment(
+      homework.subtitle.isNotEmpty ? homework.subtitle : homework.title,
+      knownSubjects,
+    );
+    final homeworkSubject =
+        _normalizeCalendarSyncText(parsed?.displayLabel ?? homework.label);
     final examSubject = _normalizeCalendarSyncText(subject);
     if (homeworkSubject.isNotEmpty &&
         examSubject.isNotEmpty &&
@@ -469,8 +500,8 @@ extension CalendarSyncService on Never {
     }
 
     final homeworkLabels = <String>{
-      _normalizeCalendarSyncText(homework.title),
-      _normalizeCalendarSyncText(homework.subtitle),
+      _normalizeCalendarSyncText(parsed?.displayTitle ?? homework.title),
+      _normalizeCalendarSyncText(parsed?.displaySubtitle ?? homework.subtitle),
     }..removeWhere((value) => value.isEmpty);
     final examLabels = <String>{
       _normalizeCalendarSyncText(homeworkExam.typeName),
@@ -484,7 +515,8 @@ extension CalendarSyncService on Never {
       }
     }
 
-    final homeworkSubtitle = _normalizeCalendarSyncText(homework.subtitle);
+    final homeworkSubtitle = _normalizeCalendarSyncText(
+        parsed?.displaySubtitle ?? homework.subtitle);
     final examName = _normalizeCalendarSyncText(homeworkExam.name);
     if (homeworkSubtitle.isNotEmpty && homeworkSubtitle == examName) {
       return true;

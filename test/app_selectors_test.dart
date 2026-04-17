@@ -1,4 +1,4 @@
-﻿import 'package:built_collection/built_collection.dart';
+import 'package:built_collection/built_collection.dart';
 import 'package:dr/app_selectors.dart';
 import 'package:dr/app_state.dart';
 import 'package:dr/data.dart';
@@ -6,6 +6,8 @@ import 'package:dr/utc_date_time.dart';
 import 'package:dr/util.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'support/fixtures.dart';
+import 'support/test_harness.dart';
 
 void main() {
   setUp(() {
@@ -152,7 +154,8 @@ void main() {
     expect(days.single.homework.map((hw) => hw.id), <int>[1, 2]);
   });
 
-  test('dashboardDays still uses title fallback for unknown legacy entries', () {
+  test('dashboardDays still uses title fallback for unknown legacy entries',
+      () {
     final state = AppState(
       (b) {
         b.dashboardState
@@ -190,6 +193,88 @@ void main() {
     final days = appSelectors.dashboardDays(state);
 
     expect(days.single.homework, isEmpty);
+  });
+
+  test('dashboardDays derives the subject for local assessments from calendar',
+      () {
+    final state = AppState(
+      (b) {
+        b.dashboardState
+          ..blacklist = ListBuilder<HomeworkType>()
+          ..allDays = ListBuilder<Day>(<Day>[
+            buildDay(
+              date: UtcDateTime(2026, 3, 27),
+              homework: <Homework>[
+                buildHomework(
+                  title: 'Erinnerung',
+                  subtitle: '/exam@2 Mündliche Prüfung',
+                  type: HomeworkType.homework,
+                ),
+              ],
+            ),
+          ]);
+        b.calendarState.days = MapBuilder<UtcDateTime, CalendarDay>({
+          UtcDateTime(2026, 3, 27): buildCalendarDay(
+            date: UtcDateTime(2026, 3, 27),
+            hours: <CalendarHour>[
+              buildCalendarHour(
+                subject: 'Italienisch',
+                fromHour: 2,
+                toHour: 2,
+              ),
+            ],
+          ),
+        });
+      },
+    );
+
+    final days = appSelectors.dashboardDays(state);
+
+    expect(days.single.homework.single.label, 'Italienisch');
+  });
+
+  test(
+      'dashboard delete removes local assessments by id even when dashboard data is normalized',
+      () {
+    final initialState = AppState(
+      (b) {
+        b.dashboardState
+          ..blacklist = ListBuilder<HomeworkType>()
+          ..allDays = ListBuilder<Day>(<Day>[
+            buildDay(
+              date: UtcDateTime(2026, 3, 27),
+              homework: <Homework>[
+                buildHomework(
+                  title: 'Erinnerung',
+                  subtitle: '/exam@2 Mündliche Prüfung',
+                  type: HomeworkType.homework,
+                  deleteable: true,
+                ),
+              ],
+            ),
+          ]);
+        b.calendarState.days = MapBuilder<UtcDateTime, CalendarDay>({
+          UtcDateTime(2026, 3, 27): buildCalendarDay(
+            date: UtcDateTime(2026, 3, 27),
+            hours: <CalendarHour>[
+              buildCalendarHour(
+                subject: 'Italienisch',
+                fromHour: 2,
+                toHour: 2,
+              ),
+            ],
+          ),
+        });
+      },
+    );
+
+    final normalizedHomework =
+        appSelectors.dashboardDays(initialState).single.homework.single;
+    final store = createStore(initialState: initialState);
+    store.actions.dashboardActions.deleteHomework(normalizedHomework);
+    final nextState = store.state;
+
+    expect(nextState.dashboardState.allDays!.single.homework, isEmpty);
   });
 
   test('allSubjectsAverage ignores configured subjects case-insensitively', () {

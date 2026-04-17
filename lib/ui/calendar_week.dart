@@ -175,16 +175,23 @@ class _HoursChunk extends StatelessWidget {
                           displayHours[n ~/ 2].fromHour <= selectedHour! &&
                           displayHours[n ~/ 2].toHour >= selectedHour!,
                       backgroundColor: colorBackground
-                          ? Color(
-                              subjectThemes[displayHours[n ~/ 2].subject]!.color,
-                            )
-                              .withValues(alpha: 0.25)
+                          ? (subjectThemes[displayHours[n ~/ 2].subject] != null
+                                  ? Color(
+                                      subjectThemes[displayHours[n ~/ 2].subject]!
+                                          .color,
+                                    ).withValues(alpha: 0.25)
+                                  : Colors.transparent)
                           : Colors.transparent,
                       selectedBackgroundColor: colorBackground
-                          ? Color(
-                              subjectThemes[displayHours[n ~/ 2].subject]!.color,
-                            )
-                              .withValues(alpha: 0.5)
+                          ? (subjectThemes[displayHours[n ~/ 2].subject] != null
+                                  ? Color(
+                                      subjectThemes[displayHours[n ~/ 2].subject]!
+                                          .color,
+                                    ).withValues(alpha: 0.5)
+                                  : Theme.of(context)
+                                      .colorScheme
+                                      .secondary
+                                      .withAlpha(35))
                           : Theme.of(context)
                               .colorScheme
                               .secondary

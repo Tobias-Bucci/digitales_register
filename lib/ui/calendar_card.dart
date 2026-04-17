@@ -19,6 +19,7 @@
 import 'package:dr/app_state.dart';
 import 'package:dr/data.dart';
 import 'package:dr/i18n/app_localizations.dart';
+import 'package:dr/local_reminder_assessments.dart';
 import 'package:dr/main.dart';
 import 'package:dr/ui/animated_linear_progress_indicator.dart';
 import 'package:dr/utc_date_time.dart';
@@ -122,6 +123,16 @@ class CalendarCard extends StatelessWidget {
         icon: homeworkExam.warning ? Icons.grade : Icons.assignment,
         iconColor: homeworkExam.warning ? Colors.red : Colors.grey,
       );
+      if (isLocalReminderAssessmentHomeworkExam(homeworkExam)) {
+        addContentRow(
+          title: l10n.text('calendar.selfCreatedAssessment'),
+          content: l10n.text(
+            'calendar.selfCreatedAssessmentBody',
+            args: {'type': l10n.translateSchoolTerm(homeworkExam.typeName)},
+          ),
+          icon: Icons.edit_note,
+        );
+      }
     }
 
     return Card(
@@ -168,25 +179,26 @@ class CalendarCard extends StatelessWidget {
               ],
             ),
             // Time (index and time)
-            _ContentItem(
-              title: hour.fromHour == hour.toHour
-                  ? l10n.text(
-                      'calendar.period.single',
-                      args: {'from': hour.fromHour.toString()},
-                    )
-                  : l10n.text(
-                      'calendar.period.range',
-                      args: {
-                        'from': hour.fromHour.toString(),
-                        'to': hour.toHour.toString(),
-                      },
-                    ),
-              content: hour.timeSpans
-                  .map((span) =>
-                      "${formatTime(span.from)} – ${formatTime(span.to)}")
-                  .join(", "),
-              icon: Icons.schedule,
-            ),
+            if (hour.timeSpans.isNotEmpty)
+              _ContentItem(
+                title: hour.fromHour == hour.toHour
+                    ? l10n.text(
+                        'calendar.period.single',
+                        args: {'from': hour.fromHour.toString()},
+                      )
+                    : l10n.text(
+                        'calendar.period.range',
+                        args: {
+                          'from': hour.fromHour.toString(),
+                          'to': hour.toHour.toString(),
+                        },
+                      ),
+                content: hour.timeSpans
+                    .map((span) =>
+                        "${formatTime(span.from)} – ${formatTime(span.to)}")
+                    .join(", "),
+                icon: Icons.schedule,
+              ),
             ...contentRows,
           ]
               .expand(
