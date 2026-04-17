@@ -52,6 +52,19 @@ void main() {
     expect(secondDay.hours.single.subject, 'Mathematik');
   });
 
+  test('generates automatic subject nick from first and last word', () {
+    expect(
+      generateAutomaticSubjectNick('Deutsch als Zweitsprache'),
+      'DZ',
+    );
+  });
+
+  test('does not generate automatic subject nick for non-three-word subjects',
+      () {
+    expect(generateAutomaticSubjectNick('Informatik'), isNull);
+    expect(generateAutomaticSubjectNick('Ein Fach Name Test'), isNull);
+  });
+
   test('detects substitute lessons from a stable teacher baseline', () {
     store.actions.calendarActions.loaded(
       _calendarLoaded(_calendarPayloadForDate(

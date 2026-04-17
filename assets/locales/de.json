@@ -225,6 +225,8 @@
   "calendar.editNicknames": "Kürzel bearbeiten",
   "calendar.reportSubstituteError": "Supplenzfehler korrigieren",
   "calendar.configureSubstitute": "Supplenz-Einstellungen öffnen",
+  "calendar.primaryTeacherScan.title": "Hauptlehrer werden ermittelt",
+  "calendar.primaryTeacherScan.body": "Der Kalender lädt mehrere Wochen im Hintergrund, damit die Hauptlehrer pro Fach automatisch erkannt werden.",
   "certificate.title": "Zeugnis",
   "messages.title": "Mitteilungen",
   "messages.none": "Noch keine Mitteilungen",

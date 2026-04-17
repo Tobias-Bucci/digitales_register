@@ -225,6 +225,8 @@
   "calendar.editNicknames": "Modifica abbreviazioni",
   "calendar.reportSubstituteError": "Correggi errore supplenza",
   "calendar.configureSubstitute": "Apri impostazioni supplenze",
+  "calendar.primaryTeacherScan.title": "Rilevamento docenti principali",
+  "calendar.primaryTeacherScan.body": "Il calendario sta caricando più settimane in background per riconoscere automaticamente il docente principale di ogni materia.",
   "certificate.title": "Pagella",
   "messages.title": "Comunicazioni",
   "messages.none": "Ancora nessuna comunicazione",

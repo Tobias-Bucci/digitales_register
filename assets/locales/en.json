@@ -225,6 +225,8 @@
   "calendar.editNicknames": "Edit abbreviations",
   "calendar.reportSubstituteError": "Fix substitute detection",
   "calendar.configureSubstitute": "Open substitute settings",
+  "calendar.primaryTeacherScan.title": "Detecting primary teachers",
+  "calendar.primaryTeacherScan.body": "The calendar is loading multiple weeks in the background so the primary teacher for each subject can be detected automatically.",
   "certificate.title": "Report card",
   "messages.title": "Messages",
   "messages.none": "No messages yet",

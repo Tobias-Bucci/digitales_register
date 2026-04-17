@@ -225,6 +225,8 @@
   "calendar.editNicknames": "Mudè les abreviazions",
   "calendar.reportSubstituteError": "Corejë n error de suplenza",
   "calendar.configureSubstitute": "Vierz les impostaziuns dl suplenze",
+  "calendar.primaryTeacherScan.title": "Rilevaziun di insignanc principals",
+  "calendar.primaryTeacherScan.body": "Le calendere ćiarea plü setemanes tl background por reconësce automaticamënter l'insignant principal de vigni dicipina.",
   "certificate.title": "Pagella",
   "messages.title": "Comunicaziuns",
   "messages.none": "Ciamò degüna comunicaziun",
