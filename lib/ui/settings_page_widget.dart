@@ -66,6 +66,8 @@ class SettingsPageWidget extends StatefulWidget {
   final OnSettingChanged<Map<String, List<String>>>
       onSetSubstitutePrimaryTeachers;
   final OnSettingChanged<List<String>> onSetSubstituteKnownTeachers;
+  final OnSettingChanged<List<String>>
+      onSetSubstitutePrimaryTeachersLockedSubjects;
   final Future<void> Function(bool enabled) onSetCalendarSyncEnabled;
   final Future<void> Function(int? calendarId) onSetCalendarSyncCalendarId;
   final Future<void> Function() onRemoveCalendarSyncEvents;
@@ -106,6 +108,7 @@ class SettingsPageWidget extends StatefulWidget {
     required this.onSetSubstituteDetectionEnabled,
     required this.onSetSubstitutePrimaryTeachers,
     required this.onSetSubstituteKnownTeachers,
+    required this.onSetSubstitutePrimaryTeachersLockedSubjects,
     required this.onSetCalendarSyncEnabled,
     required this.onSetCalendarSyncCalendarId,
     required this.onRemoveCalendarSyncEvents,
@@ -122,6 +125,7 @@ class SettingsPageWidget extends StatefulWidget {
 
 class _SettingsPageWidgetState extends State<SettingsPageWidget> {
   final controller = AutoScrollController(suggestedRowHeight: 250);
+  final GlobalKey _substituteSettingsKey = GlobalKey();
   late bool _translateSubjectsEnabled;
   late Future<List<CalendarSyncCalendar>> _calendarSyncCalendarsFuture;
 
@@ -163,14 +167,47 @@ class _SettingsPageWidgetState extends State<SettingsPageWidget> {
       });
     }
     if (widget.vm.showCalendarSubstituteSettings) {
-      WidgetsBinding.instance.addPostFrameCallback((_) {
-        controller.scrollToIndex(
-          5,
-          preferPosition: AutoScrollPosition.begin,
-        );
+      WidgetsBinding.instance.addPostFrameCallback((_) async {
+        await _scrollToSubstituteSettings();
       });
     }
     super.initState();
+  }
+
+  Future<void> _scrollToSubstituteSettings() async {
+    final context = _substituteSettingsKey.currentContext;
+    if (context != null) {
+      await Scrollable.ensureVisible(
+        context,
+        alignment: 0,
+        duration: const Duration(milliseconds: 250),
+        curve: Curves.easeInOut,
+      );
+      return;
+    }
+    await controller.scrollToIndex(
+      5,
+      preferPosition: AutoScrollPosition.begin,
+    );
+  }
+
+  void _applySubstituteTeachersUpdate(
+    Map<String, List<String>> updated, {
+    Iterable<String> manuallyLockedSubjects = const <String>[],
+  }) {
+    widget.onSetSubstitutePrimaryTeachers(updated);
+    if (manuallyLockedSubjects.isEmpty) {
+      return;
+    }
+    final lockedSubjects = <String>[
+      ...widget.vm.substitutePrimaryTeachersLockedSubjects,
+    ];
+    for (final subject in manuallyLockedSubjects) {
+      if (!containsSubjectIgnoreCase(lockedSubjects, subject)) {
+        lockedSubjects.add(subject);
+      }
+    }
+    widget.onSetSubstitutePrimaryTeachersLockedSubjects(lockedSubjects);
   }
 
   Future<List<CalendarSyncCalendar>> _loadCalendarSyncCalendars() {
@@ -210,9 +247,13 @@ class _SettingsPageWidgetState extends State<SettingsPageWidget> {
     if (subject == null) {
       return;
     }
-    final updated = Map<String, List<String>>.from(widget.vm.substitutePrimaryTeachers)
-      ..putIfAbsent(subject, () => <String>[]);
-    widget.onSetSubstitutePrimaryTeachers(updated);
+    final updated =
+        Map<String, List<String>>.from(widget.vm.substitutePrimaryTeachers)
+          ..putIfAbsent(subject, () => <String>[]);
+    _applySubstituteTeachersUpdate(
+      updated,
+      manuallyLockedSubjects: [subject],
+    );
   }
 
   Future<void> _showAddTeacherDialog(String subject) async {
@@ -241,7 +282,10 @@ class _SettingsPageWidgetState extends State<SettingsPageWidget> {
     final resolvedSubject =
         findStringIgnoreCase(updatedSubjects.keys, subject) ?? subject;
     updatedSubjects[resolvedSubject] = updatedTeachers;
-    widget.onSetSubstitutePrimaryTeachers(updatedSubjects);
+    _applySubstituteTeachersUpdate(
+      updatedSubjects,
+      manuallyLockedSubjects: [resolvedSubject],
+    );
 
     final knownTeachers = <String>[...widget.vm.allTeachers];
     if (!containsStringIgnoreCase(knownTeachers, teacher)) {
@@ -401,6 +445,11 @@ class _SettingsPageWidgetState extends State<SettingsPageWidget> {
       WidgetsBinding.instance.addPostFrameCallback((_) async {
         await controller.scrollToIndex(4,
             preferPosition: AutoScrollPosition.begin);
+      });
+    }
+    if (widget.vm.showCalendarSubstituteSettings) {
+      WidgetsBinding.instance.addPostFrameCallback((_) async {
+        await _scrollToSubstituteSettings();
       });
     }
     final currentTheme = switch (widget.currentThemePreference) {
@@ -940,6 +989,7 @@ class _SettingsPageWidgetState extends State<SettingsPageWidget> {
             index: 5,
             key: const ObjectKey(5),
             child: ListTile(
+              key: _substituteSettingsKey,
               title: Text(
                 l10n.text('settings.calendar.substituteTeachers.title'),
                 style: Theme.of(context).textTheme.headlineSmall,
@@ -947,21 +997,24 @@ class _SettingsPageWidgetState extends State<SettingsPageWidget> {
             ),
           ),
           SwitchListTile.adaptive(
-            title: Text(l10n.text('settings.calendar.substituteDetection.title')),
-            subtitle:
-                Text(l10n.text('settings.calendar.substituteDetection.subtitle')),
+            title:
+                Text(l10n.text('settings.calendar.substituteDetection.title')),
+            subtitle: Text(
+                l10n.text('settings.calendar.substituteDetection.subtitle')),
             onChanged: widget.onSetSubstituteDetectionEnabled,
             value: widget.vm.substituteDetectionEnabled,
           ),
           ListTile(
-            title: Text(l10n.text('settings.calendar.substituteTeachers.title')),
-            subtitle:
-                Text(l10n.text('settings.calendar.substituteTeachers.subtitle')),
+            title:
+                Text(l10n.text('settings.calendar.substituteTeachers.title')),
+            subtitle: Text(
+                l10n.text('settings.calendar.substituteTeachers.subtitle')),
             trailing: IconButton(
               icon: const Icon(Icons.add),
               onPressed: widget.vm.allSubjects
                       .where(
-                        (subject) => !widget.vm.substitutePrimaryTeachers.keys.any(
+                        (subject) =>
+                            !widget.vm.substitutePrimaryTeachers.keys.any(
                           (existing) => equalsIgnoreCase(existing, subject),
                         ),
                       )
@@ -1003,7 +1056,10 @@ class _SettingsPageWidgetState extends State<SettingsPageWidget> {
                         final updated = Map<String, List<String>>.from(
                           widget.vm.substitutePrimaryTeachers,
                         )..remove(entry.key);
-                        widget.onSetSubstitutePrimaryTeachers(updated);
+                        _applySubstituteTeachersUpdate(
+                          updated,
+                          manuallyLockedSubjects: [entry.key],
+                        );
                       },
                     ),
                     children: [
@@ -1051,7 +1107,10 @@ class _SettingsPageWidgetState extends State<SettingsPageWidget> {
                                 } else {
                                   updated[entry.key] = teachers;
                                 }
-                                widget.onSetSubstitutePrimaryTeachers(updated);
+                                _applySubstituteTeachersUpdate(
+                                  updated,
+                                  manuallyLockedSubjects: [entry.key],
+                                );
                               },
                             ),
                           ),

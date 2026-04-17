@@ -63,9 +63,11 @@ final settingsReducerBuilder = NestedReducerBuilder<AppState, AppStateBuilder,
       SettingsActionsNames.pushNotificationsEnabled, _pushNotificationsEnabled)
   ..add(SettingsActionsNames.substituteDetectionEnabled,
       _substituteDetectionEnabled)
-  ..add(
-      SettingsActionsNames.substitutePrimaryTeachers, _substitutePrimaryTeachers)
+  ..add(SettingsActionsNames.substitutePrimaryTeachers,
+      _substitutePrimaryTeachers)
   ..add(SettingsActionsNames.substituteKnownTeachers, _substituteKnownTeachers)
+  ..add(SettingsActionsNames.substitutePrimaryTeachersLockedSubjects,
+      _substitutePrimaryTeachersLockedSubjects)
   ..add(SettingsActionsNames.calendarSyncEnabled, _calendarSyncEnabled)
   ..add(SettingsActionsNames.calendarSyncCalendarId, _calendarSyncCalendarId)
   ..add(SettingsActionsNames.amoledMode, _amoledMode)
@@ -223,10 +225,14 @@ void _substitutePrimaryTeachers(
   builder.substitutePrimaryTeachers.replace(action.payload);
 }
 
-void _substituteKnownTeachers(
-    SettingsState state, Action<BuiltList<String>> action,
-    SettingsStateBuilder builder) {
+void _substituteKnownTeachers(SettingsState state,
+    Action<BuiltList<String>> action, SettingsStateBuilder builder) {
   builder.substituteKnownTeachers.replace(action.payload);
+}
+
+void _substitutePrimaryTeachersLockedSubjects(SettingsState state,
+    Action<BuiltList<String>> action, SettingsStateBuilder builder) {
+  builder.substitutePrimaryTeachersLockedSubjects.replace(action.payload);
 }
 
 void _calendarSyncEnabled(

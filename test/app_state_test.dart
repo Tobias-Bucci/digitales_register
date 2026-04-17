@@ -1,4 +1,4 @@
-﻿import 'package:built_collection/built_collection.dart';
+import 'package:built_collection/built_collection.dart';
 import 'package:built_value/serializer.dart';
 import 'package:dr/app_state.dart';
 import 'package:dr/data.dart';
@@ -7,7 +7,8 @@ import 'package:dr/utc_date_time.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 void main() {
-  test('extractAllSubjects combines calendar, grades, and dashboard subjects', () {
+  test('extractAllSubjects combines calendar, grades, and dashboard subjects',
+      () {
     final state = AppState(
       (b) {
         b.calendarState.days = MapBuilder<UtcDateTime, CalendarDay>(
@@ -82,7 +83,8 @@ void main() {
     );
   });
 
-  test('extractAllSubjects caches the computed subject list per state instance', () {
+  test('extractAllSubjects caches the computed subject list per state instance',
+      () {
     final state = AppState();
 
     final first = state.extractAllSubjects();
@@ -97,6 +99,8 @@ void main() {
         ..substituteDetectionEnabled = false
         ..substituteKnownTeachers =
             ListBuilder<String>(const <String>['Doris Hilpold'])
+        ..substitutePrimaryTeachersLockedSubjects =
+            ListBuilder<String>(const <String>['Informatik'])
         ..substitutePrimaryTeachers = MapBuilder<String, BuiltList<String>>({
           'Informatik': BuiltList<String>(const <String>['Doris Hilpold']),
         }),
@@ -117,6 +121,10 @@ void main() {
     expect(
       deserialized.settingsState.substitutePrimaryTeachers['Informatik'],
       BuiltList<String>(const <String>['Doris Hilpold']),
+    );
+    expect(
+      deserialized.settingsState.substitutePrimaryTeachersLockedSubjects,
+      BuiltList<String>(const <String>['Informatik']),
     );
   });
 }

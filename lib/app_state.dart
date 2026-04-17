@@ -361,6 +361,7 @@ abstract class SettingsState
   BuiltList<String> get favoriteSubjects;
   BuiltMap<String, BuiltList<String>> get substitutePrimaryTeachers;
   BuiltList<String> get substituteKnownTeachers;
+  BuiltList<String> get substitutePrimaryTeachersLockedSubjects;
 
   // Whether to fully expand the drawer if in tablet mode
   // if not, only the icons are shown
@@ -402,6 +403,7 @@ abstract class SettingsState
       ..substitutePrimaryTeachers =
           MapBuilder<String, BuiltList<String>>(<String, BuiltList<String>>{})
       ..substituteKnownTeachers = ListBuilder<String>()
+      ..substitutePrimaryTeachersLockedSubjects = ListBuilder<String>()
       ..scrollToGrades = false
       ..scrollToSubjectNicks = false
       ..scrollToCalendarSubstituteSettings = false;

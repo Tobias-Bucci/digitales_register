@@ -22,6 +22,7 @@ import 'dart:developer';
 import 'dart:io';
 import 'dart:typed_data';
 
+import 'package:built_collection/built_collection.dart';
 import 'package:built_redux/built_redux.dart';
 import 'package:dio/dio.dart' as dio;
 import 'package:dr/actions/absences_actions.dart';

@@ -155,11 +155,10 @@ void main() {
         teacherLastName: 'Hilpold',
       )),
     );
+    await _flushAsyncActions();
 
     expect(
-      store.state.calendarState.days[UtcDateTime(2026, 4, 17)]!
-          .hours
-          .single
+      store.state.calendarState.days[UtcDateTime(2026, 4, 17)]!.hours.single
           .isDetectedSubstitute,
       isTrue,
     );
@@ -169,14 +168,63 @@ void main() {
         'Informatik': BuiltList<String>(const ['Doris Hilpold']),
       }),
     );
+    await store.actions.settingsActions.substitutePrimaryTeachersLockedSubjects(
+      BuiltList<String>(const ['Informatik']),
+    );
     await _recalculateSubstitutesFromState(store);
+    await _flushAsyncActions();
 
     expect(
-      store.state.calendarState.days[UtcDateTime(2026, 4, 17)]!
-          .hours
-          .single
+      store.state.calendarState.days[UtcDateTime(2026, 4, 17)]!.hours.single
           .isDetectedSubstitute,
       isFalse,
+    );
+  });
+
+  test('auto-populates stable primary teachers per subject', () {
+    return _runAutoPopulatePrimaryTeachersTest(store);
+  });
+
+  test('manual substitute teacher changes stay locked against auto updates',
+      () async {
+    store.actions.calendarActions.loaded(
+      _calendarLoaded(_calendarPayloadForDate(
+        date: '2026-04-03',
+        teacherFirstName: 'Christoph',
+        teacherLastName: 'Holzer',
+      )),
+    );
+    store.actions.calendarActions.loaded(
+      _calendarLoaded(_calendarPayloadForDate(
+        date: '2026-04-10',
+        teacherFirstName: 'Christoph',
+        teacherLastName: 'Holzer',
+      )),
+    );
+    await _flushAsyncActions();
+
+    await store.actions.settingsActions.substitutePrimaryTeachers(
+      BuiltMap<String, BuiltList<String>>({
+        'Informatik': BuiltList<String>(const ['Doris Hilpold']),
+      }),
+    );
+    await store.actions.settingsActions.substitutePrimaryTeachersLockedSubjects(
+      BuiltList<String>(const ['Informatik']),
+    );
+    await _flushAsyncActions();
+
+    store.actions.calendarActions.loaded(
+      _calendarLoaded(_calendarPayloadForDate(
+        date: '2026-04-17',
+        teacherFirstName: 'Christoph',
+        teacherLastName: 'Holzer',
+      )),
+    );
+    await _flushAsyncActions();
+
+    expect(
+      store.state.settingsState.substitutePrimaryTeachers['Informatik'],
+      BuiltList<String>(const <String>['Doris Hilpold']),
     );
   });
 
@@ -203,22 +251,20 @@ void main() {
         teacherLastName: 'Hilpold',
       )),
     );
+    await _flushAsyncActions();
 
     expect(
-      store.state.calendarState.days[UtcDateTime(2026, 4, 17)]!
-          .hours
-          .single
+      store.state.calendarState.days[UtcDateTime(2026, 4, 17)]!.hours.single
           .isDetectedSubstitute,
       isTrue,
     );
 
     await store.actions.settingsActions.substituteDetectionEnabled(false);
     await _recalculateSubstitutesFromState(store);
+    await _flushAsyncActions();
 
     expect(
-      store.state.calendarState.days[UtcDateTime(2026, 4, 17)]!
-          .hours
-          .single
+      store.state.calendarState.days[UtcDateTime(2026, 4, 17)]!.hours.single
           .isDetectedSubstitute,
       isFalse,
     );
@@ -392,8 +438,45 @@ Future<void> _recalculateSubstitutesFromState(
   await store.actions.calendarActions.recalculateSubstitutes(
     _substituteDetectionConfig(
       enabled: store.state.settingsState.substituteDetectionEnabled,
-      primaryTeachers: store.state.settingsState.substitutePrimaryTeachers.toMap(),
+      primaryTeachers:
+          store.state.settingsState.substitutePrimaryTeachers.toMap(),
     ),
+  );
+}
+
+Future<void> _flushAsyncActions() {
+  return Future<void>.delayed(const Duration(milliseconds: 10));
+}
+
+Future<void> _runAutoPopulatePrimaryTeachersTest(
+  Store<AppState, AppStateBuilder, AppActions> store,
+) async {
+  store.actions.calendarActions.loaded(
+    _calendarLoaded(_calendarPayloadForDate(
+      date: '2026-04-03',
+      teacherFirstName: 'Christoph',
+      teacherLastName: 'Holzer',
+    )),
+  );
+  store.actions.calendarActions.loaded(
+    _calendarLoaded(_calendarPayloadForDate(
+      date: '2026-04-10',
+      teacherFirstName: 'Christoph',
+      teacherLastName: 'Holzer',
+    )),
+  );
+  store.actions.calendarActions.loaded(
+    _calendarLoaded(_calendarPayloadForDate(
+      date: '2026-04-17',
+      teacherFirstName: 'Doris',
+      teacherLastName: 'Hilpold',
+    )),
+  );
+  await _flushAsyncActions();
+
+  expect(
+    store.state.settingsState.substitutePrimaryTeachers['Informatik'],
+    BuiltList<String>(const <String>['Christoph Holzer']),
   );
 }
 
@@ -404,7 +487,8 @@ SubstituteDetectionConfig _substituteDetectionConfig({
   return SubstituteDetectionConfig(
     (b) => b
       ..enabled = enabled
-      ..primaryTeachers = MapBuilder<String, BuiltList<String>>(primaryTeachers),
+      ..primaryTeachers =
+          MapBuilder<String, BuiltList<String>>(primaryTeachers),
   );
 }
 

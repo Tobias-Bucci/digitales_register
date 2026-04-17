@@ -88,8 +88,7 @@ class SettingsPageContainer extends StatelessWidget {
             onSetSubstitutePrimaryTeachers: (map) async {
               await actions.settingsActions.substitutePrimaryTeachers(
                 BuiltMap(map.map(
-                  (key, value) =>
-                      MapEntry(key, BuiltList<String>.from(value)),
+                  (key, value) => MapEntry(key, BuiltList<String>.from(value)),
                 )),
               );
               await actions.calendarActions.recalculateSubstitutes(
@@ -99,9 +98,12 @@ class SettingsPageContainer extends StatelessWidget {
                 ),
               );
             },
-            onSetSubstituteKnownTeachers: (teachers) => actions
-                .settingsActions
+            onSetSubstituteKnownTeachers: (teachers) => actions.settingsActions
                 .substituteKnownTeachers(BuiltList<String>.from(teachers)),
+            onSetSubstitutePrimaryTeachersLockedSubjects: (subjects) =>
+                actions.settingsActions.substitutePrimaryTeachersLockedSubjects(
+              BuiltList<String>.from(subjects),
+            ),
             onSetCalendarSyncEnabled:
                 actions.settingsActions.calendarSyncEnabled.call,
             onSetCalendarSyncCalendarId:
@@ -153,6 +155,7 @@ class SettingsViewModel {
   final List<String> ignoreForGradesAverage;
   final List<String> favoriteSubjects;
   final Map<String, List<String>> substitutePrimaryTeachers;
+  final List<String> substitutePrimaryTeachersLockedSubjects;
   final List<String> allTeachers;
   final BuiltMap<String, SubjectTheme> subjectThemes;
   SettingsViewModel(AppState state)
@@ -191,9 +194,13 @@ class SettingsViewModel {
             state.settingsState.ignoreForGradesAverage.toList(),
         favoriteSubjects = state.settingsState.favoriteSubjects.toList(),
         substitutePrimaryTeachers = {
-          for (final entry in state.settingsState.substitutePrimaryTeachers.entries)
+          for (final entry
+              in state.settingsState.substitutePrimaryTeachers.entries)
             entry.key: entry.value.toList(),
         },
+        substitutePrimaryTeachersLockedSubjects = state
+            .settingsState.substitutePrimaryTeachersLockedSubjects
+            .toList(),
         subjectThemes = state.settingsState.subjectThemes,
         demoMode = state.isDemo;
 }

@@ -29,7 +29,7 @@ import '../../support/fixtures.dart';
 import '../../support/test_harness.dart';
 
 void main() {
-  final settingsList = find.byType(ListView);
+  final settingsList = find.byType(Scrollable).first;
 
   setUp(() async {
     await bootstrapTestEnvironment();
@@ -42,7 +42,8 @@ void main() {
     testWidgets('scrollToSubjectNicks opens the add dialog immediately',
         (tester) async {
       final store = createStore(
-        initialState: AppState((b) => b.settingsState.scrollToSubjectNicks = true),
+        initialState:
+            AppState((b) => b.settingsState.scrollToSubjectNicks = true),
       );
 
       await pumpApp(
@@ -76,15 +77,19 @@ void main() {
       );
       await tester.tap(find.text('Fächerkürzel'));
       await tester.pumpAndSettle();
-      tester.widget<IconButton>(
-        find.descendant(
-          of: find.ancestor(
-            of: find.text('Fächerkürzel'),
-            matching: find.byType(ExpansionTile),
-          ),
-          matching: find.byType(IconButton),
-        ).first,
-      ).onPressed!();
+      tester
+          .widget<IconButton>(
+            find
+                .descendant(
+                  of: find.ancestor(
+                    of: find.text('Fächerkürzel'),
+                    matching: find.byType(ExpansionTile),
+                  ),
+                  matching: find.byType(IconButton),
+                )
+                .first,
+          )
+          .onPressed!();
       await tester.pumpAndSettle();
 
       await tester.enterText(find.byType(EditableText).at(0), 'Fach1');
@@ -124,7 +129,8 @@ void main() {
       expect(find.text('Fach1'), findsOneWidget);
       final deleteButton = find.ancestor(
         of: find.descendant(
-          of: find.ancestor(of: find.text('Fach1'), matching: find.byType(ListTile)),
+          of: find.ancestor(
+              of: find.text('Fach1'), matching: find.byType(ListTile)),
           matching: find.byIcon(Icons.delete),
         ),
         matching: find.byType(IconButton),
@@ -134,6 +140,27 @@ void main() {
       await settleFor(tester);
 
       expect(store.state.settingsState.subjectNicks['Fach1'], isNull);
+    });
+  });
+
+  group('substitute settings', () {
+    testWidgets(
+        'scrollToCalendarSubstituteSettings brings the section into view',
+        (tester) async {
+      final store = createStore(
+        initialState: AppState(
+          (b) => b.settingsState.scrollToCalendarSubstituteSettings = true,
+        ),
+      );
+
+      await pumpApp(
+        tester,
+        store: store,
+        home: SettingsPageContainer(),
+      );
+      await settleFor(tester, duration: const Duration(milliseconds: 400));
+
+      expect(find.byKey(const ObjectKey(5)), findsOneWidget);
     });
   });
 
@@ -264,18 +291,21 @@ void main() {
         150,
         scrollable: settingsList,
       );
-      tester.widget<IconButton>(
-        find.ancestor(
-          of: find.descendant(
-            of: find.ancestor(
-              of: find.text('Fächer aus dem Notendurchschnitt ausschließen'),
-              matching: find.byType(ListTile),
+      tester
+          .widget<IconButton>(
+            find.ancestor(
+              of: find.descendant(
+                of: find.ancestor(
+                  of: find
+                      .text('Fächer aus dem Notendurchschnitt ausschließen'),
+                  matching: find.byType(ListTile),
+                ),
+                matching: find.byIcon(Icons.add),
+              ),
+              matching: find.byType(IconButton),
             ),
-            matching: find.byIcon(Icons.add),
-          ),
-          matching: find.byType(IconButton),
-        ),
-      ).onPressed!();
+          )
+          .onPressed!();
       await tester.pump();
       await settleFor(tester);
 
@@ -290,15 +320,18 @@ void main() {
         BuiltList<String>(const <String>['Fach1']),
       );
 
-      tester.widget<IconButton>(
-        find.ancestor(
-          of: find.descendant(
-            of: find.ancestor(of: find.text('Fach1'), matching: find.byType(ListTile)),
-            matching: find.byIcon(Icons.close),
-          ),
-          matching: find.byType(IconButton),
-        ),
-      ).onPressed!();
+      tester
+          .widget<IconButton>(
+            find.ancestor(
+              of: find.descendant(
+                of: find.ancestor(
+                    of: find.text('Fach1'), matching: find.byType(ListTile)),
+                matching: find.byIcon(Icons.close),
+              ),
+              matching: find.byType(IconButton),
+            ),
+          )
+          .onPressed!();
       await tester.pump();
       await settleFor(tester);
 
@@ -322,15 +355,17 @@ void main() {
         150,
         scrollable: settingsList,
       );
-      tester.widget<IconButton>(
-        find.descendant(
-          of: find.ancestor(
-            of: find.text('Fokusfächer verwalten').last,
-            matching: find.byType(ListTile),
-          ),
-          matching: find.byType(IconButton),
-        ),
-      ).onPressed!();
+      tester
+          .widget<IconButton>(
+            find.descendant(
+              of: find.ancestor(
+                of: find.text('Fokusfächer verwalten').last,
+                matching: find.byType(ListTile),
+              ),
+              matching: find.byType(IconButton),
+            ),
+          )
+          .onPressed!();
       await tester.pump();
       await settleFor(tester);
 
@@ -353,19 +388,23 @@ void main() {
         100,
         scrollable: settingsList,
       );
-      tester.widget<IconButton>(
-        find.descendant(
-          of: find.ancestor(of: find.text('Fach1').last, matching: find.byType(ListTile)),
-          matching: find.byType(IconButton),
-        ),
-      ).onPressed!();
+      tester
+          .widget<IconButton>(
+            find.descendant(
+              of: find.ancestor(
+                  of: find.text('Fach1').last, matching: find.byType(ListTile)),
+              matching: find.byType(IconButton),
+            ),
+          )
+          .onPressed!();
       await tester.pump();
       await settleFor(tester);
 
       expect(store.state.settingsState.favoriteSubjects, isEmpty);
     });
 
-    testWidgets('disables adding duplicates once all favorite subjects are used',
+    testWidgets(
+        'disables adding duplicates once all favorite subjects are used',
         (tester) async {
       final store = createStore(
         initialState: buildStateWithSubjects(

@@ -54,6 +54,8 @@ abstract class SettingsActions extends ReduxActions {
   abstract final ActionDispatcher<BuiltMap<String, BuiltList<String>>>
       substitutePrimaryTeachers;
   abstract final ActionDispatcher<BuiltList<String>> substituteKnownTeachers;
+  abstract final ActionDispatcher<BuiltList<String>>
+      substitutePrimaryTeachersLockedSubjects;
   abstract final ActionDispatcher<bool> calendarSyncEnabled;
   abstract final ActionDispatcher<int?> calendarSyncCalendarId;
   abstract final VoidActionDispatcher removeCalendarSyncEvents;
