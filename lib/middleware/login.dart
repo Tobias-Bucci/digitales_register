@@ -98,7 +98,12 @@ Future<void> _login(MiddlewareApi<AppState, AppStateBuilder, AppActions> api,
     return;
   }
 
-  final url = fixupUrl(action.payload.url);
+  final rawUrl = action.payload.url.trim();
+  final isDemoLogin =
+      action.payload.user == 'demo' &&
+      action.payload.pass == 'demo' &&
+      rawUrl.isEmpty;
+  final url = isDemoLogin ? '' : fixupUrl(rawUrl);
   await api.actions.loginActions.loggingIn();
 
   // We need to set the url earlier because other parts of the app will try to read it

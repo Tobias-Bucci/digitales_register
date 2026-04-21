@@ -105,6 +105,16 @@ class _LoginPageContentState extends State<LoginPageContent> {
 
   String get url => selectedPresetServer?.item2 ?? _urlController.text;
 
+  String _submitUrl() {
+    final username = _usernameController.text.trim();
+    final password = _passwordController.text;
+    final school = _schoolController.text.trim();
+    if (username == 'demo' && password == 'demo' && school.isEmpty) {
+      return '';
+    }
+    return url;
+  }
+
   @override
   void didChangeDependencies() {
     super.didChangeDependencies();
@@ -538,6 +548,18 @@ class _LoginPageContentState extends State<LoginPageContent> {
                                       },
                                     ),
                                   ],
+                                  if (!widget.vm.changePass) ...[
+                                    const SizedBox(height: 10),
+                                    Text(
+                                      l10n.text('login.demoHint'),
+                                      style: theme.textTheme.bodySmall
+                                          ?.copyWith(
+                                            color: theme
+                                                .colorScheme
+                                                .onSurfaceVariant,
+                                          ),
+                                    ),
+                                  ],
                                   const SizedBox(height: 14),
                                   ElevatedButton.icon(
                                     style: ElevatedButton.styleFrom(
@@ -554,19 +576,20 @@ class _LoginPageContentState extends State<LoginPageContent> {
                                         widget.vm.loading || !newPasswordsMatch
                                         ? null
                                         : () {
+                                            final submitUrl = _submitUrl();
                                             widget.setSaveNoPass(safeMode);
                                             if (widget.vm.changePass) {
                                               widget.onChangePass(
                                                 _usernameController.text,
                                                 _passwordController.text,
                                                 _newPassword1Controller.text,
-                                                url,
+                                                submitUrl,
                                               );
                                             } else {
                                               widget.onLogin(
                                                 _usernameController.value.text,
                                                 _passwordController.value.text,
-                                                url,
+                                                submitUrl,
                                               );
                                             }
                                           },

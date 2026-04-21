@@ -303,7 +303,10 @@ List? _checkIsList(dynamic json) {
 }
 
 String fixupUrl(String enteredUrl) {
-  var url = enteredUrl;
+  var url = enteredUrl.trim();
+  if (url.isEmpty) {
+    return '';
+  }
   if (Uri.parse(url).scheme.isEmpty) {
     // add https:// if there is no uri scheme
     url = "https://$url";

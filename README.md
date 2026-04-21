@@ -104,15 +104,15 @@ The application includes a demo mode for testing purposes without requiring a re
 
 Credentials:
 
-- School: Vinzentinum
-- Username: demo-user-6540
-- Password: any value
+- School: Blank
+- Username: demo
+- Password: demo
 
 Notes:
 
 - The demo environment uses mock data
-- Some features may be limited or behave differently
-- Data is not guaranteed to be consistent or persistent
+- All UI-visible demo actions run locally without real backend requests
+- Local demo changes stay on the device until the app data is deleted
 
 ---
 

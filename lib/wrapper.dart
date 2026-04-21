@@ -140,20 +140,21 @@ class Wrapper {
     VoidCallback? relogin,
     AddNetworkProtocolItem? addProtocolItem,
   }) async {
-    if (isDemoUser(url: url, username: user)) {
+    if (user == 'demo' && pass == 'demo' && (url?.trim().isEmpty ?? true)) {
       demoMode = true;
+      this.url = '';
       _loggedIn = Future.value(true);
       this.user = user;
       this.pass = pass;
+      await initializeDemoStore();
       config = Config(
         (b) => b
           ..autoLogoutSeconds = 300
           ..currentSemesterMaybe = 1
-          ..fullName = "Demo User"
-          ..imgSource =
-              "https://vinzentinum.digitalesregister.it/v2/theme/icons/profile_empty.png"
+          ..fullName = 'Demo'
+          ..imgSource = ''
           ..isStudentOrParent = true
-          ..userId = 0,
+          ..userId = 1,
       );
       configLoaded?.call();
       return;
@@ -617,7 +618,7 @@ class Wrapper {
     int unexpectedLogoutRetryCount = 0,
   }) async {
     if (demoMode) {
-      return getDemoResponse(url, args);
+      return await getDemoResponse(url, args);
     }
     assert(!url.startsWith("/"));
 
@@ -705,7 +706,12 @@ class Wrapper {
     int unexpectedLogoutRetryCount = 0,
   }) async {
     if (demoMode) {
-      return <String, Object?>{"error": null};
+      return await getDemoBytesResponse(
+        url,
+        bytes: bytes,
+        contentType: contentType,
+        fileName: fileName,
+      );
     }
     assert(!url.startsWith("/"));
 

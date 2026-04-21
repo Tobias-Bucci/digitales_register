@@ -46,8 +46,8 @@ final Expando<List<String>> _allTeachersCache =
     Expando<List<String>>('appStateAllTeachers');
 
 bool isDemoUser({required String? url, required String? username}) {
-  return username == "demo-user-6540" &&
-      url == "https://vinzentinum.digitalesregister.it";
+  final normalizedUrl = url?.trim() ?? '';
+  return username == 'demo' && normalizedUrl.isEmpty;
 }
 
 abstract class AppState implements Built<AppState, AppStateBuilder> {
