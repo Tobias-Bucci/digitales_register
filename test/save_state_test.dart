@@ -1,5 +1,6 @@
 import 'dart:convert';
 
+import 'package:built_collection/built_collection.dart';
 import 'package:built_redux/built_redux.dart';
 import 'package:dr/actions/app_actions.dart';
 import 'package:dr/actions/login_actions.dart';
@@ -49,7 +50,41 @@ void main() {
 
     final payload = await storedPayload(storage, 'immediate-user');
     expect(payload, isNotNull);
-    expect(serializers.deserialize(json.decode(payload!) as Object), isA<AppState>());
+    expect(serializers.deserialize(json.decode(payload!) as Object),
+        isA<AppState>());
+  });
+
+  test('subject nicks persist immediately after changes', () async {
+    final store = _createLoggedInStore(username: 'subject-nicks-user');
+
+    await store.actions.settingsActions.subjectNicks(
+      BuiltMap<String, String>({
+        ...defaultSubjectNicks,
+        'Mathematik': 'M',
+        'Geschichte': 'Ge',
+      }),
+    );
+
+    final payload = await storedPayload(storage, 'subject-nicks-user');
+    expect(payload, isNotNull);
+
+    final deserialized =
+        serializers.deserialize(json.decode(payload!) as Object) as AppState;
+    expect(deserialized.settingsState.subjectNicks['Mathematik'], 'M');
+    expect(deserialized.settingsState.subjectNicks['Geschichte'], 'Ge');
+  });
+
+  test('calendar substitute helper visibility persists immediately', () async {
+    final store = _createLoggedInStore(username: 'calendar-substitute-user');
+
+    await store.actions.settingsActions.showCalendarSubstituteBar(false);
+
+    final payload = await storedPayload(storage, 'calendar-substitute-user');
+    expect(payload, isNotNull);
+
+    final deserialized =
+        serializers.deserialize(json.decode(payload!) as Object) as AppState;
+    expect(deserialized.settingsState.showCalendarSubstituteBar, isFalse);
   });
 
   test('noDataSaving stores only settings state', () async {
@@ -88,7 +123,9 @@ void main() {
     );
   });
 
-  test('logout with deleteDataOnLogout replaces persisted app state with settings', () async {
+  test(
+      'logout with deleteDataOnLogout replaces persisted app state with settings',
+      () async {
     final store = _createLoggedInStore(
       username: 'logout-user',
       state: AppState(

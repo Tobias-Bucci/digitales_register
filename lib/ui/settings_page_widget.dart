@@ -130,6 +130,9 @@ class _SettingsPageWidgetState extends State<SettingsPageWidget> {
   late Future<List<CalendarSyncCalendar>> _calendarSyncCalendarsFuture;
   bool _showSubstituteSubjects = false;
   final Set<String> _expandedSubstituteSubjects = <String>{};
+  bool _handledSubjectNicksIntent = false;
+  bool _handledGradesIntent = false;
+  bool _handledCalendarSubstituteIntent = false;
 
   List<String> get subjectsWithoutNick => widget.vm.allSubjects
       .where((element) => !widget.vm.subjectNicks.keys.contains(element))
@@ -148,32 +151,58 @@ class _SettingsPageWidgetState extends State<SettingsPageWidget> {
   void initState() {
     _translateSubjectsEnabled = appSubjectTranslationController.enabled;
     _calendarSyncCalendarsFuture = _loadCalendarSyncCalendars();
-    if (widget.vm.showSubjectNicks) {
+    super.initState();
+    _handleScrollIntents();
+  }
+
+  @override
+  void didUpdateWidget(covariant SettingsPageWidget oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (!widget.vm.showSubjectNicks) {
+      _handledSubjectNicksIntent = false;
+    }
+    if (!widget.vm.showGradesSettings) {
+      _handledGradesIntent = false;
+    }
+    if (!widget.vm.showCalendarSubstituteSettings) {
+      _handledCalendarSubstituteIntent = false;
+    }
+    _handleScrollIntents();
+  }
+
+  void _handleScrollIntents() {
+    if (widget.vm.showSubjectNicks && !_handledSubjectNicksIntent) {
+      _handledSubjectNicksIntent = true;
       WidgetsBinding.instance.addPostFrameCallback((_) async {
-        await controller.scrollToIndex(4,
-            preferPosition: AutoScrollPosition.begin);
+        await controller.scrollToIndex(
+          4,
+          preferPosition: AutoScrollPosition.begin,
+        );
         if (!mounted) return;
         final newValue =
             await showEditSubjectNick(context, "", "", subjectsWithoutNick);
         if (newValue != null) {
           widget.onSetSubjectNicks(
             Map.fromEntries(
-                widget.vm.subjectNicks.entries.toList()..insert(0, newValue)),
+              widget.vm.subjectNicks.entries.toList()..insert(0, newValue),
+            ),
           );
         }
       });
     }
-    if (widget.vm.showGradesSettings) {
+    if (widget.vm.showGradesSettings && !_handledGradesIntent) {
+      _handledGradesIntent = true;
       WidgetsBinding.instance.addPostFrameCallback((_) {
         controller.scrollToIndex(3, preferPosition: AutoScrollPosition.begin);
       });
     }
-    if (widget.vm.showCalendarSubstituteSettings) {
+    if (widget.vm.showCalendarSubstituteSettings &&
+        !_handledCalendarSubstituteIntent) {
+      _handledCalendarSubstituteIntent = true;
       WidgetsBinding.instance.addPostFrameCallback((_) async {
         await _scrollToSubstituteSettings();
       });
     }
-    super.initState();
   }
 
   Future<void> _scrollToSubstituteSettings() async {
@@ -183,6 +212,19 @@ class _SettingsPageWidgetState extends State<SettingsPageWidget> {
         context,
         duration: const Duration(milliseconds: 250),
         curve: Curves.easeInOut,
+      );
+      if (!mounted || !controller.hasClients) {
+        return;
+      }
+      final maxScrollExtent = controller.position.maxScrollExtent;
+      final targetOffset = (controller.offset + 96).clamp(0.0, maxScrollExtent);
+      if ((targetOffset - controller.offset).abs() < 1) {
+        return;
+      }
+      await controller.animateTo(
+        targetOffset,
+        duration: const Duration(milliseconds: 180),
+        curve: Curves.easeOut,
       );
       return;
     }
@@ -429,17 +471,6 @@ class _SettingsPageWidgetState extends State<SettingsPageWidget> {
   @override
   Widget build(BuildContext context) {
     final l10n = context.l10n;
-    if (widget.vm.showSubjectNicks) {
-      WidgetsBinding.instance.addPostFrameCallback((_) async {
-        await controller.scrollToIndex(4,
-            preferPosition: AutoScrollPosition.begin);
-      });
-    }
-    if (widget.vm.showCalendarSubstituteSettings) {
-      WidgetsBinding.instance.addPostFrameCallback((_) async {
-        await _scrollToSubstituteSettings();
-      });
-    }
     final currentTheme = switch (widget.currentThemePreference) {
       AppThemePreference.light => _Theme.light,
       AppThemePreference.dark =>

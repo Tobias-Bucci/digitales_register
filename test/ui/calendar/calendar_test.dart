@@ -134,6 +134,45 @@ void main() {
     expect(find.text('Fach1'), findsOneWidget);
   });
 
+  testWidgets('tapping substitute helper hides it permanently in state',
+      (tester) async {
+    final store = Store<AppState, AppStateBuilder, AppActions>(
+      appReducerBuilder.build(),
+      _calendarState(
+        nicksBarEnabled: false,
+        hasSubjectWithoutNick: false,
+      ),
+      AppActions(),
+      middleware: <Middleware<AppState, AppStateBuilder, AppActions>>[
+        routingMiddleware.build(),
+      ],
+    );
+
+    await pumpApp(
+      tester,
+      store: store,
+      home: CalendarContainer(),
+      onGenerateRoute: (settings) => MaterialPageRoute<void>(
+        builder: (_) => SettingsPageContainer(),
+      ),
+    );
+    await settleFor(tester);
+
+    expect(
+      tester
+          .widget<CalendarSubstituteBar>(find.byType(CalendarSubstituteBar))
+          .show,
+      isTrue,
+    );
+
+    await tester
+        .tap(find.widgetWithText(TextButton, 'Supplenzfehler korrigieren'));
+    await tester.pump();
+    await settleFor(tester, duration: const Duration(milliseconds: 500));
+
+    expect(store.state.settingsState.showCalendarSubstituteBar, isFalse);
+  });
+
   testWidgets('favorite subject filter clears a hidden calendar selection',
       (tester) async {
     final store = createStore(

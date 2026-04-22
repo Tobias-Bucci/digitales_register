@@ -1,4 +1,4 @@
-﻿// Copyright (C) 2021 Michael Debertol
+// Copyright (C) 2021 Michael Debertol
 // Copyright (C) 2026 Tobias Bucci
 //
 // This file is part of digitales_register.
@@ -372,7 +372,7 @@ class _CalendarState extends State<Calendar> with TickerProviderStateMixin {
                         onClose: widget.closeEditNicksBar,
                       ),
                       CalendarSubstituteBar(
-                        show: true,
+                        show: widget.vm.showSubstituteBar,
                         onOpenSettings: widget.showEditSubstituteSettings,
                         enabled: widget.vm.substituteDetectionEnabled,
                       ),
@@ -460,7 +460,8 @@ class EditNickBar extends StatelessWidget {
                         child: Row(
                           children: [
                             Padding(
-                              padding: const EdgeInsets.symmetric(horizontal: 8),
+                              padding:
+                                  const EdgeInsets.symmetric(horizontal: 8),
                               child: Text(context.t('calendar.editNicknames')),
                             ),
                             const Spacer(),
