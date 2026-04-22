@@ -192,6 +192,22 @@ class _SettingsPageWidgetState extends State<SettingsPageWidget> {
     );
   }
 
+  void _updateSettingsKeepingScrollOffset(VoidCallback update) {
+    final position = controller.hasClients ? controller.position : null;
+    final offset = position?.pixels;
+    update();
+    if (offset == null) {
+      return;
+    }
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted || !controller.hasClients) {
+        return;
+      }
+      final maxScrollExtent = controller.position.maxScrollExtent;
+      controller.jumpTo(offset.clamp(0.0, maxScrollExtent));
+    });
+  }
+
   void _applySubstituteTeachersUpdate(
     Map<String, List<String>> updated, {
     Iterable<String> manuallyLockedSubjects = const <String>[],
@@ -252,10 +268,12 @@ class _SettingsPageWidgetState extends State<SettingsPageWidget> {
       updatedTeachers.add(teacher);
     }
     updatedSubjects[resolvedSubject] = updatedTeachers;
-    _applySubstituteTeachersUpdate(
-      updatedSubjects,
-      manuallyLockedSubjects: [resolvedSubject],
-    );
+    _updateSettingsKeepingScrollOffset(() {
+      _applySubstituteTeachersUpdate(
+        updatedSubjects,
+        manuallyLockedSubjects: [resolvedSubject],
+      );
+    });
 
     final knownTeachers = <String>[...widget.vm.allTeachers];
     if (!containsStringIgnoreCase(knownTeachers, teacher)) {
@@ -887,11 +905,14 @@ class _SettingsPageWidgetState extends State<SettingsPageWidget> {
                           subjectsWithoutNick,
                         );
                         if (newValue != null) {
-                          widget.onSetSubjectNicks(
-                            Map.fromEntries(
+                          _updateSettingsKeepingScrollOffset(() {
+                            widget.onSetSubjectNicks(
+                              Map.fromEntries(
                                 widget.vm.subjectNicks.entries.toList()
-                                  ..insert(0, newValue)),
-                          );
+                                  ..add(newValue),
+                              ),
+                            );
+                          });
                         }
                       },
                     ),
@@ -900,44 +921,45 @@ class _SettingsPageWidgetState extends State<SettingsPageWidget> {
                 final index = i - 1;
                 final key = widget.vm.subjectNicks.entries.toList()[index].key;
                 final value = widget.vm.subjectNicks[key];
-                return Deleteable(
+                return ListTile(
                   key: ValueKey(key),
-                  builder: (context, delete) => ListTile(
-                    title: Text(key),
-                    subtitle: Text(value!),
-                    trailing: Row(
-                      mainAxisSize: MainAxisSize.min,
-                      children: <Widget>[
-                        IconButton(
-                          icon: const Icon(Icons.delete),
-                          onPressed: () async {
-                            await delete();
+                  title: Text(key),
+                  subtitle: Text(value!),
+                  trailing: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: <Widget>[
+                      IconButton(
+                        icon: const Icon(Icons.delete),
+                        onPressed: () {
+                          _updateSettingsKeepingScrollOffset(() {
                             widget.onSetSubjectNicks(
                               Map.of(widget.vm.subjectNicks)..remove(key),
                             );
-                          },
-                        ),
-                        IconButton(
-                          icon: const Icon(Icons.edit),
-                          onPressed: () async {
-                            final newValue = await showEditSubjectNick(
-                              context,
-                              key,
-                              value,
-                              subjectsWithoutNick..add(key),
-                            );
-                            if (newValue != null) {
+                          });
+                        },
+                      ),
+                      IconButton(
+                        icon: const Icon(Icons.edit),
+                        onPressed: () async {
+                          final newValue = await showEditSubjectNick(
+                            context,
+                            key,
+                            value,
+                            subjectsWithoutNick..add(key),
+                          );
+                          if (newValue != null) {
+                            _updateSettingsKeepingScrollOffset(() {
                               widget.onSetSubjectNicks(
                                 Map.fromEntries(
                                   List.of(widget.vm.subjectNicks.entries)
                                     ..[index] = newValue,
                                 ),
                               );
-                            }
-                          },
-                        ),
-                      ],
-                    ),
+                            });
+                          }
+                        },
+                      ),
+                    ],
                   ),
                 );
               },
@@ -1072,10 +1094,12 @@ class _SettingsPageWidgetState extends State<SettingsPageWidget> {
                                       (item) => equalsIgnoreCase(item, teacher),
                                     );
                                     updated[entry.key] = teachers;
-                                    _applySubstituteTeachersUpdate(
-                                      updated,
-                                      manuallyLockedSubjects: [entry.key],
-                                    );
+                                    _updateSettingsKeepingScrollOffset(() {
+                                      _applySubstituteTeachersUpdate(
+                                        updated,
+                                        manuallyLockedSubjects: [entry.key],
+                                      );
+                                    });
                                   },
                                 ),
                               ),

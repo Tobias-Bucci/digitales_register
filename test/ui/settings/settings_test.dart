@@ -141,6 +141,54 @@ void main() {
 
       expect(store.state.settingsState.subjectNicks['Fach1'], isNull);
     });
+
+    testWidgets('keeps the scroll offset stable when adding a subject nick',
+        (tester) async {
+      final store = createStore();
+
+      await pumpApp(
+        tester,
+        store: store,
+        home: SettingsPageContainer(),
+      );
+      await settleFor(tester, duration: const Duration(milliseconds: 400));
+
+      await tester.scrollUntilVisible(
+        find.text('F\u00E4cherk\u00FCrzel'),
+        200,
+        scrollable: settingsList,
+      );
+      final offsetBefore =
+          tester.state<ScrollableState>(settingsList).position.pixels;
+      await tester.tap(find.text('F\u00E4cherk\u00FCrzel'));
+      await tester.pumpAndSettle();
+      tester
+          .widget<IconButton>(
+            find
+                .descendant(
+                  of: find.ancestor(
+                    of: find.text('F\u00E4cherk\u00FCrzel'),
+                    matching: find.byType(ExpansionTile),
+                  ),
+                  matching: find.byType(IconButton),
+                )
+                .first,
+          )
+          .onPressed!();
+      await tester.pumpAndSettle();
+
+      await tester.enterText(find.byType(EditableText).at(0), 'Fach2');
+      await tester.enterText(find.byType(EditableText).at(1), 'F2');
+      await tester.pump();
+      await tester.tap(find.text('Fertig'));
+      await tester.pump();
+      await settleFor(tester);
+
+      expect(store.state.settingsState.subjectNicks['Fach2'], 'F2');
+      final offsetAfter =
+          tester.state<ScrollableState>(settingsList).position.pixels;
+      expect(offsetAfter, closeTo(offsetBefore, 1));
+    });
   });
 
   group('substitute settings', () {
@@ -194,7 +242,8 @@ void main() {
 
       await scrollSettingsToText(tester, 'Hauptlehrer für Supplenz');
       expect(find.text('Hauptlehrer für Supplenz'), findsWidgets);
-      await tester.tap(find.byKey(const ValueKey('substitute-subjects-visibility')));
+      await tester
+          .tap(find.byKey(const ValueKey('substitute-subjects-visibility')));
       await tester.pumpAndSettle();
       await tester.tap(find.text('Informatik'));
       await tester.pumpAndSettle();
@@ -211,6 +260,45 @@ void main() {
       );
       expect(find.text('Informatik'), findsOneWidget);
       expect(find.text('Keine Lehrer ausgewählt'), findsWidgets);
+    });
+
+    testWidgets(
+        'keeps the scroll offset stable when removing a primary teacher',
+        (tester) async {
+      final store = createStore(
+        initialState: AppState(
+          (b) => b.settingsState.substitutePrimaryTeachers =
+              MapBuilder<String, BuiltList<String>>({
+            'Informatik': BuiltList<String>(const ['Doris Hilpold']),
+          }),
+        ),
+      );
+
+      await pumpApp(
+        tester,
+        store: store,
+        home: SettingsPageContainer(),
+      );
+      await settleFor(tester, duration: const Duration(milliseconds: 400));
+
+      await scrollSettingsToText(tester, 'Hauptlehrer f\u00FCr Supplenz');
+      await tester
+          .tap(find.byKey(const ValueKey('substitute-subjects-visibility')));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('Informatik'));
+      await tester.pumpAndSettle();
+
+      await tester.ensureVisible(find.byIcon(Icons.close).first);
+      await tester.pumpAndSettle();
+      final offsetBefore =
+          tester.state<ScrollableState>(settingsList).position.pixels;
+      await tester.tap(find.byIcon(Icons.close).first);
+      await tester.pump();
+      await settleFor(tester);
+
+      final offsetAfter =
+          tester.state<ScrollableState>(settingsList).position.pixels;
+      expect(offsetAfter, closeTo(offsetBefore, 1));
     });
 
     testWidgets('shows a single collapsible area for all substitute subjects',
@@ -231,7 +319,8 @@ void main() {
       expect(find.text('Hauptlehrer für Supplenz'), findsWidgets);
       expect(find.text('Informatik'), findsNothing);
 
-      await tester.tap(find.byKey(const ValueKey('substitute-subjects-visibility')));
+      await tester
+          .tap(find.byKey(const ValueKey('substitute-subjects-visibility')));
       await tester.pumpAndSettle();
 
       expect(find.text('Informatik'), findsOneWidget);
