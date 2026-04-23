@@ -47,6 +47,7 @@ abstract class SettingsActions extends ReduxActions {
   abstract final ActionDispatcher<bool> markNotSeenDashboardEntries;
   abstract final ActionDispatcher<bool> deduplicateDashboardEntries;
   abstract final ActionDispatcher<bool> showCalendarSubjectNicksBar;
+  abstract final ActionDispatcher<bool> showCalendarSubstituteBar;
   abstract final ActionDispatcher<bool> drawerExpandedChange;
   abstract final ActionDispatcher<bool> dashboardColorBorders;
   abstract final ActionDispatcher<bool> calendarColorBackground;

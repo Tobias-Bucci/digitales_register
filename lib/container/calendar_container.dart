@@ -1,4 +1,4 @@
-﻿// Copyright (C) 2021 Michael Debertol
+// Copyright (C) 2021 Michael Debertol
 // Copyright (C) 2026 Tobias Bucci
 //
 // This file is part of digitales_register.
@@ -36,8 +36,10 @@ class CalendarContainer extends StatelessWidget {
           vm: vm,
           showEditSubjectNicks:
               actions.routingActions.showEditCalendarSubjectNicks.call,
-          showEditSubstituteSettings:
-              actions.routingActions.showEditCalendarSubstituteSettings.call,
+          showEditSubstituteSettings: () {
+            actions.settingsActions.showCalendarSubstituteBar(false);
+            actions.routingActions.showEditCalendarSubstituteSettings();
+          },
           closeEditNicksBar: () =>
               actions.settingsActions.showCalendarSubjectNicksBar(false),
           dayCallback: actions.calendarActions.load.call,
@@ -63,16 +65,22 @@ class CalendarViewModel {
   final List<String> favoriteSubjects;
   final BuiltMap<String, SubjectTheme> subjectThemes;
   final bool substituteDetectionEnabled;
+  final bool showSubstituteBar;
 
   CalendarViewModel(AppState state)
       : currentDays = _calendarDays(state),
-        first = _calendarDays(state).isEmpty ? null : _calendarDays(state).first.date,
-        last = _calendarDays(state).isEmpty ? null : _calendarDays(state).last.date,
+        first = _calendarDays(state).isEmpty
+            ? null
+            : _calendarDays(state).first.date,
+        last = _calendarDays(state).isEmpty
+            ? null
+            : _calendarDays(state).last.date,
         currentMonday = state.calendarState.currentMonday!,
         favoriteSubjects = state.settingsState.favoriteSubjects.toList(),
         subjectThemes = state.settingsState.subjectThemes,
         substituteDetectionEnabled =
             state.settingsState.substituteDetectionEnabled,
+        showSubstituteBar = state.settingsState.showCalendarSubstituteBar,
         showEditNicksBar = _calendarDays(state).any(
               (day) => day.hours.any(
                 (hour) => !state.settingsState.subjectNicks.entries.any(

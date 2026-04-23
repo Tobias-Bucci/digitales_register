@@ -27,7 +27,7 @@ Einzelne Funktionen, wie das Eintragen von neuen Absenzen, sind jedoch noch nich
 </p>
   </description>
   <releases>
-    <release version="1.8.1" date="2026-04-21">
+    <release version="1.8.2" date="2026-04-22">
       <description>
         <p>Updated the demo account with complete local test data and improved translations.</p>
       </description>
