@@ -100,8 +100,31 @@ class AppThemeController extends ChangeNotifier with WidgetsBindingObserver {
       brightness: brightness,
       platform: platform,
     );
+    final scheme = baseTheme.colorScheme;
+    final appBarTheme = baseTheme.appBarTheme.copyWith(
+      centerTitle: false,
+      backgroundColor: scheme.surface,
+      foregroundColor: scheme.onSurface,
+      elevation: 0,
+      scrolledUnderElevation: brightness == Brightness.dark ? 10 : 6,
+      shadowColor: scheme.shadow.withValues(
+        alpha: brightness == Brightness.dark ? 0.36 : 0.12,
+      ),
+      surfaceTintColor: brightness == Brightness.dark
+          ? scheme.surfaceContainerHighest.withValues(alpha: 0.18)
+          : scheme.surfaceTint.withValues(alpha: 0.08),
+      shape: Border(
+        bottom: BorderSide(
+          color: scheme.outlineVariant.withValues(
+            alpha: brightness == Brightness.dark ? 0.32 : 0.55,
+          ),
+        ),
+      ),
+    );
     if (!amoledMode || brightness != Brightness.dark) {
-      return baseTheme;
+      return baseTheme.copyWith(
+        appBarTheme: appBarTheme,
+      );
     }
 
     final amoledScheme = baseTheme.colorScheme.copyWith(
@@ -119,7 +142,7 @@ class AppThemeController extends ChangeNotifier with WidgetsBindingObserver {
       dividerColor: Colors.black,
       shadowColor: Colors.black,
       colorScheme: amoledScheme,
-      appBarTheme: baseTheme.appBarTheme.copyWith(
+      appBarTheme: appBarTheme.copyWith(
         backgroundColor: Colors.black,
         surfaceTintColor: Colors.black,
         shadowColor: Colors.black,
