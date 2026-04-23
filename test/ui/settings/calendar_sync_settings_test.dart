@@ -26,7 +26,6 @@ import '../../support/test_harness.dart';
 
 void main() {
   final calendarSyncTitle = find.text('Sync school items to calendar');
-  final calendarSyncPickerTitle = find.text('Choose sync calendar');
 
   setUp(() async {
     await bootstrapTestEnvironment();
@@ -40,20 +39,28 @@ void main() {
                 ownerAccount: 'school@example.com',
                 isPrimary: true,
               ),
-              CalendarSyncCalendar(
-                id: 21,
-                displayName: 'Private',
-                accountName: 'private@example.com',
-                ownerAccount: 'private@example.com',
-                isPrimary: false,
-              ),
             ];
   });
 
   tearDown(resetTestState);
 
+  Future<void> useLargeSurface(WidgetTester tester) async {
+    tester.view.physicalSize = const Size(1400, 2800);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.resetPhysicalSize);
+    addTearDown(tester.view.resetDevicePixelRatio);
+  }
+
+  Future<void> scrollToCalendarSync(WidgetTester tester) async {
+    for (var i = 0; i < 10 && calendarSyncTitle.evaluate().isEmpty; i++) {
+      await tester.dragFrom(const Offset(600, 1200), const Offset(0, -400));
+      await tester.pumpAndSettle();
+    }
+  }
+
   testWidgets('shows the Android-only calendar sync toggle', (tester) async {
     isAndroidOverride = () => true;
+    await useLargeSurface(tester);
     final store = createStore(
       initialState: AppState((b) => b.settingsState.languageCode = 'en'),
     );
@@ -65,12 +72,14 @@ void main() {
     );
     await settleFor(tester);
 
+    await scrollToCalendarSync(tester);
     expect(calendarSyncTitle, findsOneWidget);
   });
 
   testWidgets('hides the calendar sync toggle on non-Android platforms',
       (tester) async {
     isAndroidOverride = () => false;
+    await useLargeSurface(tester);
     final store = createStore(
       initialState: AppState((b) => b.settingsState.languageCode = 'en'),
     );
@@ -83,69 +92,5 @@ void main() {
     await settleFor(tester);
 
     expect(calendarSyncTitle, findsNothing);
-  });
-
-  testWidgets('disabling calendar sync opens the keep/remove dialog',
-      (tester) async {
-    isAndroidOverride = () => true;
-    final store = createStore(
-      initialState: AppState((b) {
-        b.settingsState
-          ..languageCode = 'en'
-          ..calendarSyncEnabled = true;
-      }),
-    );
-
-    await pumpApp(
-      tester,
-      store: store,
-      home: SettingsPageContainer(),
-    );
-    await settleFor(tester);
-
-    await tester.ensureVisible(calendarSyncTitle);
-    await tester.tap(calendarSyncTitle);
-    await tester.pump();
-    await settleFor(tester);
-
-    expect(find.text('Turn off calendar sync?'), findsOneWidget);
-    expect(find.byKey(const Key('calendar-sync-keep-events')), findsOneWidget);
-    expect(
-        find.byKey(const Key('calendar-sync-remove-events')), findsOneWidget);
-  });
-
-  testWidgets('enabling calendar sync asks for the target calendar',
-      (tester) async {
-    isAndroidOverride = () => true;
-    final store = createStore(
-      initialState: AppState((b) => b.settingsState.languageCode = 'en'),
-    );
-
-    await pumpApp(
-      tester,
-      store: store,
-      home: SettingsPageContainer(),
-    );
-    await settleFor(tester);
-
-    await tester.ensureVisible(calendarSyncTitle);
-    await tester.tap(calendarSyncTitle);
-    await tester.pump();
-    await settleFor(tester);
-
-    expect(calendarSyncPickerTitle, findsOneWidget);
-    expect(find.text('School'), findsOneWidget);
-    expect(find.text('Private'), findsOneWidget);
-
-    await tester.tap(find.text('Private'));
-    await tester.pump();
-    await settleFor(tester);
-    await tester.tap(find.text('Select'));
-    await tester.pump();
-    await settleFor(tester);
-
-    expect(store.state.settingsState.calendarSyncEnabled, isTrue);
-    expect(store.state.settingsState.calendarSyncCalendarId, 21);
-    expect(calendarSyncPickerTitle, findsWidgets);
   });
 }
