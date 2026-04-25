@@ -274,6 +274,7 @@ abstract class Subject implements Built<Subject, SubjectBuilder> {
   BuiltMap<Semester, BuiltList<GradeAll>> get gradesAll;
   BuiltMap<Semester, BuiltList<GradeDetail>> get grades;
   BuiltMap<Semester, BuiltList<Observation>> get observations;
+  BuiltMap<Semester, int> get absences;
   int? get id;
   String get name;
   BuiltMap<Semester, UtcDateTime>? get lastFetchedBasic;
@@ -367,6 +368,14 @@ abstract class Subject implements Built<Subject, SubjectBuilder> {
     } else {
       return "/";
     }
+  }
+
+  int absencesFor(Semester semester) {
+    if (semester == Semester.all) {
+      return (List.of(Semester.values)..remove(Semester.all))
+          .fold<int>(0, (sum, s) => sum + (absences[s] ?? 0));
+    }
+    return absences[semester] ?? 0;
   }
 
   static Map<String, List<DetailEntry>> sortByType(List<DetailEntry> entries) {

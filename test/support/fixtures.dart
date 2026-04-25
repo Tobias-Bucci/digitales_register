@@ -151,6 +151,7 @@ Subject buildSubject({
   Map<Semester, BuiltList<GradeAll>>? gradesAll,
   Map<Semester, BuiltList<GradeDetail>>? grades,
   Map<Semester, BuiltList<Observation>>? observations,
+  Map<Semester, int>? absences,
 }) {
   return Subject(
     (b) => b
@@ -164,6 +165,9 @@ Subject buildSubject({
       )
       ..observations = MapBuilder<Semester, BuiltList<Observation>>(
         observations ?? const <Semester, BuiltList<Observation>>{},
+      )
+      ..absences = MapBuilder<Semester, int>(
+        absences ?? const <Semester, int>{},
       ),
   );
 }
@@ -449,6 +453,9 @@ AppState buildGradesPageState({
                 ),
               ]),
             },
+            absences: <Semester, int>{
+              Semester.first: 3,
+            },
           ),
           buildSubject(
             name: 'Fach2',
@@ -464,6 +471,9 @@ AppState buildGradesPageState({
             },
             observations: <Semester, BuiltList<Observation>>{
               Semester.first: BuiltList<Observation>(),
+            },
+            absences: <Semester, int>{
+              Semester.first: 0,
             },
           ),
         ]);

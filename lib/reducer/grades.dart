@@ -81,6 +81,7 @@ void _updateSubjects(BuiltList<Subject> oldSubjects,
               (dynamic g) => tryParse(getMap(g)!, _parseGradeAll),
             ),
           )
+          ..absences[semester] = getInt(subject["absences"]) ?? 0
           ..lastFetchedBasic[semester] = UtcDateTime.now(),
       );
     } else {
@@ -96,6 +97,11 @@ void _updateSubjects(BuiltList<Subject> oldSubjects,
                     (dynamic g) => tryParse(getMap(g)!, _parseGradeAll),
                   ),
                 ),
+              },
+            )
+            ..absences = MapBuilder(
+              {
+                semester: getInt(subject["absences"]) ?? 0,
               },
             ),
         ),

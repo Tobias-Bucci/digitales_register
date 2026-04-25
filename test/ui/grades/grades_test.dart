@@ -128,6 +128,22 @@ void main() {
     expect(find.text('Fach2'), findsNothing);
   });
 
+  testWidgets('shows absences in each subject header', (tester) async {
+    final store = createStore(initialState: buildGradesPageState());
+
+    await pumpApp(
+      tester,
+      store: store,
+      home: const GradesPageContainer(),
+      theme: ThemeData(primarySwatch: Colors.deepOrange),
+    );
+    await settleFor(tester);
+
+    expect(find.byIcon(Icons.event_busy_outlined), findsNWidgets(2));
+    expect(find.text('3'), findsOneWidget);
+    expect(find.text('0'), findsOneWidget);
+  });
+
   testWidgets('failing grades are highlighted with an error badge',
       (tester) async {
     final store = createStore(initialState: buildGradesPageState());

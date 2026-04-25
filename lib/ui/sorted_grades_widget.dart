@@ -105,6 +105,44 @@ class _GradeBadge extends StatelessWidget {
   }
 }
 
+class _AbsencesBadge extends StatelessWidget {
+  const _AbsencesBadge({required this.count});
+
+  final int count;
+
+  @override
+  Widget build(BuildContext context) {
+    final colorScheme = Theme.of(context).colorScheme;
+    return DecoratedBox(
+      decoration: ShapeDecoration(
+        color: colorScheme.surfaceContainerHighest,
+        shape: const StadiumBorder(),
+      ),
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 5),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(
+              Icons.event_busy_outlined,
+              size: 16,
+              color: colorScheme.onSurfaceVariant,
+            ),
+            const SizedBox(width: 5),
+            Text(
+              count.toString(),
+              style: Theme.of(context).textTheme.labelMedium?.copyWith(
+                    color: colorScheme.onSurfaceVariant,
+                    fontWeight: FontWeight.w600,
+                  ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
 class SortedGradesWidget extends StatefulWidget {
   final SortedGradesViewModel vm;
   final ViewSubjectDetailCallback viewSubjectDetail;
@@ -359,17 +397,26 @@ class _SubjectWidgetState extends State<SubjectWidget> {
         controller: _controller,
         initiallyExpanded: widget.expanded,
         maintainState: true,
-        title: Text.rich(
-          TextSpan(
-            text: context.l10n.translateSubjectName(widget.subject.name),
-            children: [
-              if (widget.ignoredForAverage)
-                const TextSpan(
-                  text: " *",
-                  style: TextStyle(color: Colors.grey),
+        title: Row(
+          children: [
+            Expanded(
+              child: Text.rich(
+                TextSpan(
+                  text: context.l10n.translateSubjectName(widget.subject.name),
+                  children: [
+                    if (widget.ignoredForAverage)
+                      const TextSpan(
+                        text: " *",
+                        style: TextStyle(color: Colors.grey),
+                      ),
+                  ],
                 ),
-            ],
-          ),
+                overflow: TextOverflow.ellipsis,
+              ),
+            ),
+            const SizedBox(width: 8),
+            _AbsencesBadge(count: widget.subject.absencesFor(widget.semester)),
+          ],
         ),
         subtitle: _lastFetchedMessage(),
         leading: Row(

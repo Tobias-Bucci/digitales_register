@@ -524,6 +524,8 @@ void main() {
       store.state.gradesState.subjects.first.basicGrades(Semester.first),
       hasLength(1),
     );
+    expect(
+        store.state.gradesState.subjects.first.absencesFor(Semester.first), 7);
 
     store.actions.gradesActions.detailsLoaded(
       SubjectDetailLoadedPayload(
@@ -961,6 +963,7 @@ final Map<String, Object?> subjectsPayload = <String, Object?>{
   'subjects': <Object>[
     <String, Object?>{
       'subject': <String, Object?>{'id': 1, 'name': 'Deutsch'},
+      'absences': 7,
       'grades': <Object>[
         <String, Object?>{
           'grade': '7.50',
@@ -973,6 +976,7 @@ final Map<String, Object?> subjectsPayload = <String, Object?>{
     },
     <String, Object?>{
       'subject': <String, Object?>{'id': 2, 'name': 'Mathematik'},
+      'absences': 0,
       'grades': <Object>[],
     },
   ],
