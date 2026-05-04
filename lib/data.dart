@@ -744,6 +744,13 @@ abstract class Message implements Built<Message, MessageBuilder> {
   int get id;
   BuiltList<MessageAttachmentFile> get attachments;
 
+  int? get responseRequired;
+  String? get responseType;
+  bool? get needsResponse;
+  bool? get showReply;
+  String? get badge;
+  String? get historyString;
+
   bool get isNew => timeRead == null;
 
   static Serializer<Message> get serializer => _$messageSerializer;

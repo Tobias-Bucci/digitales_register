@@ -42,6 +42,7 @@ class MessagesPage extends StatefulWidget {
   final bool noInternet;
   final void Function(MessageAttachmentFile message) onOpenFile;
   final void Function(Message message) onMarkAsRead;
+  final void Function(int messageId, String response) onReply;
 
   const MessagesPage({
     super.key,
@@ -49,6 +50,7 @@ class MessagesPage extends StatefulWidget {
     required this.noInternet,
     required this.onOpenFile,
     required this.onMarkAsRead,
+    required this.onReply,
   });
   @override
   State<MessagesPage> createState() => _MessagesPageState();
@@ -118,6 +120,7 @@ class _MessagesPageState extends State<MessagesPage> {
                         message: visibleMessages[i],
                         onOpenFile: widget.onOpenFile,
                         onMarkAsRead: widget.onMarkAsRead,
+                        onReply: widget.onReply,
                         noInternet: widget.noInternet,
                         expand: visibleMessages[i].id == _expandedMessageId,
                         onExpansionChanged: (expanded) {
@@ -151,6 +154,7 @@ class MessageWidget extends StatefulWidget {
   final Message message;
   final void Function(MessageAttachmentFile message) onOpenFile;
   final void Function(Message message) onMarkAsRead;
+  final void Function(int messageId, String response) onReply;
   final bool noInternet;
   final bool expand;
   final ValueChanged<bool> onExpansionChanged;
@@ -161,6 +165,7 @@ class MessageWidget extends StatefulWidget {
     required this.onOpenFile,
     required this.noInternet,
     required this.onMarkAsRead,
+    required this.onReply,
     required this.expand,
     required this.onExpansionChanged,
   });
@@ -203,6 +208,20 @@ class _MessageWidgetState extends State<MessageWidget> {
     super.dispose();
   }
 
+  String _getTranslatedBadge(BuildContext context, String badgeKey) {
+    if (badgeKey == "agree") return context.t('messages.agree');
+    if (badgeKey == "not_agree") return context.t('messages.not_agree');
+    if (badgeKey == "Nicht beantwortet") return context.t('messages.not_answered');
+    return badgeKey;
+  }
+
+  Color _getBadgeColor(BuildContext context, String badgeKey) {
+    if (badgeKey == "agree") return Colors.green;
+    if (badgeKey == "not_agree") return Colors.red;
+    if (badgeKey == "Nicht beantwortet") return Colors.orange.shade700;
+    return Theme.of(context).primaryColor;
+  }
+
   @override
   Widget build(BuildContext context) {
     final textTheme = Theme.of(context).textTheme;
@@ -218,21 +237,77 @@ class _MessageWidgetState extends State<MessageWidget> {
       },
       title: Row(
         children: <Widget>[
+          if (widget.message.needsResponse == true)
+            Padding(
+              padding: const EdgeInsets.only(right: 8.0),
+              child: Container(
+                width: 8,
+                height: 8,
+                decoration: const BoxDecoration(
+                  color: Colors.red,
+                  shape: BoxShape.circle,
+                ),
+              ),
+            ),
           Expanded(
             child: Text(
               widget.message.subject,
               style: textTheme.titleMedium,
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
             ),
           ),
-          if (widget.message.isNew && !widget.expand)
-            badge.Badge(
-              badgeStyle: badge.BadgeStyle(
-                shape: badge.BadgeShape.square,
-                borderRadius: BorderRadius.circular(20),
-              ),
-              badgeContent: Text(
-                context.t('messages.new'),
-                style: const TextStyle(color: Colors.white),
+          if (widget.message.responseRequired == 1 || (widget.message.badge != null && widget.message.badge!.isNotEmpty))
+            Builder(builder: (context) {
+              final badgeStr = (widget.message.needsResponse == true) 
+                  ? "Nicht beantwortet" 
+                  : (widget.message.badge ?? (widget.message.isNew ? "new" : ""));
+
+              if (badgeStr == "new") {
+                return !widget.expand ? Padding(
+                  padding: const EdgeInsets.only(left: 8.0),
+                  child: badge.Badge(
+                    badgeStyle: badge.BadgeStyle(
+                      shape: badge.BadgeShape.square,
+                      borderRadius: BorderRadius.circular(20),
+                    ),
+                    badgeContent: Text(
+                      context.t('messages.new'),
+                      style: const TextStyle(color: Colors.white),
+                    ),
+                  ),
+                ) : const SizedBox.shrink();
+              }
+
+              if (badgeStr.isEmpty) return const SizedBox.shrink();
+
+              return Padding(
+                padding: const EdgeInsets.only(left: 8.0),
+                child: badge.Badge(
+                  badgeStyle: badge.BadgeStyle(
+                    shape: badge.BadgeShape.square,
+                    borderRadius: BorderRadius.circular(20),
+                    badgeColor: _getBadgeColor(context, badgeStr),
+                  ),
+                  badgeContent: Text(
+                    _getTranslatedBadge(context, badgeStr),
+                    style: const TextStyle(color: Colors.white, fontSize: 12, fontWeight: FontWeight.bold),
+                  ),
+                ),
+              );
+            })
+          else if (widget.message.isNew && !widget.expand)
+            Padding(
+              padding: const EdgeInsets.only(left: 8.0),
+              child: badge.Badge(
+                badgeStyle: badge.BadgeStyle(
+                  shape: badge.BadgeShape.square,
+                  borderRadius: BorderRadius.circular(20),
+                ),
+                badgeContent: Text(
+                  context.t('messages.new'),
+                  style: const TextStyle(color: Colors.white),
+                ),
               ),
             )
         ],
@@ -318,6 +393,43 @@ class _MessageWidgetState extends State<MessageWidget> {
                     ),
                   ]
               ].intersperse(const Divider()),
+              if (widget.message.historyString != null && widget.message.historyString!.isNotEmpty) ...[
+                const Divider(),
+                Center(
+                  child: Padding(
+                    padding: const EdgeInsets.symmetric(vertical: 8.0),
+                    child: Text(
+                      widget.message.historyString!,
+                      style: const TextStyle(fontStyle: FontStyle.italic),
+                      textAlign: TextAlign.center,
+                    ),
+                  ),
+                ),
+              ],
+              if (widget.message.showReply == true && widget.message.needsResponse == true) ...[
+                const Divider(),
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                  children: [
+                    ElevatedButton(
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: Colors.green,
+                        foregroundColor: Colors.white,
+                      ),
+                      onPressed: () => widget.onReply(widget.message.id, "agree"),
+                      child: Text(context.t('messages.agree')),
+                    ),
+                    ElevatedButton(
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: Colors.red,
+                        foregroundColor: Colors.white,
+                      ),
+                      onPressed: () => widget.onReply(widget.message.id, "not_agree"),
+                      child: Text(context.t('messages.not_agree')),
+                    ),
+                  ],
+                ),
+              ],
             ],
           ),
         ),
@@ -325,6 +437,7 @@ class _MessageWidgetState extends State<MessageWidget> {
     );
   }
 }
+
 
 bool _canRenderMessage(Message message) {
   try {

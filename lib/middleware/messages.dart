@@ -22,7 +22,28 @@ final _messagesMiddleware =
     MiddlewareBuilder<AppState, AppStateBuilder, AppActions>()
       ..add(MessagesActionsNames.load, _loadMessages)
       ..add(MessagesActionsNames.markAsRead, _markAsRead)
-      ..add(MessagesActionsNames.openFile, _openFile);
+      ..add(MessagesActionsNames.openFile, _openFile)
+      ..add(MessagesActionsNames.replyMessage, _replyMessage);
+
+Future<void> _replyMessage(
+    MiddlewareApi<AppState, AppStateBuilder, AppActions> api,
+    ActionHandler next,
+    Action<ReplyMessagePayload> action) async {
+  await next(action);
+  try {
+    await wrapper.send(
+      "api/message/reply",
+      args: {
+        "messageId": action.payload.messageId,
+        "response": {"response": action.payload.response},
+      },
+    );
+    // If the API call completes without throwing, we consider it a success
+    await api.actions.messagesActions.repliedMessage(action.payload);
+  } catch (e) {
+    // Optionally handle error? The wrapper probably shows an error snackbar for generic failures.
+  }
+}
 
 Future<void> _loadMessages(
     MiddlewareApi<AppState, AppStateBuilder, AppActions> api,

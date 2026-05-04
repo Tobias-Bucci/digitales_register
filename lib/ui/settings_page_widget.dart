@@ -188,25 +188,6 @@ class _SettingsPageWidgetState extends State<SettingsPageWidget> {
     }
   }
 
-  void _applySubstituteTeachersUpdate(
-    Map<String, List<String>> updated, {
-    Iterable<String> manuallyLockedSubjects = const <String>[],
-  }) {
-    widget.onSetSubstitutePrimaryTeachers(updated);
-    if (manuallyLockedSubjects.isEmpty) {
-      return;
-    }
-    final lockedSubjects = <String>[
-      ...widget.vm.substitutePrimaryTeachersLockedSubjects,
-    ];
-    for (final subject in manuallyLockedSubjects) {
-      if (!containsSubjectIgnoreCase(lockedSubjects, subject)) {
-        lockedSubjects.add(subject);
-      }
-    }
-    widget.onSetSubstitutePrimaryTeachersLockedSubjects(lockedSubjects);
-  }
-
   Future<List<CalendarSyncCalendar>> _loadCalendarSyncCalendars() {
     return CalendarSyncService.loadWritableCalendars();
   }
@@ -222,42 +203,6 @@ class _SettingsPageWidgetState extends State<SettingsPageWidget> {
     messenger
       ?..clearSnackBars()
       ..showSnackBar(SnackBar(content: Text(message)));
-  }
-
-  Future<void> _showAddTeacherDialog(String subject) async {
-    final l10n = context.l10n;
-    final teacher = await showDialog<String>(
-      context: context,
-      builder: (context) => AddSubject(
-        availableSubjects: widget.vm.allTeachers,
-        title: l10n.text('settings.calendar.substituteTeachers.addTeacher'),
-      ),
-    );
-    if (teacher == null) {
-      return;
-    }
-
-    final updatedSubjects =
-        Map<String, List<String>>.from(widget.vm.substitutePrimaryTeachers);
-    final resolvedSubject =
-        findStringIgnoreCase(updatedSubjects.keys, subject) ?? subject;
-    final updatedTeachers = <String>[
-      ...updatedSubjects[resolvedSubject] ?? const <String>[],
-    ];
-    if (!containsStringIgnoreCase(updatedTeachers, teacher)) {
-      updatedTeachers.add(teacher);
-    }
-    updatedSubjects[resolvedSubject] = updatedTeachers;
-    _applySubstituteTeachersUpdate(
-      updatedSubjects,
-      manuallyLockedSubjects: [resolvedSubject],
-    );
-
-    final knownTeachers = <String>[...widget.vm.allTeachers];
-    if (!containsStringIgnoreCase(knownTeachers, teacher)) {
-      knownTeachers.add(teacher);
-      widget.onSetSubstituteKnownTeachers(knownTeachers);
-    }
   }
 
   String _calendarSyncMessageForResult(

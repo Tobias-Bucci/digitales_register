@@ -37,6 +37,7 @@ void main() {
         noInternet: false,
         onOpenFile: (_) {},
         onMarkAsRead: (_) {},
+        onReply: (id, response) {},
       ),
     );
 

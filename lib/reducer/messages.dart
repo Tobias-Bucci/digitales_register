@@ -35,7 +35,8 @@ final messagesReducerBuilder = NestedReducerBuilder<AppState, AppStateBuilder,
   ..add(RoutingActionsNames.showMessage, _showMessage)
   ..add(MessagesActionsNames.fileAvailable, _fileAvailable)
   ..add(MessagesActionsNames.downloadFile, _downloadFile)
-  ..add(MessagesActionsNames.markAsRead, _markAsRead);
+  ..add(MessagesActionsNames.markAsRead, _markAsRead)
+  ..add(MessagesActionsNames.repliedMessage, _repliedMessage);
 
 void _loaded(
     MessagesState state, Action<List> action, MessagesStateBuilder builder) {
@@ -100,6 +101,22 @@ void _markAsRead(
   );
 }
 
+void _repliedMessage(
+    MessagesState state, Action<ReplyMessagePayload> action, MessagesStateBuilder builder) {
+  final index = state.messages.indexWhere((m) => m.id == action.payload.messageId);
+  if (index == -1) return;
+  builder.messages[index] = state.messages[index].rebuild(
+    (b) => b
+      ..needsResponse = false
+      ..showReply = false
+      ..timeRead = b.timeRead ?? now
+      ..badge = action.payload.response == "agree" ? "agree" : "not_agree" // Restore badge logic
+      ..historyString = action.payload.response == "agree" 
+          ? "Mit \"Stimme zu\" beantwortet." 
+          : "Mit \"Stimme nicht zu\" beantwortet.",
+  );
+}
+
 MessagesState _parseMessages(List json, MessagesState state) {
   final messages = json
       .map((dynamic m) =>
@@ -122,7 +139,13 @@ Message _parseMessage(Map json, MessagesState state) {
         : null
     ..recipientString = getString(json["recipientString"])
     ..fromName = getString(json["fromName"])
-    ..id = getInt(json["id"]);
+    ..id = getInt(json["id"])
+    ..responseRequired = getInt(json["responseRequired"])
+    ..responseType = getString(json["responseType"])
+    ..needsResponse = getBool(json["needsResponse"])
+    ..showReply = getBool(json["showReply"])
+    ..badge = getString(json["response"]) ?? getString(json["badge"])
+    ..historyString = getString(json["historyString"]);
   final oldMessage = state.messages.firstWhereOrNull(
     (m) => m.id == message.id,
   );

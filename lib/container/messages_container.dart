@@ -1,4 +1,5 @@
 // Copyright (C) 2021 Michael Debertol
+// Copyright (C) 2026 Tobias Bucci
 //
 // This file is part of digitales_register.
 //
@@ -16,6 +17,7 @@
 // along with digitales_register.  If not, see <http://www.gnu.org/licenses/>.
 
 import 'package:dr/actions/app_actions.dart';
+import 'package:dr/actions/messages_actions.dart';
 import 'package:dr/app_state.dart';
 import 'package:dr/ui/messages.dart';
 import 'package:flutter/material.dart';
@@ -32,6 +34,7 @@ class MessagesPageContainer extends StatelessWidget {
           noInternet: vm.item2,
           onOpenFile: actions.messagesActions.openFile.call,
           onMarkAsRead: (m) => actions.messagesActions.markAsRead(m.id),
+          onReply: (id, response) => actions.messagesActions.replyMessage(ReplyMessagePayload(messageId: id, response: response)),
         );
       },
       connect: (state) {

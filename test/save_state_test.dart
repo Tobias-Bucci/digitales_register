@@ -69,8 +69,8 @@ void main() {
     expect(payload, isNotNull);
 
     final deserialized =
-        serializers.deserialize(json.decode(payload!) as Object) as AppState;
-    expect(deserialized.settingsState.subjectNicks['Mathematik'], 'M');
+        serializers.deserialize(json.decode(payload!) as Object) as AppState?;
+    expect(deserialized!.settingsState.subjectNicks['Mathematik'], 'M');
     expect(deserialized.settingsState.subjectNicks['Geschichte'], 'Ge');
   });
 
@@ -83,8 +83,8 @@ void main() {
     expect(payload, isNotNull);
 
     final deserialized =
-        serializers.deserialize(json.decode(payload!) as Object) as AppState;
-    expect(deserialized.settingsState.showCalendarSubstituteBar, isFalse);
+        serializers.deserialize(json.decode(payload!) as Object) as AppState?;
+    expect(deserialized!.settingsState.showCalendarSubstituteBar, isFalse);
   });
 
   test('noDataSaving stores only settings state', () async {
