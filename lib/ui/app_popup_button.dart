@@ -66,10 +66,7 @@ class _AppPopupButtonState<T> extends State<AppPopupButton<T>> {
     final isDark = theme.brightness == Brightness.dark;
     final buttonColor = isDark
         ? const Color(0xFF1C1C1E)
-        : Color.alphaBlend(
-            colorScheme.primary.withValues(alpha: 0.10),
-            colorScheme.surface,
-          );
+        : Colors.transparent;
     final menuColor = isDark ? const Color(0xFF141414) : colorScheme.surface;
     final borderColor = isDark
         ? const Color(0xFF323236)
@@ -107,13 +104,14 @@ class _AppPopupButtonState<T> extends State<AppPopupButton<T>> {
                     : borderColor,
               ),
               boxShadow: [
-                BoxShadow(
-                  color: colorScheme.shadow.withValues(
-                    alpha: _menuOpen ? 0.16 : 0.08,
+                if (isDark)
+                  BoxShadow(
+                    color: colorScheme.shadow.withValues(
+                      alpha: _menuOpen ? 0.16 : 0.08,
+                    ),
+                    blurRadius: _menuOpen ? 18 : 10,
+                    offset: const Offset(0, 8),
                   ),
-                  blurRadius: _menuOpen ? 18 : 10,
-                  offset: const Offset(0, 8),
-                ),
               ],
             ),
             padding: widget.padding,
