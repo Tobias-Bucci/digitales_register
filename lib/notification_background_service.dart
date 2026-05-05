@@ -1,4 +1,4 @@
-﻿// Copyright (C) 2026 Tobias Bucci
+// Copyright (C) 2026 Tobias Bucci
 //
 // This file is part of digitales_register.
 //
@@ -268,6 +268,8 @@ class NotificationBackgroundService {
   static bool _appInForeground = true;
   static Timer? _foregroundPollTimer;
 
+  static void Function(String? payload)? onNotificationTap;
+
   @visibleForTesting
   static NotificationFetchOverride? fetchUnreadNotificationsOverride;
   @visibleForTesting
@@ -379,7 +381,12 @@ class NotificationBackgroundService {
       iOS: iosSettings,
     );
 
-    await _notificationsPlugin.initialize(initSettings);
+    await _notificationsPlugin.initialize(
+      initSettings,
+      onDidReceiveNotificationResponse: (response) {
+        _handleNotificationTap(response.payload);
+      },
+    );
 
     const channel = AndroidNotificationChannel(
       _channelId,
@@ -396,6 +403,12 @@ class NotificationBackgroundService {
     _notificationsInitialized = true;
   }
 
+  static void _handleNotificationTap(String? payload) {
+    if (onNotificationTap != null) {
+      onNotificationTap!(payload);
+    }
+  }
+
   static Future<void> pollAndNotify({required String trigger}) async {
     final lease = await _tryAcquirePollLease(trigger: trigger);
     if (!lease.acquired) {
@@ -406,13 +419,14 @@ class NotificationBackgroundService {
     try {
       final unread = await (fetchUnreadNotificationsOverride != null
           ? fetchUnreadNotificationsOverride!()
-          : _fetchUnreadNotifications());
+              .then((list) => list.map(_toNotificationCandidate).toList())
+          : _fetchUnreadItemCandidates());
       final prefs = await SharedPreferences.getInstance();
       final previousEntries = _readReminderEntries(prefs);
       final currentTime = now;
       final evaluation = evaluateNotificationReminders(
         previousEntries: previousEntries,
-        unreadCandidates: unread.map(_toNotificationCandidate),
+        unreadCandidates: unread,
         currentTime: currentTime,
       );
 
@@ -548,12 +562,13 @@ class NotificationBackgroundService {
     return true;
   }
 
-  static Future<List<Map<String, dynamic>>> _fetchUnreadNotifications() async {
+  static Future<List<NotificationReminderCandidate>>
+      _fetchUnreadItemCandidates() async {
     final secureStorage = getFlutterSecureStorage();
     final loginRaw = await secureStorage.read(key: "login");
     if (loginRaw == null) {
       await appendLog("Keine Login-Daten vorhanden, Polling uebersprungen");
-      return const <Map<String, dynamic>>[];
+      return const <NotificationReminderCandidate>[];
     }
 
     dynamic loginJson;
@@ -561,7 +576,7 @@ class NotificationBackgroundService {
       loginJson = json.decode(loginRaw);
     } catch (_) {
       await appendLog("Login-Daten konnten nicht gelesen werden");
-      return const <Map<String, dynamic>>[];
+      return const <NotificationReminderCandidate>[];
     }
 
     final user = getString(loginJson["user"]);
@@ -570,7 +585,7 @@ class NotificationBackgroundService {
 
     if (user == null || pass == null || rawUrl == null) {
       await appendLog("Login-Daten unvollstaendig, Polling uebersprungen");
-      return const <Map<String, dynamic>>[];
+      return const <NotificationReminderCandidate>[];
     }
 
     final baseUrl = "${fixupUrl(rawUrl)}/v2";
@@ -593,29 +608,58 @@ class NotificationBackgroundService {
     final loginMap = getMap(loginResponse.data);
     if ((getBool(loginMap?["loggedIn"]) ?? false) == false) {
       await appendLog("Login fuer Background-Polling fehlgeschlagen");
-      return const <Map<String, dynamic>>[];
+      return const <NotificationReminderCandidate>[];
     }
 
-    final unreadResponse =
-        await dio.post<dynamic>("$baseUrl/api/notification/unread");
+    final candidates = <NotificationReminderCandidate>[];
 
-    if (unreadResponse.data is! List) {
-      await appendLog("Unread-Endpoint lieferte keine Liste");
-      return const <Map<String, dynamic>>[];
+    // Fetch Notifications
+    try {
+      final unreadResponse =
+          await dio.post<dynamic>("$baseUrl/api/notification/unread");
+
+      if (unreadResponse.data is List) {
+        final unreadList = unreadResponse.data as List;
+        for (final dynamic entry in unreadList) {
+          final rawMap = getMap(entry);
+          if (rawMap != null) {
+            candidates
+                .add(_toNotificationCandidate(rawMap.cast<String, dynamic>()));
+          }
+        }
+      } else {
+        await appendLog("Unread-Endpoint lieferte keine Liste");
+      }
+    } catch (e) {
+      await appendLog("Fehler beim Abrufen der Mitteilungen: $e");
     }
 
-    final unreadList = unreadResponse.data as List;
-    return unreadList.map<Map<String, dynamic>>((dynamic entry) {
-      final rawMap = getMap(entry);
-      if (rawMap == null) return <String, dynamic>{};
+    // Fetch Messages
+    try {
+      final messagesResponse =
+          await dio.post<dynamic>("$baseUrl/api/message/getMyMessages");
 
-      final normalized = <String, dynamic>{};
-      rawMap.forEach((dynamic key, dynamic value) {
-        normalized[key.toString()] = value;
-      });
-      return normalized;
-    }).toList();
+      if (messagesResponse.data is List) {
+        final messagesList = messagesResponse.data as List;
+        for (final dynamic entry in messagesList) {
+          final rawMap = getMap(entry);
+          if (rawMap != null) {
+            if (rawMap["timeRead"] == null) {
+              candidates
+                  .add(_toMessageCandidate(rawMap.cast<String, dynamic>()));
+            }
+          }
+        }
+      } else {
+        await appendLog("Messages-Endpoint lieferte keine Liste");
+      }
+    } catch (e) {
+      await appendLog("Fehler beim Abrufen der Nachrichten: $e");
+    }
+
+    return candidates;
   }
+
 
   static NotificationReminderCandidate _toNotificationCandidate(
       Map<String, dynamic> n) {
@@ -634,6 +678,28 @@ class NotificationBackgroundService {
       key: key,
       title: title,
       body: subTitle,
+    );
+  }
+
+  static NotificationReminderCandidate _toMessageCandidate(
+      Map<String, dynamic> m) {
+    final id = getInt(m["id"]);
+    final subject = getString(m["subject"]) ?? "";
+    final text = getString(m["text"]) ?? "";
+    final fromName = getString(m["fromName"]) ?? "";
+    final timeSent = getString(m["timeSent"]) ?? "";
+
+    final key = id != null
+        ? "msg:$id"
+        : "msg_hash:${_stableHash("$subject|$text|$fromName|$timeSent")}";
+
+    final title =
+        fromName.isNotEmpty ? "Nachricht von $fromName" : "Neue Nachricht";
+
+    return NotificationReminderCandidate(
+      key: key,
+      title: title,
+      body: subject.isNotEmpty ? subject : text,
     );
   }
 
