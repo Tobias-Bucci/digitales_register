@@ -397,7 +397,7 @@ abstract class SettingsState
       ..favoriteSubjects = ListBuilder()
       ..dashboardColorBorders = false
       ..calendarColorBackground = false
-      ..pushNotificationsEnabled = false
+      ..pushNotificationsEnabled = true
       ..substituteDetectionEnabled = true
       ..calendarSyncEnabled = false
       ..calendarSyncCalendarId = null
