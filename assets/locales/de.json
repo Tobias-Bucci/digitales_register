@@ -319,6 +319,7 @@
   "login.noConnectionHint": "Keine Verbindung mit \"{url}\" möglich. Bitte überprüfe deine Internetverbindung.\nWenn du \"{otherSchool}\" ausgewählt hast, musst du eine gültige Adresse eingeben.",
   "login.noConnectionWithUrl": "Keine Verbindung mit \"{url}\" möglich",
   "login.emptyCredentials": "Bitte gib etwas ein",
+  "login.invalidCredentials": "Ungültiger Benutzer/Passwort",
   "login.passwordChangedSuccess": "Passwort erfolgreich geändert",
   "login.userTypeUnsupported.title": "Tut uns leid!",
   "login.userTypeUnsupported.message": "Diese App ist ausschließlich für Schüler*innen und Eltern geeignet.",

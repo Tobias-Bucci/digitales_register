@@ -510,6 +510,11 @@ class AppLocalizations {
         args: {'url': connectionMatch.group(1)!},
       );
     }
+    if (RegExp(r'user_not_found|password_wrong|passwort_wrong',
+            caseSensitive: false)
+        .hasMatch(trimmed)) {
+      return text('login.invalidCredentials');
+    }
     final replacements = <String, String>{
       'Bitte gib etwas ein': text('login.emptyCredentials'),
       'Dieser Benutzertyp wird nicht unterstützt.':

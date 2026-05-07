@@ -319,6 +319,7 @@
   "login.noConnectionHint": "Degüna conessiun possibla cun \"{url}\". Controlëia tüa conessiun internet.\nSce t'as alté fora \"{otherSchool}\", dësses scrie ite n indriz valid.",
   "login.noConnectionWithUrl": "Degüna conessiun possibla cun \"{url}\"",
   "login.emptyCredentials": "Por plajëir, scrie ite val'",
+  "login.invalidCredentials": "Inom d'ütent/password nia valid",
   "login.passwordChangedSuccess": "Password mudada cun suzes",
   "login.userTypeUnsupported.title": "Se rincresce!",
   "login.userTypeUnsupported.message": "Chësta app é ma por scolars y geniturs.",
