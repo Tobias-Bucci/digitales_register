@@ -30,7 +30,6 @@ import 'package:dr/platform_adapter.dart';
 import 'package:dr/theme_controller.dart';
 import 'package:dr/ui/autocomplete_options.dart';
 import 'package:dr/ui/dialog.dart';
-import 'package:dr/ui/donations.dart';
 import 'package:dr/ui/network_protocol_page.dart';
 import 'package:dr/util.dart';
 import 'package:flutter/material.dart';
@@ -799,16 +798,6 @@ class _SettingsPageWidgetState extends State<SettingsPageWidget> {
             );
           },
         ),
-        if (!Platform.isMacOS)
-          ListTile(
-            leading: const Icon(Icons.monetization_on),
-            title: Text(l10n.text('settings.advanced.supportUs')),
-            onTap: () {
-              Navigator.of(context).push(
-                MaterialPageRoute<void>(builder: (context) => Donate()),
-              );
-            },
-          ),
         ListTile(
           leading: const Icon(Icons.feedback),
           title: Text(l10n.text('settings.advanced.feedback')),

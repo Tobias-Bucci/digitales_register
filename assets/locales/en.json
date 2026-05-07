@@ -70,7 +70,6 @@
   "settings.advanced.iosMode": "iOS mode",
   "settings.advanced.iosMode.subtitle": "Imitate the appearance of an iOS app",
   "settings.advanced.networkProtocol": "Network protocol",
-  "settings.advanced.supportUs": "Support us now!",
   "settings.advanced.feedback": "Send feedback",
   "settings.advanced.sourceFork": "View source code (fork)",
   "settings.advanced.sourceOriginal": "View original source code",
