@@ -293,7 +293,16 @@ class RegisterApp extends StatelessWidget {
               builder: (context, child) => AppLockSync(
                 enabled: vm.biometricAppLockEnabled,
                 child: BiometricAppLockOverlay(
-                  child: child ?? const SizedBox.shrink(),
+                  child: ColoredBox(
+                    color: Theme.of(context).scaffoldBackgroundColor,
+                    child: SafeArea(
+                      top: false,
+                      left: true,
+                      right: true,
+                      bottom: true,
+                      child: child ?? const SizedBox.shrink(),
+                    ),
+                  ),
                 ),
               ),
               debugShowCheckedModeBanner: false,
