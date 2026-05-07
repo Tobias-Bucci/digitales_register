@@ -119,11 +119,13 @@ class NotificationReminderCandidate {
     required this.key,
     required this.title,
     required this.body,
+    this.dedupeId,
   });
 
   final String key;
   final String title;
   final String? body;
+  final String? dedupeId;
 }
 
 class NotificationReminderEntry {
@@ -421,12 +423,22 @@ class NotificationBackgroundService {
           ? fetchUnreadNotificationsOverride!()
               .then((list) => list.map(_toNotificationCandidate).toList())
           : _fetchUnreadItemCandidates());
+
+      final dedupedUnread = dedupeCandidates(unread);
+
+      try {
+        await appendLog(
+          "[$trigger] Gefundene Kandidaten: ${dedupedUnread.length} - ${dedupedUnread.map((c) => '${c.key}|${c.title}|${c.body}').join('; ')}",
+        );
+      } catch (_) {
+        // Logging must not break polling.
+      }
       final prefs = await SharedPreferences.getInstance();
       final previousEntries = _readReminderEntries(prefs);
       final currentTime = now;
       final evaluation = evaluateNotificationReminders(
         previousEntries: previousEntries,
-        unreadCandidates: unread,
+        unreadCandidates: dedupedUnread,
         currentTime: currentTime,
       );
 
@@ -657,7 +669,33 @@ class NotificationBackgroundService {
       await appendLog("Fehler beim Abrufen der Nachrichten: $e");
     }
 
-    return candidates;
+    // Deduplicate candidates by title+body to avoid double-counting the
+    // same underlying event when it appears both as a "notification"
+    // and as a "message" from different endpoints.
+    return dedupeCandidates(candidates);
+  }
+
+  @visibleForTesting
+  static List<NotificationReminderCandidate> dedupeCandidates(
+    Iterable<NotificationReminderCandidate> candidates,
+  ) {
+    final uniqueMap = <String, NotificationReminderCandidate>{};
+    for (final c in candidates) {
+      String fallbackKey() {
+        var t = c.title.trim();
+        t = t.replaceFirst(RegExp(r'^Nachricht von\s+', caseSensitive: false), '');
+        t = t.toLowerCase();
+        final b = (c.body ?? '').trim().toLowerCase();
+        return "$t|$b";
+      }
+
+      final dedupeKey = c.dedupeId ?? fallbackKey();
+      if (!uniqueMap.containsKey(dedupeKey)) {
+        uniqueMap[dedupeKey] = c;
+      }
+    }
+
+    return uniqueMap.values.toList(growable: false);
   }
 
 
@@ -678,6 +716,11 @@ class NotificationBackgroundService {
       key: key,
       title: title,
       body: subTitle,
+        dedupeId: type == 'message' && objectId != null
+          ? 'msg:$objectId'
+          : (id != null
+            ? 'notif:$id'
+            : (objectId != null ? 'notif:$objectId' : null)),
     );
   }
 
@@ -700,6 +743,7 @@ class NotificationBackgroundService {
       key: key,
       title: title,
       body: subject.isNotEmpty ? subject : text,
+      dedupeId: id != null ? 'msg:$id' : null,
     );
   }
 

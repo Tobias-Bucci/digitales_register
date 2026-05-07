@@ -232,6 +232,28 @@ void main() {
     expect(shown.single.title, '2 ungelesene Benachrichtigungen');
   });
 
+  test('duplicate message notifications collapse before counting', () {
+    final deduped = NotificationBackgroundService.dedupeCandidates(
+      <NotificationReminderCandidate>[
+        const NotificationReminderCandidate(
+          key: 'notif:5100',
+          title: 'Neue Mitteilung Mathematik',
+          body: 'Nachricht von Lehrperson',
+          dedupeId: 'msg:100',
+        ),
+        const NotificationReminderCandidate(
+          key: 'msg:100',
+          title: 'Nachricht von Lehrperson',
+          body: 'Neue Mitteilung Mathematik',
+          dedupeId: 'msg:100',
+        ),
+      ],
+    );
+
+    expect(deduped, hasLength(1));
+    expect(deduped.single.dedupeId, 'msg:100');
+  });
+
   test('overlapping poll invocations do not double-alert', () async {
     final shown = <NotificationDisplayRequest>[];
     final releaseNotification = Completer<void>();
