@@ -48,12 +48,12 @@ class CalendarCardContainer extends StatelessWidget {
         );
       },
       connect: (state) {
-        final mergedDay = calendarDayWithLocalReminderAssessments(state, day) ??
+        final CalendarDay mergedDay = calendarDayWithLocalReminderAssessments(state, day) ??
             state.calendarState.days[day]!;
-        final hour = mergedDay.hours[hourIndex];
+        final CalendarHour hour = mergedDay.hours[hourIndex];
         final theme = state.settingsState.subjectThemes[hour.subject] ??
             SubjectTheme(
-              (b) => b
+              (SubjectThemeBuilder b) => b
                 ..color = Colors.grey.toARGB32()
                 ..thick = 1,
             );
