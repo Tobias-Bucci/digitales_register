@@ -66,3 +66,25 @@ android/key.properties
 android/*.jks
 ios/Flutter/ephemeral/
 macos/Flutter/GeneratedPluginRegistrant.swift
+
+# ======= IOS =======
+# Pods und Symlinks MÜSSEN ignoriert werden. Die werden auf dem Mac via "pod install" neu erzeugt!
+**/ios/Pods/
+**/ios/.symlinks/
+
+# Generierte Konfigurationen für iOS, baut Flutter auf dem Mac automatisch neu
+**/ios/Flutter/Flutter.podspec
+**/ios/Flutter/Generated.xcconfig
+**/ios/Flutter/app.flx
+**/ios/Flutter/app.zip
+**/ios/Flutter/flutter_assets/
+**/ios/Flutter/flutter_export_environment.sh
+
+# User-spezifische Xcode Cache-Dateien (verhindert Git-Merge-Konflikte)
+*.mode1v3
+*.mode2v3
+*.pbxuser
+*.perspectivev3
+*.xcuserstate
+*.xcworkspace/xcuserdata/
+*.xcodeproj/xcuserdata/
