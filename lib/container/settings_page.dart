@@ -40,9 +40,7 @@ class SettingsPageContainer extends StatelessWidget {
           builder: (context, _) => SettingsPageWidget(
             vm: vm,
             currentThemePreference: themeController.themePreference,
-            platformOverride: themeController.platformOverride,
             onSetThemePreference: themeController.setThemePreference,
-            onSetPlatformOverride: themeController.setPlatformOverride,
             onSetLanguage: (language) =>
                 actions.settingsActions.setLanguage(language.code),
             onSetNoPassSaving: actions.settingsActions.saveNoPass.call,

@@ -58,7 +58,6 @@ class SettingsPageWidget extends StatefulWidget {
   final OnSettingChanged<bool> onSetDashboardDeduplicateEntries;
   final OnSettingChanged<AppThemePreference> onSetThemePreference;
   final OnSettingChanged<AppLanguage> onSetLanguage;
-  final OnSettingChanged<bool> onSetPlatformOverride;
   final OnSettingChanged<bool> onSetDashboardColorBorders;
   final OnSettingChanged<bool> onSetCalenderColorBackground;
   final OnSettingChanged<bool> onSetDashboardColorTestsInRed;
@@ -82,7 +81,6 @@ class SettingsPageWidget extends StatefulWidget {
   final VoidCallback onShowDebug;
   final SettingsViewModel vm;
   final AppThemePreference currentThemePreference;
-  final bool platformOverride;
 
   const SettingsPageWidget({
     super.key,
@@ -99,7 +97,6 @@ class SettingsPageWidget extends StatefulWidget {
     required this.onSetLanguage,
     required this.onSetSubjectNicks,
     required this.vm,
-    required this.onSetPlatformOverride,
     required this.onShowProfile,
     required this.onShowDebug,
     required this.onSetIgnoreForGradesAverage,
@@ -119,7 +116,6 @@ class SettingsPageWidget extends StatefulWidget {
     required this.onSetContrastColor,
     required this.onSetFavoriteSubjects,
     required this.currentThemePreference,
-    required this.platformOverride,
   });
 
   @override
@@ -781,13 +777,6 @@ class _SettingsPageWidgetState extends State<SettingsPageWidget> {
     return _SettingsSectionCard(
       title: l10n.text('settings.section.advanced'),
       children: [
-        if (Platform.isAndroid)
-          SwitchListTile.adaptive(
-            title: Text(l10n.text('settings.advanced.iosMode')),
-            subtitle: Text(l10n.text('settings.advanced.iosMode.subtitle')),
-            onChanged: widget.onSetPlatformOverride,
-            value: widget.platformOverride,
-          ),
         ListTile(
           title: Text(l10n.text('settings.advanced.networkProtocol')),
           trailing: const Icon(Icons.chevron_right),

@@ -15,15 +15,12 @@
 // You should have received a copy of the GNU General Public License
 // along with digitales_register.  If not, see <http://www.gnu.org/licenses/>.
 
-import 'dart:io';
-
 import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 const contrastColorPreferenceKey = "contrastColor";
 const _themeBrightnessPreferenceKey = "isDark";
 const _followDeviceThemePreferenceKey = "followDeviceTheme";
-const _platformOverridePreferenceKey = "platformOverride";
 const defaultContrastColor = Color(0xFF3D79AF);
 
 enum AppThemePreference {
@@ -37,11 +34,9 @@ class AppThemeController extends ChangeNotifier with WidgetsBindingObserver {
 
   Color _contrastColor = defaultContrastColor;
   AppThemePreference _themePreference = AppThemePreference.system;
-  bool _platformOverride = false;
 
   Color get contrastColor => _contrastColor;
   AppThemePreference get themePreference => _themePreference;
-  bool get platformOverride => _platformOverride;
 
   ThemeMode get themeMode {
     switch (_themePreference) {
@@ -70,7 +65,6 @@ class AppThemeController extends ChangeNotifier with WidgetsBindingObserver {
       _themePreference =
           isDark ? AppThemePreference.dark : AppThemePreference.light;
     }
-    _platformOverride = prefs.getBool(_platformOverridePreferenceKey) ?? false;
     notifyListeners();
   }
 
@@ -91,14 +85,9 @@ class AppThemeController extends ChangeNotifier with WidgetsBindingObserver {
     required Brightness brightness,
     required bool amoledMode,
   }) {
-    TargetPlatform? platform;
-    if (_platformOverride && Platform.isAndroid) {
-      platform = TargetPlatform.iOS;
-    }
     final baseTheme = ThemeData(
       colorSchemeSeed: _contrastColor,
       brightness: brightness,
-      platform: platform,
     );
     final scheme = baseTheme.colorScheme;
     final appBarTheme = baseTheme.appBarTheme.copyWith(
@@ -187,14 +176,6 @@ class AppThemeController extends ChangeNotifier with WidgetsBindingObserver {
         preference == AppThemePreference.dark,
       );
     }
-  }
-
-  Future<void> setPlatformOverride(bool value) async {
-    _platformOverride = value;
-    notifyListeners();
-
-    final prefs = await SharedPreferences.getInstance();
-    await prefs.setBool(_platformOverridePreferenceKey, value);
   }
 
   Future<void> setContrastColor(Color color) async {
