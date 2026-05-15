@@ -397,5 +397,9 @@
   "profile.locked.unlock": "Mit Biometrie entsperren",
   "semester.first": "1. Semester",
   "semester.second": "2. Semester",
-  "semester.all": "Beide Semester"
+  "semester.all": "Beide Semester",
+  "update.title": "Neues Update verfügbar!",
+  "update.content": "Lade dir jetzt die neueste Version herunter.",
+  "update.later": "Später",
+  "update.now": "Aktualisieren"
 }

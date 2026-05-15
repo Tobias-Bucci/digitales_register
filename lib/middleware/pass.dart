@@ -1,4 +1,5 @@
 // Copyright (C) 2021 Michael Debertol
+// Copyright (C) 2026 Tobias Bucci
 //
 // This file is part of digitales_register.
 //
@@ -43,11 +44,15 @@ Future<void> _savePass(MiddlewareApi<AppState, AppStateBuilder, AppActions> api,
   if (wrapper.user == null || wrapper.pass == null || wrapper.safeMode) {
     return;
   }
+  
+  // If the user is logged in as 'debug', save 'debug' instead of the mapped username ('stbuctob').
+  final userToSave = api.state.loginState.username == 'debug' ? 'debug' : wrapper.user;
+
   await secureStorage.write(
     key: "login",
     value: json.encode(
       <String, Object?>{
-        "user": wrapper.user,
+        "user": userToSave,
         "pass": wrapper.pass,
         "url": wrapper.url,
         "otherAccounts": json.decode(

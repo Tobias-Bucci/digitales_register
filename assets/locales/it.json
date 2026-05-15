@@ -397,5 +397,9 @@
   "profile.locked.unlock": "Sblocca con biometria",
   "semester.first": "1° semestre",
   "semester.second": "2° semestre",
-  "semester.all": "Entrambi i semestri"
+  "semester.all": "Entrambi i semestri",
+  "update.title": "Nuovo aggiornamento disponibile!",
+  "update.content": "Scarica ora l'ultima versione.",
+  "update.later": "Più tardi",
+  "update.now": "Aggiorna"
 }

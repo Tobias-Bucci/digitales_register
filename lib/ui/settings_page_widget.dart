@@ -31,6 +31,8 @@ import 'package:dr/theme_controller.dart';
 import 'package:dr/ui/autocomplete_options.dart';
 import 'package:dr/ui/dialog.dart';
 import 'package:dr/ui/network_protocol_page.dart';
+import 'package:flutter_built_redux/flutter_built_redux.dart';
+import 'package:dr/actions/app_actions.dart';
 import 'package:dr/util.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_colorpicker/flutter_colorpicker.dart';
@@ -77,6 +79,7 @@ class SettingsPageWidget extends StatefulWidget {
   final OnSettingChanged<List<String>> onSetIgnoreForGradesAverage;
   final OnSettingChanged<List<String>> onSetFavoriteSubjects;
   final VoidCallback onShowProfile;
+  final VoidCallback onShowDebug;
   final SettingsViewModel vm;
   final AppThemePreference currentThemePreference;
   final bool platformOverride;
@@ -98,6 +101,7 @@ class SettingsPageWidget extends StatefulWidget {
     required this.vm,
     required this.onSetPlatformOverride,
     required this.onShowProfile,
+    required this.onShowDebug,
     required this.onSetIgnoreForGradesAverage,
     required this.onSetDashboardColorBorders,
     required this.onSetCalenderColorBackground,
@@ -873,6 +877,14 @@ class _SettingsPageWidgetState extends State<SettingsPageWidget> {
           _buildCalendarSection(l10n),
           const SizedBox(height: 16),
           _buildAdvancedSection(l10n),
+          if (widget.vm.username == 'debug')
+            Padding(
+              padding: const EdgeInsets.only(top: 16),
+              child: ElevatedButton(
+                onPressed: widget.onShowDebug,
+                child: const Text("Debug Menu"),
+              ),
+            ),
         ],
       ),
     );

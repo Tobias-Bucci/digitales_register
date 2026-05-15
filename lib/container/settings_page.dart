@@ -64,6 +64,7 @@ class SettingsPageContainer extends StatelessWidget {
             onSetDashboardDeduplicateEntries:
                 actions.settingsActions.deduplicateDashboardEntries.call,
             onShowProfile: actions.routingActions.showProfile.call,
+            onShowDebug: actions.routingActions.showDebug.call,
             onSetIgnoreForGradesAverage: (list) => actions.settingsActions
                 .ignoreSubjectsForAverage(BuiltList(list)),
             onSetFavoriteSubjects: (list) =>
@@ -134,6 +135,7 @@ class SettingsPageContainer extends StatelessWidget {
 typedef OnSettingChanged<T> = void Function(T newValue);
 
 class SettingsViewModel {
+  final String username;
   final Map<String, String> subjectNicks;
   final bool noPassSaving;
   final AppLanguage language;
@@ -165,7 +167,8 @@ class SettingsViewModel {
   final List<String> allTeachers;
   final BuiltMap<String, SubjectTheme> subjectThemes;
   SettingsViewModel(AppState state)
-      : language = AppLanguage.fromCode(state.settingsState.languageCode),
+      : username = state.loginState.username ?? '',
+        language = AppLanguage.fromCode(state.settingsState.languageCode),
         noPassSaving = state.settingsState.noPasswordSaving,
         noDataSaving = state.settingsState.noDataSaving,
         askWhenDelete = state.settingsState.askWhenDelete,

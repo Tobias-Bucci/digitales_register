@@ -26,6 +26,7 @@ enum Pages {
   certificate,
   messages,
   settings,
+  debug,
 }
 
 // This allows tests to just include the routingMiddleware
@@ -39,6 +40,7 @@ final routingMiddleware =
       ..add(RoutingActionsNames.showProfile, _showProfile)
       ..add(RoutingActionsNames.showNotifications, _showNotifications)
       ..add(RoutingActionsNames.showSettings, _showSettings)
+      ..add(RoutingActionsNames.showDebug, _showDebug)
       ..add(RoutingActionsNames.showEditCalendarSubjectNicks,
           _showEditCalendarSubjectNicks)
       ..add(RoutingActionsNames.showEditCalendarSubstituteSettings,
@@ -120,6 +122,15 @@ Future<void> _showSettings(
     Action<void> action) async {
   scaffoldKey!.currentState!
       .selectContentWidget(SettingsPageContainer(), Pages.settings);
+  await next(action);
+}
+
+Future<void> _showDebug(
+    MiddlewareApi<AppState, AppStateBuilder, AppActions> api,
+    ActionHandler next,
+    Action<void> action) async {
+  scaffoldKey!.currentState!
+      .selectContentWidget(DebugPageContainer(), Pages.debug);
   await next(action);
 }
 

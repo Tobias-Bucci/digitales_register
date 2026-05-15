@@ -397,5 +397,9 @@
   "profile.locked.unlock": "Unlock with biometrics",
   "semester.first": "1st semester",
   "semester.second": "2nd semester",
-  "semester.all": "Both semesters"
+  "semester.all": "Both semesters",
+  "update.title": "New update available!",
+  "update.content": "Download the latest version now.",
+  "update.later": "Later",
+  "update.now": "Update"
 }

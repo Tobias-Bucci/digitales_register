@@ -397,5 +397,9 @@
   "profile.locked.unlock": "Sbloche cun la biometria",
   "semester.first": "1. semester",
   "semester.second": "2. semester",
-  "semester.all": "Dui i semesters"
+  "semester.all": "Dui i semesters",
+  "update.title": "Nuev ajornament a disposizion!",
+  "update.content": "Cëria ju la verscion plu nueva śën.",
+  "update.later": "Plu tert",
+  "update.now": "Ajorna"
 }

@@ -43,6 +43,7 @@ abstract class RoutingActions extends ReduxActions {
   abstract final VoidActionDispatcher showEditCalendarSubjectNicks;
   abstract final VoidActionDispatcher showEditCalendarSubstituteSettings;
   abstract final VoidActionDispatcher showEditGradesAverageSettings;
+  abstract final VoidActionDispatcher showDebug;
 }
 
 abstract class ShowPassResetPayload

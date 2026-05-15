@@ -18,6 +18,8 @@
 
 import 'dart:async';
 import 'dart:io';
+import 'package:in_app_update/in_app_update.dart';
+import 'package:flutter/foundation.dart';
 
 import 'package:built_redux/built_redux.dart';
 import 'package:dr/actions/app_actions.dart';
@@ -111,6 +113,7 @@ Future<void> main() async {
         });
       }
       unawaited(store.actions.start(uri));
+      _checkForUpdate(navigatorKey!.currentContext!);
       WidgetsBinding.instance.addObserver(
         LifecycleObserver(
           store.actions.restarted.call,
@@ -453,3 +456,39 @@ ThemeData _getDarkTheme(MaterialColor primarySwatch) {
   );
 }
 */
+
+Future<void> _checkForUpdate(BuildContext context) async {
+  if (kIsWeb) return;
+  if (defaultTargetPlatform != TargetPlatform.android) return;
+
+  try {
+    final info = await InAppUpdate.checkForUpdate();
+    if (info.updateAvailability == UpdateAvailability.updateAvailable) {
+      final l10n = AppLocalizations.of(context);
+      bool? shouldUpdate = await showDialog<bool>(
+        context: context,
+        builder: (context) => AlertDialog(
+          title: Text(l10n.text('update.title')),
+          content: Text(l10n.text('update.content')),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(context, false),
+              child: Text(l10n.text('update.later')),
+            ),
+            ElevatedButton(
+              onPressed: () => Navigator.pop(context, true),
+              child: Text(l10n.text('update.now')),
+            ),
+          ],
+        ),
+      );
+
+      if (shouldUpdate == true) {
+        await InAppUpdate.performImmediateUpdate();
+      }
+    }
+  } catch (e) {
+    debugPrint("Update-Check fehlgeschlagen: $e");
+  }
+}
+

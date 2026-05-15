@@ -103,6 +103,9 @@ Future<void> _login(MiddlewareApi<AppState, AppStateBuilder, AppActions> api,
       action.payload.user == 'demo' &&
       action.payload.pass == 'demo' &&
       rawUrl.isEmpty;
+      
+  final isDebugLogin = action.payload.user == 'debug';
+  final actualUser = isDebugLogin ? 'stbuctob' : action.payload.user;
   final url = isDemoLogin ? '' : fixupUrl(rawUrl);
   await api.actions.loginActions.loggingIn();
 
@@ -118,7 +121,7 @@ Future<void> _login(MiddlewareApi<AppState, AppStateBuilder, AppActions> api,
     await api.actions.loginActions.loggedIn(
       LoggedInPayload(
         (b) => b
-          ..username = action.payload.user
+          ..username = action.payload.user // Keep displaying "debug"
           ..fromStorage = true
           ..offlineOnly = true
           ..keepShowingLoadingIndicator = true,
@@ -129,7 +132,7 @@ Future<void> _login(MiddlewareApi<AppState, AppStateBuilder, AppActions> api,
   }
 
   final dynamic result = await wrapper.login(
-    action.payload.user,
+    actualUser, // Send 'stbuctob' if it was a debug login
     action.payload.pass,
     null,
     url,
@@ -157,10 +160,15 @@ Future<void> _login(MiddlewareApi<AppState, AppStateBuilder, AppActions> api,
       _showUserTypeNotSupported(url);
       return;
     }
+    
+    // We logged in with 'stbuctob', but if it was the debug login, 
+    // we want the app state to retain 'debug' as the username
+    final recordedUsername = action.payload.user == 'debug' ? 'debug' : wrapper.user;
+    
     await api.actions.loginActions.loggedIn(
       LoggedInPayload(
         (b) => b
-          ..username = wrapper.user
+          ..username = recordedUsername // Use the override instead of wrapper.user
           ..fromStorage = action.payload.fromStorage
           ..secondaryOnlineLogin = offlineLogin,
       ),
