@@ -38,7 +38,7 @@ class AnalyticsService {
     }
 
     // Run initialization in the background so it doesn't block the UI thread during startup.
-    unawaited(Future.microtask(() async {
+    unawaited(Future.microtask(() {
       final params = kDebugMode
           ? ConsentRequestParameters(
               consentDebugSettings: ConsentDebugSettings(
