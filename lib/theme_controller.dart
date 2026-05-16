@@ -21,6 +21,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 const contrastColorPreferenceKey = "contrastColor";
 const _themeBrightnessPreferenceKey = "isDark";
 const _followDeviceThemePreferenceKey = "followDeviceTheme";
+const platformOverridePreferenceKey = "platformOverride";
 const defaultContrastColor = Color(0xFF3D79AF);
 
 enum AppThemePreference {
@@ -34,9 +35,11 @@ class AppThemeController extends ChangeNotifier with WidgetsBindingObserver {
 
   Color _contrastColor = defaultContrastColor;
   AppThemePreference _themePreference = AppThemePreference.system;
+  bool _platformOverride = false;
 
   Color get contrastColor => _contrastColor;
   AppThemePreference get themePreference => _themePreference;
+  bool get platformOverride => _platformOverride;
 
   ThemeMode get themeMode {
     switch (_themePreference) {
@@ -56,6 +59,8 @@ class AppThemeController extends ChangeNotifier with WidgetsBindingObserver {
     if (persistedColor != null) {
       _contrastColor = Color(persistedColor);
     }
+
+    _platformOverride = prefs.getBool(platformOverridePreferenceKey) ?? false;
 
     final followDevice = prefs.getBool(_followDeviceThemePreferenceKey) ?? true;
     if (followDevice) {
@@ -176,6 +181,16 @@ class AppThemeController extends ChangeNotifier with WidgetsBindingObserver {
         preference == AppThemePreference.dark,
       );
     }
+  }
+
+  Future<void> setPlatformOverride(bool value) async {
+    _platformOverride = value;
+    notifyListeners();
+
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setBool(platformOverridePreferenceKey, value);
+    // If platform override is enabled, stop following device theme.
+    await prefs.setBool(_followDeviceThemePreferenceKey, !value);
   }
 
   Future<void> setContrastColor(Color color) async {

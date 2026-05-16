@@ -130,7 +130,7 @@ Future<void> _showDebug(
     ActionHandler next,
     Action<void> action) async {
   scaffoldKey!.currentState!
-      .selectContentWidget(DebugPageContainer(), Pages.debug);
+      .selectContentWidget(const DebugPageContainer(), Pages.debug);
   await next(action);
 }
 

@@ -15,12 +15,12 @@
 // You should have received a copy of the GNU General Public License
 // along with digitales_register.  If not, see <http://www.gnu.org/licenses/>.
 
+import 'package:dr/i18n/app_localizations.dart';
 import 'package:flutter/material.dart';
 import 'package:in_app_update/in_app_update.dart';
-import 'package:dr/i18n/app_localizations.dart';
 
 class DebugPageContainer extends StatelessWidget {
-  const DebugPageContainer({Key? key}) : super(key: key);
+  const DebugPageContainer({super.key});
 
   @override
   Widget build(BuildContext context) {
@@ -29,7 +29,7 @@ class DebugPageContainer extends StatelessWidget {
 }
 
 class DebugPageWidget extends StatelessWidget {
-  const DebugPageWidget({Key? key}) : super(key: key);
+  const DebugPageWidget({super.key});
 
   @override
   Widget build(BuildContext context) {
@@ -43,7 +43,7 @@ class DebugPageWidget extends StatelessWidget {
               final l10n = AppLocalizations.of(context);
               
               // Simuliere das Popup
-              bool? shouldUpdate = await showDialog<bool>(
+              final bool? shouldUpdate = await showDialog<bool>(
                 context: context,
                 builder: (context) => AlertDialog(
                   title: Text(l10n.text('update.title')),

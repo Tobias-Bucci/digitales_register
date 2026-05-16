@@ -18,11 +18,10 @@
 
 import 'dart:async';
 import 'dart:io';
-import 'package:in_app_update/in_app_update.dart';
-import 'package:flutter/foundation.dart';
 
 import 'package:built_redux/built_redux.dart';
 import 'package:dr/actions/app_actions.dart';
+import 'package:dr/analytics_service.dart';
 import 'package:dr/android_widget_service.dart';
 import 'package:dr/app_language_controller.dart';
 import 'package:dr/app_state.dart';
@@ -46,9 +45,11 @@ import 'package:dr/theme_controller.dart';
 import 'package:dr/ui/grade_calculator.dart';
 import 'package:dr/ui/grades_chart_page.dart';
 import 'package:dr/util.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_built_redux/flutter_built_redux.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
+import 'package:in_app_update/in_app_update.dart';
 import 'package:package_info_plus/package_info_plus.dart';
 import 'package:responsive_scaffold/responsive_scaffold.dart';
 import 'package:uni_links/uni_links.dart';
@@ -69,6 +70,9 @@ final AppActions actions = AppActions();
 Future<void> main() async {
   final startupStopwatch = Stopwatch()..start();
   WidgetsFlutterBinding.ensureInitialized();
+  
+  await AnalyticsService.initLich();
+  
   navigatorKey = GlobalKey();
   scaffoldKey = GlobalKey();
   scaffoldMessengerKey = GlobalKey();
@@ -98,12 +102,12 @@ Future<void> main() async {
   unawaited(_initializeNotificationBackgroundService());
   WidgetsBinding.instance.addPostFrameCallback(
     (_) async {
-      logPerformanceEvent(
+      unawaited(AnalyticsService.logCustomEvent(
         "app_first_frame",
-        <String, Object?>{
+        <String, Object>{
           "elapsedMs": startupStopwatch.elapsedMilliseconds,
         },
-      );
+      ));
       Uri? uri;
       if (Platform.isAndroid) {
         uri = await getInitialUri();
@@ -129,12 +133,12 @@ Future<void> _loadThemeController() async {
   final stopwatch = Stopwatch()..start();
   await themeController.load();
   stopwatch.stop();
-  logPerformanceEvent(
+  unawaited(AnalyticsService.logCustomEvent(
     "theme_loaded",
-    <String, Object?>{
+    <String, Object>{
       "elapsedMs": stopwatch.elapsedMilliseconds,
     },
-  );
+  ));
 }
 
 Future<void> _loadPackageInfo() async {
@@ -149,12 +153,12 @@ Future<void> _initializeNotificationBackgroundService() async {
   final stopwatch = Stopwatch()..start();
   await NotificationBackgroundService.initialize();
   stopwatch.stop();
-  logPerformanceEvent(
+  unawaited(AnalyticsService.logCustomEvent(
     "notification_service_initialized",
-    <String, Object?>{
+    <String, Object>{
       "elapsedMs": stopwatch.elapsedMilliseconds,
     },
-  );
+  ));
 }
 
 Future<void> setGlobalContrastColor(Color color) async {
@@ -300,9 +304,6 @@ class RegisterApp extends StatelessWidget {
                     color: Theme.of(context).scaffoldBackgroundColor,
                     child: SafeArea(
                       top: false,
-                      left: true,
-                      right: true,
-                      bottom: true,
                       child: child ?? const SizedBox.shrink(),
                     ),
                   ),
@@ -465,7 +466,7 @@ Future<void> _checkForUpdate(BuildContext context) async {
     final info = await InAppUpdate.checkForUpdate();
     if (info.updateAvailability == UpdateAvailability.updateAvailable) {
       final l10n = AppLocalizations.of(context);
-      bool? shouldUpdate = await showDialog<bool>(
+      final bool? shouldUpdate = await showDialog<bool>(
         context: context,
         builder: (context) => AlertDialog(
           title: Text(l10n.text('update.title')),

@@ -71,6 +71,7 @@
   "settings.advanced.iosMode.subtitle": "Imitate the appearance of an iOS app",
   "settings.advanced.networkProtocol": "Network protocol",
   "settings.advanced.feedback": "Send feedback",
+  "settings.advanced.privacy": "Privacy Settings",
   "settings.advanced.sourceFork": "View source code (fork)",
   "settings.advanced.sourceOriginal": "View original source code",
   "settings.advanced.about": "About this app",

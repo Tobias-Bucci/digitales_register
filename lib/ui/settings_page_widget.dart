@@ -16,10 +16,9 @@
 // You should have received a copy of the GNU General Public License
 // along with digitales_register.  If not, see <http://www.gnu.org/licenses/>.
 
-import 'dart:io';
-
 import 'package:built_collection/built_collection.dart';
 import 'package:deleteable_tile/deleteable_tile.dart';
+import 'package:dr/analytics_service.dart';
 import 'package:dr/app_state.dart';
 import 'package:dr/app_subject_translation_controller.dart';
 import 'package:dr/calendar_sync_service.dart';
@@ -31,8 +30,6 @@ import 'package:dr/theme_controller.dart';
 import 'package:dr/ui/autocomplete_options.dart';
 import 'package:dr/ui/dialog.dart';
 import 'package:dr/ui/network_protocol_page.dart';
-import 'package:flutter_built_redux/flutter_built_redux.dart';
-import 'package:dr/actions/app_actions.dart';
 import 'package:dr/util.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_colorpicker/flutter_colorpicker.dart';
@@ -777,6 +774,14 @@ class _SettingsPageWidgetState extends State<SettingsPageWidget> {
     return _SettingsSectionCard(
       title: l10n.text('settings.section.advanced'),
       children: [
+        ListTile(
+          leading: const Icon(Icons.privacy_tip_outlined),
+          title: Text(l10n.text('settings.advanced.privacy')),
+          trailing: const Icon(Icons.chevron_right),
+          onTap: () async {
+            await AnalyticsService.showPrivacyOptionsForm(context);
+          },
+        ),
         ListTile(
           title: Text(l10n.text('settings.advanced.networkProtocol')),
           trailing: const Icon(Icons.chevron_right),
