@@ -15,6 +15,8 @@
 // You should have received a copy of the GNU General Public License
 // along with digitales_register.  If not, see <http://www.gnu.org/licenses/>.
 
+import 'dart:async';
+
 import 'package:firebase_analytics/firebase_analytics.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:firebase_crashlytics/firebase_crashlytics.dart'; // Crashlytics Import
@@ -35,31 +37,34 @@ class AnalyticsService {
       return;
     }
 
-    final params = kDebugMode
-        ? ConsentRequestParameters(
-            consentDebugSettings: ConsentDebugSettings(
-              debugGeography: DebugGeography.debugGeographyEea,
-              testIdentifiers: ['0A8EF9EBB8F18901025D2A96EE8EAB47'], // <- Hier geändert
-            ),
-          )
-        : ConsentRequestParameters();
+    // Run initialization in the background so it doesn't block the UI thread during startup.
+    unawaited(Future.microtask(() async {
+      final params = kDebugMode
+          ? ConsentRequestParameters(
+              consentDebugSettings: ConsentDebugSettings(
+                debugGeography: DebugGeography.debugGeographyEea,
+                testIdentifiers: ['0A8EF9EBB8F18901025D2A96EE8EAB47'], // <- Hier geändert
+              ),
+            )
+          : ConsentRequestParameters();
 
-    try {
-      ConsentInformation.instance.requestConsentInfoUpdate(
-        params,
-        () {
-          _handleConsentInfoUpdate();
-        },
-        (FormError error) {
-          debugPrint("❌ Consent Info Update Fehler: ${error.message}");
-          // Bei Fehlern NICHT auf initialized=true setzen, damit ein neuer Versuch möglich bleibt
-          _initialized = false; 
-        },
-      );
-    } catch (e) {
-      debugPrint("❌ Fehler bei Consent-Anfrage: $e");
-      _initialized = false;
-    }
+      try {
+        ConsentInformation.instance.requestConsentInfoUpdate(
+          params,
+          () {
+            _handleConsentInfoUpdate();
+          },
+          (FormError error) {
+            debugPrint("❌ Consent Info Update Fehler: ${error.message}");
+            // Bei Fehlern NICHT auf initialized=true setzen, damit ein neuer Versuch möglich bleibt
+            _initialized = false; 
+          },
+        );
+      } catch (e) {
+        debugPrint("❌ Fehler bei Consent-Anfrage: $e");
+        _initialized = false;
+      }
+    }));
   }
 
   static void _handleConsentInfoUpdate() {

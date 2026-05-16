@@ -75,9 +75,9 @@ Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
   
   // 🌟 DAS HIER MUSS REIN: Initialisiert das Mobile Ads SDK (AdMob)
-  await MobileAds.instance.initialize();
+  unawaited(MobileAds.instance.initialize());
   
-  await AnalyticsService.initLich();
+  unawaited(AnalyticsService.initLich());
   
   navigatorKey = GlobalKey();
   scaffoldKey = GlobalKey();
