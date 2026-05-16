@@ -20,7 +20,9 @@ import 'package:firebase_core/firebase_core.dart';
 import 'package:firebase_crashlytics/firebase_crashlytics.dart'; // Crashlytics Import
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:google_mobile_ads/google_mobile_ads.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 // ignore: avoid_classes_with_only_static_members
 class AnalyticsService {
@@ -66,7 +68,7 @@ class AnalyticsService {
         if (isAvailable) {
           _loadAndShowConsentForm();
         } else {
-          _checkConsentAndEnable();
+          checkCurrentConsent();
         }
       });
     } catch (e) {
@@ -85,10 +87,10 @@ class AnalyticsService {
                 if (formError != null) {
                   debugPrint("⚠️ Formular Fehler: ${formError.message}");
                 }
-                _checkConsentAndEnable();
+                checkCurrentConsent();
               });
             } else {
-              _checkConsentAndEnable();
+              checkCurrentConsent();
             }
           });
         },
@@ -101,17 +103,52 @@ class AnalyticsService {
     }
   }
 
-  // 3. Prüfen ob zugestimmt wurde
-  static void _checkConsentAndEnable() {
+  static const MethodChannel _consentChannel = MethodChannel('dr/consent');
+
+  // 3. Prüfen ob zugestimmt wurde und reaktiv anwenden
+  static Future<void> checkCurrentConsent() async {
     try {
-      ConsentInformation.instance.getConsentStatus().then((status) async {
-        if (status == ConsentStatus.obtained) {
+      final status = await ConsentInformation.instance.getConsentStatus();
+      if (status == ConsentStatus.obtained) {
+        final canRequestAds = await ConsentInformation.instance.canRequestAds();
+        
+        String purposeConsents = '';
+        if (defaultTargetPlatform == TargetPlatform.android) {
+          try {
+            final String? result = await _consentChannel.invokeMethod('getIABTCFPurposeConsents');
+            purposeConsents = result ?? '';
+          } catch (e) {
+            debugPrint("❌ Fehler beim Auslesen des Consent-Strings über MethodChannel: $e");
+          }
+        } else {
+          // Fallback für iOS (oder wenn SharedPreferences dort direkt ohne Prefix lesbar sind)
+          final prefs = await SharedPreferences.getInstance();
+          await prefs.reload();
+          purposeConsents = prefs.getString('IABTCF_PurposeConsents') ?? '';
+        }
+
+        // Index 0 in IABTCF_PurposeConsents entspricht Purpose 1 (Analytics & Storage)
+        final hasAnalyticsConsent = purposeConsents.isNotEmpty && purposeConsents[0] == '1';
+
+        if (canRequestAds && hasAnalyticsConsent) {
+          _initialized = false; // Reset to force _enableFirebase to run fully
           await _enableFirebase();
         } else {
-          debugPrint("⚠️ Consent nicht erhalten. Firebase bleibt deaktiviert.");
-          _initialized = true; // Entscheidung steht (Ablehnung), also initialisiert
+          debugPrint("⚠️ Nutzer hat Consent verweigert (Not Consent). Firebase bleibt stumm/wird deaktiviert.");
+          if (Firebase.apps.isNotEmpty) {
+            await FirebaseAnalytics.instance.setAnalyticsCollectionEnabled(false);
+            await FirebaseCrashlytics.instance.setCrashlyticsCollectionEnabled(false);
+          }
+          _initialized = true;
         }
-      });
+      } else {
+        debugPrint("⚠️ Consent nicht erhalten. Firebase bleibt deaktiviert.");
+        if (Firebase.apps.isNotEmpty) {
+          await FirebaseAnalytics.instance.setAnalyticsCollectionEnabled(false);
+          await FirebaseCrashlytics.instance.setCrashlyticsCollectionEnabled(false);
+        }
+        _initialized = true; // Entscheidung steht (Ablehnung), also initialisiert
+      }
     } catch (e) {
       debugPrint("❌ Fehler beim Prüfen des Consent-Status: $e");
     }
@@ -175,7 +212,7 @@ class AnalyticsService {
           if (formError != null) {
             debugPrint("⚠️ Fehler beim Öffnen der Privacy Options: ${formError.message}");
           }
-          _checkConsentAndEnable();
+          checkCurrentConsent();
         });
       } else {
         await resetConsent();
