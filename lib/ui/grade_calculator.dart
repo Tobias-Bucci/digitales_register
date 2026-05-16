@@ -1,4 +1,4 @@
-﻿// Copyright (C) 2021 Michael Debertol
+// Copyright (C) 2021 Michael Debertol
 // Copyright (C) 2026 Tobias Bucci
 //
 // This file is part of digitales_register.
@@ -18,6 +18,7 @@
 
 import 'package:built_collection/built_collection.dart';
 import 'package:deleteable_tile/deleteable_tile.dart';
+import 'package:dr/analytics_service.dart';
 import 'package:dr/actions/app_actions.dart';
 import 'package:dr/app_state.dart';
 import 'package:dr/data.dart';
@@ -202,6 +203,7 @@ class _GradeCalculatorState extends State<GradeCalculator> {
       setState(() {
         grades.add(_Grade(grade: grade.item1, weightPercentage: grade.item2));
       });
+      AnalyticsService.logCustomEvent('grade_calculator_added_grade');
     }
   }
 
@@ -223,6 +225,7 @@ class _GradeCalculatorState extends State<GradeCalculator> {
     setState(() {
       grades.addAll(result);
     });
+    AnalyticsService.logCustomEvent('grade_calculator_imported_grades', {'count': result.length});
   }
 
   void updateGrade(_Grade previous, _Grade? updated) {

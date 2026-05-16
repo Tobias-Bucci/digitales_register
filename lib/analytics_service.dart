@@ -24,7 +24,6 @@ import 'package:google_mobile_ads/google_mobile_ads.dart';
 
 // ignore: avoid_classes_with_only_static_members
 class AnalyticsService {
-  static final FirebaseAnalytics _analytics = FirebaseAnalytics.instance;
   static bool _initialized = false;
 
   // 1. Consent anfordern und Firebase bei Zustimmung erlauben
@@ -127,7 +126,7 @@ class AnalyticsService {
       }
 
       // Erfassung explizit aktivieren
-      await _analytics.setAnalyticsCollectionEnabled(true);
+      await FirebaseAnalytics.instance.setAnalyticsCollectionEnabled(true);
       await FirebaseCrashlytics.instance.setCrashlyticsCollectionEnabled(true);
 
       // Leitet alle nicht abgefangenen Flutter-Fehler automatisch an Crashlytics weiter
@@ -148,8 +147,10 @@ class AnalyticsService {
   // 5. Eigene Events tracken
   static Future<void> logCustomEvent(String name, [Map<String, Object>? parameters]) async {
     if (!_initialized) return; // Verhindert fehlerhafte Loggings vor dem Consent-Check
+    if (Firebase.apps.isEmpty) return; // Verhindert Absturz, falls Consent abgelehnt wurde
+
     try {
-      await _analytics.logEvent(name: name, parameters: parameters);
+      await FirebaseAnalytics.instance.logEvent(name: name, parameters: parameters);
     } catch (e) {
       debugPrint("❌ Fehler beim Logging von Event '$name': $e");
     }
@@ -191,8 +192,10 @@ class AnalyticsService {
       await ConsentInformation.instance.reset();
       _initialized = false;
       // Analytics wieder schlafen legen, bis neu entschieden wurde
-      await _analytics.setAnalyticsCollectionEnabled(false);
-      await FirebaseCrashlytics.instance.setCrashlyticsCollectionEnabled(false);
+      if (Firebase.apps.isNotEmpty) {
+        await FirebaseAnalytics.instance.setAnalyticsCollectionEnabled(false);
+        await FirebaseCrashlytics.instance.setCrashlyticsCollectionEnabled(false);
+      }
       debugPrint("✅ Consent wurde zurückgesetzt.");
     } catch (e) {
       debugPrint("❌ Fehler beim Zurücksetzen des Consent: $e");

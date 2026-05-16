@@ -22,6 +22,7 @@ import 'package:dr/container/calendar_week_container.dart';
 import 'package:dr/data.dart';
 import 'package:dr/i18n/app_localizations.dart';
 import 'package:dr/main.dart';
+import 'package:dr/analytics_service.dart';
 import 'package:dr/ui/favorite_subject_filter.dart';
 import 'package:dr/utc_date_time.dart';
 import 'package:dr/util.dart';
@@ -98,6 +99,7 @@ class _CalendarState extends State<Calendar> with TickerProviderStateMixin {
         _dateRangeOpacityController.drive(_dateRangeOpacityTween);
 
     widget.dayCallback(widget.vm.currentMonday);
+    AnalyticsService.logCustomEvent('calendar_viewed');
 
     super.initState();
   }

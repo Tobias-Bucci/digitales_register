@@ -55,6 +55,7 @@ import 'package:in_app_update/in_app_update.dart';
 import 'package:package_info_plus/package_info_plus.dart';
 import 'package:responsive_scaffold/responsive_scaffold.dart';
 import 'package:uni_links/uni_links.dart';
+import 'package:google_mobile_ads/google_mobile_ads.dart';
 
 GlobalKey<NavigatorState>? navigatorKey;
 GlobalKey<NavigatorState> nestedNavKey = GlobalKey();
@@ -72,6 +73,9 @@ final AppActions actions = AppActions();
 Future<void> main() async {
   final startupStopwatch = Stopwatch()..start();
   WidgetsFlutterBinding.ensureInitialized();
+  
+  // 🌟 DAS HIER MUSS REIN: Initialisiert das Mobile Ads SDK (AdMob)
+  await MobileAds.instance.initialize();
   
   await AnalyticsService.initLich();
   
@@ -351,6 +355,7 @@ class LifecycleObserver with WidgetsBindingObserver {
   Future<void> _handleResumed() async {
     await NotificationBackgroundService.handleAppResumed();
     await biometricAppLockController.authenticateIfNeeded();
+    await AnalyticsService.logCustomEvent("app_opened");
     onForeground();
   }
 }

@@ -25,6 +25,7 @@ import 'package:dr/ui/animated_linear_progress_indicator.dart';
 import 'package:dr/ui/app_popup_button.dart';
 import 'package:dr/ui/last_fetched_overlay.dart';
 import 'package:dr/ui/no_internet.dart';
+import 'package:dr/analytics_service.dart';
 import 'package:flutter/material.dart';
 import 'package:responsive_scaffold/responsive_scaffold.dart';
 
@@ -82,7 +83,7 @@ Widget _buildAverageValue(
   );
 }
 
-class GradesPage extends StatelessWidget {
+class GradesPage extends StatefulWidget {
   final GradesPageViewModel vm;
   final ValueChanged<Semester> changeSemester;
   final VoidCallback showGradesSettings;
@@ -95,7 +96,28 @@ class GradesPage extends StatelessWidget {
   });
 
   @override
+  State<GradesPage> createState() => _GradesPageState();
+}
+
+class _GradesPageState extends State<GradesPage> {
+  String? _lastLoggedAverage;
+
+  @override
   Widget build(BuildContext context) {
+    final vm = widget.vm;
+    
+    // Logge den Durchschnitt nur, wenn er sich geändert hat und gültig ist
+    if (vm.showAllSubjectsAverage && vm.allSubjectsAverage != '/' && vm.allSubjectsAverage != _lastLoggedAverage) {
+      _lastLoggedAverage = vm.allSubjectsAverage;
+      final parsed = double.tryParse(vm.allSubjectsAverage.replaceAll(',', '.'));
+      if (parsed != null) {
+        AnalyticsService.logCustomEvent(
+          'user_average_grade',
+          {'average': parsed},
+        );
+      }
+    }
+
     final l10n = context.l10n;
     final averageStyle = Theme.of(context).textTheme.titleMedium;
     return Scaffold(
@@ -106,7 +128,7 @@ class GradesPage extends StatelessWidget {
             padding: const EdgeInsets.only(right: 12),
             child: _SemesterSwitcher(
               selectedSemester: vm.showSemester,
-              onChanged: changeSemester,
+              onChanged: widget.changeSemester,
             ),
           ),
         ],
@@ -137,7 +159,7 @@ class GradesPage extends StatelessWidget {
                                   Text(l10n.text('grades.average')),
                                   IconButton(
                                     icon: const Icon(Icons.settings),
-                                    onPressed: showGradesSettings,
+                                    onPressed: widget.showGradesSettings,
                                   ),
                                 ],
                               ),
