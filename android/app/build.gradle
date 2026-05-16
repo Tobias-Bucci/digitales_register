@@ -2,6 +2,7 @@ plugins {
     id "com.android.application"
     id "org.jetbrains.kotlin.android"
     id "dev.flutter.flutter-gradle-plugin"
+    id "com.google.gms.google-services"
 }
 
 def localProperties = new Properties()
@@ -102,4 +103,7 @@ dependencies {
     // Required by Tink via androidx.security:security-crypto during R8 shrinking.
     implementation "com.google.errorprone:error_prone_annotations:2.28.0"
     implementation "com.google.code.findbugs:jsr305:3.0.2"
+    // Firebase BoM and Analytics
+    implementation platform('com.google.firebase:firebase-bom:34.13.0')
+    implementation 'com.google.firebase:firebase-analytics'
 }

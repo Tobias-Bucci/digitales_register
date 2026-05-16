@@ -64,6 +64,7 @@ app.*.map.json
 # Android signing secrets
 android/key.properties
 android/*.jks
+**/google-services.json
 ios/Flutter/ephemeral/
 macos/Flutter/GeneratedPluginRegistrant.swift
 

@@ -406,9 +406,7 @@ class NotificationBackgroundService {
   }
 
   static void _handleNotificationTap(String? payload) {
-    if (onNotificationTap != null) {
-      onNotificationTap!(payload);
-    }
+    onNotificationTap?.call(payload);
   }
 
   static Future<void> pollAndNotify({required String trigger}) async {

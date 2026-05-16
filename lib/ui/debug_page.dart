@@ -41,7 +41,8 @@ class DebugPageWidget extends StatelessWidget {
           ElevatedButton(
             onPressed: () async {
               final l10n = AppLocalizations.of(context);
-              
+              final messenger = ScaffoldMessenger.of(context);
+
               // Simuliere das Popup
               final bool? shouldUpdate = await showDialog<bool>(
                 context: context,
@@ -66,18 +67,18 @@ class DebugPageWidget extends StatelessWidget {
               if (shouldUpdate == true) {
                 try {
                   final info = await InAppUpdate.checkForUpdate();
-                  ScaffoldMessenger.of(context).showSnackBar(
+                  messenger.showSnackBar(
                     SnackBar(content: Text('Status: ${info.updateAvailability}')),
                   );
                   if (info.updateAvailability == UpdateAvailability.updateAvailable) {
                     await InAppUpdate.performImmediateUpdate();
                   } else {
-                    ScaffoldMessenger.of(context).showSnackBar(
+                    messenger.showSnackBar(
                       const SnackBar(content: Text('Nativer PlayStore Update-Check ergab: Kein Update verfügbar.')),
                     );
                   }
                 } catch (e) {
-                  ScaffoldMessenger.of(context).showSnackBar(
+                  messenger.showSnackBar(
                     SnackBar(content: Text('Nativer Error: $e')),
                   );
                 }

@@ -1,0 +1,14 @@
+{
+  "project_info": {
+    "project_number": "HIER_PROJEKT_NUMMER_EINTRAGEN",
+    "project_id": "dein-projekt-id",
+    "storage_bucket": "dein-projekt.appspot.com"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:xxxxxx:android:xxxxxx"
+      }
+    }
+  ]
+}

@@ -16,6 +16,8 @@
 // You should have received a copy of the GNU General Public License
 // along with digitales_register.  If not, see <http://www.gnu.org/licenses/>.
 
+// ignore_for_file: use_build_context_synchronously
+
 import 'dart:async';
 import 'dart:io';
 
@@ -97,27 +99,33 @@ Future<void> main() async {
     ),
   );
   runApp(RegisterApp(store: store));
-  unawaited(_loadThemeController());
-  unawaited(_loadPackageInfo());
-  unawaited(_initializeNotificationBackgroundService());
+  await _loadThemeController();
+  await _loadPackageInfo();
+  await _initializeNotificationBackgroundService();
   WidgetsBinding.instance.addPostFrameCallback(
     (_) async {
-      unawaited(AnalyticsService.logCustomEvent(
+      // Capture navigator context before any async gaps to avoid using
+      // a BuildContext across an async boundary.
+      final BuildContext? navContext = navigatorKey?.currentContext;
+
+      await AnalyticsService.logCustomEvent(
         "app_first_frame",
         <String, Object>{
           "elapsedMs": startupStopwatch.elapsedMilliseconds,
         },
-      ));
+      );
       Uri? uri;
       if (Platform.isAndroid) {
         uri = await getInitialUri();
         await _uriLinkSubscription?.cancel();
-        _uriLinkSubscription = uriLinkStream.listen((event) {
-          store.actions.start(event);
+        _uriLinkSubscription = uriLinkStream.listen((event) async {
+          await store.actions.start(event);
         });
       }
-      unawaited(store.actions.start(uri));
-      _checkForUpdate(navigatorKey!.currentContext!);
+      await store.actions.start(uri);
+      if (navContext != null) {
+        await _checkForUpdate();
+      }
       WidgetsBinding.instance.addObserver(
         LifecycleObserver(
           store.actions.restarted.call,
@@ -129,16 +137,19 @@ Future<void> main() async {
   );
 }
 
+
+
+
 Future<void> _loadThemeController() async {
   final stopwatch = Stopwatch()..start();
   await themeController.load();
   stopwatch.stop();
-  unawaited(AnalyticsService.logCustomEvent(
+  await AnalyticsService.logCustomEvent(
     "theme_loaded",
     <String, Object>{
       "elapsedMs": stopwatch.elapsedMilliseconds,
     },
-  ));
+  );
 }
 
 Future<void> _loadPackageInfo() async {
@@ -153,12 +164,12 @@ Future<void> _initializeNotificationBackgroundService() async {
   final stopwatch = Stopwatch()..start();
   await NotificationBackgroundService.initialize();
   stopwatch.stop();
-  unawaited(AnalyticsService.logCustomEvent(
+  await AnalyticsService.logCustomEvent(
     "notification_service_initialized",
     <String, Object>{
       "elapsedMs": stopwatch.elapsedMilliseconds,
     },
-  ));
+  );
 }
 
 Future<void> setGlobalContrastColor(Color color) async {
@@ -458,16 +469,19 @@ ThemeData _getDarkTheme(MaterialColor primarySwatch) {
 }
 */
 
-Future<void> _checkForUpdate(BuildContext context) async {
+Future<void> _checkForUpdate() async {
   if (kIsWeb) return;
   if (defaultTargetPlatform != TargetPlatform.android) return;
+  // Capture a stable context from the global navigator before awaiting.
+  final BuildContext? safeContext = navigatorKey?.currentContext;
+  if (safeContext == null) return;
 
   try {
+    final l10n = AppLocalizations.of(safeContext);
     final info = await InAppUpdate.checkForUpdate();
     if (info.updateAvailability == UpdateAvailability.updateAvailable) {
-      final l10n = AppLocalizations.of(context);
       final bool? shouldUpdate = await showDialog<bool>(
-        context: context,
+        context: safeContext,
         builder: (context) => AlertDialog(
           title: Text(l10n.text('update.title')),
           content: Text(l10n.text('update.content')),
