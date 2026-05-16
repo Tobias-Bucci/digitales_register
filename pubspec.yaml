@@ -33,6 +33,10 @@ dependencies:
   file_picker: ^10.3.2
   flutter:
     sdk: flutter
+  firebase_core: ^4.9.0
+  firebase_analytics: ^12.4.1
+  firebase_crashlytics: ^5.2.2
+  google_mobile_ads: ^8.0.0
   flutter_built_redux:
     path: packages/flutter_built_redux
   flutter_colorpicker: ^1.0.3
