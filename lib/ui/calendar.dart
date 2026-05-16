@@ -16,13 +16,13 @@
 // You should have received a copy of the GNU General Public License
 // along with digitales_register.  If not, see <http://www.gnu.org/licenses/>.
 
+import 'package:dr/analytics_service.dart';
 import 'package:dr/container/calendar_container.dart';
 import 'package:dr/container/calendar_detail_container.dart';
 import 'package:dr/container/calendar_week_container.dart';
 import 'package:dr/data.dart';
 import 'package:dr/i18n/app_localizations.dart';
 import 'package:dr/main.dart';
-import 'package:dr/analytics_service.dart';
 import 'package:dr/ui/favorite_subject_filter.dart';
 import 'package:dr/utc_date_time.dart';
 import 'package:dr/util.dart';
