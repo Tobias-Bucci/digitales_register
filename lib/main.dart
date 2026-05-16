@@ -357,6 +357,7 @@ class LifecycleObserver with WidgetsBindingObserver {
     await biometricAppLockController.authenticateIfNeeded();
     await AnalyticsService.logCustomEvent("app_opened");
     onForeground();
+    await _checkForUpdate();
   }
 }
 
@@ -474,9 +475,13 @@ ThemeData _getDarkTheme(MaterialColor primarySwatch) {
 }
 */
 
+bool _isUpdateDialogOpen = false;
+
 Future<void> _checkForUpdate() async {
   if (kIsWeb) return;
   if (defaultTargetPlatform != TargetPlatform.android) return;
+  if (_isUpdateDialogOpen) return;
+
   // Capture a stable context from the global navigator before awaiting.
   final BuildContext? safeContext = navigatorKey?.currentContext;
   if (safeContext == null) return;
@@ -485,6 +490,7 @@ Future<void> _checkForUpdate() async {
     final l10n = AppLocalizations.of(safeContext);
     final info = await InAppUpdate.checkForUpdate();
     if (info.updateAvailability == UpdateAvailability.updateAvailable) {
+      _isUpdateDialogOpen = true;
       final bool? shouldUpdate = await showDialog<bool>(
         context: safeContext,
         builder: (context) => AlertDialog(
@@ -502,12 +508,14 @@ Future<void> _checkForUpdate() async {
           ],
         ),
       );
+      _isUpdateDialogOpen = false;
 
       if (shouldUpdate == true) {
         await InAppUpdate.performImmediateUpdate();
       }
     }
   } catch (e) {
+    _isUpdateDialogOpen = false;
     debugPrint("Update-Check fehlgeschlagen: $e");
   }
 }
