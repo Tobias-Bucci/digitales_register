@@ -22,6 +22,8 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:google_mobile_ads/google_mobile_ads.dart';
 
+import 'firebase_options.dart';
+
 // ignore: avoid_classes_with_only_static_members
 class AnalyticsService {
   static bool _initialized = false;
@@ -122,7 +124,9 @@ class AnalyticsService {
     try {
       // Falls Firebase noch gar nicht initialisiert wurde (Sicherheitsnetz)
       if (Firebase.apps.isEmpty) {
-        await Firebase.initializeApp();
+        await Firebase.initializeApp(
+          options: DefaultFirebaseOptions.currentPlatform,
+        );
       }
 
       // Erfassung explizit aktivieren
