@@ -19,16 +19,18 @@ import 'dart:async';
 
 import 'package:firebase_analytics/firebase_analytics.dart';
 import 'package:firebase_core/firebase_core.dart';
-import 'package:firebase_crashlytics/firebase_crashlytics.dart'; // Crashlytics Import
+import 'package:firebase_crashlytics/firebase_crashlytics.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
 import 'package:google_mobile_ads/google_mobile_ads.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 // ignore: avoid_classes_with_only_static_members
 class AnalyticsService {
+  static const String _consentGivenKey = 'consent_given';
+  static Future<void>? _initializationFuture;
   static bool _initialized = false;
+  static bool _firebaseHandlersInstalled = false;
 
   // 1. Consent anfordern und Firebase bei Zustimmung erlauben
   static Future<void> initLich() async {
@@ -37,148 +39,147 @@ class AnalyticsService {
       return;
     }
 
-    // Run initialization in the background so it doesn't block the UI thread during startup.
-    unawaited(Future.microtask(() {
-      final params = kDebugMode
-          ? ConsentRequestParameters(
-              consentDebugSettings: ConsentDebugSettings(
-                debugGeography: DebugGeography.debugGeographyEea,
-                testIdentifiers: ['0A8EF9EBB8F18901025D2A96EE8EAB47'], // <- Hier geändert
-              ),
-            )
-          : ConsentRequestParameters();
-
-      try {
-        ConsentInformation.instance.requestConsentInfoUpdate(
-          params,
-          () {
-            _handleConsentInfoUpdate();
-          },
-          (FormError error) {
-            debugPrint("❌ Consent Info Update Fehler: ${error.message}");
-            // Bei Fehlern NICHT auf initialized=true setzen, damit ein neuer Versuch möglich bleibt
-            _initialized = false; 
-          },
-        );
-      } catch (e) {
-        debugPrint("❌ Fehler bei Consent-Anfrage: $e");
-        _initialized = false;
-      }
-    }));
-  }
-
-  static void _handleConsentInfoUpdate() {
+    _initializationFuture ??= _initialize();
     try {
-      ConsentInformation.instance.isConsentFormAvailable().then((isAvailable) {
-        if (isAvailable) {
-          _loadAndShowConsentForm();
-        } else {
-          checkCurrentConsent();
-        }
-      });
-    } catch (e) {
-      debugPrint("❌ Fehler beim Handling Consent Info: $e");
+      await _initializationFuture;
+    } finally {
+      if (!_initialized) {
+        _initializationFuture = null;
+      }
     }
   }
 
-  // 2. Formular laden und anzeigen
-  static void _loadAndShowConsentForm() {
+  static Future<void> _initialize() async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.reload();
+
+    final consentGiven = prefs.getBool(_consentGivenKey);
+
+    // Wenn bereits eine Entscheidung gespeichert wurde, direkt anwenden
+    if (consentGiven != null) {
+      if (consentGiven) {
+        await _enableFirebaseAndAds();
+      } else {
+        await _disableFirebase();
+        _initialized = true;
+      }
+      return;
+    }
+
+    // Keine Entscheidung vorhanden -> Consent-Flow starten
+    final params = kDebugMode
+        ? ConsentRequestParameters(
+            consentDebugSettings: ConsentDebugSettings(
+              debugGeography: DebugGeography.debugGeographyEea,
+              testIdentifiers: ['0A8EF9EBB8F18901025D2A96EE8EAB47'],
+            ),
+          )
+        : ConsentRequestParameters();
+
+    final completer = Completer<void>();
     try {
+      ConsentInformation.instance.requestConsentInfoUpdate(
+        params,
+        () {
+          unawaited(
+            _handleConsentInfoUpdate().whenComplete(() {
+              if (!completer.isCompleted) {
+                completer.complete();
+              }
+            }),
+          );
+        },
+        (FormError error) {
+          debugPrint("❌ Consent Info Update Fehler: ${error.message}");
+          unawaited(_persistConsentDecision(false));
+          if (!completer.isCompleted) {
+            completer.complete();
+          }
+        },
+      );
+      await completer.future;
+    } catch (e) {
+      debugPrint("❌ Fehler bei Consent-Anfrage: $e");
+      if (!completer.isCompleted) {
+        completer.complete();
+      }
+    }
+  }
+
+  static Future<void> _handleConsentInfoUpdate() async {
+    try {
+      final isAvailable =
+          await ConsentInformation.instance.isConsentFormAvailable();
+      if (isAvailable) {
+        await _loadAndShowConsentForm();
+      } else {
+        // Kein Formular verfügbar -> Tracking deaktivieren und Initialisierung abschließen
+        await _persistConsentDecision(false);
+      }
+    } catch (e) {
+      debugPrint("❌ Fehler beim Handling Consent Info: $e");
+      await _persistConsentDecision(false);
+    }
+  }
+
+  static Future<void> _loadAndShowConsentForm() async {
+    try {
+      final completer = Completer<void>();
       ConsentForm.loadConsentForm(
         (ConsentForm consentForm) {
-          ConsentInformation.instance.getConsentStatus().then((status) {
-            if (status == ConsentStatus.required) {
-              consentForm.show((FormError? formError) {
-                if (formError != null) {
-                  debugPrint("⚠️ Formular Fehler: ${formError.message}");
-                }
-                checkCurrentConsent();
-              });
-            } else {
-              checkCurrentConsent();
+          consentForm.show((FormError? formError) async {
+            if (formError != null) {
+              debugPrint("⚠️ Formular Fehler: ${formError.message}");
+            }
+            final consentGiven =
+                await ConsentInformation.instance.canRequestAds();
+            await _persistConsentDecision(consentGiven);
+            if (!completer.isCompleted) {
+              completer.complete();
             }
           });
         },
         (FormError error) {
-          debugPrint("⚠️ Fehler beim Laden des Consent-Formulars: ${error.message}");
+          debugPrint(
+              "⚠️ Fehler beim Laden des Consent-Formulars: ${error.message}");
+          unawaited(_persistConsentDecision(false));
+          if (!completer.isCompleted) {
+            completer.complete();
+          }
         },
       );
+      await completer.future;
     } catch (e) {
       debugPrint("❌ Exception bei Consent-Formular: $e");
     }
   }
 
-  static const MethodChannel _consentChannel = MethodChannel('dr/consent');
-
-  // 3. Prüfen ob zugestimmt wurde und reaktiv anwenden
-  static Future<void> checkCurrentConsent() async {
+  static Future<void> _persistConsentDecision(bool consentGiven) async {
     try {
-      final status = await ConsentInformation.instance.getConsentStatus();
-      if (status == ConsentStatus.obtained) {
-        final canRequestAds = await ConsentInformation.instance.canRequestAds();
-        
-        String purposeConsents = '';
-        if (defaultTargetPlatform == TargetPlatform.android) {
-          try {
-            final String? result = await _consentChannel.invokeMethod('getIABTCFPurposeConsents');
-            purposeConsents = result ?? '';
-          } catch (e) {
-            debugPrint("❌ Fehler beim Auslesen des Consent-Strings über MethodChannel: $e");
-          }
-        } else {
-          // Fallback für iOS (oder wenn SharedPreferences dort direkt ohne Prefix lesbar sind)
-          final prefs = await SharedPreferences.getInstance();
-          await prefs.reload();
-          purposeConsents = prefs.getString('IABTCF_PurposeConsents') ?? '';
-        }
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.setBool(_consentGivenKey, consentGiven);
 
-        // Index 0 in IABTCF_PurposeConsents entspricht Purpose 1 (Analytics & Storage)
-        final hasAnalyticsConsent = purposeConsents.isNotEmpty && purposeConsents[0] == '1';
-
-        if (canRequestAds && hasAnalyticsConsent) {
-          _initialized = false; // Reset to force _enableFirebase to run fully
-          await _enableFirebase();
-        } else {
-          debugPrint("⚠️ Nutzer hat Consent verweigert (Not Consent). Firebase bleibt stumm/wird deaktiviert.");
-          if (Firebase.apps.isNotEmpty) {
-            await FirebaseAnalytics.instance.setAnalyticsCollectionEnabled(false);
-            await FirebaseCrashlytics.instance.setCrashlyticsCollectionEnabled(false);
-          }
-          _initialized = true;
-        }
+      if (consentGiven) {
+        await _enableFirebaseAndAds();
       } else {
-        debugPrint("⚠️ Consent nicht erhalten. Firebase bleibt deaktiviert.");
-        if (Firebase.apps.isNotEmpty) {
-          await FirebaseAnalytics.instance.setAnalyticsCollectionEnabled(false);
-          await FirebaseCrashlytics.instance.setCrashlyticsCollectionEnabled(false);
-        }
-        _initialized = true; // Entscheidung steht (Ablehnung), also initialisiert
+        await _disableFirebase();
+        _initialized = true;
       }
     } catch (e) {
-      debugPrint("❌ Fehler beim Prüfen des Consent-Status: $e");
+      debugPrint("❌ Fehler beim Speichern des Consent-Status: $e");
     }
   }
 
-  // 4. Firebase Analytics & Crashlytics scharf schalten
-  static Future<void> _enableFirebase() async {
+  static Future<void> _enableFirebaseAndAds() async {
     try {
-      // Falls Firebase noch gar nicht initialisiert wurde (Sicherheitsnetz)
-      if (Firebase.apps.isEmpty) {
-        await Firebase.initializeApp();
-      }
-
-      // Erfassung explizit aktivieren
+      await _ensureFirebaseInitialized();
       await FirebaseAnalytics.instance.setAnalyticsCollectionEnabled(true);
       await FirebaseCrashlytics.instance.setCrashlyticsCollectionEnabled(true);
+      await MobileAds.instance.initialize();
+      _installCrashReportingOnce();
 
-      // Leitet alle nicht abgefangenen Flutter-Fehler automatisch an Crashlytics weiter
-      FlutterError.onError = FirebaseCrashlytics.instance.recordFlutterFatalError;
-      PlatformDispatcher.instance.onError = (error, stack) {
-        FirebaseCrashlytics.instance.recordError(error, stack, fatal: true);
-        return true;
-      };
-      
-      debugPrint("✅ Firebase Analytics & Crashlytics erfolgreich DSGVO-konform aktiviert!");
+      debugPrint(
+          "✅ Firebase Analytics & Crashlytics erfolgreich DSGVO-konform aktiviert!");
       _initialized = true;
     } catch (e) {
       debugPrint("❌ Fehler bei Firebase Aktivierung: $e");
@@ -186,58 +187,73 @@ class AnalyticsService {
     }
   }
 
-  // 5. Eigene Events tracken
-  static Future<void> logCustomEvent(String name, [Map<String, Object>? parameters]) async {
-    if (!_initialized) return; // Verhindert fehlerhafte Loggings vor dem Consent-Check
-    if (Firebase.apps.isEmpty) return; // Verhindert Absturz, falls Consent abgelehnt wurde
+  static Future<void> _ensureFirebaseInitialized() async {
+    if (Firebase.apps.isNotEmpty) {
+      return;
+    }
+
+    await Firebase.initializeApp();
+  }
+
+  static void _installCrashReportingOnce() {
+    if (_firebaseHandlersInstalled) {
+      return;
+    }
+
+    FlutterError.onError = FirebaseCrashlytics.instance.recordFlutterFatalError;
+    PlatformDispatcher.instance.onError = (error, stack) {
+      FirebaseCrashlytics.instance.recordError(error, stack, fatal: true);
+      return true;
+    };
+    _firebaseHandlersInstalled = true;
+  }
+
+  static Future<void> _disableFirebase() async {
+    if (Firebase.apps.isEmpty) {
+      return;
+    }
+
+    await FirebaseAnalytics.instance.resetAnalyticsData();
+    await FirebaseCrashlytics.instance.deleteUnsentReports();
+    await FirebaseAnalytics.instance.setAnalyticsCollectionEnabled(false);
+    await FirebaseCrashlytics.instance.setCrashlyticsCollectionEnabled(false);
+  }
+
+  static Future<void> logCustomEvent(String name,
+      [Map<String, Object>? parameters]) async {
+    if (!_initialized) {
+      return; // Verhindert fehlerhafte Loggings vor dem Consent-Check
+    }
+    if (Firebase.apps.isEmpty) {
+      return; // Verhindert Absturz, falls Consent abgelehnt wurde
+    }
 
     try {
-      await FirebaseAnalytics.instance.logEvent(name: name, parameters: parameters);
+      await FirebaseAnalytics.instance
+          .logEvent(name: name, parameters: parameters);
     } catch (e) {
       debugPrint("❌ Fehler beim Logging von Event '$name': $e");
     }
   }
 
-  // 6. Consent-Status abrufen
-  static Future<ConsentStatus> getConsentStatus() async {
-    try {
-      return await ConsentInformation.instance.getConsentStatus();
-    } catch (e) {
-      debugPrint("❌ Fehler beim Abrufen des Consent-Status: $e");
-      return ConsentStatus.unknown;
-    }
-  }
-
-  // Öffnet die Einstellungen (wichtig für den "Datenschutz-Einstellungen"-Button in deiner App)
   static Future<void> showPrivacyOptionsForm(BuildContext context) async {
     try {
-      final status = await ConsentInformation.instance.getPrivacyOptionsRequirementStatus();
-      if (status == PrivacyOptionsRequirementStatus.required) {
-        await ConsentForm.showPrivacyOptionsForm((FormError? formError) {
-          if (formError != null) {
-            debugPrint("⚠️ Fehler beim Öffnen der Privacy Options: ${formError.message}");
-          }
-          checkCurrentConsent();
-        });
-      } else {
-        await resetConsent();
-        await initLich();
-      }
+      await resetConsent();
+      await initLich();
     } catch (e) {
       debugPrint("❌ Fehler bei showPrivacyOptionsForm: $e");
     }
   }
 
-  // 7. Consent zurücksetzen
   static Future<void> resetConsent() async {
     try {
       await ConsentInformation.instance.reset();
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.reload();
+      await prefs.remove(_consentGivenKey);
       _initialized = false;
-      // Analytics wieder schlafen legen, bis neu entschieden wurde
-      if (Firebase.apps.isNotEmpty) {
-        await FirebaseAnalytics.instance.setAnalyticsCollectionEnabled(false);
-        await FirebaseCrashlytics.instance.setCrashlyticsCollectionEnabled(false);
-      }
+      _initializationFuture = null;
+      await _disableFirebase();
       debugPrint("✅ Consent wurde zurückgesetzt.");
     } catch (e) {
       debugPrint("❌ Fehler beim Zurücksetzen des Consent: $e");

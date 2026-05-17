@@ -51,7 +51,6 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_built_redux/flutter_built_redux.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
-import 'package:google_mobile_ads/google_mobile_ads.dart' hide AppState;
 import 'package:in_app_update/in_app_update.dart';
 import 'package:package_info_plus/package_info_plus.dart';
 import 'package:responsive_scaffold/responsive_scaffold.dart';
@@ -73,20 +72,11 @@ final AppActions actions = AppActions();
 Future<void> main() async {
   final startupStopwatch = Stopwatch()..start();
   WidgetsFlutterBinding.ensureInitialized();
-  
-  // 🌟 DAS HIER MUSS REIN: Initialisiert das Mobile Ads SDK (AdMob)
-  unawaited(MobileAds.instance.initialize());
-  
-  unawaited(AnalyticsService.initLich());
-  
+
   navigatorKey = GlobalKey();
   scaffoldKey = GlobalKey();
   scaffoldMessengerKey = GlobalKey();
   secureStorage = getFlutterSecureStorage();
-  await appLanguageController.load(
-    fallbackLocale: WidgetsBinding.instance.platformDispatcher.locale,
-  );
-  await appSubjectTranslationController.load();
   final store = Store<AppState, AppStateBuilder, AppActions>(
     appReducerBuilder.build(),
     AppState(
@@ -103,42 +93,68 @@ Future<void> main() async {
     ),
   );
   runApp(RegisterApp(store: store));
-  await _loadThemeController();
-  await _loadPackageInfo();
-  await _initializeNotificationBackgroundService();
   WidgetsBinding.instance.addPostFrameCallback(
-    (_) async {
-      // Capture navigator context before any async gaps to avoid using
-      // a BuildContext across an async boundary.
-      final BuildContext? navContext = navigatorKey?.currentContext;
+    (_) => unawaited(
+      _initializeAfterFirstFrame(
+        store: store,
+        startupStopwatch: startupStopwatch,
+      ),
+    ),
+  );
+}
 
-      await AnalyticsService.logCustomEvent(
-        "app_first_frame",
-        <String, Object>{
-          "elapsedMs": startupStopwatch.elapsedMilliseconds,
-        },
-      );
-      Uri? uri;
-      if (Platform.isAndroid) {
-        uri = await getInitialUri();
-        await _uriLinkSubscription?.cancel();
-        _uriLinkSubscription = uriLinkStream.listen((event) async {
-          await store.actions.start(event);
-        });
-      }
-      await store.actions.start(uri);
-      if (navContext != null) {
-        await _checkForUpdate();
-      }
-      WidgetsBinding.instance.addObserver(
-        LifecycleObserver(
-          store.actions.restarted.call,
-          // this might not finish in time:
-          store.actions.saveState.call,
-        ),
-      );
+Future<void> _initializeAfterFirstFrame({
+  required Store<AppState, AppStateBuilder, AppActions> store,
+  required Stopwatch startupStopwatch,
+}) async {
+  final BuildContext? navContext = navigatorKey?.currentContext;
+
+  unawaited(_restoreUserPreferences(store));
+  unawaited(AnalyticsService.initLich());
+  unawaited(_loadThemeController());
+  unawaited(_loadPackageInfo());
+  unawaited(_initializeNotificationBackgroundService());
+
+  await AnalyticsService.logCustomEvent(
+    "app_first_frame",
+    <String, Object>{
+      "elapsedMs": startupStopwatch.elapsedMilliseconds,
     },
   );
+
+  Uri? uri;
+  if (Platform.isAndroid) {
+    uri = await getInitialUri();
+    await _uriLinkSubscription?.cancel();
+    _uriLinkSubscription = uriLinkStream.listen((event) async {
+      await store.actions.start(event);
+    });
+  }
+
+  await store.actions.start(uri);
+  if (navContext != null) {
+    await _checkForUpdate();
+  }
+
+  WidgetsBinding.instance.addObserver(
+    LifecycleObserver(
+      store.actions.restarted.call,
+      // this might not finish in time:
+      store.actions.saveState.call,
+    ),
+  );
+}
+
+Future<void> _restoreUserPreferences(
+  Store<AppState, AppStateBuilder, AppActions> store,
+) async {
+  await appLanguageController.load(
+    fallbackLocale: WidgetsBinding.instance.platformDispatcher.locale,
+  );
+  await store.actions.settingsActions.setLanguage(
+    appLanguageController.language.code,
+  );
+  await appSubjectTranslationController.load();
 }
 
 
