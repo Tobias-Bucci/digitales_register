@@ -115,12 +115,9 @@ Future<void> _initializeAfterFirstFrame({
   unawaited(_loadPackageInfo());
   unawaited(_initializeNotificationBackgroundService());
 
-  await AnalyticsService.logCustomEvent(
-    "app_first_frame",
-    <String, Object>{
-      "elapsedMs": startupStopwatch.elapsedMilliseconds,
-    },
-  );
+  await AnalyticsService.logCustomEvent("app_first_frame", <String, Object>{
+    "elapsedMs": startupStopwatch.elapsedMilliseconds,
+  });
 
   Uri? uri;
   if (Platform.isAndroid) {
@@ -157,19 +154,13 @@ Future<void> _restoreUserPreferences(
   await appSubjectTranslationController.load();
 }
 
-
-
-
 Future<void> _loadThemeController() async {
   final stopwatch = Stopwatch()..start();
   await themeController.load();
   stopwatch.stop();
-  await AnalyticsService.logCustomEvent(
-    "theme_loaded",
-    <String, Object>{
-      "elapsedMs": stopwatch.elapsedMilliseconds,
-    },
-  );
+  await AnalyticsService.logCustomEvent("theme_loaded", <String, Object>{
+    "elapsedMs": stopwatch.elapsedMilliseconds,
+  });
 }
 
 Future<void> _loadPackageInfo() async {
@@ -186,9 +177,7 @@ Future<void> _initializeNotificationBackgroundService() async {
   stopwatch.stop();
   await AnalyticsService.logCustomEvent(
     "notification_service_initialized",
-    <String, Object>{
-      "elapsedMs": stopwatch.elapsedMilliseconds,
-    },
+    <String, Object>{"elapsedMs": stopwatch.elapsedMilliseconds},
   );
 }
 
@@ -197,10 +186,7 @@ Future<void> setGlobalContrastColor(Color color) async {
 }
 
 class RegisterApp extends StatelessWidget {
-  const RegisterApp({
-    super.key,
-    required this.store,
-  });
+  const RegisterApp({super.key, required this.store});
 
   final Store<AppState, AppStateBuilder, AppActions> store;
 
@@ -215,8 +201,9 @@ class RegisterApp extends StatelessWidget {
             amoledMode: state.settingsState.amoledMode,
             biometricAppLockEnabled:
                 state.settingsState.biometricAppLockEnabled,
-            locale:
-                AppLanguage.fromCode(state.settingsState.languageCode).locale,
+            locale: AppLanguage.fromCode(
+              state.settingsState.languageCode,
+            ).locale,
           ),
           builder: (context, vm, actions) => AnimatedBuilder(
             animation: themeController,
@@ -313,9 +300,8 @@ class RegisterApp extends StatelessWidget {
                   default:
                     return MaterialPageRoute<void>(
                       settings: settings,
-                      builder: (_) => _UnknownRoutePage(
-                        routeName: settings.name ?? '',
-                      ),
+                      builder: (_) =>
+                          _UnknownRoutePage(routeName: settings.name ?? ''),
                     );
                 }
               },
@@ -387,6 +373,18 @@ class _RegisterAppViewModel {
   final bool amoledMode;
   final bool biometricAppLockEnabled;
   final Locale locale;
+
+  @override
+  bool operator ==(Object other) {
+    return identical(this, other) ||
+        other is _RegisterAppViewModel &&
+            other.amoledMode == amoledMode &&
+            other.biometricAppLockEnabled == biometricAppLockEnabled &&
+            other.locale == locale;
+  }
+
+  @override
+  int get hashCode => Object.hash(amoledMode, biometricAppLockEnabled, locale);
 }
 
 String tr(String key, {Map<String, String> args = const {}}) {
@@ -403,17 +401,11 @@ void showSnackBar(String message) {
   if (messengerState == null) {
     return;
   }
-  messengerState.showSnackBar(
-    SnackBar(
-      content: Text(message),
-    ),
-  );
+  messengerState.showSnackBar(SnackBar(content: Text(message)));
 }
 
 class _UnknownRoutePage extends StatelessWidget {
-  const _UnknownRoutePage({
-    required this.routeName,
-  });
+  const _UnknownRoutePage({required this.routeName});
 
   final String routeName;
 
@@ -421,9 +413,7 @@ class _UnknownRoutePage extends StatelessWidget {
   Widget build(BuildContext context) {
     final l10n = context.l10n;
     return Scaffold(
-      appBar: AppBar(
-        title: Text(l10n.text('navigation.unknownRoute.title')),
-      ),
+      appBar: AppBar(title: Text(l10n.text('navigation.unknownRoute.title'))),
       body: Center(
         child: Padding(
           padding: const EdgeInsets.all(24),

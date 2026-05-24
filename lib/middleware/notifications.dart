@@ -24,24 +24,38 @@ final _notificationsMiddleware =
       ..add(NotificationsActionsNames.deleteAll, _deleteAllNotifications);
 
 Future<void> _loadNotifications(
-    MiddlewareApi<AppState, AppStateBuilder, AppActions> api,
-    ActionHandler next,
-    Action<void> action) async {
+  MiddlewareApi<AppState, AppStateBuilder, AppActions> api,
+  ActionHandler next,
+  Action<void> action,
+) async {
   if (api.state.noInternet) return;
-
-  await next(action);
-  final dynamic data = await wrapper.send("api/notification/unread");
-
-  if (data != null) {
-    await api.actions.notificationsActions.loaded(data as List);
+  if (!_isCacheMarkedStale(_notificationsCacheKey) &&
+      api.state.notificationState.notifications != null &&
+      _isFresh(
+        api.state.notificationState.lastFetched,
+        _notificationsCacheTtl,
+      )) {
+    return;
   }
+
+  await _runCoalescedLoad(_notificationsCacheKey, () async {
+    await next(action);
+    final dynamic data = await wrapper.send("api/notification/unread");
+
+    if (data != null) {
+      await api.actions.notificationsActions.loaded(data as List);
+      _markRuntimeCacheFresh(_notificationsCacheKey);
+    }
+  });
 }
 
 Future<void> _deleteNotification(
-    MiddlewareApi<AppState, AppStateBuilder, AppActions> api,
-    ActionHandler next,
-    Action<Notification> action) async {
+  MiddlewareApi<AppState, AppStateBuilder, AppActions> api,
+  ActionHandler next,
+  Action<Notification> action,
+) async {
   await next(action);
+  _markRuntimeCacheStale(_notificationsCacheKey);
   await wrapper.send(
     "api/notification/markAsRead",
     args: {"id": action.payload.id},
@@ -49,16 +63,16 @@ Future<void> _deleteNotification(
 }
 
 Future<void> _deleteAllNotifications(
-    MiddlewareApi<AppState, AppStateBuilder, AppActions> api,
-    ActionHandler next,
-    Action<void> action) async {
+  MiddlewareApi<AppState, AppStateBuilder, AppActions> api,
+  ActionHandler next,
+  Action<void> action,
+) async {
   await next(action);
-  for (final n in api.state.notificationState.notifications!
-      .where((n) => n.type == "message" && n.objectId != null)) {
+  _markRuntimeCacheStale(_notificationsCacheKey);
+  for (final n in api.state.notificationState.notifications!.where(
+    (n) => n.type == "message" && n.objectId != null,
+  )) {
     await api.actions.messagesActions.markAsRead(n.objectId!);
   }
-  await wrapper.send(
-    "api/notification/markAsRead",
-    args: {},
-  );
+  await wrapper.send("api/notification/markAsRead", args: {});
 }

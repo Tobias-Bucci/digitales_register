@@ -15,6 +15,7 @@
 // You should have received a copy of the GNU General Public License
 // along with digitales_register.  If not, see <http://www.gnu.org/licenses/>.
 
+import 'package:collection/collection.dart';
 import 'package:dr/actions/app_actions.dart';
 import 'package:dr/actions/login_actions.dart';
 import 'package:dr/app_state.dart';
@@ -78,14 +79,46 @@ class LoginPageViewModel {
   final List<String> otherAccounts;
 
   LoginPageViewModel.from(AppState state)
-      : error = state.loginState.errorMsg,
-        loading = state.loginState.loading,
-        safeMode = state.settingsState.noPasswordSaving,
-        noInternet = state.noInternet,
-        servers = schools,
-        changePass = state.loginState.changePassword,
-        mustChangePass = state.loginState.mustChangePassword,
-        username = state.loginState.username,
-        url = state.url,
-        otherAccounts = state.loginState.otherAccounts.toList();
+    : error = state.loginState.errorMsg,
+      loading = state.loginState.loading,
+      safeMode = state.settingsState.noPasswordSaving,
+      noInternet = state.noInternet,
+      servers = schools,
+      changePass = state.loginState.changePassword,
+      mustChangePass = state.loginState.mustChangePassword,
+      username = state.loginState.username,
+      url = state.url,
+      otherAccounts = state.loginState.otherAccounts.toList();
+
+  static const _collectionEquality = DeepCollectionEquality();
+
+  @override
+  bool operator ==(Object other) {
+    return identical(this, other) ||
+        other is LoginPageViewModel &&
+            other.error == error &&
+            other.username == username &&
+            other.url == url &&
+            other.loading == loading &&
+            other.safeMode == safeMode &&
+            other.noInternet == noInternet &&
+            other.changePass == changePass &&
+            other.mustChangePass == mustChangePass &&
+            _collectionEquality.equals(other.servers, servers) &&
+            _collectionEquality.equals(other.otherAccounts, otherAccounts);
+  }
+
+  @override
+  int get hashCode => Object.hash(
+    error,
+    username,
+    url,
+    loading,
+    safeMode,
+    noInternet,
+    changePass,
+    mustChangePass,
+    _collectionEquality.hash(servers),
+    _collectionEquality.hash(otherAccounts),
+  );
 }

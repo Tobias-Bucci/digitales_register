@@ -27,37 +27,54 @@ final _calendarMiddleware =
       ..add(RoutingActionsNames.showCalendar, _clearSelection);
 
 Future<void> _loadCalendar(
-    MiddlewareApi<AppState, AppStateBuilder, AppActions> api,
-    ActionHandler next,
-    Action<UtcDateTime> action) async {
+  MiddlewareApi<AppState, AppStateBuilder, AppActions> api,
+  ActionHandler next,
+  Action<UtcDateTime> action,
+) async {
   if (api.state.noInternet) return;
 
-  await next(action);
-  final dynamic data = await wrapper.send("api/calendar/student",
-      args: {"startDate": DateFormat("yyyy-MM-dd").format(action.payload)});
-
-  if (data != null) {
-    await api.actions.calendarActions.loaded(
-      CalendarLoadedPayload(
-        data: data as Map<String, dynamic>,
-        config: SubstituteDetectionConfig(
-          (b) => b
-            ..enabled = api.state.settingsState.substituteDetectionEnabled
-            ..primaryTeachers =
-                api.state.settingsState.substitutePrimaryTeachers.toBuilder()
-            ..lockedSubjects = api
-                .state.settingsState.substitutePrimaryTeachersLockedSubjects
-                .toBuilder(),
-        ),
-      ),
-    );
+  final cacheKey = _calendarCacheKey(action.payload);
+  if (_isRuntimeCacheFresh(cacheKey, _calendarCacheTtl)) {
+    return;
   }
+
+  await _runCoalescedLoad(cacheKey, () async {
+    await next(action);
+    final dynamic data = await wrapper.send(
+      "api/calendar/student",
+      args: {"startDate": DateFormat("yyyy-MM-dd").format(action.payload)},
+    );
+
+    if (data != null) {
+      await api.actions.calendarActions.loaded(
+        CalendarLoadedPayload(
+          data: data as Map<String, dynamic>,
+          config: SubstituteDetectionConfig(
+            (b) => b
+              ..enabled = api.state.settingsState.substituteDetectionEnabled
+              ..primaryTeachers = api
+                  .state
+                  .settingsState
+                  .substitutePrimaryTeachers
+                  .toBuilder()
+              ..lockedSubjects = api
+                  .state
+                  .settingsState
+                  .substitutePrimaryTeachersLockedSubjects
+                  .toBuilder(),
+          ),
+        ),
+      );
+      _markRuntimeCacheFresh(cacheKey);
+    }
+  });
 }
 
 Future<void> _selectionChanged(
-    MiddlewareApi<AppState, AppStateBuilder, AppActions> api,
-    ActionHandler next,
-    Action<CalendarSelection?> action) async {
+  MiddlewareApi<AppState, AppStateBuilder, AppActions> api,
+  ActionHandler next,
+  Action<CalendarSelection?> action,
+) async {
   await next(action);
   if (action.payload == null) {
     return;
@@ -70,9 +87,10 @@ Future<void> _selectionChanged(
 }
 
 Future<void> _weekChanged(
-    MiddlewareApi<AppState, AppStateBuilder, AppActions> api,
-    ActionHandler next,
-    Action<UtcDateTime> action) async {
+  MiddlewareApi<AppState, AppStateBuilder, AppActions> api,
+  ActionHandler next,
+  Action<UtcDateTime> action,
+) async {
   await next(action);
   final selectedDate = api.state.calendarState.selection?.date;
   if (selectedDate != null && toMonday(selectedDate) != action.payload) {
@@ -90,17 +108,19 @@ Future<void> _weekChanged(
 }
 
 Future<void> _clearSelection(
-    MiddlewareApi<AppState, AppStateBuilder, AppActions> api,
-    ActionHandler next,
-    Action<void> action) async {
+  MiddlewareApi<AppState, AppStateBuilder, AppActions> api,
+  ActionHandler next,
+  Action<void> action,
+) async {
   await next(action);
   await api.actions.calendarActions.select(null);
 }
 
 Future<void> _openSubmission(
-    MiddlewareApi<AppState, AppStateBuilder, AppActions> api,
-    ActionHandler next,
-    Action<LessonContentSubmission> action) async {
+  MiddlewareApi<AppState, AppStateBuilder, AppActions> api,
+  ActionHandler next,
+  Action<LessonContentSubmission> action,
+) async {
   await next(action);
 
   if (!action.payload.fileAvailable ||

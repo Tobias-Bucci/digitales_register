@@ -26,9 +26,10 @@ final _messagesMiddleware =
       ..add(MessagesActionsNames.replyMessage, _replyMessage);
 
 Future<void> _replyMessage(
-    MiddlewareApi<AppState, AppStateBuilder, AppActions> api,
-    ActionHandler next,
-    Action<ReplyMessagePayload> action) async {
+  MiddlewareApi<AppState, AppStateBuilder, AppActions> api,
+  ActionHandler next,
+  Action<ReplyMessagePayload> action,
+) async {
   await next(action);
   try {
     await wrapper.send(
@@ -40,25 +41,37 @@ Future<void> _replyMessage(
     );
     // If the API call completes without throwing, we consider it a success
     await api.actions.messagesActions.repliedMessage(action.payload);
+    _markRuntimeCacheStale(_messagesCacheKey);
   } catch (e) {
     // Optionally handle error? The wrapper probably shows an error snackbar for generic failures.
   }
 }
 
 Future<void> _loadMessages(
-    MiddlewareApi<AppState, AppStateBuilder, AppActions> api,
-    ActionHandler next,
-    Action<void> action) async {
+  MiddlewareApi<AppState, AppStateBuilder, AppActions> api,
+  ActionHandler next,
+  Action<void> action,
+) async {
   if (api.state.noInternet) return;
-  await next(action);
-  final dynamic response = await wrapper.send("api/message/getMyMessages");
-  if (response != null) {
-    await api.actions.messagesActions.loaded(response as List);
+  if (!_isCacheMarkedStale(_messagesCacheKey) &&
+      _isFresh(api.state.messagesState.lastFetched, _messagesCacheTtl)) {
+    return;
   }
+  await _runCoalescedLoad(_messagesCacheKey, () async {
+    await next(action);
+    final dynamic response = await wrapper.send("api/message/getMyMessages");
+    if (response != null) {
+      await api.actions.messagesActions.loaded(response as List);
+      _markRuntimeCacheFresh(_messagesCacheKey);
+    }
+  });
 }
 
-Future<void> _openFile(MiddlewareApi<AppState, AppStateBuilder, AppActions> api,
-    ActionHandler next, Action<MessageAttachmentFile> action) async {
+Future<void> _openFile(
+  MiddlewareApi<AppState, AppStateBuilder, AppActions> api,
+  ActionHandler next,
+  Action<MessageAttachmentFile> action,
+) async {
   await next(action);
   if (action.payload.isLink) {
     final link = action.payload.link;
@@ -88,7 +101,8 @@ Future<void> _openFile(MiddlewareApi<AppState, AppStateBuilder, AppActions> api,
       },
     );
     await api.actions.messagesActions.fileAvailable(
-        action.payload.rebuild((b) => b..fileAvailable = success));
+      action.payload.rebuild((b) => b..fileAvailable = success),
+    );
     if (!success) {
       return;
     }
@@ -98,10 +112,13 @@ Future<void> _openFile(MiddlewareApi<AppState, AppStateBuilder, AppActions> api,
 }
 
 Future<void> _markAsRead(
-    MiddlewareApi<AppState, AppStateBuilder, AppActions> api,
-    ActionHandler next,
-    Action<int> action) async {
+  MiddlewareApi<AppState, AppStateBuilder, AppActions> api,
+  ActionHandler next,
+  Action<int> action,
+) async {
   await next(action);
+  _markRuntimeCacheStale(_messagesCacheKey);
+  _markRuntimeCacheStale(_notificationsCacheKey);
   await wrapper.send(
     "api/message/markAsRead",
     args: {"messageId": action.payload},

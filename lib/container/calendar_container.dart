@@ -61,36 +61,83 @@ class CalendarViewModel {
   final UtcDateTime? last;
   final UtcDateTime currentMonday;
   final CalendarSelection? selection;
-  final List<CalendarDay> currentDays;
-  final List<String> favoriteSubjects;
+  final BuiltList<CalendarDay> currentDays;
+  final BuiltList<String> favoriteSubjects;
   final BuiltMap<String, SubjectTheme> subjectThemes;
   final bool substituteDetectionEnabled;
   final bool showSubstituteBar;
 
-  CalendarViewModel(AppState state)
-      : currentDays = _calendarDays(state),
-        first = _calendarDays(state).isEmpty
-            ? null
-            : _calendarDays(state).first.date,
-        last = _calendarDays(state).isEmpty
-            ? null
-            : _calendarDays(state).last.date,
-        currentMonday = state.calendarState.currentMonday!,
-        favoriteSubjects = state.settingsState.favoriteSubjects.toList(),
-        subjectThemes = state.settingsState.subjectThemes,
-        substituteDetectionEnabled =
-            state.settingsState.substituteDetectionEnabled,
-        showSubstituteBar = state.settingsState.showCalendarSubstituteBar,
-        showEditNicksBar = _calendarDays(state).any(
-              (day) => day.hours.any(
-                (hour) => !state.settingsState.subjectNicks.entries.any(
-                  (entry) => equalsIgnoreCase(entry.key, hour.subject),
-                ),
+  factory CalendarViewModel(AppState state) {
+    final currentDays = BuiltList<CalendarDay>(_calendarDays(state));
+    return CalendarViewModel._(
+      currentDays: currentDays,
+      first: currentDays.isEmpty ? null : currentDays.first.date,
+      last: currentDays.isEmpty ? null : currentDays.last.date,
+      currentMonday: state.calendarState.currentMonday!,
+      favoriteSubjects: state.settingsState.favoriteSubjects,
+      subjectThemes: state.settingsState.subjectThemes,
+      substituteDetectionEnabled:
+          state.settingsState.substituteDetectionEnabled,
+      showSubstituteBar: state.settingsState.showCalendarSubstituteBar,
+      showEditNicksBar:
+          currentDays.any(
+            (day) => day.hours.any(
+              (hour) => !state.settingsState.subjectNicks.entries.any(
+                (entry) => equalsIgnoreCase(entry.key, hour.subject),
               ),
-            ) &&
-            state.settingsState.showCalendarNicksBar,
-        noInternet = state.noInternet,
-        selection = state.calendarState.selection;
+            ),
+          ) &&
+          state.settingsState.showCalendarNicksBar,
+      noInternet: state.noInternet,
+      selection: state.calendarState.selection,
+    );
+  }
+
+  const CalendarViewModel._({
+    required this.showEditNicksBar,
+    required this.noInternet,
+    required this.first,
+    required this.last,
+    required this.currentMonday,
+    required this.selection,
+    required this.currentDays,
+    required this.favoriteSubjects,
+    required this.subjectThemes,
+    required this.substituteDetectionEnabled,
+    required this.showSubstituteBar,
+  });
+
+  @override
+  bool operator ==(Object other) {
+    return identical(this, other) ||
+        other is CalendarViewModel &&
+            other.showEditNicksBar == showEditNicksBar &&
+            other.noInternet == noInternet &&
+            other.first == first &&
+            other.last == last &&
+            other.currentMonday == currentMonday &&
+            other.selection == selection &&
+            other.currentDays == currentDays &&
+            other.favoriteSubjects == favoriteSubjects &&
+            other.subjectThemes == subjectThemes &&
+            other.substituteDetectionEnabled == substituteDetectionEnabled &&
+            other.showSubstituteBar == showSubstituteBar;
+  }
+
+  @override
+  int get hashCode => Object.hash(
+    showEditNicksBar,
+    noInternet,
+    first,
+    last,
+    currentMonday,
+    selection,
+    currentDays,
+    favoriteSubjects,
+    subjectThemes,
+    substituteDetectionEnabled,
+    showSubstituteBar,
+  );
 
   static List<CalendarDay> _calendarDays(AppState state) {
     return calendarDaysForWeekWithLocalReminderAssessments(

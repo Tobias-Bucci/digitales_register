@@ -54,6 +54,8 @@ class AppLocalizations {
     Locale.fromSubtags(languageCode: 'de', countryCode: 'LLD'),
     Locale('en'),
   ];
+  static final Map<AppLanguage, Future<Map<String, String>>> _languageMapCache =
+      <AppLanguage, Future<Map<String, String>>>{};
 
   static const Map<String, Map<AppLanguage, String>> _subjectTranslations = {
     'Deutsch': {
@@ -411,13 +413,19 @@ class AppLocalizations {
   static Future<AppLocalizations> load(Locale locale) async {
     final language = AppLanguage.fromLocale(locale);
     final translations = await _loadLanguageMap(language);
-    return AppLocalizations._(
-      locale: locale,
-      translations: translations,
-    );
+    return AppLocalizations._(locale: locale, translations: translations);
   }
 
   static Future<Map<String, String>> _loadLanguageMap(
+    AppLanguage language,
+  ) {
+    return _languageMapCache.putIfAbsent(
+      language,
+      () => _loadLanguageMapUncached(language),
+    );
+  }
+
+  static Future<Map<String, String>> _loadLanguageMapUncached(
     AppLanguage language,
   ) async {
     final merged = <String, String>{};
@@ -436,15 +444,12 @@ class AppLocalizations {
       }
     }
     if (merged.isNotEmpty) {
-      return merged;
+      return Map<String, String>.unmodifiable(merged);
     }
     throw FlutterError('No localization assets found for ${language.code}.');
   }
 
-  String text(
-    String key, {
-    Map<String, String> args = const {},
-  }) {
+  String text(String key, {Map<String, String> args = const {}}) {
     var value = _translations[key] ?? _translations['i18n.missing'] ?? key;
     for (final entry in args.entries) {
       value = value.replaceAll('{${entry.key}}', entry.value);
@@ -502,23 +507,26 @@ class AppLocalizations {
 
   String translateAuthServerText(String input) {
     final trimmed = input.trim();
-    final connectionMatch = RegExp('^Keine Verbindung mit "(.+)" möglich')
-        .firstMatch(trimmed);
+    final connectionMatch = RegExp(
+      '^Keine Verbindung mit "(.+)" möglich',
+    ).firstMatch(trimmed);
     if (connectionMatch != null) {
       return text(
         'login.noConnectionWithUrl',
         args: {'url': connectionMatch.group(1)!},
       );
     }
-    if (RegExp('user_not_found|password_wrong|passwort_wrong',
-            caseSensitive: false)
-        .hasMatch(trimmed)) {
+    if (RegExp(
+      'user_not_found|password_wrong|passwort_wrong',
+      caseSensitive: false,
+    ).hasMatch(trimmed)) {
       return text('login.invalidCredentials');
     }
     final replacements = <String, String>{
       'Bitte gib etwas ein': text('login.emptyCredentials'),
-      'Dieser Benutzertyp wird nicht unterstützt.':
-          text('login.userTypeUnsupported.message'),
+      'Dieser Benutzertyp wird nicht unterstützt.': text(
+        'login.userTypeUnsupported.message',
+      ),
     };
     return replacements[trimmed] ?? input;
   }
@@ -651,10 +659,7 @@ class AppLocalizations {
     if (match != null) {
       return text(
         'schoolTerm.createdByOn',
-        args: {
-          'name': match.group(1)!,
-          'date': match.group(2)!,
-        },
+        args: {'name': match.group(1)!, 'date': match.group(2)!},
       );
     }
     return translateSchoolTerm(input);
@@ -685,8 +690,9 @@ class AppLocalizations {
   String absenceJustificationLabel(AbsenceJustified justified) {
     return switch (justified) {
       AbsenceJustified.justified => text('absences.status.justified'),
-      AbsenceJustified.forSchool =>
-        text('absences.justification.schoolJustified'),
+      AbsenceJustified.forSchool => text(
+          'absences.justification.schoolJustified',
+        ),
       AbsenceJustified.notJustified => text('absences.status.notJustified'),
       AbsenceJustified.notYetJustified => text('absences.justification.notYet'),
       _ => text('absences.justification.notYet'),

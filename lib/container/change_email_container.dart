@@ -25,8 +25,8 @@ import 'package:flutter_built_redux/flutter_built_redux.dart';
 class ChangeEmailContainer extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
-    return StoreConnection<AppState, AppActions, Object>(
-      connect: (_) => Object(),
+    return StoreConnection<AppState, AppActions, Object?>(
+      connect: (_) => null,
       builder: (context, state, api) {
         return ChangeEmail(
           changeEmail: (pass, email) => api.profileActions.changeEmail(

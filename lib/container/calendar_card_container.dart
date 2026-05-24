@@ -48,10 +48,12 @@ class CalendarCardContainer extends StatelessWidget {
         );
       },
       connect: (state) {
-        final CalendarDay mergedDay = calendarDayWithLocalReminderAssessments(state, day) ??
+        final CalendarDay mergedDay =
+            calendarDayWithLocalReminderAssessments(state, day) ??
             state.calendarState.days[day]!;
         final CalendarHour hour = mergedDay.hours[hourIndex];
-        final theme = state.settingsState.subjectThemes[hour.subject] ??
+        final theme =
+            state.settingsState.subjectThemes[hour.subject] ??
             SubjectTheme(
               (SubjectThemeBuilder b) => b
                 ..color = Colors.grey.toARGB32()
@@ -60,7 +62,8 @@ class CalendarCardContainer extends StatelessWidget {
         return CalendarCardViewModel(
           hour: hour,
           theme: theme,
-          selected: state.calendarState.selection?.date == day &&
+          selected:
+              state.calendarState.selection?.date == day &&
               state.calendarState.selection?.hour == hour.fromHour,
           noInternet: state.noInternet,
         );
@@ -75,10 +78,23 @@ class CalendarCardViewModel {
   final bool selected;
   final bool noInternet;
 
-  CalendarCardViewModel({
+  const CalendarCardViewModel({
     required this.noInternet,
     required this.hour,
     required this.theme,
     required this.selected,
   });
+
+  @override
+  bool operator ==(Object other) {
+    return identical(this, other) ||
+        other is CalendarCardViewModel &&
+            other.hour == hour &&
+            other.theme == theme &&
+            other.selected == selected &&
+            other.noInternet == noInternet;
+  }
+
+  @override
+  int get hashCode => Object.hash(hour, theme, selected, noInternet);
 }

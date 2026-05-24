@@ -26,41 +26,50 @@ final _absencesMiddleware =
       ..add(AbsencesActionsNames.removeFutureAbsence, _removeFutureAbsence);
 
 Future<void> _loadAbsences(
-    MiddlewareApi<AppState, AppStateBuilder, AppActions> api,
-    ActionHandler next,
-    Action<void> action) async {
+  MiddlewareApi<AppState, AppStateBuilder, AppActions> api,
+  ActionHandler next,
+  Action<void> action,
+) async {
   if (api.state.noInternet) return;
-  _absencesDebug('load -> request');
-  await next(action);
-  dynamic response;
-  try {
-    response = await wrapper.send("api/student/dashboard/absences");
-  } on UnexpectedLogoutException {
-    await _handleUnexpectedLogout(api, 'load');
+  if (!_isCacheMarkedStale(_absencesCacheKey) &&
+      _isFresh(api.state.absencesState.lastFetched, _absencesCacheTtl)) {
     return;
   }
-  if (response != null) {
-    final responseMap = getMap(response);
-    if (responseMap != null) {
-      final absencesCount = (responseMap['absences'] as List?)?.length;
-      final futureCount = (responseMap['futureAbsences'] as List?)?.length;
-      final dynamic canEdit = responseMap['canEdit'];
-      _absencesDebug(
-        'load <- canEdit=$canEdit absences=$absencesCount futureAbsences=$futureCount',
-      );
-    } else {
-      _absencesDebug('load <- non-map response: $response');
+  _absencesDebug('load -> request');
+  await _runCoalescedLoad(_absencesCacheKey, () async {
+    await next(action);
+    dynamic response;
+    try {
+      response = await wrapper.send("api/student/dashboard/absences");
+    } on UnexpectedLogoutException {
+      await _handleUnexpectedLogout(api, 'load');
+      return;
     }
-    await api.actions.absencesActions.loaded(response);
-  } else {
-    _absencesDebug('load <- null response');
-  }
+    if (response != null) {
+      final responseMap = getMap(response);
+      if (responseMap != null) {
+        final absencesCount = (responseMap['absences'] as List?)?.length;
+        final futureCount = (responseMap['futureAbsences'] as List?)?.length;
+        final dynamic canEdit = responseMap['canEdit'];
+        _absencesDebug(
+          'load <- canEdit=$canEdit absences=$absencesCount futureAbsences=$futureCount',
+        );
+      } else {
+        _absencesDebug('load <- non-map response: $response');
+      }
+      await api.actions.absencesActions.loaded(response);
+      _markRuntimeCacheFresh(_absencesCacheKey);
+    } else {
+      _absencesDebug('load <- null response');
+    }
+  });
 }
 
 Future<void> _addFutureAbsence(
-    MiddlewareApi<AppState, AppStateBuilder, AppActions> api,
-    ActionHandler next,
-    Action<Map<String, dynamic>> action) async {
+  MiddlewareApi<AppState, AppStateBuilder, AppActions> api,
+  ActionHandler next,
+  Action<Map<String, dynamic>> action,
+) async {
   if (api.state.noInternet) return;
   _absencesDebug('add -> payload=${action.payload}');
   await next(action);
@@ -77,6 +86,7 @@ Future<void> _addFutureAbsence(
   _absencesDebug('add <- response=$response');
   if (_responseSucceeded(response)) {
     _absencesDebug('add -> success, reloading absences');
+    _markRuntimeCacheStale(_absencesCacheKey);
     await api.actions.absencesActions.load();
     if (!wrapper.noInternet) {
       showSnackBar('Voraus-Absenz wurde eingetragen');
@@ -93,9 +103,10 @@ Future<void> _addFutureAbsence(
 }
 
 Future<void> _removeFutureAbsence(
-    MiddlewareApi<AppState, AppStateBuilder, AppActions> api,
-    ActionHandler next,
-    Action<FutureAbsence> action) async {
+  MiddlewareApi<AppState, AppStateBuilder, AppActions> api,
+  ActionHandler next,
+  Action<FutureAbsence> action,
+) async {
   if (api.state.noInternet) return;
   await next(action);
   final payload = _buildRemoveFutureAbsencePayload(action.payload);
@@ -119,6 +130,7 @@ Future<void> _removeFutureAbsence(
   _absencesDebug('remove <- response=$response');
   if (_responseSucceeded(response)) {
     _absencesDebug('remove -> success, reloading absences');
+    _markRuntimeCacheStale(_absencesCacheKey);
     await api.actions.absencesActions.load();
   } else if (!wrapper.noInternet) {
     _absencesDebug('remove -> failed');
@@ -132,9 +144,10 @@ Future<void> _removeFutureAbsence(
 }
 
 Future<void> _justifyAbsence(
-    MiddlewareApi<AppState, AppStateBuilder, AppActions> api,
-    ActionHandler next,
-    Action<Map<String, dynamic>> action) async {
+  MiddlewareApi<AppState, AppStateBuilder, AppActions> api,
+  ActionHandler next,
+  Action<Map<String, dynamic>> action,
+) async {
   if (api.state.noInternet) return;
   await next(action);
   final payload = _buildJustifyAbsencePayload(api.state, action.payload);
@@ -159,6 +172,7 @@ Future<void> _justifyAbsence(
   _absencesDebug('justify <- response=$response');
   if (_responseSucceeded(response)) {
     _absencesDebug('justify -> success, reloading absences');
+    _markRuntimeCacheStale(_absencesCacheKey);
     await api.actions.absencesActions.load();
     if (!wrapper.noInternet) {
       final l10n = await _loadMiddlewareLocalizations(api.state);
@@ -204,7 +218,8 @@ Future<void> _handleUnexpectedLogout(
   String operation,
 ) async {
   _absencesDebug(
-      '$operation -> unexpected logout from server, triggering forced logout');
+    '$operation -> unexpected logout from server, triggering forced logout',
+  );
   if (!wrapper.noInternet) {
     showSnackBar('Sitzung abgelaufen, bitte erneut anmelden');
   }
@@ -253,9 +268,7 @@ Map<String, dynamic>? _buildRemoveFutureAbsencePayload(FutureAbsence absence) {
     'reason_signature': absence.reasonSignature,
     'reason': absence.reason,
   };
-  return <String, dynamic>{
-    'futureAbsence': futureAbsence,
-  };
+  return <String, dynamic>{'futureAbsence': futureAbsence};
 }
 
 int _justifiedToInt(AbsenceJustified justified) {
@@ -296,9 +309,9 @@ Map<String, dynamic>? _buildJustifyAbsencePayload(
   final dateFormat = DateFormat('yyyy-MM-dd');
   final timestamp = UtcDateTime.now();
   final groupDate = absenceGroup.date ?? absenceGroup.absences.first.date;
-  final locale = AppLanguage.fromCode(state.settingsState.languageCode)
-      .locale
-      .toLanguageTag();
+  final locale = AppLanguage.fromCode(
+    state.settingsState.languageCode,
+  ).locale.toLanguageTag();
 
   final groupItems = absenceGroup.absences
       .map(
@@ -307,8 +320,9 @@ Map<String, dynamic>? _buildJustifyAbsencePayload(
           'minutes': absence.minutes,
           'minutes_begin': absence.minutesCameTooLate,
           'minutes_end': absence.minutesLeftTooEarly,
-          'justified':
-              _justifiedToInt(absence.justified ?? absenceGroup.justified),
+          'justified': _justifiedToInt(
+            absence.justified ?? absenceGroup.justified,
+          ),
           'note': absence.note,
           'date': dateFormat.format(absence.date),
           'hour': absence.hour,
@@ -358,8 +372,10 @@ Map<String, dynamic>? _buildJustifyAbsencePayload(
       'selfdecl_id': absenceGroup.selfdeclId ?? 0,
       'selfdecl_input': absenceGroup.selfdeclInput ?? '',
       'formattedDateObject': <String, dynamic>{
-        'startDate':
-            DateFormat('EEE dd.MM.yyyy', locale).format(startAbsence.date),
+        'startDate': DateFormat(
+          'EEE dd.MM.yyyy',
+          locale,
+        ).format(startAbsence.date),
         'startHour': startAbsence.hour,
         'startTimeObj': _buildTimeObject(startTime),
         'endDate': DateFormat('EEE dd.MM.yyyy', locale).format(endAbsence.date),
@@ -408,8 +424,12 @@ String _lookupLessonTime({
   if (exact != null) {
     return exact;
   }
-  final weekday =
-      _collectLessonTimesByWeekday(state, date.weekday, hour, endTime);
+  final weekday = _collectLessonTimesByWeekday(
+    state,
+    date.weekday,
+    hour,
+    endTime,
+  );
   if (weekday != null) {
     return weekday;
   }

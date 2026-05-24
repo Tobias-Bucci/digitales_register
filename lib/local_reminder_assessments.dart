@@ -21,11 +21,7 @@ import 'package:dr/data.dart';
 import 'package:dr/utc_date_time.dart';
 import 'package:dr/util.dart';
 
-enum LocalReminderAssessmentType {
-  test,
-  classwork,
-  exam,
-}
+enum LocalReminderAssessmentType { test, classwork, exam }
 
 class LocalReminderAssessment {
   const LocalReminderAssessment({
@@ -47,10 +43,10 @@ class LocalReminderAssessment {
   final String name;
 
   String get serverTypeName => switch (type) {
-        LocalReminderAssessmentType.test => 'Test',
-        LocalReminderAssessmentType.classwork => 'Schularbeit',
-        LocalReminderAssessmentType.exam => 'Prüfung',
-      };
+    LocalReminderAssessmentType.test => 'Test',
+    LocalReminderAssessmentType.classwork => 'Schularbeit',
+    LocalReminderAssessmentType.exam => 'Prüfung',
+  };
 
   String get displayTitle => serverTypeName;
 
@@ -104,18 +100,23 @@ const _localReminderAssessmentCommands = <String, LocalReminderAssessmentType>{
 
 const _defaultLocalReminderAssessmentCommands =
     <LocalReminderAssessmentType, String>{
-  LocalReminderAssessmentType.test: 'test',
-  LocalReminderAssessmentType.classwork: 'cw',
-  LocalReminderAssessmentType.exam: 'exam',
-};
+      LocalReminderAssessmentType.test: 'test',
+      LocalReminderAssessmentType.classwork: 'cw',
+      LocalReminderAssessmentType.exam: 'exam',
+    };
+
+final Expando<List<String>> _sortedSubjectCache = Expando<List<String>>(
+  'localReminderAssessmentSortedSubjects',
+);
 
 LocalReminderAssessment? parseLocalReminderAssessment(
   String text,
   Iterable<String> knownSubjects,
 ) {
   final trimmed = text.trim();
-  final match =
-      RegExp(r'^/([A-Za-z]+)(?:@([1-9]\d*))?(?:\s+(.*))?$').firstMatch(trimmed);
+  final match = RegExp(
+    r'^/([A-Za-z]+)(?:@([1-9]\d*))?(?:\s+(.*))?$',
+  ).firstMatch(trimmed);
   if (match == null) {
     return null;
   }
@@ -130,8 +131,9 @@ LocalReminderAssessment? parseLocalReminderAssessment(
   final period = int.tryParse(match.group(2) ?? '');
   final remainder = (match.group(3) ?? '').trim();
   final subject = _findMatchingSubject(remainder, knownSubjects);
-  final name =
-      subject == null ? remainder : remainder.substring(subject.length).trim();
+  final name = subject == null
+      ? remainder
+      : remainder.substring(subject.length).trim();
 
   return LocalReminderAssessment(
     type: type,
@@ -276,31 +278,32 @@ List<CalendarDay> calendarDaysForWeekWithLocalReminderAssessments(
   for (final day in state.dashboardState.allDays ?? const <Day>[]) {
     final date = UtcDateTime(day.date.year, day.date.month, day.date.day);
     if (!date.isBefore(monday) && date.isBefore(weekEnd)) {
-      if (day.homework.any(
-        (homework) {
-          final parsed = parseLocalReminderAssessment(
-            homework.subtitle.isNotEmpty ? homework.subtitle : homework.title,
-            state.extractAllSubjects(),
-          );
-          return parsed != null &&
-              parsed.period != null &&
-              localReminderAssessmentHasCalendarSlot(state, date, parsed);
-        },
-      )) {
+      if (day.homework.any((homework) {
+        final parsed = parseLocalReminderAssessment(
+          homework.subtitle.isNotEmpty ? homework.subtitle : homework.title,
+          state.extractAllSubjects(),
+        );
+        return parsed != null &&
+            parsed.period != null &&
+            localReminderAssessmentHasCalendarSlot(state, date, parsed);
+      })) {
         dates.add(date);
       }
     }
   }
 
-  final result = dates
-      .map((date) => _mergeLocalReminderAssessmentsIntoCalendarDay(
-            state,
-            date,
-            state.calendarState.days[date],
-          ))
-      .whereType<CalendarDay>()
-      .toList()
-    ..sort((a, b) => a.date.compareTo(b.date));
+  final result =
+      dates
+          .map(
+            (date) => _mergeLocalReminderAssessmentsIntoCalendarDay(
+              state,
+              date,
+              state.calendarState.days[date],
+            ),
+          )
+          .whereType<CalendarDay>()
+          .toList()
+        ..sort((a, b) => a.date.compareTo(b.date));
   return result;
 }
 
@@ -464,8 +467,7 @@ String? _findMatchingSubject(String input, Iterable<String> knownSubjects) {
     return null;
   }
 
-  final sortedSubjects = knownSubjects.toSet().toList()
-    ..sort((a, b) => b.length.compareTo(a.length));
+  final sortedSubjects = _subjectsSortedByLength(knownSubjects);
   for (final subject in sortedSubjects) {
     if (!_startsWithIgnoreCase(normalizedInput, subject)) {
       continue;
@@ -479,6 +481,19 @@ String? _findMatchingSubject(String input, Iterable<String> knownSubjects) {
     }
   }
   return null;
+}
+
+List<String> _subjectsSortedByLength(Iterable<String> knownSubjects) {
+  final cached = _sortedSubjectCache[knownSubjects];
+  if (cached != null) {
+    return cached;
+  }
+  final sortedSubjects = List<String>.unmodifiable(
+    knownSubjects.toSet().toList()
+      ..sort((a, b) => b.length.compareTo(a.length)),
+  );
+  _sortedSubjectCache[knownSubjects] = sortedSubjects;
+  return sortedSubjects;
 }
 
 bool _startsWithIgnoreCase(String input, String prefix) {

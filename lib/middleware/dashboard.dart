@@ -18,55 +18,74 @@
 
 part of 'middleware.dart';
 
-final _dashboardMiddleware = MiddlewareBuilder<AppState, AppStateBuilder,
-    AppActions>()
-  ..add(DashboardActionsNames.load, _loadDays)
-  ..add(DashboardActionsNames.switchFuture, _switchFuture)
-  ..add(DashboardActionsNames.addReminder, _addReminder)
-  ..add(DashboardActionsNames.editReminder, _editReminder)
-  ..add(DashboardActionsNames.deleteHomework, _deleteHomework)
-  ..add(DashboardActionsNames.toggleDone, _toggleDone)
-  ..add(DashboardActionsNames.openAttachment, _openAttachment)
-  ..add(SettingsActionsNames.markNotSeenDashboardEntries, _markNotSeenEntries);
+final _dashboardMiddleware =
+    MiddlewareBuilder<AppState, AppStateBuilder, AppActions>()
+      ..add(DashboardActionsNames.load, _loadDays)
+      ..add(DashboardActionsNames.switchFuture, _switchFuture)
+      ..add(DashboardActionsNames.addReminder, _addReminder)
+      ..add(DashboardActionsNames.editReminder, _editReminder)
+      ..add(DashboardActionsNames.deleteHomework, _deleteHomework)
+      ..add(DashboardActionsNames.toggleDone, _toggleDone)
+      ..add(DashboardActionsNames.openAttachment, _openAttachment)
+      ..add(
+        SettingsActionsNames.markNotSeenDashboardEntries,
+        _markNotSeenEntries,
+      );
 
-Future<void> _loadDays(MiddlewareApi<AppState, AppStateBuilder, AppActions> api,
-    ActionHandler next, Action<bool> action) async {
+Future<void> _loadDays(
+  MiddlewareApi<AppState, AppStateBuilder, AppActions> api,
+  ActionHandler next,
+  Action<bool> action,
+) async {
   if (api.state.noInternet) return;
 
-  await next(action);
-  final dynamic data = await wrapper.send("api/student/dashboard/dashboard",
-      args: {"viewFuture": action.payload});
-
-  if (data is! List) {
-    await api.actions.dashboardActions.notLoaded();
+  final cacheKey = _dashboardCacheKey(action.payload);
+  if (_isRuntimeCacheFresh(cacheKey, _dashboardCacheTtl)) {
     return;
   }
-  await api.actions.dashboardActions.loaded(
-    DaysLoadedPayload(
-      (b) => b
-        ..data = data
-        ..future = action.payload
-        ..markNewOrChangedEntries =
-            api.state.settingsState.dashboardMarkNewOrChangedEntries
-        ..deduplicateEntries =
-            api.state.settingsState.dashboardDeduplicateEntries,
-    ),
-  );
+
+  await _runCoalescedLoad(cacheKey, () async {
+    await next(action);
+    final dynamic data = await wrapper.send(
+      "api/student/dashboard/dashboard",
+      args: {"viewFuture": action.payload},
+    );
+
+    if (data is! List) {
+      await api.actions.dashboardActions.notLoaded();
+      return;
+    }
+    await api.actions.dashboardActions.loaded(
+      DaysLoadedPayload(
+        (b) => b
+          ..data = data
+          ..future = action.payload
+          ..markNewOrChangedEntries =
+              api.state.settingsState.dashboardMarkNewOrChangedEntries
+          ..deduplicateEntries =
+              api.state.settingsState.dashboardDeduplicateEntries,
+      ),
+    );
+    _markRuntimeCacheFresh(cacheKey);
+  });
 }
 
 Future<void> _switchFuture(
-    MiddlewareApi<AppState, AppStateBuilder, AppActions> api,
-    ActionHandler next,
-    Action<void> action) async {
+  MiddlewareApi<AppState, AppStateBuilder, AppActions> api,
+  ActionHandler next,
+  Action<void> action,
+) async {
   await next(action);
   await api.actions.dashboardActions.load(api.state.dashboardState.future);
 }
 
 Future<void> _addReminder(
-    MiddlewareApi<AppState, AppStateBuilder, AppActions> api,
-    ActionHandler next,
-    Action<AddReminderPayload> action) async {
+  MiddlewareApi<AppState, AppStateBuilder, AppActions> api,
+  ActionHandler next,
+  Action<AddReminderPayload> action,
+) async {
   await next(action);
+  _markRuntimeCacheStale(_dashboardCacheKey(api.state.dashboardState.future));
   final dynamic result = await wrapper.send(
     "api/student/dashboard/save_reminder",
     args: {
@@ -88,17 +107,17 @@ Future<void> _addReminder(
 }
 
 Future<void> _deleteHomework(
-    MiddlewareApi<AppState, AppStateBuilder, AppActions> api,
-    ActionHandler next,
-    Action<Homework> action) async {
+  MiddlewareApi<AppState, AppStateBuilder, AppActions> api,
+  ActionHandler next,
+  Action<Homework> action,
+) async {
   // Remove the entry from the dashboard immediately and reconcile with the
   // server afterwards, so reminder deletes behave responsively.
   await next(action);
+  _markRuntimeCacheStale(_dashboardCacheKey(api.state.dashboardState.future));
   final dynamic result = await wrapper.send(
     "api/student/dashboard/delete_reminder",
-    args: {
-      "id": action.payload.id,
-    },
+    args: {"id": action.payload.id},
   );
   if (result == null || result["success"] != true) {
     if (!wrapper.noInternet) {
@@ -109,14 +128,14 @@ Future<void> _deleteHomework(
 }
 
 Future<void> _editReminder(
-    MiddlewareApi<AppState, AppStateBuilder, AppActions> api,
-    ActionHandler next,
-    Action<EditReminderPayload> action) async {
+  MiddlewareApi<AppState, AppStateBuilder, AppActions> api,
+  ActionHandler next,
+  Action<EditReminderPayload> action,
+) async {
+  _markRuntimeCacheStale(_dashboardCacheKey(api.state.dashboardState.future));
   final deleteResult = await wrapper.send(
     "api/student/dashboard/delete_reminder",
-    args: {
-      "id": action.payload.previousHomework.id,
-    },
+    args: {"id": action.payload.previousHomework.id},
   );
   if (deleteResult == null ||
       deleteResult["success"] != true ||
@@ -154,10 +173,12 @@ Future<void> _editReminder(
 }
 
 Future<void> _toggleDone(
-    MiddlewareApi<AppState, AppStateBuilder, AppActions> api,
-    ActionHandler next,
-    Action<ToggleDonePayload> action) async {
+  MiddlewareApi<AppState, AppStateBuilder, AppActions> api,
+  ActionHandler next,
+  Action<ToggleDonePayload> action,
+) async {
   await next(action);
+  _markRuntimeCacheStale(_dashboardCacheKey(api.state.dashboardState.future));
   final dynamic result = await wrapper.send(
     "api/student/dashboard/toggle_reminder",
     args: {
@@ -189,9 +210,10 @@ Future<void> _toggleDone(
 }
 
 Future<void> _markNotSeenEntries(
-    MiddlewareApi<AppState, AppStateBuilder, AppActions> api,
-    ActionHandler next,
-    Action<bool> action) async {
+  MiddlewareApi<AppState, AppStateBuilder, AppActions> api,
+  ActionHandler next,
+  Action<bool> action,
+) async {
   if (!action.payload) {
     await api.actions.dashboardActions.markAllAsSeen();
   }
@@ -199,9 +221,10 @@ Future<void> _markNotSeenEntries(
 }
 
 Future<void> _openAttachment(
-    MiddlewareApi<AppState, AppStateBuilder, AppActions> api,
-    ActionHandler next,
-    Action<GradeGroupSubmission> action) async {
+  MiddlewareApi<AppState, AppStateBuilder, AppActions> api,
+  ActionHandler next,
+  Action<GradeGroupSubmission> action,
+) async {
   await next(action);
 
   if (!action.payload.fileAvailable ||
@@ -218,7 +241,8 @@ Future<void> _openAttachment(
       },
     );
     await api.actions.dashboardActions.attachmentReady(
-        action.payload.rebuild((b) => b..fileAvailable = success));
+      action.payload.rebuild((b) => b..fileAvailable = success),
+    );
     if (!success) {
       return;
     }

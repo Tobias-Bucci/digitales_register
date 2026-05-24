@@ -22,17 +22,28 @@ final _certificateMiddleware =
       ..add(CertificateActionsNames.load, _loadCertificate);
 
 Future<void> _loadCertificate(
-    MiddlewareApi<AppState, AppStateBuilder, AppActions> api,
-    ActionHandler next,
-    Action<void> action) async {
+  MiddlewareApi<AppState, AppStateBuilder, AppActions> api,
+  ActionHandler next,
+  Action<void> action,
+) async {
   if (api.state.noInternet) return;
-  await next(action);
-  await _syncCertificateLanguageToApp(api);
-  final dynamic response =
-      await wrapper.send("student/certificate", method: "GET");
-  if (response != null) {
-    await api.actions.certificateActions.loaded(response as String);
+  if (!_isCacheMarkedStale(_certificateCacheKey) &&
+      api.state.certificateState.html != null &&
+      _isFresh(api.state.certificateState.lastFetched, _certificateCacheTtl)) {
+    return;
   }
+  await _runCoalescedLoad(_certificateCacheKey, () async {
+    await next(action);
+    await _syncCertificateLanguageToApp(api);
+    final dynamic response = await wrapper.send(
+      "student/certificate",
+      method: "GET",
+    );
+    if (response != null) {
+      await api.actions.certificateActions.loaded(response as String);
+      _markRuntimeCacheFresh(_certificateCacheKey);
+    }
+  });
 }
 
 Future<void> _syncCertificateLanguageToApp(
@@ -44,10 +55,7 @@ Future<void> _syncCertificateLanguageToApp(
     if (profileMap == null) {
       return;
     }
-    await _syncServerLanguageToApp(
-      api: api,
-      profile: profileMap,
-    );
+    await _syncServerLanguageToApp(api: api, profile: profileMap);
   } catch (_) {
     // Best effort only. Certificate loading should continue even if the sync
     // attempt fails.

@@ -15,6 +15,7 @@
 // You should have received a copy of the GNU General Public License
 // along with digitales_register.  If not, see <http://www.gnu.org/licenses/>.
 
+import 'package:built_collection/built_collection.dart';
 import 'package:dr/actions/app_actions.dart';
 import 'package:dr/app_state.dart';
 import 'package:dr/ui/network_protocol.dart';
@@ -24,12 +25,16 @@ import 'package:flutter_built_redux/flutter_built_redux.dart';
 class NetworkProtocolContainer extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
-    return StoreConnection<AppState, AppActions, List<NetworkProtocolItem>>(
+    return StoreConnection<
+      AppState,
+      AppActions,
+      BuiltList<NetworkProtocolItem>
+    >(
       builder: (context, vm, actions) {
-        return NetworkProtocol(items: vm);
+        return NetworkProtocol(items: vm.toList());
       },
       connect: (state) {
-        return state.networkProtocolState.items.toList();
+        return state.networkProtocolState.items;
       },
     );
   }

@@ -34,13 +34,17 @@ Future<String> _loginText(
   String key, {
   Map<String, String> args = const {},
 }) async {
-  final l10n =
-      await AppLocalizations.load(appLanguageController.language.locale);
+  final l10n = await AppLocalizations.load(
+    appLanguageController.language.locale,
+  );
   return l10n.text(key, args: args);
 }
 
-Future<void> _logout(MiddlewareApi<AppState, AppStateBuilder, AppActions> api,
-    ActionHandler next, Action<LogoutPayload> action) async {
+Future<void> _logout(
+  MiddlewareApi<AppState, AppStateBuilder, AppActions> api,
+  ActionHandler next,
+  Action<LogoutPayload> action,
+) async {
   await NotificationBackgroundService.handleAppPaused();
   if (action.payload.hard &&
       api.state.loginState.loggedIn &&
@@ -56,14 +60,13 @@ Future<void> _logout(MiddlewareApi<AppState, AppStateBuilder, AppActions> api,
   if (!api.state.settingsState.noPasswordSaving && action.payload.hard) {
     await secureStorage.write(
       key: "login",
-      value: json.encode(
-        <String, Object?>{
-          "url": wrapper.url,
-          if (await secureStorage.containsKey(key: "login"))
-            "otherAccounts": json.decode(
-                (await secureStorage.read(key: "login"))!)["otherAccounts"],
-        },
-      ),
+      value: json.encode(<String, Object?>{
+        "url": wrapper.url,
+        if (await secureStorage.containsKey(key: "login"))
+          "otherAccounts": json.decode(
+            (await secureStorage.read(key: "login"))!,
+          )["otherAccounts"],
+      }),
     );
   }
   if (api.state.settingsState.deleteDataOnLogout && action.payload.hard) {
@@ -76,6 +79,7 @@ Future<void> _logout(MiddlewareApi<AppState, AppStateBuilder, AppActions> api,
   await next(action);
   if (action.payload.hard) {
     statePersistenceService.clear();
+    _clearRuntimeCaches();
     await androidWidgetSnapshotService.clear();
     wrapper = Wrapper();
     await api.actions.mountAppState(AppState());
@@ -83,8 +87,11 @@ Future<void> _logout(MiddlewareApi<AppState, AppStateBuilder, AppActions> api,
   }
 }
 
-Future<void> _login(MiddlewareApi<AppState, AppStateBuilder, AppActions> api,
-    ActionHandler next, Action<LoginPayload> action) async {
+Future<void> _login(
+  MiddlewareApi<AppState, AppStateBuilder, AppActions> api,
+  ActionHandler next,
+  Action<LoginPayload> action,
+) async {
   await next(action);
   if (action.payload.user == "" || action.payload.pass == "") {
     final emptyCredentials = await _loginText('login.emptyCredentials');
@@ -103,7 +110,7 @@ Future<void> _login(MiddlewareApi<AppState, AppStateBuilder, AppActions> api,
       action.payload.user == 'demo' &&
       action.payload.pass == 'demo' &&
       rawUrl.isEmpty;
-      
+
   final isDebugLogin = action.payload.user == 'debug';
   final actualUser = isDebugLogin ? 'stbuctob' : action.payload.user;
   final url = isDemoLogin ? '' : fixupUrl(rawUrl);
@@ -121,7 +128,9 @@ Future<void> _login(MiddlewareApi<AppState, AppStateBuilder, AppActions> api,
     await api.actions.loginActions.loggedIn(
       LoggedInPayload(
         (b) => b
-          ..username = action.payload.user // Keep displaying "debug"
+          ..username = action
+              .payload
+              .user // Keep displaying "debug"
           ..fromStorage = true
           ..offlineOnly = true
           ..keepShowingLoadingIndicator = true,
@@ -150,25 +159,27 @@ Future<void> _login(MiddlewareApi<AppState, AppStateBuilder, AppActions> api,
   if (await wrapper.loggedIn) {
     if (!wrapper.config.isStudentOrParent) {
       wrapper.logout(hard: true);
-      final unsupportedMessage =
-          await _loginText('login.userTypeUnsupported.message');
+      final unsupportedMessage = await _loginText(
+        'login.userTypeUnsupported.message',
+      );
       await api.actions.loginActions.loginFailed(
-        LoginFailedPayload(
-          (b) => b..cause = unsupportedMessage,
-        ),
+        LoginFailedPayload((b) => b..cause = unsupportedMessage),
       );
       _showUserTypeNotSupported(url);
       return;
     }
-    
-    // We logged in with 'stbuctob', but if it was the debug login, 
+
+    // We logged in with 'stbuctob', but if it was the debug login,
     // we want the app state to retain 'debug' as the username
-    final recordedUsername = action.payload.user == 'debug' ? 'debug' : wrapper.user;
-    
+    final recordedUsername = action.payload.user == 'debug'
+        ? 'debug'
+        : wrapper.user;
+
     await api.actions.loginActions.loggedIn(
       LoggedInPayload(
         (b) => b
-          ..username = recordedUsername // Use the override instead of wrapper.user
+          ..username =
+              recordedUsername // Use the override instead of wrapper.user
           ..fromStorage = action.payload.fromStorage
           ..secondaryOnlineLogin = offlineLogin,
       ),
@@ -206,9 +217,10 @@ Future<void> _login(MiddlewareApi<AppState, AppStateBuilder, AppActions> api,
 }
 
 Future<void> _changePass(
-    MiddlewareApi<AppState, AppStateBuilder, AppActions> api,
-    ActionHandler next,
-    Action<ChangePassPayload> action) async {
+  MiddlewareApi<AppState, AppStateBuilder, AppActions> api,
+  ActionHandler next,
+  Action<ChangePassPayload> action,
+) async {
   await next(action);
   final dynamic result = await wrapper.changePass(
     action.payload.url,
@@ -222,9 +234,11 @@ Future<void> _changePass(
   }
   if (result["error"] != null) {
     await api.actions.loginActions.loginFailed(
-      LoginFailedPayload((b) => b
-        ..cause = wrapper.error
-        ..username = action.payload.user),
+      LoginFailedPayload(
+        (b) => b
+          ..cause = wrapper.error
+          ..username = action.payload.user,
+      ),
     );
   } else {
     await api.actions.loginActions.login(
@@ -242,9 +256,10 @@ Future<void> _changePass(
 }
 
 Future<void> _loginFailed(
-    MiddlewareApi<AppState, AppStateBuilder, AppActions> api,
-    ActionHandler next,
-    Action<LoginFailedPayload> action) async {
+  MiddlewareApi<AppState, AppStateBuilder, AppActions> api,
+  ActionHandler next,
+  Action<LoginFailedPayload> action,
+) async {
   await next(action);
 
   await api.actions.savePassActions.delete();
@@ -252,9 +267,10 @@ Future<void> _loginFailed(
 }
 
 Future<void> _showChangePass(
-    MiddlewareApi<AppState, AppStateBuilder, AppActions> api,
-    ActionHandler next,
-    Action<void> action) async {
+  MiddlewareApi<AppState, AppStateBuilder, AppActions> api,
+  ActionHandler next,
+  Action<void> action,
+) async {
   await api.actions.routingActions.showLogin();
   await next(action);
 }
@@ -263,26 +279,25 @@ Future<void> _showChangePass(
 dio.Dio? passDio;
 
 Future<void> _requestPassReset(
-    MiddlewareApi<AppState, AppStateBuilder, AppActions> api,
-    ActionHandler next,
-    Action<RequestPassResetPayload> action) async {
+  MiddlewareApi<AppState, AppStateBuilder, AppActions> api,
+  ActionHandler next,
+  Action<RequestPassResetPayload> action,
+) async {
   await next(action);
   // the api url DOES NOT contain /v2/ in the path. This is intentional.
   try {
     final dynamic result = (await (passDio ?? dio.Dio()).post<dynamic>(
       "${api.state.url}/api/auth/resetPassword",
-      data: {
-        "email": action.payload.email,
-        "username": action.payload.user,
-      },
-    ))
-        .data;
+      data: {"email": action.payload.email, "username": action.payload.user},
+    )).data;
     if (getMap(result)?["error"] != null) {
-      await api.actions.loginActions
-          .passResetFailed("[${result["error"]}]: ${result["message"]}");
+      await api.actions.loginActions.passResetFailed(
+        "[${result["error"]}]: ${result["message"]}",
+      );
     } else {
-      await api.actions.loginActions
-          .passResetSucceeded((result["message"] as String?)!);
+      await api.actions.loginActions.passResetSucceeded(
+        (result["message"] as String?)!,
+      );
     }
   } catch (e) {
     if (await cannotConnectTo(api.state.url!)) {
@@ -298,9 +313,10 @@ Future<void> _requestPassReset(
 }
 
 Future<void> _resetPass(
-    MiddlewareApi<AppState, AppStateBuilder, AppActions> api,
-    ActionHandler next,
-    Action<String> action) async {
+  MiddlewareApi<AppState, AppStateBuilder, AppActions> api,
+  ActionHandler next,
+  Action<String> action,
+) async {
   // the api url DOES NOT contain /v2/ in the path. This is intentional.
   final dynamic result = (await (passDio ?? dio.Dio()).post<dynamic>(
     "${api.state.url}/api/auth/setNewPassword",
@@ -311,21 +327,23 @@ Future<void> _resetPass(
       "oldPassword": "",
       "newPassword": action.payload,
     },
-  ))
-      .data;
+  )).data;
   if (result["error"] != null) {
-    await api.actions.loginActions
-        .passResetFailed("[${result["error"]}]: ${result["message"]}");
+    await api.actions.loginActions.passResetFailed(
+      "[${result["error"]}]: ${result["message"]}",
+    );
   } else {
-    await api.actions.loginActions
-        .passResetSucceeded(result["message"] as String);
+    await api.actions.loginActions.passResetSucceeded(
+      result["message"] as String,
+    );
   }
 }
 
 Future<void> _addAccount(
-    MiddlewareApi<AppState, AppStateBuilder, AppActions> api,
-    ActionHandler next,
-    Action<void> action) async {
+  MiddlewareApi<AppState, AppStateBuilder, AppActions> api,
+  ActionHandler next,
+  Action<void> action,
+) async {
   await next(action);
   // There might be no loginStorage if "stay logged in" is not enabled.
   final loginStorage = await secureStorage.read(key: "login");
@@ -344,12 +362,10 @@ Future<void> _addAccount(
     }
     await secureStorage.write(
       key: "login",
-      value: json.encode(
-        <String, Object?>{
-          "url": login["url"],
-          "otherAccounts": otherAccounts,
-        },
-      ),
+      value: json.encode(<String, Object?>{
+        "url": login["url"],
+        "otherAccounts": otherAccounts,
+      }),
     );
   }
   await api.actions.mountAppState(AppState());
@@ -357,9 +373,10 @@ Future<void> _addAccount(
 }
 
 Future<void> _selectAccount(
-    MiddlewareApi<AppState, AppStateBuilder, AppActions> api,
-    ActionHandler next,
-    Action<int> action) async {
+  MiddlewareApi<AppState, AppStateBuilder, AppActions> api,
+  ActionHandler next,
+  Action<int> action,
+) async {
   await next(action);
   final dynamic login = json.decode((await secureStorage.read(key: "login"))!);
   login["otherAccounts"] ??= <Object?>[];

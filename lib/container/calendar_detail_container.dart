@@ -63,10 +63,21 @@ class CalendarDetailVM {
   final UtcDateTime? selectedDay;
   final int? selectedHour;
 
-  CalendarDetailVM({
+  const CalendarDetailVM({
     required this.selectedDay,
     required this.selectedHour,
   });
+
+  @override
+  bool operator ==(Object other) {
+    return identical(this, other) ||
+        other is CalendarDetailVM &&
+            other.selectedDay == selectedDay &&
+            other.selectedHour == selectedHour;
+  }
+
+  @override
+  int get hashCode => Object.hash(selectedDay, selectedHour);
 }
 
 class CalendarDetailItemContainer extends StatelessWidget {
@@ -97,7 +108,8 @@ class CalendarDetailItemContainer extends StatelessWidget {
 
         final hour = day != null && hourIndex != null
             ? day.hours.firstWhereOrNull(
-                (h) => h.fromHour <= hourIndex && h.toHour >= hourIndex)
+                (h) => h.fromHour <= hourIndex && h.toHour >= hourIndex,
+              )
             : null;
         final loading = state.calendarState.daysForWeek(toMonday(date)).isEmpty;
         return CalendarDetailItemVM(
@@ -119,8 +131,8 @@ abstract class CalendarDetailItemVM
   bool get noInternet;
   bool get loading;
 
-  factory CalendarDetailItemVM(
-          [void Function(CalendarDetailItemVMBuilder)? updates]) =
-      _$CalendarDetailItemVM;
+  factory CalendarDetailItemVM([
+    void Function(CalendarDetailItemVMBuilder)? updates,
+  ]) = _$CalendarDetailItemVM;
   CalendarDetailItemVM._();
 }

@@ -94,8 +94,84 @@ final AndroidWidgetSnapshotService androidWidgetSnapshotService =
 @visibleForTesting
 Duration noInternetRetryInterval = const Duration(seconds: 5);
 
+const Duration _dashboardCacheTtl = Duration(seconds: 45);
+const Duration _notificationsCacheTtl = Duration(seconds: 30);
+const Duration _profileCacheTtl = Duration(minutes: 5);
+const Duration _calendarCacheTtl = Duration(minutes: 5);
+const Duration _gradesCacheTtl = Duration(minutes: 1);
+const Duration _messagesCacheTtl = Duration(minutes: 1);
+const Duration _absencesCacheTtl = Duration(minutes: 2);
+const Duration _certificateCacheTtl = Duration(minutes: 5);
+
 Timer? _noInternetRetryTimer;
 bool _noInternetRetryInFlight = false;
+final Map<String, Future<void>> _inFlightLoads = <String, Future<void>>{};
+final Map<String, UtcDateTime> _runtimeCacheTimes = <String, UtcDateTime>{};
+final Set<String> _staleCacheKeys = <String>{};
+
+String _dashboardCacheKey(bool future) => 'dashboard:$future';
+String _calendarCacheKey(UtcDateTime monday) =>
+    'calendar:${monday.stripTime().toIso8601String()}';
+
+const String _notificationsCacheKey = 'notifications';
+const String _profileCacheKey = 'profile';
+const String _messagesCacheKey = 'messages';
+const String _absencesCacheKey = 'absences';
+const String _certificateCacheKey = 'certificate';
+
+bool _isFresh(UtcDateTime? timestamp, Duration ttl) {
+  if (timestamp == null) {
+    return false;
+  }
+  final age = now.difference(timestamp);
+  return !age.isNegative && age < ttl;
+}
+
+bool _isRuntimeCacheFresh(String key, Duration ttl) {
+  return _isFresh(_runtimeCacheTimes[key], ttl);
+}
+
+void _markRuntimeCacheFresh(String key) {
+  _runtimeCacheTimes[key] = now;
+  _staleCacheKeys.remove(key);
+}
+
+void _markRuntimeCacheStale(String key) {
+  _runtimeCacheTimes.remove(key);
+  _staleCacheKeys.add(key);
+}
+
+bool _isCacheMarkedStale(String key) {
+  return _staleCacheKeys.contains(key);
+}
+
+void _clearRuntimeCaches() {
+  _inFlightLoads.clear();
+  _runtimeCacheTimes.clear();
+  _staleCacheKeys.clear();
+  _authenticatedBytesInFlight.clear();
+}
+
+Future<void> _runCoalescedLoad(String key, Future<void> Function() load) async {
+  final existing = _inFlightLoads[key];
+  if (existing != null) {
+    await existing;
+    return;
+  }
+
+  final future = Future<void>(() async {
+    await load();
+  });
+  _inFlightLoads[key] = future;
+  try {
+    await future;
+  } finally {
+    if (identical(_inFlightLoads[key], future)) {
+      final removed = _inFlightLoads.remove(key);
+      assert(identical(removed, future));
+    }
+  }
+}
 
 @visibleForTesting
 Wrapper wrapper = Wrapper();
@@ -133,7 +209,8 @@ List<Middleware<AppState, AppStateBuilder, AppActions>> middleware({
     ];
 
 NextActionHandler _errorMiddleware(
-        MiddlewareApi<AppState, AppStateBuilder, AppActions> api) =>
+  MiddlewareApi<AppState, AppStateBuilder, AppActions> api,
+) =>
     (ActionHandler next) => (Action action) async {
           Future<void> handleError(dynamic e, StackTrace? trace) async {
             log("Error caught by error middleware",
@@ -177,8 +254,7 @@ NextActionHandler _errorMiddleware(
                         ),
                         Padding(
                           padding: const EdgeInsets.all(8.0),
-                          child: Text(
-                            """
+                          child: Text("""
 Ein Fehler ist aufgetreten.
 ${e is UnexpectedLogoutException ? """
 
@@ -196,8 +272,7 @@ Bitte benachrichtige uns, damit wir diesen Fehler beheben können:"""}
 
  --  Fehlerprotokoll: --
 
-$error""",
-                          ),
+$error"""),
                         ),
                       ],
                     ),
@@ -218,16 +293,20 @@ $error""",
           }
         };
 
-void _tap(MiddlewareApi<AppState, AppStateBuilder, AppActions> api,
-    ActionHandler next, Action<void> action) {
+void _tap(
+  MiddlewareApi<AppState, AppStateBuilder, AppActions> api,
+  ActionHandler next,
+  Action<void> action,
+) {
   wrapper.interaction();
   // do not call next: this action is only to update the logout time
 }
 
 Future<void> _refreshNoInternet(
-    MiddlewareApi<AppState, AppStateBuilder, AppActions> api,
-    ActionHandler next,
-    Action<void> action) async {
+  MiddlewareApi<AppState, AppStateBuilder, AppActions> api,
+  ActionHandler next,
+  Action<void> action,
+) async {
   await next(action);
   final noInternet = await wrapper.refreshNoInternet();
   await api.actions.noInternet(noInternet);
@@ -249,13 +328,10 @@ void _scheduleNoInternetRetry() {
   if (_noInternetRetryTimer != null) {
     return;
   }
-  _noInternetRetryTimer = Timer(
-    noInternetRetryInterval,
-    () {
-      _noInternetRetryTimer = null;
-      unawaited(_runNoInternetRetry());
-    },
-  );
+  _noInternetRetryTimer = Timer(noInternetRetryInterval, () {
+    _noInternetRetryTimer = null;
+    unawaited(_runNoInternetRetry());
+  });
 }
 
 Future<void> _runNoInternetRetry() async {
@@ -274,9 +350,10 @@ Future<void> _runNoInternetRetry() async {
 }
 
 Future<void> _noInternet(
-    MiddlewareApi<AppState, AppStateBuilder, AppActions> api,
-    ActionHandler next,
-    Action<bool> action) async {
+  MiddlewareApi<AppState, AppStateBuilder, AppActions> api,
+  ActionHandler next,
+  Action<bool> action,
+) async {
   final prevNoInternet = api.state.noInternet;
   await next(action);
   final noInternet = api.state.noInternet;
@@ -292,8 +369,11 @@ Future<void> _noInternet(
   }
 }
 
-Future<void> _load(MiddlewareApi<AppState, AppStateBuilder, AppActions> api,
-    ActionHandler next, Action<void> action) async {
+Future<void> _load(
+  MiddlewareApi<AppState, AppStateBuilder, AppActions> api,
+  ActionHandler next,
+  Action<void> action,
+) async {
   // By resetting the wrapper we clear all cookies.
   // However we don't want to reset the wrapper in tests
   if (wrapper is! Mock) {
@@ -302,6 +382,7 @@ Future<void> _load(MiddlewareApi<AppState, AppStateBuilder, AppActions> api,
   await NotificationBackgroundService.handleAppPaused();
   _cancelNoInternetRetry();
   _noInternetRetryInFlight = false;
+  _clearRuntimeCaches();
   statePersistenceService.clear();
   await androidWidgetSnapshotService.clear();
   wrapper.noInternet = api.state.noInternet;
@@ -327,8 +408,9 @@ Future<void> _load(MiddlewareApi<AppState, AppStateBuilder, AppActions> api,
   final pass = getString(login["pass"]);
   final url = getString(login["url"]);
   final List<String> otherAccounts = List.from(
-    (login["otherAccounts"] as List?)
-            ?.map<String>((dynamic login) => login["user"] as String) ??
+    (login["otherAccounts"] as List?)?.map<String>(
+          (dynamic login) => login["user"] as String,
+        ) ??
         <String>[],
   );
   await api.actions.loginActions.setAvailableAccounts(otherAccounts);
@@ -341,11 +423,13 @@ Future<void> _load(MiddlewareApi<AppState, AppStateBuilder, AppActions> api,
   } else {
     if (user != null && pass != null) {
       await api.actions.loginActions.login(
-        LoginPayload((b) => b
-          ..user = user
-          ..pass = pass
-          ..url = url
-          ..fromStorage = true),
+        LoginPayload(
+          (b) => b
+            ..user = user
+            ..pass = pass
+            ..url = url
+            ..fromStorage = true,
+        ),
       );
     } else {
       await api.actions.routingActions.showLogin();
@@ -353,17 +437,25 @@ Future<void> _load(MiddlewareApi<AppState, AppStateBuilder, AppActions> api,
   }
 }
 
-Future<void> _refresh(MiddlewareApi<AppState, AppStateBuilder, AppActions> api,
-    ActionHandler next, Action<void> action) async {
+Future<void> _refresh(
+  MiddlewareApi<AppState, AppStateBuilder, AppActions> api,
+  ActionHandler next,
+  Action<void> action,
+) async {
   await next(action);
+  _markRuntimeCacheStale(_dashboardCacheKey(api.state.dashboardState.future));
+  _markRuntimeCacheStale(_notificationsCacheKey);
   await Future.wait([
     api.actions.dashboardActions.load(api.state.dashboardState.future),
     api.actions.notificationsActions.load(),
   ]);
 }
 
-Future<void> _loggedIn(MiddlewareApi<AppState, AppStateBuilder, AppActions> api,
-    ActionHandler next, Action<LoggedInPayload> action) async {
+Future<void> _loggedIn(
+  MiddlewareApi<AppState, AppStateBuilder, AppActions> api,
+  ActionHandler next,
+  Action<LoggedInPayload> action,
+) async {
   if (!api.state.loginState.loggedIn && !action.payload.secondaryOnlineLogin) {
     statePersistenceService.clear();
   }
@@ -382,8 +474,9 @@ Future<void> _loggedIn(MiddlewareApi<AppState, AppStateBuilder, AppActions> api,
     final state = await _readFromStorage(key);
     if (state != null) {
       try {
-        final serializedState =
-            serializers.deserialize(json.decode(state) as Object);
+        final serializedState = serializers.deserialize(
+          json.decode(state) as Object,
+        );
         if (serializedState is SettingsState) {
           await api.actions.mountAppState(
             api.state.rebuild(
@@ -425,8 +518,9 @@ Future<void> _loggedIn(MiddlewareApi<AppState, AppStateBuilder, AppActions> api,
         // next not at the beginning: bug fix (serialization)
         await next(action);
 
-        await api.actions.settingsActions
-            .saveNoPass(api.state.settingsState.noPasswordSaving);
+        await api.actions.settingsActions.saveNoPass(
+          api.state.settingsState.noPasswordSaving,
+        );
       } catch (e) {
         showSnackBar(tr('error.savedDataLoadFailed'));
         log("Failed to load data", error: e);
@@ -447,9 +541,7 @@ Future<void> _loggedIn(MiddlewareApi<AppState, AppStateBuilder, AppActions> api,
   );
   if (!notificationsEnabled &&
       api.state.settingsState.pushNotificationsEnabled) {
-    showSnackBar(
-      tr('notifications.permissionDeniedDisabled'),
-    );
+    showSnackBar(tr('notifications.permissionDeniedDisabled'));
     await api.actions.settingsActions.pushNotificationsEnabled(false);
   }
 
@@ -472,7 +564,8 @@ Future<void> _loggedIn(MiddlewareApi<AppState, AppStateBuilder, AppActions> api,
 bool deletedData = false;
 
 NextActionHandler _saveStateMiddleware(
-        MiddlewareApi<AppState, AppStateBuilder, AppActions> api) =>
+  MiddlewareApi<AppState, AppStateBuilder, AppActions> api,
+) =>
     (ActionHandler next) => (Action action) async {
           await next(action);
           if (api.state.loginState.loggedIn &&
@@ -616,7 +709,9 @@ Future<void> _start(
         }
         if (parameters["redirect"] != null) {
           await redirectAfterLogin(
-              parameters["redirect"]!.replaceFirst("#", ""), api);
+            parameters["redirect"]!.replaceFirst("#", ""),
+            api,
+          );
         }
       default:
         showSnackBar(tr('navigation.linkOpenFailed'));
@@ -635,8 +730,10 @@ Future<void> _start(
   await api.actions.load();
 }
 
-Future<void> redirectAfterLogin(String location,
-    MiddlewareApi<AppState, AppStateBuilder, AppActions> api) async {
+Future<void> redirectAfterLogin(
+  String location,
+  MiddlewareApi<AppState, AppStateBuilder, AppActions> api,
+) async {
   switch (location) {
     case "":
     case "dashboard/student":
@@ -684,6 +781,8 @@ bool _popAll() {
 }
 
 Future<String>? _attachmentDownloadDirectoryFuture;
+final Map<String, Future<Uint8List>> _authenticatedBytesInFlight =
+    <String, Future<Uint8List>>{};
 
 Future<String> _getAttachmentDownloadDirectory() {
   final cached = _attachmentDownloadDirectoryFuture;
@@ -695,7 +794,8 @@ Future<String> _getAttachmentDownloadDirectory() {
   final future = () async {
     try {
       return (await getExternalStorageDirectories(
-              type: StorageDirectory.downloads))!
+        type: StorageDirectory.downloads,
+      ))!
           .first
           .path;
     } catch (_) {
@@ -719,9 +819,7 @@ Future<bool> downloadFile(
 ) async {
   await wrapper.ensureLoggedIn();
 
-  final saveFile = File(
-    "${await _getAttachmentDownloadDirectory()}/$fileName",
-  );
+  final saveFile = File("${await _getAttachmentDownloadDirectory()}/$fileName");
   var success = true;
   if (await saveFile.exists()) {
     final shouldOverwrite = await askShouldOverwriteFile(fileName);
@@ -757,25 +855,36 @@ Future<bool> downloadFile(
 }
 
 Future<Uint8List> fetchAuthenticatedBytes(String url) async {
-  await wrapper.ensureLoggedIn();
-  final response = await wrapper.dio.get<List<int>>(
-    url,
-    options: dio.Options(responseType: dio.ResponseType.bytes),
-  );
-  return Uint8List.fromList(response.data ?? const <int>[]);
+  final existing = _authenticatedBytesInFlight[url];
+  if (existing != null) {
+    return existing;
+  }
+  final request = () async {
+    await wrapper.ensureLoggedIn();
+    final response = await wrapper.dio.get<List<int>>(
+      url,
+      options: dio.Options(responseType: dio.ResponseType.bytes),
+    );
+    return Uint8List.fromList(response.data ?? const <int>[]);
+  }();
+  _authenticatedBytesInFlight[url] = request;
+  try {
+    return await request;
+  } finally {
+    if (identical(_authenticatedBytesInFlight[url], request)) {
+      final removed = _authenticatedBytesInFlight.remove(url);
+      assert(identical(removed, request));
+    }
+  }
 }
 
 Future<bool> canOpenFile(String fileName) async {
-  return File(
-    "${await _getAttachmentDownloadDirectory()}/$fileName",
-  ).exists();
+  return File("${await _getAttachmentDownloadDirectory()}/$fileName").exists();
 }
 
 Future<void> openFile(String fileName) async {
   log("opening file: $fileName");
-  await OpenFile.open(
-    "${await _getAttachmentDownloadDirectory()}/$fileName",
-  );
+  await OpenFile.open("${await _getAttachmentDownloadDirectory()}/$fileName");
 }
 
 Future<bool?> askShouldOverwriteFile(String fileName) {
@@ -785,10 +894,7 @@ Future<bool?> askShouldOverwriteFile(String fileName) {
         return InfoDialog(
           title: Text(tr('files.overwrite.title')),
           content: Text(
-            tr(
-              'files.overwrite.body',
-              args: {'fileName': fileName},
-            ),
+            tr('files.overwrite.body', args: {'fileName': fileName}),
           ),
           actions: [
             TextButton(
@@ -818,7 +924,8 @@ Future<void> _checkShowUnmaintainedAlert() async {
   // which is Documents/ for desktop. The directory was therefore fixed, but we should
   // still check for the file in the old location.
   final legacyFile = File(
-      "${(await getApplicationDocumentsDirectory()).path}/unmaintainedAlertShown");
+    "${(await getApplicationDocumentsDirectory()).path}/unmaintainedAlertShown",
+  );
   if (await legacyFile.exists()) {
     // create the file in the correct location
     await file.create(recursive: true);
@@ -845,9 +952,7 @@ Future<void> _checkShowUnmaintainedAlert() async {
                     );
                   },
               ),
-              TextSpan(
-                text: tr('about.welcome.bodyMiddle'),
-              ),
+              TextSpan(text: tr('about.welcome.bodyMiddle')),
               TextSpan(
                 text: "github.com/Tobias-Bucci/digitales_register",
                 style: const TextStyle(color: Colors.blue),
@@ -855,14 +960,13 @@ Future<void> _checkShowUnmaintainedAlert() async {
                   ..onTap = () {
                     launchUrl(
                       Uri.parse(
-                          "https://github.com/Tobias-Bucci/digitales_register"),
+                        "https://github.com/Tobias-Bucci/digitales_register",
+                      ),
                       mode: LaunchMode.externalApplication,
                     );
                   },
               ),
-              TextSpan(
-                text: tr('about.welcome.bodySuffix'),
-              ),
+              TextSpan(text: tr('about.welcome.bodySuffix')),
             ],
           ),
         ),

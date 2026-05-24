@@ -45,9 +45,21 @@ class CertificateViewModel {
   final UtcDateTime? lastFetched;
   final bool noInternet;
 
-  CertificateViewModel({
+  const CertificateViewModel({
     required this.html,
     required this.noInternet,
     required this.lastFetched,
   });
+
+  @override
+  bool operator ==(Object other) {
+    return identical(this, other) ||
+        other is CertificateViewModel &&
+            other.html == html &&
+            other.lastFetched == lastFetched &&
+            other.noInternet == noInternet;
+  }
+
+  @override
+  int get hashCode => Object.hash(html, lastFetched, noInternet);
 }

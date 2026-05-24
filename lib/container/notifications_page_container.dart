@@ -15,6 +15,7 @@
 // You should have received a copy of the GNU General Public License
 // along with digitales_register.  If not, see <http://www.gnu.org/licenses/>.
 
+import 'package:built_collection/built_collection.dart';
 import 'package:dr/actions/app_actions.dart';
 import 'package:dr/app_state.dart';
 import 'package:dr/data.dart';
@@ -27,11 +28,14 @@ import 'package:tuple/tuple.dart';
 class NotificationPageContainer extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
-    return StoreConnection<AppState, AppActions,
-        Tuple3<List<Notification>, UtcDateTime?, bool>>(
+    return StoreConnection<
+      AppState,
+      AppActions,
+      Tuple3<BuiltList<Notification>, UtcDateTime?, bool>
+    >(
       builder: (context, vm, actions) {
         return NotificationPage(
-          notifications: vm.item1,
+          notifications: vm.item1.toList(),
           noInternet: vm.item3,
           deleteNotification: actions.notificationsActions.delete.call,
           deleteAllNotifications: actions.notificationsActions.deleteAll.call,
@@ -41,7 +45,7 @@ class NotificationPageContainer extends StatelessWidget {
       },
       connect: (state) {
         return Tuple3(
-          state.notificationState.notifications!.toList(),
+          state.notificationState.notifications!,
           state.notificationState.lastFetched,
           state.noInternet,
         );

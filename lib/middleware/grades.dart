@@ -17,12 +17,15 @@
 
 part of 'middleware.dart';
 
-final _gradesMiddleware = MiddlewareBuilder<AppState, AppStateBuilder,
-    AppActions>()
-  ..add(GradesActionsNames.setSemester, _setSemester)
-  ..add(GradesActionsNames.load, _loadGrades)
-  ..add(GradesActionsNames.loadDetails, _loadGradesDetails)
-  ..add(GradesActionsNames.loadCancelledDescription, _loadCancelledDescription);
+final _gradesMiddleware =
+    MiddlewareBuilder<AppState, AppStateBuilder, AppActions>()
+      ..add(GradesActionsNames.setSemester, _setSemester)
+      ..add(GradesActionsNames.load, _loadGrades)
+      ..add(GradesActionsNames.loadDetails, _loadGradesDetails)
+      ..add(
+        GradesActionsNames.loadCancelledDescription,
+        _loadCancelledDescription,
+      );
 
 final _gradesLock = SemesterLock((s) async {
   await wrapper.send("?semesterWechsel=${s.n}");
@@ -33,123 +36,182 @@ const String _subjectsDetail = "api/student/subject_detail";
 const String _grade = "api/student/entry/getGrade";
 
 Future<void> _setSemester(
-    MiddlewareApi<AppState, AppStateBuilder, AppActions> api,
-    ActionHandler next,
-    Action<Semester> action) async {
+  MiddlewareApi<AppState, AppStateBuilder, AppActions> api,
+  ActionHandler next,
+  Action<Semester> action,
+) async {
   await next(action);
   await api.actions.gradesActions.load(action.payload);
 }
 
 Future<void> _loadGrades(
-    MiddlewareApi<AppState, AppStateBuilder, AppActions> api,
-    ActionHandler next,
-    Action<Semester> action) async {
+  MiddlewareApi<AppState, AppStateBuilder, AppActions> api,
+  ActionHandler next,
+  Action<Semester> action,
+) async {
   if (api.state.noInternet) return;
 
+  final semesters = _semestersFor(action.payload);
+  final staleSemesters = semesters
+      .where((semester) => !_hasFreshBasicGrades(api.state, semester))
+      .toList();
+  if (staleSemesters.isEmpty) {
+    return;
+  }
+
   await next(action);
-  _doForSemester(
-    action.payload == Semester.all
-        ? [Semester.first, Semester.second]
-        : [action.payload],
-    (s) async {
-      final dynamic data = await wrapper.send(
-        _subjects,
-        args: {"studentId": api.state.config!.userId},
-      );
-      if (data == null) {
-        await api.actions.gradesActions.loadFailed();
-        return;
-      }
-      await api.actions.gradesActions.loaded(
-        SubjectsLoadedPayload(
-          (b) => b
-            ..data = data
-            ..semester = s.toBuilder(),
-        ),
-      );
-    },
-  );
+  _doForSemester(staleSemesters, (s) async {
+    final dynamic data = await wrapper.send(
+      _subjects,
+      args: {"studentId": api.state.config!.userId},
+    );
+    if (data == null) {
+      await api.actions.gradesActions.loadFailed();
+      return;
+    }
+    await api.actions.gradesActions.loaded(
+      SubjectsLoadedPayload(
+        (b) => b
+          ..data = data
+          ..semester = s.toBuilder(),
+      ),
+    );
+  });
 }
 
 Future<void> _loadGradesDetails(
-    MiddlewareApi<AppState, AppStateBuilder, AppActions> api,
-    ActionHandler next,
-    Action<LoadSubjectDetailsPayload> action) async {
+  MiddlewareApi<AppState, AppStateBuilder, AppActions> api,
+  ActionHandler next,
+  Action<LoadSubjectDetailsPayload> action,
+) async {
   if (api.state.noInternet) return;
+
+  final semesters = _semestersFor(action.payload.semester);
+  final staleSemesters = semesters
+      .where(
+        (semester) => !_hasFreshDetailedGrades(
+          api.state,
+          action.payload.subject.id,
+          semester,
+        ),
+      )
+      .toList();
+  if (staleSemesters.isEmpty) {
+    return;
+  }
 
   await next(action);
 
-  _doForSemester(
-    action.payload.semester == Semester.all
-        ? [Semester.first, Semester.second]
-        : [action.payload.semester],
-    (s) async {
-      dynamic data = await wrapper.send(
-        _subjectsDetail,
-        args: {
-          "studentId": api.state.config!.userId,
-          "subjectId": action.payload.subject.id
-        },
-      );
-      if (data == null) {
-        return;
-      }
-      if (data is String) {
-        data = json.decode(data);
-      }
-      await api.actions.gradesActions.detailsLoaded(
-        SubjectDetailLoadedPayload(
+  _doForSemester(staleSemesters, (s) async {
+    dynamic data = await wrapper.send(
+      _subjectsDetail,
+      args: {
+        "studentId": api.state.config!.userId,
+        "subjectId": action.payload.subject.id,
+      },
+    );
+    if (data == null) {
+      return;
+    }
+    if (data is String) {
+      data = json.decode(data);
+    }
+    await api.actions.gradesActions.detailsLoaded(
+      SubjectDetailLoadedPayload(
+        (b) => b
+          ..data = data
+          ..semester = s.toBuilder()
+          ..subject = action.payload.subject.toBuilder(),
+      ),
+    );
+    for (final grade in api.state.gradesState.subjects
+        .firstWhere((s) => s.id == action.payload.subject.id)
+        .grades[s]!
+        .where((g) => g.cancelled && g.cancelledDescription == null)) {
+      await api.actions.gradesActions.loadCancelledDescription(
+        LoadGradeCancelledDescriptionPayload(
           (b) => b
-            ..data = data
             ..semester = s.toBuilder()
-            ..subject = action.payload.subject.toBuilder(),
+            ..grade = grade.toBuilder(),
         ),
       );
-      for (final grade in api.state.gradesState.subjects
-          .firstWhere((s) => s.id == action.payload.subject.id)
-          .grades[s]!
-          .where((g) => g.cancelled)) {
-        await api.actions.gradesActions.loadCancelledDescription(
-          LoadGradeCancelledDescriptionPayload(
-            (b) => b
-              ..semester = s.toBuilder()
-              ..grade = grade.toBuilder(),
-          ),
-        );
-      }
-    },
+    }
+  });
+}
+
+List<Semester> _semestersFor(Semester semester) {
+  return semester == Semester.all
+      ? [Semester.first, Semester.second]
+      : [semester];
+}
+
+Subject? _findSubject(AppState state, int? subjectId) {
+  if (subjectId == null) {
+    return null;
+  }
+  for (final subject in state.gradesState.subjects) {
+    if (subject.id == subjectId) {
+      return subject;
+    }
+  }
+  return null;
+}
+
+bool _hasFreshBasicGrades(AppState state, Semester semester) {
+  final subjects = state.gradesState.subjects;
+  if (subjects.isEmpty) {
+    return false;
+  }
+  final timestamps = subjects.map((subject) => subject.lastFetchedBasic);
+  if (timestamps.any(
+    (fetched) => fetched == null || fetched[semester] == null,
+  )) {
+    return false;
+  }
+  return timestamps.every(
+    (fetched) => _isFresh(fetched![semester], _gradesCacheTtl),
   );
 }
 
+bool _hasFreshDetailedGrades(
+  AppState state,
+  int? subjectId,
+  Semester semester,
+) {
+  final subject = _findSubject(state, subjectId);
+  if (subject == null) {
+    return false;
+  }
+  return subject.grades[semester] != null &&
+      subject.observations[semester] != null &&
+      _isFresh(subject.lastFetchedDetailed?[semester], _gradesCacheTtl);
+}
+
 Future<void> _loadCancelledDescription(
-    MiddlewareApi<AppState, AppStateBuilder, AppActions> api,
-    ActionHandler next,
-    Action<LoadGradeCancelledDescriptionPayload> action) async {
+  MiddlewareApi<AppState, AppStateBuilder, AppActions> api,
+  ActionHandler next,
+  Action<LoadGradeCancelledDescriptionPayload> action,
+) async {
   if (api.state.noInternet) return;
 
   await next(action);
-  _doForSemester(
-    [action.payload.semester],
-    (s) async {
-      final dynamic data = await wrapper.send(
-        _grade,
-        args: {
-          "gradeId": action.payload.grade.id,
-        },
-      );
-      if (data == null) {
-        return;
-      }
-      await api.actions.gradesActions.cancelledDescriptionLoaded(
-        GradeCancelledDescriptionLoadedPayload(
-          (b) => b
-            ..grade = action.payload.grade.toBuilder()
-            ..semester = action.payload.semester.toBuilder()
-            ..data = data,
-        ),
-      );
-    },
-  );
+  _doForSemester([action.payload.semester], (s) async {
+    final dynamic data = await wrapper.send(
+      _grade,
+      args: {"gradeId": action.payload.grade.id},
+    );
+    if (data == null) {
+      return;
+    }
+    await api.actions.gradesActions.cancelledDescriptionLoaded(
+      GradeCancelledDescriptionLoadedPayload(
+        (b) => b
+          ..grade = action.payload.grade.toBuilder()
+          ..semester = action.payload.semester.toBuilder()
+          ..data = data,
+      ),
+    );
+  });
 }
 
 void _doForSemester(
@@ -178,7 +240,9 @@ class SemesterLock {
   Map<Semester, List<AsyncVoidCallback>> waitlist = {};
 
   Future<void> synchronized(
-      Semester semester, Future<void> Function() f) async {
+    Semester semester,
+    Future<void> Function() f,
+  ) async {
     await _mutex.acquire();
     bool mutexAcquired = true;
     if (usersOfCurrent == 0 || semester == current) {

@@ -18,16 +18,19 @@
 
 part of 'middleware.dart';
 
-final _profileMiddleware = MiddlewareBuilder<AppState, AppStateBuilder,
-    AppActions>()
-  ..add(ProfileActionsNames.load, _loadProfile)
-  ..add(ProfileActionsNames.sendNotificationEmails, _setSendNotificationEmails)
-  ..add(ProfileActionsNames.changeEmail, _changeEmail)
-  ..add(
-    ProfileActionsNames.pickAndUploadProfilePicture,
-    _pickAndUploadProfilePicture,
-  )
-  ..add(ProfileActionsNames.updateCodiceFiscale, _updateCodiceFiscale);
+final _profileMiddleware =
+    MiddlewareBuilder<AppState, AppStateBuilder, AppActions>()
+      ..add(ProfileActionsNames.load, _loadProfile)
+      ..add(
+        ProfileActionsNames.sendNotificationEmails,
+        _setSendNotificationEmails,
+      )
+      ..add(ProfileActionsNames.changeEmail, _changeEmail)
+      ..add(
+        ProfileActionsNames.pickAndUploadProfilePicture,
+        _pickAndUploadProfilePicture,
+      )
+      ..add(ProfileActionsNames.updateCodiceFiscale, _updateCodiceFiscale);
 
 typedef ProfilePicturePicker = Future<SelectedProfilePicture?> Function();
 
@@ -47,39 +50,43 @@ class SelectedProfilePicture {
 }
 
 Future<void> _loadProfile(
-    MiddlewareApi<AppState, AppStateBuilder, AppActions> api,
-    ActionHandler next,
-    Action<void> action) async {
-  await next(action);
+  MiddlewareApi<AppState, AppStateBuilder, AppActions> api,
+  ActionHandler next,
+  Action<void> action,
+) async {
   if (api.state.noInternet) return;
-  dynamic result;
-  try {
-    result = await wrapper.send("api/profile/get");
-  } on UnexpectedLogoutException {
-    _showProfileRequestFailedMessage(
-      tr('profile.loadFailed'),
-    );
+  if (_isRuntimeCacheFresh(_profileCacheKey, _profileCacheTtl) &&
+      api.state.profileState.username != null) {
     return;
   }
-  if (result == null) {
-    return;
-  }
-  final resultMap = getMap(result);
-  if (resultMap != null) {
-    await _syncServerLanguageToApp(
-      api: api,
-      profile: resultMap,
-    );
-  }
-  await api.actions.profileActions.loaded(result as Object);
+  await _runCoalescedLoad(_profileCacheKey, () async {
+    await next(action);
+    dynamic result;
+    try {
+      result = await wrapper.send("api/profile/get");
+    } on UnexpectedLogoutException {
+      _showProfileRequestFailedMessage(tr('profile.loadFailed'));
+      return;
+    }
+    if (result == null) {
+      return;
+    }
+    final resultMap = getMap(result);
+    if (resultMap != null) {
+      await _syncServerLanguageToApp(api: api, profile: resultMap);
+    }
+    await api.actions.profileActions.loaded(result as Object);
+    _markRuntimeCacheFresh(_profileCacheKey);
+  });
 }
 
 Future<void> _syncServerLanguageToApp({
   required MiddlewareApi<AppState, AppStateBuilder, AppActions> api,
   required Map profile,
 }) async {
-  final targetLanguage =
-      _preferredServerLanguageForApp(api.state.settingsState.languageCode);
+  final targetLanguage = _preferredServerLanguageForApp(
+    api.state.settingsState.languageCode,
+  );
   if (targetLanguage == null) {
     return;
   }
@@ -92,9 +99,7 @@ Future<void> _syncServerLanguageToApp({
   try {
     await wrapper.send(
       'api/profile/updateProfile',
-      args: <String, Object?>{
-        'language': targetLanguage,
-      },
+      args: <String, Object?>{'language': targetLanguage},
     );
   } catch (_) {
     // Best effort only. If the server rejects this, keep the local app language.
@@ -116,47 +121,41 @@ String? _preferredServerLanguageForApp(String languageCode) {
 }
 
 Future<void> _setSendNotificationEmails(
-    MiddlewareApi<AppState, AppStateBuilder, AppActions> api,
-    ActionHandler next,
-    Action<bool> action) async {
+  MiddlewareApi<AppState, AppStateBuilder, AppActions> api,
+  ActionHandler next,
+  Action<bool> action,
+) async {
   dynamic result;
   try {
     result = await wrapper.send(
       "api/profile/updateNotificationSettings",
-      args: {
-        "notificationsEnabled": action.payload,
-      },
+      args: {"notificationsEnabled": action.payload},
     );
   } on UnexpectedLogoutException {
-    _showProfileRequestFailedMessage(
-      tr('profile.notificationSettingsFailed'),
-    );
+    _showProfileRequestFailedMessage(tr('profile.notificationSettingsFailed'));
     return;
   }
   if (result == null) {
     return;
   }
+  _markRuntimeCacheStale(_profileCacheKey);
   await next(action);
 }
 
 Future<void> _changeEmail(
-    MiddlewareApi<AppState, AppStateBuilder, AppActions> api,
-    ActionHandler next,
-    Action<ChangeEmailPayload> action) async {
+  MiddlewareApi<AppState, AppStateBuilder, AppActions> api,
+  ActionHandler next,
+  Action<ChangeEmailPayload> action,
+) async {
   await next(action);
   dynamic result;
   try {
     result = await wrapper.send(
       "api/profile/updateProfile",
-      args: {
-        "email": action.payload.email,
-        "password": action.payload.pass,
-      },
+      args: {"email": action.payload.email, "password": action.payload.pass},
     );
   } on UnexpectedLogoutException {
-    _showProfileRequestFailedMessage(
-      tr('profile.saveFailed'),
-    );
+    _showProfileRequestFailedMessage(tr('profile.saveFailed'));
     return;
   }
   if (result == null) {
@@ -168,13 +167,15 @@ Future<void> _changeEmail(
   } else {
     showSnackBar("[${result["error"]}]: ${result["message"]}");
   }
+  _markRuntimeCacheStale(_profileCacheKey);
   await api.actions.profileActions.load();
 }
 
 Future<void> _pickAndUploadProfilePicture(
-    MiddlewareApi<AppState, AppStateBuilder, AppActions> api,
-    ActionHandler next,
-    Action<void> action) async {
+  MiddlewareApi<AppState, AppStateBuilder, AppActions> api,
+  ActionHandler next,
+  Action<void> action,
+) async {
   await next(action);
   final selected = await pickProfilePicture();
   if (selected == null) {
@@ -190,9 +191,7 @@ Future<void> _pickAndUploadProfilePicture(
       fileName: selected.fileName,
     );
   } on UnexpectedLogoutException {
-    _showProfileRequestFailedMessage(
-      tr('profile.pictureUploadFailed'),
-    );
+    _showProfileRequestFailedMessage(tr('profile.pictureUploadFailed'));
     return;
   }
   if (result == null) {
@@ -207,6 +206,7 @@ Future<void> _pickAndUploadProfilePicture(
 
   if (resultMap["error"] == null) {
     showSnackBar(tr('profile.pictureUpdated'));
+    _markRuntimeCacheStale(_profileCacheKey);
     await api.actions.profileActions.load();
   } else {
     showSnackBar("[${resultMap["error"]}] ${resultMap["message"]}");
@@ -214,14 +214,13 @@ Future<void> _pickAndUploadProfilePicture(
 }
 
 Future<void> _updateCodiceFiscale(
-    MiddlewareApi<AppState, AppStateBuilder, AppActions> api,
-    ActionHandler next,
-    Action<String> action) async {
+  MiddlewareApi<AppState, AppStateBuilder, AppActions> api,
+  ActionHandler next,
+  Action<String> action,
+) async {
   await next(action);
   if (api.state.profileState.codiceFiscale?.trim().isNotEmpty ?? false) {
-    showSnackBar(
-      tr('profile.taxIdLocked'),
-    );
+    showSnackBar(tr('profile.taxIdLocked'));
     return;
   }
 
@@ -234,14 +233,10 @@ Future<void> _updateCodiceFiscale(
   try {
     result = await wrapper.send(
       "api/profile/updateCodiceFiscale",
-      args: <String, Object?>{
-        "codiceFiscale": codiceFiscale,
-      },
+      args: <String, Object?>{"codiceFiscale": codiceFiscale},
     );
   } on UnexpectedLogoutException {
-    _showProfileRequestFailedMessage(
-      tr('profile.taxIdSaveFailed'),
-    );
+    _showProfileRequestFailedMessage(tr('profile.taxIdSaveFailed'));
     return;
   }
   if (result == null) {
@@ -255,9 +250,8 @@ Future<void> _updateCodiceFiscale(
   }
 
   if (resultMap["error"] == null) {
-    showSnackBar(
-      getString(resultMap["message"]) ?? tr('profile.taxIdUpdated'),
-    );
+    showSnackBar(getString(resultMap["message"]) ?? tr('profile.taxIdUpdated'));
+    _markRuntimeCacheStale(_profileCacheKey);
     await api.actions.profileActions.load();
   } else {
     showSnackBar("[${resultMap["error"]}]: ${resultMap["message"]}");

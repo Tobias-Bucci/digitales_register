@@ -28,10 +28,7 @@ import 'package:intl/intl.dart';
 class AbsenceGroupContainer extends StatelessWidget {
   final int group;
 
-  const AbsenceGroupContainer({
-    super.key,
-    required this.group,
-  });
+  const AbsenceGroupContainer({super.key, required this.group});
   @override
   Widget build(BuildContext context) {
     return StoreConnection<AppState, AppActions, _AbsenceGroupViewModel>(
@@ -63,8 +60,10 @@ class AbsenceGroupContainer extends StatelessWidget {
           fromTo += l10n.text(
             'absences.range.multiDay',
             args: {
-              'startDate':
-                  DateFormat("EE d.M.yyyy", localeTag).format(first.date),
+              'startDate': DateFormat(
+                "EE d.M.yyyy",
+                localeTag,
+              ).format(first.date),
               'startHour': first.hour.toString(),
               'endDate': DateFormat("EE d.M.yyyy", localeTag).format(last.date),
               'endHour': last.hour.toString(),
@@ -91,23 +90,26 @@ class AbsenceGroupContainer extends StatelessWidget {
         }
 
         final justifiedString = switch (absenceGroup.justified) {
-          AbsenceJustified.justified => absenceGroup.reasonSignature != null &&
-                  absenceGroup.reasonTimestamp != null
-              ? l10n.text(
-                  'absences.justification.recordedBy',
-                  args: {
-                    'timestamp': DateFormat(
-                      "EEE d.M.yyyy HH:mm",
-                      localeTag,
-                    ).format(absenceGroup.reasonTimestamp!),
-                    'signature': absenceGroup.reasonSignature!,
-                  },
-                )
-              : l10n.text('absences.status.justified'),
-          AbsenceJustified.forSchool =>
-            l10n.text('absences.justification.schoolJustified'),
-          AbsenceJustified.notJustified =>
-            l10n.text('absences.status.notJustified'),
+          AbsenceJustified.justified =>
+            absenceGroup.reasonSignature != null &&
+                    absenceGroup.reasonTimestamp != null
+                ? l10n.text(
+                    'absences.justification.recordedBy',
+                    args: {
+                      'timestamp': DateFormat(
+                        "EEE d.M.yyyy HH:mm",
+                        localeTag,
+                      ).format(absenceGroup.reasonTimestamp!),
+                      'signature': absenceGroup.reasonSignature!,
+                    },
+                  )
+                : l10n.text('absences.status.justified'),
+          AbsenceJustified.forSchool => l10n.text(
+            'absences.justification.schoolJustified',
+          ),
+          AbsenceJustified.notJustified => l10n.text(
+            'absences.status.notJustified',
+          ),
           _ => l10n.text('absences.justification.notYet'),
         };
 
@@ -121,13 +123,11 @@ class AbsenceGroupContainer extends StatelessWidget {
             note: absenceGroup.note,
             onJustify: vm.canJustify
                 ? (reason, signature) {
-                    actions.absencesActions.justifyAbsence(
-                      <String, dynamic>{
-                        'absenceGroup': absenceGroup,
-                        'reason': reason,
-                        'signature': signature,
-                      },
-                    );
+                    actions.absencesActions.justifyAbsence(<String, dynamic>{
+                      'absenceGroup': absenceGroup,
+                      'reason': reason,
+                      'signature': signature,
+                    });
                   }
                 : null,
           ),
@@ -135,7 +135,8 @@ class AbsenceGroupContainer extends StatelessWidget {
       },
       connect: (state) {
         final absenceGroup = state.absencesState.absences[group];
-        final canJustify = state.absencesState.canEdit &&
+        final canJustify =
+            state.absencesState.canEdit &&
             absenceGroup.justified == AbsenceJustified.notYetJustified &&
             absenceGroup.reason == null &&
             absenceGroup.reasonSignature == null &&
@@ -174,8 +175,16 @@ class _AbsenceGroupViewModel {
   final AbsenceGroup group;
   final bool canJustify;
 
-  const _AbsenceGroupViewModel({
-    required this.group,
-    required this.canJustify,
-  });
+  const _AbsenceGroupViewModel({required this.group, required this.canJustify});
+
+  @override
+  bool operator ==(Object other) {
+    return identical(this, other) ||
+        other is _AbsenceGroupViewModel &&
+            other.group == group &&
+            other.canJustify == canJustify;
+  }
+
+  @override
+  int get hashCode => Object.hash(group, canJustify);
 }
