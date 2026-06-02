@@ -602,7 +602,7 @@ Future<void> _setLanguage(
     if (targetLanguage != null) {
       try {
         await wrapper.send(
-          'api/profile/updateProfile',
+          'api/profile/updateLanguage',
           args: <String, Object?>{
             'language': targetLanguage,
           },

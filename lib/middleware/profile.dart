@@ -98,7 +98,7 @@ Future<void> _syncServerLanguageToApp({
 
   try {
     await wrapper.send(
-      'api/profile/updateProfile',
+      'api/profile/updateLanguage',
       args: <String, Object?>{'language': targetLanguage},
     );
   } catch (_) {

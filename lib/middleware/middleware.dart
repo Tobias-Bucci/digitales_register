@@ -176,6 +176,21 @@ Future<void> _runCoalescedLoad(String key, Future<void> Function() load) async {
 @visibleForTesting
 Wrapper wrapper = Wrapper();
 
+bool isOffline() => wrapper.noInternet;
+
+Future<String?> loadHomeworkSummaryHtml() async {
+  if (wrapper.noInternet) {
+    return null;
+  }
+  // The official frontend sends a Unix timestamp in milliseconds here.
+  final timestamp = DateTime.now().millisecondsSinceEpoch;
+  final response = await wrapper.send(
+    'vorstand/homework&klasse?_=$timestamp',
+    method: 'GET',
+  );
+  return response?.toString();
+}
+
 List<Middleware<AppState, AppStateBuilder, AppActions>> middleware({
   @visibleForTesting bool includeErrorMiddleware = true,
 }) =>

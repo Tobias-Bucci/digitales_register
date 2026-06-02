@@ -132,6 +132,7 @@ class _DemoStore {
       case 'api/profile/updateNotificationSettings':
         return _updateNotificationSettings(args);
       case 'api/profile/updateProfile':
+      case 'api/profile/updateLanguage':
         return _updateProfile(args);
       case 'api/profile/updateCodiceFiscale':
         return _updateCodiceFiscale(args);
@@ -262,7 +263,8 @@ class _DemoStore {
       _state['profile'] as Map<String, dynamic>;
 
   String get _demoLanguage {
-    final language = (_profileState['language'] as String?)?.trim().toLowerCase();
+    final language =
+        (_profileState['language'] as String?)?.trim().toLowerCase();
     return switch (language) {
       'en' => 'en',
       'it' => 'it',
@@ -457,7 +459,8 @@ class _DemoStore {
 
     for (final reminder in _reminders) {
       generated
-          .putIfAbsent(reminder['date'] as String, () => <Map<String, Object?>>[])
+          .putIfAbsent(
+              reminder['date'] as String, () => <Map<String, Object?>>[])
           .add(_dashboardReminderToResponse(reminder));
     }
 
@@ -557,8 +560,8 @@ class _DemoStore {
     _persistSync();
     return <String, Object?>{
       'success': true,
-        'message': _text('absenceSaved'),
-      };
+      'message': _text('absenceSaved'),
+    };
   }
 
   Map<String, Object?> _removeFutureAbsence(Map<String, Object?> args) {
@@ -632,7 +635,8 @@ class _DemoStore {
   }
 
   Map<String, Object?> _updateNotificationSettings(Map<String, Object?> args) {
-    _profileState['notificationsEnabled'] = args['notificationsEnabled'] == true;
+    _profileState['notificationsEnabled'] =
+        args['notificationsEnabled'] == true;
     _persistSync();
     return <String, Object?>{'error': null, 'message': 'OK'};
   }
@@ -769,7 +773,8 @@ class _DemoStore {
     final summaryRows = <String>[
       _certificateRow(_text('certificateAverage'), '8.72'),
       _certificateRow(_text('certificateAbsences'), '2'),
-      _certificateRow(_text('certificateBehavior'), _text('certificatePositive')),
+      _certificateRow(
+          _text('certificateBehavior'), _text('certificatePositive')),
     ].join();
     final gradeRows = _demoSubjects.take(6).map((subject) {
       final grades = subject.gradesForSemester(
@@ -905,7 +910,8 @@ class _DemoStore {
     var justified = 0;
     var notJustified = 0;
     for (final group in _absenceGroups) {
-      final groupEntries = (group['group'] as List).cast<Map<String, dynamic>>();
+      final groupEntries =
+          (group['group'] as List).cast<Map<String, dynamic>>();
       for (final entry in groupEntries) {
         counter++;
         final status = entry['justified'] as int? ?? 1;
@@ -1993,244 +1999,247 @@ final List<_DemoSubject> _demoSubjects = <_DemoSubject>[
 
 const Map<String, Map<String, String>> _demoTranslations =
     <String, Map<String, String>>{
-      'absenceSaved': {
-        'de': 'Absenz gespeichert',
-        'en': 'Absence saved',
-        'it': 'Assenza salvata',
-        'lld': 'Assënza salvada',
-      },
-      'reminderTitle': {
-        'de': 'Erinnerung',
-        'en': 'Reminder',
-        'it': 'Promemoria',
-        'lld': 'Monitoranza',
-      },
-      'reminderSportsBag': {
-        'de': 'Turnbeutel einpacken',
-        'en': 'Pack your sports bag',
-        'it': 'Prepara la borsa per sport',
-        'lld': 'Meti ite la borsa por sport',
-      },
-      'historyHomework': {
-        'de': 'Kapitel 4 zusammenfassen',
-        'en': 'Summarize chapter 4',
-        'it': 'Riassumi il capitolo 4',
-        'lld': 'Fai n riassunt dl capitol 4',
-      },
-      'springBreak': {
-        'de': 'Frühlingsferien',
-        'en': 'Spring break',
-        'it': 'Vacanze di primavera',
-        'lld': 'Vacanzes de primavëra',
-      },
-      'doctorAppointment': {
-        'de': 'Arzttermin',
-        'en': 'Doctor appointment',
-        'it': 'Visita medica',
-        'lld': 'Apointamënt dal dotur',
-      },
-      'delay': {
-        'de': 'Verspätung',
-        'en': 'Delay',
-        'it': 'Ritardo',
-        'lld': 'Retard',
-      },
-      'dashboardTitleTest': {
-        'de': 'Test',
-        'en': 'Test',
-        'it': 'Test',
-        'lld': 'Test',
-      },
-      'dashboardTitleHomework': {
-        'de': 'Hausaufgabe',
-        'en': 'Homework',
-        'it': 'Compito',
-        'lld': 'Compit',
-      },
-      'dashboardTitleSchoolwork': {
-        'de': 'Schularbeit',
-        'en': 'Schoolwork',
-        'it': 'Compito in classe',
-        'lld': 'Compit de classa',
-      },
-      'dashboardTitleExam': {
-        'de': 'Prüfung',
-        'en': 'Exam',
-        'it': 'Esame',
-        'lld': 'Ejam',
-      },
-      'dashboardTitleProjectSubmission': {
-        'de': 'Projektabgabe',
-        'en': 'Project submission',
-        'it': 'Consegna progetto',
-        'lld': 'Consegna dl proiet',
-      },
-      'dashboardTitleHoliday': {
-        'de': 'Ferien',
-        'en': 'Holiday',
-        'it': 'Vacanza',
-        'lld': 'Vacanza',
-      },
-      'messageWelcomeSubject': {
-        'de': 'Willkommen im Demo-Konto',
-        'en': 'Welcome to the demo account',
-        'it': 'Benvenuto nell’account demo',
-        'lld': 'Bëgnodü tl account demo',
-      },
-      'messageTripSubject': {
-        'de': 'Mitteilung zum Lehrausflug',
-        'en': 'Message about the field trip',
-        'it': 'Comunicazione sulla gita scolastica',
-        'lld': 'Comunicaziun sön la gita scola',
-      },
-      'messageFallbackSubject': {
-        'de': 'Demo-Mitteilung',
-        'en': 'Demo message',
-        'it': 'Messaggio demo',
-        'lld': 'Mesaj demo',
-      },
-      'messageSenderOffice': {
-        'de': 'Sekretariat',
-        'en': 'Office',
-        'it': 'Segreteria',
-        'lld': 'Sekretariat',
-      },
-      'messageSenderClassBoard': {
-        'de': 'Klassenvorstand',
-        'en': 'Class board',
-        'it': 'Coordinatore di classe',
-        'lld': 'Cunsëi de classa',
-      },
-      'messageWelcomeLine1': {
-        'de': 'Dieses Demo-Konto funktioniert vollständig lokal auf dem Gerät.',
-        'en': 'This demo account runs entirely locally on the device.',
-        'it': 'Questo account demo funziona interamente in locale sul dispositivo.',
-        'lld': 'Chësc account demo laora daldöt local sön le aparat.',
-      },
-      'messageWelcomeLine2': {
-        'de': 'Du kannst Erinnerungen, Absenzen und Profileinstellungen gefahrlos testen.',
-        'en': 'You can safely test reminders, absences, and profile settings.',
-        'it': 'Puoi testare senza rischi promemoria, assenze e impostazioni del profilo.',
-        'lld': 'Podes provè monitoranzes, assënzes y impostaziuns dl profil sainza rischi.',
-      },
-      'messageTripLine1': {
-        'de': 'Am Freitag findet der Demo-Lehrausflug ins Technikmuseum statt.',
-        'en': 'The demo field trip to the technology museum takes place on Friday.',
-        'it': 'Venerdì si terrà la gita demo al museo della tecnologia.',
-        'lld': 'Vëndres é la gita demo al museum dla tecnologia.',
-      },
-      'messageTripLine2': {
-        'de': 'Treffpunkt ist um 07:30 Uhr vor dem Haupteingang.',
-        'en': 'Meeting point is at 7:30 AM in front of the main entrance.',
-        'it': 'Il ritrovo è alle 07:30 davanti all’ingresso principale.',
-        'lld': 'L ncunter é ales 07:30 dan le gran ingrès.',
-      },
-      'messageTripLine3': {
-        'de': 'Bitte eine Trinkflasche und Schreibmaterial mitnehmen.',
-        'en': 'Please bring a water bottle and writing materials.',
-        'it': 'Porta con te una borraccia e il materiale per scrivere.',
-        'lld': 'Prëi con te na boza d’aiga y material por scrie.',
-      },
-      'messageFallbackLine': {
-        'de': 'Dies ist eine lokal erzeugte Demo-Mitteilung.',
-        'en': 'This is a locally generated demo message.',
-        'it': 'Questo è un messaggio demo generato localmente.',
-        'lld': 'Chësc é n mesaj demo generé localmënter.',
-      },
-      'notificationLocalModeTitle': {
-        'de': 'Demo-Hinweis',
-        'en': 'Demo note',
-        'it': 'Nota demo',
-        'lld': 'Nota demo',
-      },
-      'notificationLocalModeSubtitle': {
-        'de': 'Dieses Konto funktioniert vollständig lokal.',
-        'en': 'This account works fully offline and locally.',
-        'it': 'Questo account funziona interamente in locale.',
-        'lld': 'Chësc account laora daldöt local.',
-      },
-      'certificateHeading': {
-        'de': 'Demo-Zeugnis',
-        'en': 'Demo certificate',
-        'it': 'Certificato demo',
-        'lld': 'Zertificat demo',
-      },
-      'certificateBody': {
-        'de': 'Dieses Zeugnis wird lokal im Demo-Konto erzeugt.',
-        'en': 'This certificate is generated locally in the demo account.',
-        'it': 'Questo certificato viene generato localmente nell’account demo.',
-        'lld': 'Chësc zertificat vën generé localmënter tl account demo.',
-      },
-      'certificateDateLabel': {
-        'de': 'Stand',
-        'en': 'Issued',
-        'it': 'Data',
-        'lld': 'Data',
-      },
-      'certificateSummary': {
-        'de': 'Übersicht',
-        'en': 'Summary',
-        'it': 'Riepilogo',
-        'lld': 'Resumè',
-      },
-      'certificateGrades': {
-        'de': 'Noten',
-        'en': 'Grades',
-        'it': 'Voti',
-        'lld': 'Proi',
-      },
-      'certificateSubject': {
-        'de': 'Fach',
-        'en': 'Subject',
-        'it': 'Materia',
-        'lld': 'Diciplina',
-      },
-      'certificateGrade': {
-        'de': 'Note',
-        'en': 'Grade',
-        'it': 'Voto',
-        'lld': 'Pro',
-      },
-      'certificateAverage': {
-        'de': 'Durchschnitt',
-        'en': 'Average',
-        'it': 'Media',
-        'lld': 'Media',
-      },
-      'certificateAbsences': {
-        'de': 'Absenzen',
-        'en': 'Absences',
-        'it': 'Assenze',
-        'lld': 'Assënzes',
-      },
-      'certificateBehavior': {
-        'de': 'Verhalten',
-        'en': 'Conduct',
-        'it': 'Comportamento',
-        'lld': 'Comportamënt',
-      },
-      'certificatePositive': {
-        'de': 'Sehr positiv',
-        'en': 'Very positive',
-        'it': 'Molto positivo',
-        'lld': 'Massa positif',
-      },
-      'teacherPlaceholderFirst': {
-        'de': 'Lehrperson',
-        'en': 'Teacher',
-        'it': 'Docente',
-        'lld': 'Insignante',
-      },
-      'teacherPlaceholderLast': {
-        'de': 'Platzhalter',
-        'en': 'Placeholder',
-        'it': 'Segnaposto',
-        'lld': 'Placeholder',
-      },
-      'roomPlaceholder': {
-        'de': 'Raum Platzhalter',
-        'en': 'Room Placeholder',
-        'it': 'Aula segnaposto',
-        'lld': 'Aula placeholder',
-      },
-    };
+  'absenceSaved': {
+    'de': 'Absenz gespeichert',
+    'en': 'Absence saved',
+    'it': 'Assenza salvata',
+    'lld': 'Assënza salvada',
+  },
+  'reminderTitle': {
+    'de': 'Erinnerung',
+    'en': 'Reminder',
+    'it': 'Promemoria',
+    'lld': 'Monitoranza',
+  },
+  'reminderSportsBag': {
+    'de': 'Turnbeutel einpacken',
+    'en': 'Pack your sports bag',
+    'it': 'Prepara la borsa per sport',
+    'lld': 'Meti ite la borsa por sport',
+  },
+  'historyHomework': {
+    'de': 'Kapitel 4 zusammenfassen',
+    'en': 'Summarize chapter 4',
+    'it': 'Riassumi il capitolo 4',
+    'lld': 'Fai n riassunt dl capitol 4',
+  },
+  'springBreak': {
+    'de': 'Frühlingsferien',
+    'en': 'Spring break',
+    'it': 'Vacanze di primavera',
+    'lld': 'Vacanzes de primavëra',
+  },
+  'doctorAppointment': {
+    'de': 'Arzttermin',
+    'en': 'Doctor appointment',
+    'it': 'Visita medica',
+    'lld': 'Apointamënt dal dotur',
+  },
+  'delay': {
+    'de': 'Verspätung',
+    'en': 'Delay',
+    'it': 'Ritardo',
+    'lld': 'Retard',
+  },
+  'dashboardTitleTest': {
+    'de': 'Test',
+    'en': 'Test',
+    'it': 'Test',
+    'lld': 'Test',
+  },
+  'dashboardTitleHomework': {
+    'de': 'Hausaufgabe',
+    'en': 'Homework',
+    'it': 'Compito',
+    'lld': 'Compit',
+  },
+  'dashboardTitleSchoolwork': {
+    'de': 'Schularbeit',
+    'en': 'Schoolwork',
+    'it': 'Compito in classe',
+    'lld': 'Compit de classa',
+  },
+  'dashboardTitleExam': {
+    'de': 'Prüfung',
+    'en': 'Exam',
+    'it': 'Esame',
+    'lld': 'Ejam',
+  },
+  'dashboardTitleProjectSubmission': {
+    'de': 'Projektabgabe',
+    'en': 'Project submission',
+    'it': 'Consegna progetto',
+    'lld': 'Consegna dl proiet',
+  },
+  'dashboardTitleHoliday': {
+    'de': 'Ferien',
+    'en': 'Holiday',
+    'it': 'Vacanza',
+    'lld': 'Vacanza',
+  },
+  'messageWelcomeSubject': {
+    'de': 'Willkommen im Demo-Konto',
+    'en': 'Welcome to the demo account',
+    'it': 'Benvenuto nell’account demo',
+    'lld': 'Bëgnodü tl account demo',
+  },
+  'messageTripSubject': {
+    'de': 'Mitteilung zum Lehrausflug',
+    'en': 'Message about the field trip',
+    'it': 'Comunicazione sulla gita scolastica',
+    'lld': 'Comunicaziun sön la gita scola',
+  },
+  'messageFallbackSubject': {
+    'de': 'Demo-Mitteilung',
+    'en': 'Demo message',
+    'it': 'Messaggio demo',
+    'lld': 'Mesaj demo',
+  },
+  'messageSenderOffice': {
+    'de': 'Sekretariat',
+    'en': 'Office',
+    'it': 'Segreteria',
+    'lld': 'Sekretariat',
+  },
+  'messageSenderClassBoard': {
+    'de': 'Klassenvorstand',
+    'en': 'Class board',
+    'it': 'Coordinatore di classe',
+    'lld': 'Cunsëi de classa',
+  },
+  'messageWelcomeLine1': {
+    'de': 'Dieses Demo-Konto funktioniert vollständig lokal auf dem Gerät.',
+    'en': 'This demo account runs entirely locally on the device.',
+    'it': 'Questo account demo funziona interamente in locale sul dispositivo.',
+    'lld': 'Chësc account demo laora daldöt local sön le aparat.',
+  },
+  'messageWelcomeLine2': {
+    'de':
+        'Du kannst Erinnerungen, Absenzen und Profileinstellungen gefahrlos testen.',
+    'en': 'You can safely test reminders, absences, and profile settings.',
+    'it':
+        'Puoi testare senza rischi promemoria, assenze e impostazioni del profilo.',
+    'lld':
+        'Podes provè monitoranzes, assënzes y impostaziuns dl profil sainza rischi.',
+  },
+  'messageTripLine1': {
+    'de': 'Am Freitag findet der Demo-Lehrausflug ins Technikmuseum statt.',
+    'en': 'The demo field trip to the technology museum takes place on Friday.',
+    'it': 'Venerdì si terrà la gita demo al museo della tecnologia.',
+    'lld': 'Vëndres é la gita demo al museum dla tecnologia.',
+  },
+  'messageTripLine2': {
+    'de': 'Treffpunkt ist um 07:30 Uhr vor dem Haupteingang.',
+    'en': 'Meeting point is at 7:30 AM in front of the main entrance.',
+    'it': 'Il ritrovo è alle 07:30 davanti all’ingresso principale.',
+    'lld': 'L ncunter é ales 07:30 dan le gran ingrès.',
+  },
+  'messageTripLine3': {
+    'de': 'Bitte eine Trinkflasche und Schreibmaterial mitnehmen.',
+    'en': 'Please bring a water bottle and writing materials.',
+    'it': 'Porta con te una borraccia e il materiale per scrivere.',
+    'lld': 'Prëi con te na boza d’aiga y material por scrie.',
+  },
+  'messageFallbackLine': {
+    'de': 'Dies ist eine lokal erzeugte Demo-Mitteilung.',
+    'en': 'This is a locally generated demo message.',
+    'it': 'Questo è un messaggio demo generato localmente.',
+    'lld': 'Chësc é n mesaj demo generé localmënter.',
+  },
+  'notificationLocalModeTitle': {
+    'de': 'Demo-Hinweis',
+    'en': 'Demo note',
+    'it': 'Nota demo',
+    'lld': 'Nota demo',
+  },
+  'notificationLocalModeSubtitle': {
+    'de': 'Dieses Konto funktioniert vollständig lokal.',
+    'en': 'This account works fully offline and locally.',
+    'it': 'Questo account funziona interamente in locale.',
+    'lld': 'Chësc account laora daldöt local.',
+  },
+  'certificateHeading': {
+    'de': 'Demo-Zeugnis',
+    'en': 'Demo certificate',
+    'it': 'Certificato demo',
+    'lld': 'Zertificat demo',
+  },
+  'certificateBody': {
+    'de': 'Dieses Zeugnis wird lokal im Demo-Konto erzeugt.',
+    'en': 'This certificate is generated locally in the demo account.',
+    'it': 'Questo certificato viene generato localmente nell’account demo.',
+    'lld': 'Chësc zertificat vën generé localmënter tl account demo.',
+  },
+  'certificateDateLabel': {
+    'de': 'Stand',
+    'en': 'Issued',
+    'it': 'Data',
+    'lld': 'Data',
+  },
+  'certificateSummary': {
+    'de': 'Übersicht',
+    'en': 'Summary',
+    'it': 'Riepilogo',
+    'lld': 'Resumè',
+  },
+  'certificateGrades': {
+    'de': 'Noten',
+    'en': 'Grades',
+    'it': 'Voti',
+    'lld': 'Proi',
+  },
+  'certificateSubject': {
+    'de': 'Fach',
+    'en': 'Subject',
+    'it': 'Materia',
+    'lld': 'Diciplina',
+  },
+  'certificateGrade': {
+    'de': 'Note',
+    'en': 'Grade',
+    'it': 'Voto',
+    'lld': 'Pro',
+  },
+  'certificateAverage': {
+    'de': 'Durchschnitt',
+    'en': 'Average',
+    'it': 'Media',
+    'lld': 'Media',
+  },
+  'certificateAbsences': {
+    'de': 'Absenzen',
+    'en': 'Absences',
+    'it': 'Assenze',
+    'lld': 'Assënzes',
+  },
+  'certificateBehavior': {
+    'de': 'Verhalten',
+    'en': 'Conduct',
+    'it': 'Comportamento',
+    'lld': 'Comportamënt',
+  },
+  'certificatePositive': {
+    'de': 'Sehr positiv',
+    'en': 'Very positive',
+    'it': 'Molto positivo',
+    'lld': 'Massa positif',
+  },
+  'teacherPlaceholderFirst': {
+    'de': 'Lehrperson',
+    'en': 'Teacher',
+    'it': 'Docente',
+    'lld': 'Insignante',
+  },
+  'teacherPlaceholderLast': {
+    'de': 'Platzhalter',
+    'en': 'Placeholder',
+    'it': 'Segnaposto',
+    'lld': 'Placeholder',
+  },
+  'roomPlaceholder': {
+    'de': 'Raum Platzhalter',
+    'en': 'Room Placeholder',
+    'it': 'Aula segnaposto',
+    'lld': 'Aula placeholder',
+  },
+};

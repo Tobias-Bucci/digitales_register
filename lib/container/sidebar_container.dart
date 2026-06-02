@@ -1,4 +1,4 @@
-﻿// Copyright (C) 2021 Michael Debertol
+// Copyright (C) 2021 Michael Debertol
 // Copyright (C) 2026 Tobias Bucci
 //
 // This file is part of digitales_register.
@@ -21,8 +21,10 @@ import 'package:built_value/built_value.dart';
 import 'package:dr/actions/app_actions.dart';
 import 'package:dr/actions/login_actions.dart';
 import 'package:dr/app_state.dart';
+import 'package:dr/main.dart';
 import 'package:dr/middleware/middleware.dart';
 import 'package:dr/profile_picture.dart';
+import 'package:dr/ui/homework_summary_page.dart';
 import 'package:dr/ui/sidebar.dart';
 import 'package:flutter/material.dart' hide Builder;
 import 'package:flutter_built_redux/flutter_built_redux.dart';
@@ -54,6 +56,12 @@ class SidebarContainer extends StatelessWidget {
           username: state.username,
           showAbsences: actions.routingActions.showAbsences.call,
           showCalendar: actions.routingActions.showCalendar.call,
+          showHomeworkSummary: () {
+            scaffoldKey!.currentState!.selectContentWidget(
+              const HomeworkSummaryPage(),
+              Pages.homeworkSummary,
+            );
+          },
           showCertificate: actions.routingActions.showCertificate.call,
           showGrades: actions.routingActions.showGrades.call,
           showMessages: actions.routingActions.showMessages.call,
