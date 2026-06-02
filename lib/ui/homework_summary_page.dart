@@ -26,10 +26,28 @@ import 'package:intl/intl.dart';
 import 'package:responsive_scaffold/responsive_scaffold.dart';
 
 class HomeworkSummaryPage extends StatefulWidget {
-  const HomeworkSummaryPage({super.key});
+  const HomeworkSummaryPage({
+    super.key,
+    this.loader = loadHomeworkSummaryHtml,
+    this.translationPrefix = 'homeworkSummary',
+    this.icon = Icons.assignment_outlined,
+  });
+
+  final Future<String?> Function() loader;
+  final String translationPrefix;
+  final IconData icon;
 
   @override
   State<HomeworkSummaryPage> createState() => _HomeworkSummaryPageState();
+}
+
+class CourseContentPage extends HomeworkSummaryPage {
+  const CourseContentPage({super.key})
+      : super(
+          loader: loadCourseContentHtml,
+          translationPrefix: 'courseContent',
+          icon: Icons.menu_book_outlined,
+        );
 }
 
 class _HomeworkSummaryPageState extends State<HomeworkSummaryPage> {
@@ -43,7 +61,7 @@ class _HomeworkSummaryPageState extends State<HomeworkSummaryPage> {
   }
 
   Future<HomeworkSummaryDocument> _load() async {
-    final response = await loadHomeworkSummaryHtml();
+    final response = await widget.loader();
     if (response == null) throw const HomeworkSummaryLoadException();
     _lastFetched = DateTime.now();
     return HomeworkSummaryDocument.parse(response);
@@ -65,9 +83,9 @@ class _HomeworkSummaryPageState extends State<HomeworkSummaryPage> {
         title: Row(
           mainAxisSize: MainAxisSize.min,
           children: [
-            const Icon(Icons.assignment_outlined),
+            Icon(widget.icon),
             const SizedBox(width: 8),
-            Text(l10n.text('homeworkSummary.title')),
+            Text(l10n.text('${widget.translationPrefix}.title')),
           ],
         ),
       ),
@@ -81,6 +99,7 @@ class _HomeworkSummaryPageState extends State<HomeworkSummaryPage> {
             body = const NoInternet();
           } else if (snapshot.hasError) {
             body = _HomeworkSummaryError(
+              translationPrefix: widget.translationPrefix,
               error: snapshot.error.toString(),
               onRetry: _refresh,
             );
@@ -88,6 +107,7 @@ class _HomeworkSummaryPageState extends State<HomeworkSummaryPage> {
             body = const Center(child: CircularProgressIndicator());
           } else {
             body = _HomeworkSummaryContent(
+              translationPrefix: widget.translationPrefix,
               document: snapshot.data!,
               lastFetched: _lastFetched,
               onRefresh: _refresh,
@@ -114,11 +134,13 @@ class HomeworkSummaryLoadException implements Exception {
 
 class _HomeworkSummaryContent extends StatelessWidget {
   const _HomeworkSummaryContent({
+    required this.translationPrefix,
     required this.document,
     required this.lastFetched,
     required this.onRefresh,
   });
 
+  final String translationPrefix;
   final HomeworkSummaryDocument document;
   final DateTime? lastFetched;
   final Future<void> Function() onRefresh;
@@ -141,15 +163,20 @@ class _HomeworkSummaryContent extends StatelessWidget {
             padding: const EdgeInsets.fromLTRB(16, 16, 16, 120),
             children: [
               _HomeworkSummaryHeader(
+                translationPrefix: translationPrefix,
                 title: document.title,
                 totalEntries: totalEntries,
                 lastFetched: lastFetched,
               ),
               if (!hasEntries)
                 _EmptyHomeworkSummary(
-                  message: l10n.text('homeworkSummary.empty'),
+                  message: l10n.text('$translationPrefix.empty'),
                 ),
-              for (final week in document.weeks) _HomeworkWeekCard(week: week),
+              for (final week in document.weeks)
+                _HomeworkWeekCard(
+                  translationPrefix: translationPrefix,
+                  week: week,
+                ),
             ],
           ),
         ),
@@ -160,11 +187,13 @@ class _HomeworkSummaryContent extends StatelessWidget {
 
 class _HomeworkSummaryHeader extends StatelessWidget {
   const _HomeworkSummaryHeader({
+    required this.translationPrefix,
     required this.title,
     required this.totalEntries,
     required this.lastFetched,
   });
 
+  final String translationPrefix;
   final String title;
   final int totalEntries;
   final DateTime? lastFetched;
@@ -196,7 +225,7 @@ class _HomeworkSummaryHeader extends StatelessWidget {
                   children: [
                     Text(
                       title.isEmpty
-                          ? l10n.text('homeworkSummary.title')
+                          ? l10n.text('$translationPrefix.title')
                           : title,
                       style: theme.textTheme.headlineSmall,
                     ),
@@ -204,7 +233,7 @@ class _HomeworkSummaryHeader extends StatelessWidget {
                       const SizedBox(height: 4),
                       Text(
                         l10n.text(
-                          'homeworkSummary.lastFetched',
+                          '$translationPrefix.lastFetched',
                           args: {
                             'time': DateFormat.Hm(
                               l10n.locale.toLanguageTag(),
@@ -231,8 +260,8 @@ class _HomeworkSummaryHeader extends StatelessWidget {
                   child: Text(
                     l10n.text(
                       totalEntries == 1
-                          ? 'homeworkSummary.entryCount.one'
-                          : 'homeworkSummary.entryCount.other',
+                          ? '$translationPrefix.entryCount.one'
+                          : '$translationPrefix.entryCount.other',
                       args: {'count': totalEntries.toString()},
                     ),
                     style: theme.textTheme.labelLarge?.copyWith(
@@ -250,8 +279,12 @@ class _HomeworkSummaryHeader extends StatelessWidget {
 }
 
 class _HomeworkWeekCard extends StatelessWidget {
-  const _HomeworkWeekCard({required this.week});
+  const _HomeworkWeekCard({
+    required this.translationPrefix,
+    required this.week,
+  });
 
+  final String translationPrefix;
   final HomeworkSummaryWeek week;
 
   @override
@@ -285,8 +318,8 @@ class _HomeworkWeekCard extends StatelessWidget {
                 Text(
                   l10n.text(
                     week.entries.length == 1
-                        ? 'homeworkSummary.entryCount.one'
-                        : 'homeworkSummary.entryCount.other',
+                        ? '$translationPrefix.entryCount.one'
+                        : '$translationPrefix.entryCount.other',
                     args: {'count': week.entries.length.toString()},
                   ),
                   style: theme.textTheme.labelMedium?.copyWith(
@@ -297,7 +330,7 @@ class _HomeworkWeekCard extends StatelessWidget {
             ),
             const SizedBox(height: 10),
             if (week.entries.isEmpty)
-              _EmptyWeekRow(text: l10n.text('homeworkSummary.emptyWeek'))
+              _EmptyWeekRow(text: l10n.text('$translationPrefix.emptyWeek'))
             else
               for (var index = 0; index < week.entries.length; index++) ...[
                 if (index > 0)
@@ -482,10 +515,12 @@ class _ExtraCellsRow extends StatelessWidget {
 
 class _HomeworkSummaryError extends StatelessWidget {
   const _HomeworkSummaryError({
+    required this.translationPrefix,
     required this.error,
     required this.onRetry,
   });
 
+  final String translationPrefix;
   final String error;
   final Future<void> Function() onRetry;
 
@@ -505,7 +540,7 @@ class _HomeworkSummaryError extends StatelessWidget {
             ),
             const SizedBox(height: 16),
             Text(
-              l10n.text('homeworkSummary.loadFailed'),
+              l10n.text('$translationPrefix.loadFailed'),
               textAlign: TextAlign.center,
               style: Theme.of(context).textTheme.titleMedium,
             ),
@@ -515,7 +550,7 @@ class _HomeworkSummaryError extends StatelessWidget {
             FilledButton.icon(
               onPressed: onRetry,
               icon: const Icon(Icons.refresh),
-              label: Text(l10n.text('homeworkSummary.retry')),
+              label: Text(l10n.text('$translationPrefix.retry')),
             ),
           ],
         ),

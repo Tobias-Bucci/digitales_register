@@ -191,6 +191,19 @@ Future<String?> loadHomeworkSummaryHtml() async {
   return response?.toString();
 }
 
+Future<String?> loadCourseContentHtml() async {
+  if (wrapper.noInternet) {
+    return null;
+  }
+  // The official frontend sends a Unix timestamp in milliseconds here.
+  final timestamp = DateTime.now().millisecondsSinceEpoch;
+  final response = await wrapper.send(
+    'courseContent/viewer?course=0&_=$timestamp',
+    method: 'GET',
+  );
+  return response?.toString();
+}
+
 List<Middleware<AppState, AppStateBuilder, AppActions>> middleware({
   @visibleForTesting bool includeErrorMiddleware = true,
 }) =>

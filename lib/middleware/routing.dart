@@ -24,6 +24,7 @@ enum Pages {
   absences,
   calendar,
   homeworkSummary,
+  courseContent,
   certificate,
   messages,
   settings,

@@ -40,6 +40,7 @@ class Sidebar extends StatelessWidget {
     required this.showAbsences,
     required this.showCalendar,
     required this.showHomeworkSummary,
+    required this.showCourseContent,
     required this.showCertificate,
     required this.showMessages,
     required this.showProfile,
@@ -57,6 +58,7 @@ class Sidebar extends StatelessWidget {
       showAbsences,
       showCalendar,
       showHomeworkSummary,
+      showCourseContent,
       showCertificate,
       showMessages,
       showProfile,
@@ -182,6 +184,12 @@ class Sidebar extends StatelessWidget {
           icon: Icons.assignment_outlined,
           isSelected: currentSelected == Pages.homeworkSummary,
           onPressed: showHomeworkSummary,
+        ),
+        CollapsibleItem(
+          text: l10n.text('sidebar.courseContent'),
+          icon: Icons.menu_book_outlined,
+          isSelected: currentSelected == Pages.courseContent,
+          onPressed: showCourseContent,
         ),
         CollapsibleItem(
           text: l10n.text('sidebar.certificate'),
