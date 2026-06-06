@@ -17,7 +17,6 @@
 
 import 'package:dr/i18n/app_localizations.dart';
 import 'package:flutter/material.dart';
-import 'package:in_app_update/in_app_update.dart';
 
 class DebugPageContainer extends StatelessWidget {
   const DebugPageContainer({super.key});
@@ -41,10 +40,9 @@ class DebugPageWidget extends StatelessWidget {
           ElevatedButton(
             onPressed: () async {
               final l10n = AppLocalizations.of(context);
-              final messenger = ScaffoldMessenger.of(context);
 
               // Simuliere das Popup
-              final bool? shouldUpdate = await showDialog<bool>(
+              await showDialog<void>(
                 context: context,
                 builder: (context) => AlertDialog(
                   title: Text(l10n.text('update.title')),
@@ -61,30 +59,8 @@ class DebugPageWidget extends StatelessWidget {
                   ],
                 ),
               );
-
-              // Führe danach den nativen Request zum Testen durch,
-              // unabhängig davon, ob es auf UpdateNotAvailable steht
-              if (shouldUpdate == true) {
-                try {
-                  final info = await InAppUpdate.checkForUpdate();
-                  messenger.showSnackBar(
-                    SnackBar(content: Text('Status: ${info.updateAvailability}')),
-                  );
-                  if (info.updateAvailability == UpdateAvailability.updateAvailable) {
-                    await InAppUpdate.performImmediateUpdate();
-                  } else {
-                    messenger.showSnackBar(
-                      const SnackBar(content: Text('Nativer PlayStore Update-Check ergab: Kein Update verfügbar.')),
-                    );
-                  }
-                } catch (e) {
-                  messenger.showSnackBar(
-                    SnackBar(content: Text('Nativer Error: $e')),
-                  );
-                }
-              }
             },
-            child: const Text("Update Popup erzwingen / triggern"),
+            child: const Text("Update Popup simulieren"),
           ),
         ],
       ),

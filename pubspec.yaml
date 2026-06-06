@@ -50,7 +50,6 @@ dependencies:
   hive: ^2.0.0
   html: ^0.15.6
   http: ^1.2.2
-  in_app_update: ^4.2.5
   intl: ^0.20.2
   mocktail: ^0.3.0
   mutex: ^3.0.0

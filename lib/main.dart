@@ -47,11 +47,9 @@ import 'package:dr/theme_controller.dart';
 import 'package:dr/ui/grade_calculator.dart';
 import 'package:dr/ui/grades_chart_page.dart';
 import 'package:dr/util.dart';
-import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_built_redux/flutter_built_redux.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
-import 'package:in_app_update/in_app_update.dart';
 import 'package:package_info_plus/package_info_plus.dart';
 import 'package:responsive_scaffold/responsive_scaffold.dart';
 import 'package:uni_links/uni_links.dart';
@@ -107,8 +105,6 @@ Future<void> _initializeAfterFirstFrame({
   required Store<AppState, AppStateBuilder, AppActions> store,
   required Stopwatch startupStopwatch,
 }) async {
-  final BuildContext? navContext = navigatorKey?.currentContext;
-
   unawaited(_restoreUserPreferences(store));
   unawaited(AnalyticsService.initLich());
   unawaited(_loadThemeController());
@@ -129,9 +125,6 @@ Future<void> _initializeAfterFirstFrame({
   }
 
   await store.actions.start(uri);
-  if (navContext != null) {
-    await _checkForUpdate();
-  }
 
   WidgetsBinding.instance.addObserver(
     LifecycleObserver(
@@ -359,7 +352,6 @@ class LifecycleObserver with WidgetsBindingObserver {
     await biometricAppLockController.authenticateIfNeeded();
     await AnalyticsService.logCustomEvent("app_opened");
     onForeground();
-    await _checkForUpdate();
   }
 }
 
@@ -480,48 +472,3 @@ ThemeData _getDarkTheme(MaterialColor primarySwatch) {
   );
 }
 */
-
-bool _isUpdateDialogOpen = false;
-
-Future<void> _checkForUpdate() async {
-  if (kIsWeb) return;
-  if (defaultTargetPlatform != TargetPlatform.android) return;
-  if (_isUpdateDialogOpen) return;
-
-  // Capture a stable context from the global navigator before awaiting.
-  final BuildContext? safeContext = navigatorKey?.currentContext;
-  if (safeContext == null) return;
-
-  try {
-    final l10n = AppLocalizations.of(safeContext);
-    final info = await InAppUpdate.checkForUpdate();
-    if (info.updateAvailability == UpdateAvailability.updateAvailable) {
-      _isUpdateDialogOpen = true;
-      final bool? shouldUpdate = await showDialog<bool>(
-        context: safeContext,
-        builder: (context) => AlertDialog(
-          title: Text(l10n.text('update.title')),
-          content: Text(l10n.text('update.content')),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.pop(context, false),
-              child: Text(l10n.text('update.later')),
-            ),
-            ElevatedButton(
-              onPressed: () => Navigator.pop(context, true),
-              child: Text(l10n.text('update.now')),
-            ),
-          ],
-        ),
-      );
-      _isUpdateDialogOpen = false;
-
-      if (shouldUpdate == true) {
-        await InAppUpdate.performImmediateUpdate();
-      }
-    }
-  } catch (e) {
-    _isUpdateDialogOpen = false;
-    debugPrint("Update-Check fehlgeschlagen: $e");
-  }
-}
