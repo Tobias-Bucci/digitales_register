@@ -26,6 +26,7 @@ import 'package:tuple/tuple.dart';
 class AppSelectors {
   final _dashboardDaysSelector = _DashboardDaysSelector();
   final _allSubjectsAverageSelector = _AllSubjectsAverageSelector();
+  final _certificateAverageSelector = _CertificateAverageSelector();
   final _hasGradesDataSelector = _HasGradesDataSelector();
   final _chartSelector = _GradesChartSelector();
   final _absenceStatsSelector = _AbsenceStatsSelector();
@@ -35,6 +36,9 @@ class AppSelectors {
 
   String allSubjectsAverage(AppState state) =>
       _allSubjectsAverageSelector.select(state);
+
+  String certificateAverage(AppState state) =>
+      _certificateAverageSelector.select(state);
 
   bool hasGradesData(AppState state) => _hasGradesDataSelector.select(state);
 
@@ -225,6 +229,43 @@ class _AllSubjectsAverageSelector {
 
     final result =
         count == 0 ? "/" : gradeAverageFormat.format(sum / count / 100);
+    _subjects = state.gradesState.subjects;
+    _ignoredSubjects = state.settingsState.ignoreForGradesAverage;
+    _semester = state.gradesState.semester;
+    _lastResult = result;
+    return result;
+  }
+}
+
+class _CertificateAverageSelector {
+  BuiltList<Subject>? _subjects;
+  BuiltList<String>? _ignoredSubjects;
+  Semester? _semester;
+  String? _lastResult;
+
+  String select(AppState state) {
+    if (identical(state.gradesState.subjects, _subjects) &&
+        identical(
+            state.settingsState.ignoreForGradesAverage, _ignoredSubjects) &&
+        identical(state.gradesState.semester, _semester) &&
+        _lastResult != null) {
+      return _lastResult!;
+    }
+
+    var sum = 0;
+    var count = 0;
+    for (final subject in state.gradesState.subjects) {
+      final average = subject.average(state.gradesState.semester);
+      if (average != null &&
+          !state.settingsState.ignoreForGradesAverage.any(
+            (element) => element.toLowerCase() == subject.name.toLowerCase(),
+          )) {
+        sum += (average + 50) ~/ 100;
+        count++;
+      }
+    }
+
+    final result = count == 0 ? "/" : gradeAverageFormat.format(sum / count);
     _subjects = state.gradesState.subjects;
     _ignoredSubjects = state.settingsState.ignoreForGradesAverage;
     _semester = state.gradesState.semester;

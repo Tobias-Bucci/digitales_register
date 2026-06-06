@@ -332,6 +332,81 @@ void main() {
     expect(appSelectors.allSubjectsAverage(state), '6,00');
   });
 
+  test('certificateAverage rounds every subject before averaging', () {
+    final state = AppState(
+      (b) {
+        b.gradesState
+          ..semester = Semester.first.toBuilder()
+          ..subjects = ListBuilder<Subject>(<Subject>[
+            Subject(
+              (b) => b
+                ..name = 'Deutsch'
+                ..gradesAll = MapBuilder<Semester, BuiltList<GradeAll>>(
+                  <Semester, BuiltList<GradeAll>>{
+                    Semester.first: BuiltList<GradeAll>(<GradeAll>[
+                      GradeAll(
+                        (b) => b
+                          ..grade = 749
+                          ..weightPercentage = 100
+                          ..date = UtcDateTime(2026, 3, 28)
+                          ..cancelled = false
+                          ..type = 'Schularbeit',
+                      ),
+                    ]),
+                  },
+                )
+                ..grades = MapBuilder<Semester, BuiltList<GradeDetail>>()
+                ..observations = MapBuilder<Semester, BuiltList<Observation>>(),
+            ),
+            Subject(
+              (b) => b
+                ..name = 'Mathematik'
+                ..gradesAll = MapBuilder<Semester, BuiltList<GradeAll>>(
+                  <Semester, BuiltList<GradeAll>>{
+                    Semester.first: BuiltList<GradeAll>(<GradeAll>[
+                      GradeAll(
+                        (b) => b
+                          ..grade = 750
+                          ..weightPercentage = 100
+                          ..date = UtcDateTime(2026, 3, 28)
+                          ..cancelled = false
+                          ..type = 'Test',
+                      ),
+                    ]),
+                  },
+                )
+                ..grades = MapBuilder<Semester, BuiltList<GradeDetail>>()
+                ..observations = MapBuilder<Semester, BuiltList<Observation>>(),
+            ),
+            Subject(
+              (b) => b
+                ..name = 'Sport'
+                ..gradesAll = MapBuilder<Semester, BuiltList<GradeAll>>(
+                  <Semester, BuiltList<GradeAll>>{
+                    Semester.first: BuiltList<GradeAll>(<GradeAll>[
+                      GradeAll(
+                        (b) => b
+                          ..grade = 950
+                          ..weightPercentage = 100
+                          ..date = UtcDateTime(2026, 3, 28)
+                          ..cancelled = false
+                          ..type = 'Praktisch',
+                      ),
+                    ]),
+                  },
+                )
+                ..grades = MapBuilder<Semester, BuiltList<GradeDetail>>()
+                ..observations = MapBuilder<Semester, BuiltList<Observation>>(),
+            ),
+          ]);
+        b.settingsState.ignoreForGradesAverage =
+            ListBuilder<String>(<String>['sport']);
+      },
+    );
+
+    expect(appSelectors.certificateAverage(state), '7,50');
+  });
+
   test('hasGradesData respects the selected semester', () {
     final state = AppState(
       (b) => b.gradesState

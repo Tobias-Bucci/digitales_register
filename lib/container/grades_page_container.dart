@@ -55,6 +55,7 @@ abstract class GradesPageViewModel
   Semester get showSemester;
 
   String get allSubjectsAverage;
+  String get certificateAverage;
   String? get lastFetchedMessage;
   bool get loading;
   bool get showGradesDiagram;
@@ -77,6 +78,7 @@ abstract class GradesPageViewModel
         ..showSemester = state.gradesState.semester.toBuilder()
         ..loading = state.gradesState.loading
         ..allSubjectsAverage = appSelectors.allSubjectsAverage(state)
+        ..certificateAverage = appSelectors.certificateAverage(state)
         ..hasData = appSelectors.hasGradesData(state)
         ..noInternet = state.noInternet
         ..showGradesDiagram = state.settingsState.showGradesDiagram
