@@ -62,12 +62,6 @@ class SidebarContainer extends StatelessWidget {
               Pages.homeworkSummary,
             );
           },
-          showCourseContent: () {
-            scaffoldKey!.currentState!.selectContentWidget(
-              const CourseContentPage(),
-              Pages.courseContent,
-            );
-          },
           showCertificate: actions.routingActions.showCertificate.call,
           showGrades: actions.routingActions.showGrades.call,
           showMessages: actions.routingActions.showMessages.call,

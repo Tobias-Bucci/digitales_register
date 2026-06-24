@@ -109,47 +109,9 @@ class _GradesPageState extends State<GradesPage> {
       builder: (dialogContext) => AlertDialog(
         title: Text(l10n.text('grades.certificateAverage')),
         content: Text(l10n.text('grades.certificateAverageInfo')),
-        actionsAlignment: MainAxisAlignment.spaceBetween,
         actions: [
-          TextButton(
-            onPressed: () {
-              Navigator.of(dialogContext).pop();
-              _showMaturaCreditsTable(context);
-            },
-            child: Text(l10n.text('grades.maturaCredits')),
-          ),
           TextButton(
             onPressed: () => Navigator.of(dialogContext).pop(),
-            child: Text(l10n.text('common.close')),
-          ),
-        ],
-      ),
-    );
-  }
-
-  void _showMaturaCreditsTable(BuildContext context) {
-    final l10n = context.l10n;
-    showDialog<void>(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: Text(l10n.text('grades.maturaCredits')),
-        content: SingleChildScrollView(
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(l10n.text('grades.maturaCreditsInfo')),
-              const SizedBox(height: 16),
-              SingleChildScrollView(
-                scrollDirection: Axis.horizontal,
-                child: _MaturaCreditsTable(localizations: l10n),
-              ),
-            ],
-          ),
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.of(context).pop(),
             child: Text(l10n.text('common.close')),
           ),
         ],
@@ -290,54 +252,6 @@ class _AverageRow extends StatelessWidget {
           ],
         ),
       ),
-    );
-  }
-}
-
-class _MaturaCreditsTable extends StatelessWidget {
-  final AppLocalizations localizations;
-
-  const _MaturaCreditsTable({required this.localizations});
-
-  @override
-  Widget build(BuildContext context) {
-    final textTheme = Theme.of(context).textTheme;
-    final rows = <List<String>>[
-      [
-        localizations.text('grades.maturaCredits.average'),
-        localizations.text('grades.maturaCredits.thirdClass'),
-        localizations.text('grades.maturaCredits.fourthClass'),
-        localizations.text('grades.maturaCredits.fifthClass'),
-      ],
-      ['M < 6', '-', '-', '7-8'],
-      ['6', '7-8', '8-9', '9-10'],
-      ['6 < M <= 7', '8-9', '9-10', '10-11'],
-      ['7 < M <= 8', '9-10', '10-11', '11-12'],
-      ['8 < M <= 9', '10-11', '11-12', '13-14'],
-      ['9 < M <= 10', '11-12', '12-13', '14-15'],
-    ];
-
-    return Table(
-      border: TableBorder.all(color: Theme.of(context).dividerColor),
-      defaultColumnWidth: const FixedColumnWidth(132),
-      children: [
-        for (final row in rows)
-          TableRow(
-            children: [
-              for (final cell in row)
-                Padding(
-                  padding: const EdgeInsets.all(8),
-                  child: Text(
-                    cell,
-                    style: row == rows.first
-                        ? textTheme.bodyMedium
-                            ?.copyWith(fontWeight: FontWeight.w700)
-                        : textTheme.bodyMedium,
-                  ),
-                ),
-            ],
-          ),
-      ],
     );
   }
 }

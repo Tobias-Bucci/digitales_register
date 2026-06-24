@@ -41,15 +41,6 @@ class HomeworkSummaryPage extends StatefulWidget {
   State<HomeworkSummaryPage> createState() => _HomeworkSummaryPageState();
 }
 
-class CourseContentPage extends HomeworkSummaryPage {
-  const CourseContentPage({super.key})
-      : super(
-          loader: loadCourseContentHtml,
-          translationPrefix: 'courseContent',
-          icon: Icons.menu_book_outlined,
-        );
-}
-
 class _HomeworkSummaryPageState extends State<HomeworkSummaryPage> {
   late Future<HomeworkSummaryDocument> _future;
   DateTime? _lastFetched;
