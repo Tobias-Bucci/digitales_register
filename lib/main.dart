@@ -233,6 +233,7 @@ class RegisterApp extends StatelessWidget {
               scaffoldMessengerKey: scaffoldMessengerKey,
               initialRoute: "/",
               onGenerateRoute: (RouteSettings settings) {
+                unawaited(AnalyticsService.logScreenView(settings.name ?? '/'));
                 final List<String> pathElements = settings.name!.split("/");
                 if (pathElements[0] != "") return null;
                 switch (pathElements[1]) {

@@ -60,18 +60,6 @@ class MainActivity: FlutterFragmentActivity() {
                 else -> result.notImplemented()
             }
         }
-        MethodChannel(
-            flutterEngine.dartExecutor.binaryMessenger,
-            "dr/consent",
-        ).setMethodCallHandler { call, result ->
-            when (call.method) {
-                "getIABTCFPurposeConsents" -> {
-                    val prefs = getSharedPreferences(packageName + "_preferences", Context.MODE_PRIVATE)
-                    result.success(prefs.getString("IABTCF_PurposeConsents", ""))
-                }
-                else -> result.notImplemented()
-            }
-        }
         widgetMethodChannel = MethodChannel(
             flutterEngine.dartExecutor.binaryMessenger,
             DigitalesRegisterWidgetContract.METHOD_CHANNEL,

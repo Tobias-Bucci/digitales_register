@@ -38,6 +38,7 @@ import 'package:dr/actions/profile_actions.dart';
 import 'package:dr/actions/routing_actions.dart';
 import 'package:dr/actions/save_pass_actions.dart';
 import 'package:dr/actions/settings_actions.dart';
+import 'package:dr/analytics_service.dart';
 import 'package:dr/android_widget_service.dart';
 import 'package:dr/app_language_controller.dart';
 import 'package:dr/app_state.dart';
@@ -418,6 +419,7 @@ Future<void> _load(
   }
 
   await _checkShowUnmaintainedAlert();
+  await _checkShowPrivacyConsentAlert();
 
   final user = getString(login["user"]);
   final pass = getString(login["pass"]);
@@ -996,4 +998,13 @@ Future<void> _checkShowUnmaintainedAlert() async {
   );
 
   await file.create(recursive: true);
+}
+
+Future<void> _checkShowPrivacyConsentAlert() async {
+  final context = navigatorKey?.currentContext;
+  if (context == null || !context.mounted) {
+    return;
+  }
+
+  await AnalyticsService.showPrivacyConsentDialog(context);
 }

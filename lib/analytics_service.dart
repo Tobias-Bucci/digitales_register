@@ -17,25 +17,35 @@
 
 import 'dart:async';
 
+import 'package:dr/i18n/app_localizations.dart';
 import 'package:firebase_analytics/firebase_analytics.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:firebase_crashlytics/firebase_crashlytics.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
-import 'package:google_mobile_ads/google_mobile_ads.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+
+enum PrivacyConsentChoice {
+  necessaryOnly,
+  all,
+}
 
 // ignore: avoid_classes_with_only_static_members
 class AnalyticsService {
-  static const String _consentGivenKey = 'consent_given';
+  static const String _consentChoiceKey = 'privacy_consent_choice_v2';
+  static const String _legacyConsentGivenKey = 'consent_given';
+  static const int _consentVersion = 2;
+
   static Future<void>? _initializationFuture;
   static bool _initialized = false;
   static bool _firebaseHandlersInstalled = false;
+  static PrivacyConsentChoice? _choice;
 
-  // 1. Consent anfordern und Firebase bei Zustimmung erlauben
+  static bool get statisticsEnabled => _choice == PrivacyConsentChoice.all;
+  static bool get hasCurrentConsent => _choice != null;
+
   static Future<void> initLich() async {
     if (_initialized) {
-      debugPrint("AnalyticsService ist bereits initialisiert.");
       return;
     }
 
@@ -53,138 +63,67 @@ class AnalyticsService {
     final prefs = await SharedPreferences.getInstance();
     await prefs.reload();
 
-    final consentGiven = prefs.getBool(_consentGivenKey);
-
-    // Wenn bereits eine Entscheidung gespeichert wurde, direkt anwenden
-    if (consentGiven != null) {
-      if (consentGiven) {
-        await _enableFirebaseAndAds();
-      } else {
-        await _disableFirebase();
-        _initialized = true;
-      }
-      return;
+    _choice = _readChoice(prefs.getString(_consentChoiceKey));
+    if (_choice == null && prefs.containsKey(_legacyConsentGivenKey)) {
+      await prefs.remove(_legacyConsentGivenKey);
     }
 
-    // Keine Entscheidung vorhanden -> Consent-Flow starten
-    final params = kDebugMode
-        ? ConsentRequestParameters(
-            consentDebugSettings: ConsentDebugSettings(
-              debugGeography: DebugGeography.debugGeographyEea,
-              testIdentifiers: ['0A8EF9EBB8F18901025D2A96EE8EAB47'],
-            ),
-          )
-        : ConsentRequestParameters();
+    await _ensureFirebaseInitialized();
+    if (_choice == PrivacyConsentChoice.all) {
+      await _enableFirebaseCollection();
+    } else {
+      await _disableFirebaseCollection();
+    }
+    _initialized = true;
+  }
 
-    final completer = Completer<void>();
-    try {
-      ConsentInformation.instance.requestConsentInfoUpdate(
-        params,
-        () {
-          unawaited(
-            _handleConsentInfoUpdate().whenComplete(() {
-              if (!completer.isCompleted) {
-                completer.complete();
-              }
-            }),
-          );
-        },
-        (FormError error) {
-          debugPrint("❌ Consent Info Update Fehler: ${error.message}");
-          unawaited(_persistConsentDecision(false));
-          if (!completer.isCompleted) {
-            completer.complete();
-          }
-        },
-      );
-      await completer.future;
-    } catch (e) {
-      debugPrint("❌ Fehler bei Consent-Anfrage: $e");
-      if (!completer.isCompleted) {
-        completer.complete();
-      }
+  static PrivacyConsentChoice? _readChoice(String? raw) {
+    if (raw == 'v${_consentVersion}_all') {
+      return PrivacyConsentChoice.all;
+    }
+    if (raw == 'v${_consentVersion}_necessary_only') {
+      return PrivacyConsentChoice.necessaryOnly;
+    }
+    return null;
+  }
+
+  static String _writeChoice(PrivacyConsentChoice choice) {
+    switch (choice) {
+      case PrivacyConsentChoice.all:
+        return 'v${_consentVersion}_all';
+      case PrivacyConsentChoice.necessaryOnly:
+        return 'v${_consentVersion}_necessary_only';
     }
   }
 
-  static Future<void> _handleConsentInfoUpdate() async {
-    try {
-      final isAvailable =
-          await ConsentInformation.instance.isConsentFormAvailable();
-      if (isAvailable) {
-        await _loadAndShowConsentForm();
-      } else {
-        // Kein Formular verfügbar -> Tracking deaktivieren und Initialisierung abschließen
-        await _persistConsentDecision(false);
-      }
-    } catch (e) {
-      debugPrint("❌ Fehler beim Handling Consent Info: $e");
-      await _persistConsentDecision(false);
+  static Future<void> applyConsentChoice(PrivacyConsentChoice choice) async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setString(_consentChoiceKey, _writeChoice(choice));
+    await prefs.remove(_legacyConsentGivenKey);
+    _choice = choice;
+
+    await _ensureFirebaseInitialized();
+    if (choice == PrivacyConsentChoice.all) {
+      await _enableFirebaseCollection();
+      await logCustomEvent('privacy_consent_updated', <String, Object>{
+        'statistics_enabled': true,
+      });
+    } else {
+      await _disableFirebaseCollection();
     }
+    _initialized = true;
   }
 
-  static Future<void> _loadAndShowConsentForm() async {
-    try {
-      final completer = Completer<void>();
-      ConsentForm.loadConsentForm(
-        (ConsentForm consentForm) {
-          consentForm.show((FormError? formError) async {
-            if (formError != null) {
-              debugPrint("⚠️ Formular Fehler: ${formError.message}");
-            }
-            final consentGiven =
-                await ConsentInformation.instance.canRequestAds();
-            await _persistConsentDecision(consentGiven);
-            if (!completer.isCompleted) {
-              completer.complete();
-            }
-          });
-        },
-        (FormError error) {
-          debugPrint(
-              "⚠️ Fehler beim Laden des Consent-Formulars: ${error.message}");
-          unawaited(_persistConsentDecision(false));
-          if (!completer.isCompleted) {
-            completer.complete();
-          }
-        },
-      );
-      await completer.future;
-    } catch (e) {
-      debugPrint("❌ Exception bei Consent-Formular: $e");
-    }
-  }
-
-  static Future<void> _persistConsentDecision(bool consentGiven) async {
-    try {
-      final prefs = await SharedPreferences.getInstance();
-      await prefs.setBool(_consentGivenKey, consentGiven);
-
-      if (consentGiven) {
-        await _enableFirebaseAndAds();
-      } else {
-        await _disableFirebase();
-        _initialized = true;
-      }
-    } catch (e) {
-      debugPrint("❌ Fehler beim Speichern des Consent-Status: $e");
-    }
-  }
-
-  static Future<void> _enableFirebaseAndAds() async {
-    try {
-      await _ensureFirebaseInitialized();
-      await FirebaseAnalytics.instance.setAnalyticsCollectionEnabled(true);
-      await FirebaseCrashlytics.instance.setCrashlyticsCollectionEnabled(true);
-      await MobileAds.instance.initialize();
-      _installCrashReportingOnce();
-
-      debugPrint(
-          "✅ Firebase Analytics & Crashlytics erfolgreich DSGVO-konform aktiviert!");
-      _initialized = true;
-    } catch (e) {
-      debugPrint("❌ Fehler bei Firebase Aktivierung: $e");
-      _initialized = false;
-    }
+  static Future<void> _enableFirebaseCollection() async {
+    await FirebaseAnalytics.instance.setConsent(
+      analyticsStorageConsentGranted: true,
+      adStorageConsentGranted: false,
+      adUserDataConsentGranted: false,
+      adPersonalizationSignalsConsentGranted: false,
+    );
+    await FirebaseAnalytics.instance.setAnalyticsCollectionEnabled(true);
+    await FirebaseCrashlytics.instance.setCrashlyticsCollectionEnabled(true);
+    _installCrashReportingOnce();
   }
 
   static Future<void> _ensureFirebaseInitialized() async {
@@ -208,55 +147,239 @@ class AnalyticsService {
     _firebaseHandlersInstalled = true;
   }
 
-  static Future<void> _disableFirebase() async {
+  static Future<void> _disableFirebaseCollection() async {
     if (Firebase.apps.isEmpty) {
       return;
     }
 
+    await FirebaseAnalytics.instance.setConsent(
+      analyticsStorageConsentGranted: false,
+      adStorageConsentGranted: false,
+      adUserDataConsentGranted: false,
+      adPersonalizationSignalsConsentGranted: false,
+    );
     await FirebaseAnalytics.instance.resetAnalyticsData();
     await FirebaseCrashlytics.instance.deleteUnsentReports();
     await FirebaseAnalytics.instance.setAnalyticsCollectionEnabled(false);
     await FirebaseCrashlytics.instance.setCrashlyticsCollectionEnabled(false);
   }
 
-  static Future<void> logCustomEvent(String name,
-      [Map<String, Object>? parameters]) async {
-    if (!_initialized) {
-      return; // Verhindert fehlerhafte Loggings vor dem Consent-Check
-    }
-    if (Firebase.apps.isEmpty) {
-      return; // Verhindert Absturz, falls Consent abgelehnt wurde
+  static Future<void> logCustomEvent(
+    String name, [
+    Map<String, Object>? parameters,
+  ]) async {
+    await initLich();
+    if (!statisticsEnabled || Firebase.apps.isEmpty) {
+      return;
     }
 
     try {
       await FirebaseAnalytics.instance
           .logEvent(name: name, parameters: parameters);
     } catch (e) {
-      debugPrint("❌ Fehler beim Logging von Event '$name': $e");
+      debugPrint("Fehler beim Logging von Event '$name': $e");
+    }
+  }
+
+  static Future<void> logScreenView(String screenName) async {
+    await initLich();
+    if (!statisticsEnabled || Firebase.apps.isEmpty) {
+      return;
+    }
+
+    try {
+      await FirebaseAnalytics.instance.logScreenView(screenName: screenName);
+    } catch (e) {
+      debugPrint("Fehler beim Logging von Screen '$screenName': $e");
     }
   }
 
   static Future<void> showPrivacyOptionsForm(BuildContext context) async {
-    try {
-      await resetConsent();
-      await initLich();
-    } catch (e) {
-      debugPrint("❌ Fehler bei showPrivacyOptionsForm: $e");
-    }
+    await showPrivacyConsentDialog(context, force: true);
   }
 
-  static Future<void> resetConsent() async {
-    try {
-      await ConsentInformation.instance.reset();
-      final prefs = await SharedPreferences.getInstance();
-      await prefs.reload();
-      await prefs.remove(_consentGivenKey);
-      _initialized = false;
-      _initializationFuture = null;
-      await _disableFirebase();
-      debugPrint("✅ Consent wurde zurückgesetzt.");
-    } catch (e) {
-      debugPrint("❌ Fehler beim Zurücksetzen des Consent: $e");
+  static Future<void> showPrivacyConsentDialog(
+    BuildContext context, {
+    bool force = false,
+  }) async {
+    await initLich();
+    if (!force && hasCurrentConsent) {
+      return;
     }
+    if (!context.mounted) {
+      return;
+    }
+
+    final choice = await showDialog<PrivacyConsentChoice>(
+      context: context,
+      barrierDismissible: false,
+      builder: (context) => const _PrivacyConsentDialog(),
+    );
+    if (choice == null) {
+      return;
+    }
+    await applyConsentChoice(choice);
+  }
+}
+
+class _PrivacyConsentDialog extends StatelessWidget {
+  const _PrivacyConsentDialog();
+
+  @override
+  Widget build(BuildContext context) {
+    final l10n = context.l10n;
+    final theme = Theme.of(context);
+    final size = MediaQuery.sizeOf(context);
+    return AlertDialog(
+      insetPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 24),
+      titlePadding: const EdgeInsets.fromLTRB(24, 24, 24, 8),
+      contentPadding: const EdgeInsets.fromLTRB(24, 8, 24, 12),
+      actionsPadding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
+      title: Text(l10n.text('privacyConsent.title')),
+      content: ConstrainedBox(
+        constraints: BoxConstraints(
+          maxWidth: 560,
+          maxHeight: size.height * 0.62,
+        ),
+        child: SingleChildScrollView(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              Text(
+                l10n.text('privacyConsent.body'),
+                style: theme.textTheme.bodyLarge?.copyWith(height: 1.35),
+              ),
+              const SizedBox(height: 16),
+              _ConsentInfoTile(
+                icon: Icons.lock_outline,
+                title: l10n.text('privacyConsent.necessary.title'),
+                body: l10n.text('privacyConsent.necessary.body'),
+                details: l10n.text('privacyConsent.necessary.details'),
+                alwaysActive: true,
+              ),
+              const SizedBox(height: 10),
+              _ConsentInfoTile(
+                icon: Icons.analytics_outlined,
+                title: l10n.text('privacyConsent.statistics.title'),
+                body: l10n.text('privacyConsent.statistics.body'),
+                details: l10n.text('privacyConsent.statistics.details'),
+                alwaysActive: false,
+              ),
+              const SizedBox(height: 12),
+              Text(
+                l10n.text('privacyConsent.note'),
+                style: Theme.of(context).textTheme.bodySmall,
+              ),
+            ],
+          ),
+        ),
+      ),
+      actions: [
+        TextButton(
+          onPressed: () =>
+              Navigator.of(context).pop(PrivacyConsentChoice.necessaryOnly),
+          child: Text(l10n.text('privacyConsent.necessaryOnly')),
+        ),
+        FilledButton(
+          onPressed: () =>
+              Navigator.of(context).pop(PrivacyConsentChoice.all),
+          child: Text(l10n.text('privacyConsent.acceptAll')),
+        ),
+      ],
+    );
+  }
+}
+
+class _ConsentInfoTile extends StatelessWidget {
+  const _ConsentInfoTile({
+    required this.icon,
+    required this.title,
+    required this.body,
+    required this.details,
+    required this.alwaysActive,
+  });
+
+  final IconData icon;
+  final String title;
+  final String body;
+  final String details;
+  final bool alwaysActive;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final colorScheme = theme.colorScheme;
+    final statusLabel = alwaysActive
+        ? context.l10n.text('privacyConsent.alwaysActive')
+        : context.l10n.text('privacyConsent.optional');
+    return DecoratedBox(
+      decoration: BoxDecoration(
+        border: Border.all(color: colorScheme.outlineVariant),
+        borderRadius: BorderRadius.circular(8),
+      ),
+      child: Padding(
+        padding: const EdgeInsets.all(12),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Icon(icon, color: colorScheme.primary),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Text(
+                    title,
+                    style: theme.textTheme.titleSmall?.copyWith(
+                      fontWeight: FontWeight.w700,
+                      height: 1.25,
+                    ),
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 10),
+            Align(
+              alignment: Alignment.centerLeft,
+              child: DecoratedBox(
+                decoration: BoxDecoration(
+                  color: alwaysActive
+                      ? colorScheme.surfaceContainerHighest
+                      : colorScheme.primaryContainer,
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                child: Padding(
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+                  child: Text(
+                    statusLabel,
+                    style: theme.textTheme.labelMedium?.copyWith(
+                      color: alwaysActive
+                          ? colorScheme.onSurfaceVariant
+                          : colorScheme.onPrimaryContainer,
+                      fontWeight: FontWeight.w700,
+                    ),
+                  ),
+                ),
+              ),
+            ),
+            const SizedBox(height: 10),
+            Text(
+              body,
+              style: theme.textTheme.bodyMedium?.copyWith(height: 1.35),
+            ),
+            const SizedBox(height: 8),
+            Text(
+              details,
+              style: theme.textTheme.bodySmall?.copyWith(
+                color: colorScheme.onSurfaceVariant,
+                height: 1.35,
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
   }
 }
