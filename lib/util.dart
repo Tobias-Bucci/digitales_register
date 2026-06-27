@@ -1,4 +1,4 @@
-﻿// Copyright (C) 2021 Michael Debertol
+// Copyright (C) 2021 Michael Debertol
 // Copyright (C) 2026 Tobias Bucci
 //
 // This file is part of digitales_register.
@@ -311,6 +311,10 @@ String fixupUrl(String enteredUrl) {
     // add https:// if there is no uri scheme
     url = "https://$url";
   }
+  final parsed = Uri.parse(url);
+  if (parsed.scheme == 'http') {
+    url = parsed.replace(scheme: 'https').toString();
+  }
   const defaultUrlPath = "v2/login";
   if (url.endsWith(defaultUrlPath)) {
     // /v2/login is the default path the browser is redirected to when loading
@@ -321,10 +325,13 @@ String fixupUrl(String enteredUrl) {
 }
 
 Future<bool> cannotConnectTo(String url) async {
+  final uri = Uri.parse(url);
+  if (uri.scheme != 'https') {
+    return true;
+  }
   var noInternet = false;
   try {
-    final result =
-        await http.get(Uri.parse(url)).timeout(const Duration(seconds: 10));
+    final result = await http.get(uri).timeout(const Duration(seconds: 10));
     noInternet = result.statusCode != 200;
   } catch (e) {
     noInternet = true;

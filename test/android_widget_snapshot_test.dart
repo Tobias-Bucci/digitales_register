@@ -15,11 +15,8 @@
 // You should have received a copy of the GNU General Public License
 // along with digitales_register.  If not, see <http://www.gnu.org/licenses/>.
 
-import 'package:built_collection/built_collection.dart';
 import 'package:dr/android_widget_snapshot.dart';
 import 'package:dr/app_state.dart';
-import 'package:dr/data.dart';
-import 'package:dr/utc_date_time.dart';
 import 'package:dr/util.dart';
 import 'package:flutter_test/flutter_test.dart';
 
@@ -34,65 +31,23 @@ void main() {
     mockNow = null;
   });
 
-  test('builds ready snapshot with dashboard, grades and today data', () {
+  test('builds ready snapshot without sensitive widget data', () {
     final state = AppState(
       (b) => b
         ..loginState.loggedIn = true
         ..loginState.username = 'max'
-        ..url = 'https://school.example'
-        ..dashboardState.future = true
-        ..dashboardState.allDays = ListBuilder<Day>(<Day>[
-          buildDay(
-            date: fixtureNow,
-            homework: <Homework>[
-              buildHomework(
-                title: 'Arbeitsblatt',
-                subtitle: 'Seite 12',
-                label: 'Mathematik',
-                warning: true,
-              ),
-            ],
-          ),
-        ])
-        ..gradesState.semester = Semester.first.toBuilder()
-        ..gradesState.subjects = ListBuilder<Subject>(<Subject>[
-          buildSubject(
-            name: 'Mathematik',
-            gradesAll: <Semester, BuiltList<GradeAll>>{
-              Semester.first: BuiltList<GradeAll>(<GradeAll>[
-                buildGradeAll(
-                  date: UtcDateTime(2026, 3, 27),
-                  grade: 875,
-                ),
-              ]),
-            },
-          ),
-        ])
-        ..calendarState.days = MapBuilder<UtcDateTime, CalendarDay>({
-          UtcDateTime(2026, 3, 28): buildCalendarDay(
-            date: UtcDateTime(2026, 3, 28),
-            hours: <CalendarHour>[
-              buildCalendarHour(
-                subject: 'Mathematik',
-                toHour: 2,
-                rooms: const <String>['A101'],
-              ),
-            ],
-          ),
-        })
-        ..settingsState.subjectNicks = MapBuilder<String, String>(
-            {...defaultSubjectNicks, 'Mathematik': 'Mat'}),
+        ..url = 'https://school.example',
     );
 
     final snapshot = buildAndroidWidgetSnapshot(state);
 
     expect(snapshot.meta.status, AndroidWidgetSnapshotStatus.ready);
-    expect(snapshot.dashboard.items, hasLength(1));
-    expect(snapshot.dashboard.items.single.subject, 'Mat');
-    expect(snapshot.grades.overallAverage, '8,75');
-    expect(snapshot.grades.subjects.single.average, '8,75');
-    expect(snapshot.today.items.single.subject, 'Mat');
-    expect(snapshot.today.items.single.roomLabel, 'A101');
+    expect(snapshot.meta.username, isNull);
+    expect(snapshot.meta.server, isNull);
+    expect(snapshot.dashboard.items, isEmpty);
+    expect(snapshot.grades.overallAverage, isEmpty);
+    expect(snapshot.grades.subjects, isEmpty);
+    expect(snapshot.today.items, isEmpty);
   });
 
   test('marks snapshot as data saving disabled when noDataSaving is active',

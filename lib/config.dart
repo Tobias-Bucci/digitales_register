@@ -16,6 +16,7 @@
 // along with digitales_register.  If not, see <http://www.gnu.org/licenses/>.
 
 const Map<String, String> schools = {
+  "Landesberufsschule für das Gastgewerbe Savoy": "https://savoy.digitalesregister.it",
   "Kunstgymnasium und Landesberufsschule Cademia":
       "https://cademia.digitalesregister.it",
   "Cusanus Gymnasium Bruneck": "https://cusanus-gymnasium.digitalesregister.it",

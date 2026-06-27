@@ -15,11 +15,8 @@
 // You should have received a copy of the GNU General Public License
 // along with digitales_register.  If not, see <http://www.gnu.org/licenses/>.
 
-import 'package:dr/app_selectors.dart';
 import 'package:dr/app_state.dart';
-import 'package:dr/data.dart';
 import 'package:dr/utc_date_time.dart';
-import 'package:dr/util.dart';
 
 const int androidWidgetSnapshotSchemaVersion = 1;
 
@@ -229,10 +226,8 @@ AndroidWidgetSnapshot buildAndroidWidgetSnapshot(AppState state) {
   return AndroidWidgetSnapshot(
     meta: AndroidWidgetSnapshotMeta(
       status: status,
-      generatedAt: now,
+      generatedAt: UtcDateTime.now(),
       languageCode: state.settingsState.languageCode,
-      username: state.loginState.username,
-      server: state.url,
     ),
     dashboard: _buildDashboardSnapshot(state),
     grades: _buildGradesSnapshot(state),
@@ -254,108 +249,29 @@ AndroidWidgetSnapshotStatus _statusForState(AppState state) {
 }
 
 AndroidDashboardWidgetSnapshot _buildDashboardSnapshot(AppState state) {
-  final items = appSelectors
-      .dashboardDays(state)
-      .expand(
-        (day) => day.homework.map(
-          (homework) => AndroidDashboardWidgetItem(
-            subject: _subjectLabel(state, homework.label),
-            title: homework.title,
-            subtitle: homework.subtitle,
-            dayLabel: day.displayName,
-            trailing: homework.gradeFormatted,
-            warning: homework.warning,
-            done: homework.checked,
-          ),
-        ),
-      )
-      .take(5)
-      .toList(growable: false);
-
-  return AndroidDashboardWidgetSnapshot(
+  return const AndroidDashboardWidgetSnapshot(
     title: 'Dashboard',
-    subtitle: state.dashboardState.future
-        ? 'Kommende Eintraege'
-        : 'Vergangene Eintraege',
-    emptyMessage: 'Keine Dashboard-Eintraege vorhanden',
-    items: items,
+    subtitle: 'In der App oeffnen',
+    emptyMessage: 'Oeffne die App, um Eintraege anzuzeigen',
+    items: <AndroidDashboardWidgetItem>[],
   );
 }
 
 AndroidGradesWidgetSnapshot _buildGradesSnapshot(AppState state) {
-  final favoriteSubjects = state.settingsState.favoriteSubjects;
-  final semester = state.gradesState.semester;
-  final subjects = state.gradesState.subjects.toList()
-    ..sort(
-      (a, b) {
-        final aFavorite = containsSubjectIgnoreCase(favoriteSubjects, a.name);
-        final bFavorite = containsSubjectIgnoreCase(favoriteSubjects, b.name);
-        if (aFavorite != bFavorite) {
-          return aFavorite ? -1 : 1;
-        }
-        return a.name.toLowerCase().compareTo(b.name.toLowerCase());
-      },
-    );
-
-  final gradeItems = subjects
-      .where((subject) => subject.average(semester) != null)
-      .map(
-        (subject) => AndroidGradesWidgetItem(
-          subject: _subjectLabel(state, subject.name),
-          average: subject.averageFormatted(semester),
-        ),
-      )
-      .toList(growable: false);
-
-  return AndroidGradesWidgetSnapshot(
+  return const AndroidGradesWidgetSnapshot(
     title: 'Noten',
-    subtitle: semester.name,
-    emptyMessage: 'Keine Notendaten vorhanden',
-    overallAverage: appSelectors.allSubjectsAverage(state),
-    subjects: gradeItems,
+    subtitle: 'In der App oeffnen',
+    emptyMessage: 'Oeffne die App, um Noten anzuzeigen',
+    overallAverage: '',
+    subjects: <AndroidGradesWidgetItem>[],
   );
 }
 
 AndroidTodayWidgetSnapshot _buildTodaySnapshot(AppState state) {
-  final todayDate = UtcDateTime(now.year, now.month, now.day);
-  CalendarDay? today;
-  for (final day in state.calendarState.days.values) {
-    if (day.date == todayDate) {
-      today = day;
-      break;
-    }
-  }
-
-  final items = (today?.hours.toList() ?? const <CalendarHour>[])
-      .map(
-        (hour) => AndroidTodayWidgetItem(
-          subject: _subjectLabel(state, hour.subject),
-          timeLabel:
-              '${hour.fromHour}.${hour.toHour == hour.fromHour ? '' : '-${hour.toHour}.'} Stunde',
-          roomLabel: hour.rooms.isEmpty ? 'Kein Raum' : hour.rooms.join(', '),
-          warning: hour.warning,
-        ),
-      )
-      .take(6)
-      .toList(growable: false);
-
-  return AndroidTodayWidgetSnapshot(
+  return const AndroidTodayWidgetSnapshot(
     title: 'Heute',
-    subtitle: Day.format(todayDate),
-    emptyMessage: 'Keine Stunden fuer heute gespeichert',
-    items: items,
+    subtitle: 'In der App oeffnen',
+    emptyMessage: 'Oeffne die App, um den Stundenplan anzuzeigen',
+    items: <AndroidTodayWidgetItem>[],
   );
-}
-
-String _subjectLabel(AppState state, String? subject) {
-  if (subject == null || subject.isEmpty) {
-    return 'Ohne Fach';
-  }
-  final resolvedKey =
-      findSubjectIgnoreCase(state.settingsState.subjectNicks.keys, subject);
-  final nick = state.settingsState.subjectNicks[subject] ??
-      (resolvedKey == null
-          ? null
-          : state.settingsState.subjectNicks[resolvedKey]);
-  return nick ?? subject;
 }

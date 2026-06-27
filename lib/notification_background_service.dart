@@ -24,6 +24,8 @@ import 'package:cookie_jar/cookie_jar.dart';
 import 'package:dio/dio.dart';
 import 'package:dio_cookie_manager/dio_cookie_manager.dart';
 import 'package:dr/desktop.dart';
+import 'package:dr/i18n/app_language.dart';
+import 'package:dr/i18n/app_localizations.dart';
 import 'package:dr/utc_date_time.dart';
 import 'package:dr/util.dart';
 import 'package:flutter/services.dart';
@@ -63,6 +65,13 @@ typedef NotificationCancelOverride = Future<void> Function(int id);
 typedef BackgroundTaskSyncOverride = Future<void> Function(
     {required bool enabled});
 typedef LocalNotificationsInitOverride = Future<void> Function();
+
+enum NotificationPrivacyKind {
+  generic,
+  message,
+  grade,
+  homework,
+}
 
 @pragma("vm:entry-point")
 void notificationBackgroundDispatcher() {
@@ -119,12 +128,14 @@ class NotificationReminderCandidate {
     required this.key,
     required this.title,
     required this.body,
+    this.kind = NotificationPrivacyKind.generic,
     this.dedupeId,
   });
 
   final String key;
   final String title;
   final String? body;
+  final NotificationPrivacyKind kind;
   final String? dedupeId;
 }
 
@@ -133,6 +144,7 @@ class NotificationReminderEntry {
     required this.key,
     required this.title,
     required this.body,
+    this.kind = NotificationPrivacyKind.generic,
     required this.firstSeenAt,
     required this.lastSeenAt,
     this.lastAlertedAt,
@@ -143,6 +155,7 @@ class NotificationReminderEntry {
       key: getString(json["key"]) ?? "",
       title: getString(json["title"]) ?? "",
       body: getString(json["body"]),
+      kind: _readPrivacyKind(getString(json["kind"])),
       firstSeenAt:
           UtcDateTime.tryParse(getString(json["firstSeenAt"]) ?? "") ?? now,
       lastSeenAt:
@@ -155,6 +168,7 @@ class NotificationReminderEntry {
   final String key;
   final String title;
   final String? body;
+  final NotificationPrivacyKind kind;
   final UtcDateTime firstSeenAt;
   final UtcDateTime lastSeenAt;
   final UtcDateTime? lastAlertedAt;
@@ -164,6 +178,7 @@ class NotificationReminderEntry {
       "key": key,
       "title": title,
       "body": body,
+      "kind": kind.name,
       "firstSeenAt": firstSeenAt.toIso8601String(),
       "lastSeenAt": lastSeenAt.toIso8601String(),
       "lastAlertedAt": lastAlertedAt?.toIso8601String(),
@@ -174,6 +189,7 @@ class NotificationReminderEntry {
     String? key,
     String? title,
     String? body,
+    NotificationPrivacyKind? kind,
     UtcDateTime? firstSeenAt,
     UtcDateTime? lastSeenAt,
     UtcDateTime? lastAlertedAt,
@@ -183,12 +199,20 @@ class NotificationReminderEntry {
       key: key ?? this.key,
       title: title ?? this.title,
       body: body ?? this.body,
+      kind: kind ?? this.kind,
       firstSeenAt: firstSeenAt ?? this.firstSeenAt,
       lastSeenAt: lastSeenAt ?? this.lastSeenAt,
       lastAlertedAt:
           clearLastAlertedAt ? null : (lastAlertedAt ?? this.lastAlertedAt),
     );
   }
+}
+
+NotificationPrivacyKind _readPrivacyKind(String? raw) {
+  return NotificationPrivacyKind.values.firstWhere(
+    (kind) => kind.name == raw,
+    orElse: () => NotificationPrivacyKind.generic,
+  );
 }
 
 class NotificationReminderEvaluation {
@@ -219,14 +243,16 @@ NotificationReminderEvaluation evaluateNotificationReminders({
     final updated = (existing ??
             NotificationReminderEntry(
               key: candidate.key,
-              title: candidate.title,
-              body: candidate.body,
+              title: candidate.kind.name,
+              body: '',
+              kind: candidate.kind,
               firstSeenAt: currentTime,
               lastSeenAt: currentTime,
             ))
         .copyWith(
-      title: candidate.title,
-      body: candidate.body,
+      title: candidate.kind.name,
+      body: '',
+      kind: candidate.kind,
       lastSeenAt: currentTime,
     );
 
@@ -426,7 +452,7 @@ class NotificationBackgroundService {
 
       try {
         await appendLog(
-          "[$trigger] Gefundene Kandidaten: ${dedupedUnread.length} - ${dedupedUnread.map((c) => '${c.key}|${c.title}|${c.body}').join('; ')}",
+          "[$trigger] Gefundene Kandidaten: ${dedupedUnread.length}",
         );
       } catch (_) {
         // Logging must not break polling.
@@ -681,7 +707,8 @@ class NotificationBackgroundService {
     for (final c in candidates) {
       String fallbackKey() {
         var t = c.title.trim();
-        t = t.replaceFirst(RegExp(r'^Nachricht von\s+', caseSensitive: false), '');
+        t = t.replaceFirst(
+            RegExp(r'^Nachricht von\s+', caseSensitive: false), '');
         t = t.toLowerCase();
         final b = (c.body ?? '').trim().toLowerCase();
         return "$t|$b";
@@ -695,7 +722,6 @@ class NotificationBackgroundService {
 
     return uniqueMap.values.toList(growable: false);
   }
-
 
   static NotificationReminderCandidate _toNotificationCandidate(
       Map<String, dynamic> n) {
@@ -714,11 +740,16 @@ class NotificationBackgroundService {
       key: key,
       title: title,
       body: subTitle,
-        dedupeId: type == 'message' && objectId != null
+      kind: _privacyKindForNotification(
+        type: type,
+        title: title,
+        body: subTitle,
+      ),
+      dedupeId: type == 'message' && objectId != null
           ? 'msg:$objectId'
           : (id != null
-            ? 'notif:$id'
-            : (objectId != null ? 'notif:$objectId' : null)),
+              ? 'notif:$id'
+              : (objectId != null ? 'notif:$objectId' : null)),
     );
   }
 
@@ -741,18 +772,49 @@ class NotificationBackgroundService {
       key: key,
       title: title,
       body: subject.isNotEmpty ? subject : text,
+      kind: NotificationPrivacyKind.message,
       dedupeId: id != null ? 'msg:$id' : null,
     );
+  }
+
+  static NotificationPrivacyKind _privacyKindForNotification({
+    required String type,
+    required String title,
+    required String? body,
+  }) {
+    final haystack = '$type $title ${body ?? ''}'.toLowerCase();
+    if (haystack.contains('message') ||
+        haystack.contains('mitteilung') ||
+        haystack.contains('nachricht') ||
+        haystack.contains('comunicazione') ||
+        haystack.contains('comunicaziun')) {
+      return NotificationPrivacyKind.message;
+    }
+    if (haystack.contains('grade') ||
+        haystack.contains('note') ||
+        haystack.contains('noten') ||
+        haystack.contains('voto') ||
+        haystack.contains('pro')) {
+      return NotificationPrivacyKind.grade;
+    }
+    if (haystack.contains('homework') ||
+        haystack.contains('hausaufgabe') ||
+        haystack.contains('compito') ||
+        haystack.contains('compit')) {
+      return NotificationPrivacyKind.homework;
+    }
+    return NotificationPrivacyKind.generic;
   }
 
   static Future<void> _showReminderNotification(
     NotificationReminderEntry entry,
   ) async {
+    final title = await _privateNotificationText(entry.kind);
     await _showNotification(
       NotificationDisplayRequest(
         id: _stableHash(entry.key) & 0x7fffffff,
-        title: entry.title,
-        body: entry.body,
+        title: title,
+        body: null,
         payload: entry.key,
       ),
     );
@@ -761,19 +823,31 @@ class NotificationBackgroundService {
   static Future<void> _showSummaryNotification(
     List<NotificationReminderEntry> dueEntries,
   ) async {
-    final count = dueEntries.length;
-    final previewTitles =
-        dueEntries.take(3).map((entry) => entry.title).toList(growable: false);
-    final body = previewTitles.join(", ");
+    final title = await _privateNotificationText(null);
     await _showNotification(
       NotificationDisplayRequest(
         id: _summaryNotificationId,
-        title: "$count ungelesene Benachrichtigungen",
-        body: body.isEmpty ? null : body,
+        title: title,
+        body: null,
         payload: "summary",
-        lines: dueEntries.map((entry) => entry.title).toList(growable: false),
       ),
     );
+  }
+
+  static Future<String> _privateNotificationText(
+    NotificationPrivacyKind? kind,
+  ) async {
+    final prefs = await SharedPreferences.getInstance();
+    final language = AppLanguage.fromCode(prefs.getString('appLanguage'));
+    final l10n = await AppLocalizations.load(language.locale);
+    final key = switch (kind) {
+      NotificationPrivacyKind.message => 'notifications.private.message',
+      NotificationPrivacyKind.grade => 'notifications.private.grade',
+      NotificationPrivacyKind.homework => 'notifications.private.homework',
+      NotificationPrivacyKind.generic => 'notifications.private.generic',
+      null => 'notifications.private.summary',
+    };
+    return l10n.text(key);
   }
 
   static Future<void> _showNotification(

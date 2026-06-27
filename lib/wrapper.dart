@@ -184,6 +184,13 @@ class Wrapper {
       assert(onAddProtocolItem != null);
     }
     this.url = url;
+    if ((this.url?.isNotEmpty ?? false) &&
+        Uri.parse(this.url!).scheme != 'https') {
+      _loggedIn = Future.value(false);
+      error =
+          "Es konnte keine sichere HTTPS-Verbindung hergestellt werden. Bitte pruefe die eingegebene Adresse.";
+      return null;
+    }
     final loggedInCompleter = Completer<bool>();
     _loggedIn = loggedInCompleter.future;
     Map response;
@@ -378,7 +385,13 @@ class Wrapper {
 
   Future<dynamic> changePass(
       String url, String user, String oldPass, String newPass) async {
-    this.url = url;
+    this.url = fixupUrl(url);
+    if (Uri.parse(this.url!).scheme != 'https') {
+      _loggedIn = Future.value(false);
+      error =
+          "Es konnte keine sichere HTTPS-Verbindung hergestellt werden. Bitte pruefe die eingegebene Adresse.";
+      return null;
+    }
     Map response;
     _clearCookies();
     try {

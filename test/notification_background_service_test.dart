@@ -113,10 +113,13 @@ void main() {
     await NotificationBackgroundService.pollAndNotify(trigger: 'initial');
 
     expect(shown, hasLength(1));
-    expect(shown.single.title, 'Mathe');
+    expect(shown.single.title, 'Neue Mitteilung erhalten');
+    expect(shown.single.body, isNull);
     final stored =
         await NotificationBackgroundService.getStoredReminderEntries();
     expect(stored, hasLength(1));
+    expect(stored.single.title, 'message');
+    expect(stored.single.body, isEmpty);
     expect(stored.single.lastAlertedAt, mockNow);
   });
 
@@ -144,7 +147,8 @@ void main() {
     await NotificationBackgroundService.pollAndNotify(trigger: 'second');
 
     expect(shown, hasLength(1));
-    expect(shown.single.title, 'Neu');
+    expect(shown.single.title, 'Neue Mitteilung erhalten');
+    expect(shown.single.body, isNull);
   });
 
   test('unread notifications do not re-alert before 10 minutes', () async {
@@ -185,7 +189,8 @@ void main() {
     await NotificationBackgroundService.pollAndNotify(trigger: 'second');
 
     expect(shown, hasLength(1));
-    expect(shown.single.title, 'Deutsch');
+    expect(shown.single.title, 'Neue Mitteilung erhalten');
+    expect(shown.single.body, isNull);
   });
 
   test('disappeared unread notifications are removed from tracking', () async {
@@ -229,7 +234,9 @@ void main() {
 
     expect(shown, hasLength(1));
     expect(shown.single.payload, 'summary');
-    expect(shown.single.title, '2 ungelesene Benachrichtigungen');
+    expect(shown.single.title, 'Neue Benachrichtigungen erhalten');
+    expect(shown.single.body, isNull);
+    expect(shown.single.lines, isEmpty);
   });
 
   test('duplicate message notifications collapse before counting', () {

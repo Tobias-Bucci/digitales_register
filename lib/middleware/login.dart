@@ -106,14 +106,24 @@ Future<void> _login(
   }
 
   final rawUrl = action.payload.url.trim();
-  final isDemoLogin =
-      action.payload.user == 'demo' &&
+  final isDemoLogin = action.payload.user == 'demo' &&
       action.payload.pass == 'demo' &&
       rawUrl.isEmpty;
 
   final isDebugLogin = action.payload.user == 'debug';
   final actualUser = isDebugLogin ? 'stbuctob' : action.payload.user;
   final url = isDemoLogin ? '' : fixupUrl(rawUrl);
+  if (!isDemoLogin && Uri.parse(url).scheme != 'https') {
+    final httpsRequired = await _loginText('login.httpsRequired');
+    await api.actions.loginActions.loginFailed(
+      LoginFailedPayload(
+        (b) => b
+          ..cause = httpsRequired
+          ..username = action.payload.user,
+      ),
+    );
+    return;
+  }
   await api.actions.loginActions.loggingIn();
 
   // We need to set the url earlier because other parts of the app will try to read it
@@ -128,9 +138,7 @@ Future<void> _login(
     await api.actions.loginActions.loggedIn(
       LoggedInPayload(
         (b) => b
-          ..username = action
-              .payload
-              .user // Keep displaying "debug"
+          ..username = action.payload.user // Keep displaying "debug"
           ..fromStorage = true
           ..offlineOnly = true
           ..keepShowingLoadingIndicator = true,
@@ -171,9 +179,8 @@ Future<void> _login(
 
     // We logged in with 'stbuctob', but if it was the debug login,
     // we want the app state to retain 'debug' as the username
-    final recordedUsername = action.payload.user == 'debug'
-        ? 'debug'
-        : wrapper.user;
+    final recordedUsername =
+        action.payload.user == 'debug' ? 'debug' : wrapper.user;
 
     await api.actions.loginActions.loggedIn(
       LoggedInPayload(
@@ -289,7 +296,8 @@ Future<void> _requestPassReset(
     final dynamic result = (await (passDio ?? dio.Dio()).post<dynamic>(
       "${api.state.url}/api/auth/resetPassword",
       data: {"email": action.payload.email, "username": action.payload.user},
-    )).data;
+    ))
+        .data;
     if (getMap(result)?["error"] != null) {
       await api.actions.loginActions.passResetFailed(
         "[${result["error"]}]: ${result["message"]}",
@@ -327,7 +335,8 @@ Future<void> _resetPass(
       "oldPassword": "",
       "newPassword": action.payload,
     },
-  )).data;
+  ))
+      .data;
   if (result["error"] != null) {
     await api.actions.loginActions.passResetFailed(
       "[${result["error"]}]: ${result["message"]}",
