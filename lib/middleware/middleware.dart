@@ -66,6 +66,7 @@ import 'package:file_picker/file_picker.dart';
 import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart' hide Action, Notification;
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
+import 'package:image/image.dart' as image;
 import 'package:intl/intl.dart';
 import 'package:mocktail/mocktail.dart';
 import 'package:mutex/mutex.dart';

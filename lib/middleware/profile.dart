@@ -181,14 +181,15 @@ Future<void> _pickAndUploadProfilePicture(
   if (selected == null) {
     return;
   }
+  final upload = _normalizeProfilePictureForUpload(selected);
 
   dynamic result;
   try {
     result = await wrapper.sendBytes(
       "api/profile/uploadProfilePicture",
-      bytes: selected.bytes,
-      contentType: selected.contentType,
-      fileName: selected.fileName,
+      bytes: upload.bytes,
+      contentType: upload.contentType,
+      fileName: upload.fileName,
     );
   } on UnexpectedLogoutException {
     _showProfileRequestFailedMessage(tr('profile.pictureUploadFailed'));
@@ -292,6 +293,43 @@ Future<SelectedProfilePicture?> _defaultPickProfilePicture() async {
     contentType: _guessImageMimeType(file.name),
     fileName: file.name,
   );
+}
+
+SelectedProfilePicture _normalizeProfilePictureForUpload(
+  SelectedProfilePicture selected,
+) {
+  if (!_isJpegProfilePicture(selected)) {
+    return selected;
+  }
+
+  final decoded = image.decodeJpg(Uint8List.fromList(selected.bytes));
+  if (decoded == null) {
+    return selected;
+  }
+
+  return SelectedProfilePicture(
+    bytes: image.encodeJpg(decoded, quality: 92),
+    contentType: 'image/jpeg',
+    fileName: selected.fileName,
+  );
+}
+
+bool _isJpegProfilePicture(SelectedProfilePicture selected) {
+  final contentType = selected.contentType.toLowerCase();
+  if (contentType == 'image/jpeg' || contentType == 'image/jpg') {
+    return true;
+  }
+
+  final fileName = selected.fileName.toLowerCase();
+  if (fileName.endsWith('.jpg') || fileName.endsWith('.jpeg')) {
+    return true;
+  }
+
+  final bytes = selected.bytes;
+  return bytes.length >= 3 &&
+      bytes[0] == 0xff &&
+      bytes[1] == 0xd8 &&
+      bytes[2] == 0xff;
 }
 
 String _guessImageMimeType(String fileName) {

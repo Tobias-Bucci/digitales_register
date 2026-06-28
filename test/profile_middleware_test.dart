@@ -1,8 +1,11 @@
+import 'dart:typed_data';
+
 import 'package:dr/app_state.dart';
 import 'package:dr/middleware/middleware.dart';
 import 'package:dr/wrapper.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:image/image.dart' as image;
 import 'package:mocktail/mocktail.dart';
 
 import 'support/test_harness.dart';
@@ -171,6 +174,78 @@ void main() {
         fileName: 'avatar.png',
       ),
     ).called(1);
+    verify(() => mockWrapper.send('api/profile/get')).called(1);
+  });
+
+  testWidgets('pickAndUploadProfilePicture bakes JPEG EXIF orientation',
+      (tester) async {
+    final sourceImage = image.Image(width: 2, height: 1)
+      ..setPixelRgb(0, 0, 255, 0, 0)
+      ..setPixelRgb(1, 0, 0, 0, 255);
+    sourceImage.exif.imageIfd.orientation = 6;
+    final sourceBytes = image.encodeJpg(sourceImage);
+
+    final previousPicker = pickProfilePicture;
+    pickProfilePicture = () async => SelectedProfilePicture(
+          bytes: sourceBytes,
+          contentType: 'image/jpeg',
+          fileName: 'avatar.jpg',
+        );
+    addTearDown(() {
+      pickProfilePicture = previousPicker;
+    });
+
+    when(
+      () => mockWrapper.sendBytes(
+        'api/profile/uploadProfilePicture',
+        bytes: any(named: 'bytes'),
+        contentType: 'image/jpeg',
+        fileName: 'avatar.jpg',
+      ),
+    ).thenAnswer(
+      (_) async => <String, Object?>{
+        'error': null,
+        'name': 'uploaded-picture',
+      },
+    );
+    when(() => mockWrapper.send('api/profile/get'))
+        .thenAnswer((_) async => <String, Object?>{
+              'name': 'Anna Rossi',
+              'email': 'anna@example.com',
+              'username': 'anna',
+              'roleName': 'Schüler/in',
+              'notificationsEnabled': false,
+              'picture': 'uploaded-picture',
+            });
+
+    final store = createStore(withMiddleware: true);
+
+    await pumpApp(
+      tester,
+      store: store,
+      home: const Scaffold(body: SizedBox()),
+    );
+    await tester.pump();
+
+    await expectLater(
+      store.actions.profileActions.pickAndUploadProfilePicture(),
+      completes,
+    );
+    await tester.pump();
+
+    final captured = verify(
+      () => mockWrapper.sendBytes(
+        'api/profile/uploadProfilePicture',
+        bytes: captureAny(named: 'bytes'),
+        contentType: 'image/jpeg',
+        fileName: 'avatar.jpg',
+      ),
+    ).captured.single as List<int>;
+    final uploadedImage = image.decodeJpg(Uint8List.fromList(captured))!;
+
+    expect(uploadedImage.width, 1);
+    expect(uploadedImage.height, 2);
+    expect(uploadedImage.exif.imageIfd.hasOrientation, isFalse);
     verify(() => mockWrapper.send('api/profile/get')).called(1);
   });
 }
