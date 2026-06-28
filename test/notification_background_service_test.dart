@@ -1,4 +1,4 @@
-﻿import 'dart:async';
+import 'dart:async';
 
 import 'package:dr/actions/login_actions.dart';
 import 'package:dr/app_state.dart';
@@ -259,6 +259,69 @@ void main() {
 
     expect(deduped, hasLength(1));
     expect(deduped.single.dedupeId, 'msg:100');
+  });
+
+  test('parses current user id from config page', () {
+    expect(
+      NotificationBackgroundService.parseCurrentUserIdForTest(
+        'var currentUserId=3539;var currentUserName="st-test";',
+      ),
+      3539,
+    );
+    expect(
+      NotificationBackgroundService.parseCurrentUserIdForTest(
+        'var currentUserName="st-test";',
+      ),
+      isNull,
+    );
+  });
+
+  test('detects self-sent messages by fromUserId', () {
+    expect(
+      NotificationBackgroundService.isSentByCurrentUserForTest(
+        <String, dynamic>{
+          'id': 12,
+          'fromUserId': 3539,
+          'timeRead': null,
+        },
+        currentUserId: 3539,
+      ),
+      isTrue,
+    );
+    expect(
+      NotificationBackgroundService.isSentByCurrentUserForTest(
+        <String, dynamic>{
+          'id': 13,
+          'fromUserId': 5547,
+          'timeRead': null,
+        },
+        currentUserId: 3539,
+      ),
+      isFalse,
+    );
+  });
+
+  test('filters notifications that refer to self-sent messages', () {
+    expect(
+      NotificationBackgroundService.isMessageNotificationForIdsForTest(
+        <String, dynamic>{
+          'type': 'message',
+          'objectId': 2684,
+        },
+        <int>{2684},
+      ),
+      isTrue,
+    );
+    expect(
+      NotificationBackgroundService.isMessageNotificationForIdsForTest(
+        <String, dynamic>{
+          'type': 'grade',
+          'objectId': 2684,
+        },
+        <int>{2684},
+      ),
+      isFalse,
+    );
   });
 
   test('overlapping poll invocations do not double-alert', () async {

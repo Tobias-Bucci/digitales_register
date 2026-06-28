@@ -647,30 +647,12 @@ class NotificationBackgroundService {
       return const <NotificationReminderCandidate>[];
     }
 
+    final currentUserId = await _fetchCurrentUserId(dio, baseUrl);
     final candidates = <NotificationReminderCandidate>[];
+    final sentUnreadMessageIds = <int>{};
 
-    // Fetch Notifications
-    try {
-      final unreadResponse =
-          await dio.post<dynamic>("$baseUrl/api/notification/unread");
-
-      if (unreadResponse.data is List) {
-        final unreadList = unreadResponse.data as List;
-        for (final dynamic entry in unreadList) {
-          final rawMap = getMap(entry);
-          if (rawMap != null) {
-            candidates
-                .add(_toNotificationCandidate(rawMap.cast<String, dynamic>()));
-          }
-        }
-      } else {
-        await appendLog("Unread-Endpoint lieferte keine Liste");
-      }
-    } catch (e) {
-      await appendLog("Fehler beim Abrufen der Mitteilungen: $e");
-    }
-
-    // Fetch Messages
+    // Fetch Messages first so notification entries for self-sent messages can
+    // be filtered out afterwards as well.
     try {
       final messagesResponse =
           await dio.post<dynamic>("$baseUrl/api/message/getMyMessages");
@@ -681,6 +663,13 @@ class NotificationBackgroundService {
           final rawMap = getMap(entry);
           if (rawMap != null) {
             if (rawMap["timeRead"] == null) {
+              final messageId = getInt(rawMap["id"]);
+              if (_isSentByCurrentUser(rawMap, currentUserId: currentUserId)) {
+                if (messageId != null) {
+                  sentUnreadMessageIds.add(messageId);
+                }
+                continue;
+              }
               candidates
                   .add(_toMessageCandidate(rawMap.cast<String, dynamic>()));
             }
@@ -693,10 +682,97 @@ class NotificationBackgroundService {
       await appendLog("Fehler beim Abrufen der Nachrichten: $e");
     }
 
+    // Fetch Notifications
+    try {
+      final unreadResponse =
+          await dio.post<dynamic>("$baseUrl/api/notification/unread");
+
+      if (unreadResponse.data is List) {
+        final unreadList = unreadResponse.data as List;
+        for (final dynamic entry in unreadList) {
+          final rawMap = getMap(entry);
+          if (rawMap != null) {
+            if (_isMessageNotificationForIds(rawMap, sentUnreadMessageIds)) {
+              continue;
+            }
+            candidates
+                .add(_toNotificationCandidate(rawMap.cast<String, dynamic>()));
+          }
+        }
+      } else {
+        await appendLog("Unread-Endpoint lieferte keine Liste");
+      }
+    } catch (e) {
+      await appendLog("Fehler beim Abrufen der Mitteilungen: $e");
+    }
+
     // Deduplicate candidates by title+body to avoid double-counting the
     // same underlying event when it appears both as a "notification"
     // and as a "message" from different endpoints.
     return dedupeCandidates(candidates);
+  }
+
+  static Future<int?> _fetchCurrentUserId(Dio dio, String baseUrl) async {
+    try {
+      final response = await dio.get<String>(baseUrl);
+      return _parseCurrentUserId(response.data);
+    } catch (e) {
+      await appendLog("CurrentUserId konnte nicht geladen werden: $e");
+      return null;
+    }
+  }
+
+  @visibleForTesting
+  static int? parseCurrentUserIdForTest(String? source) =>
+      _parseCurrentUserId(source);
+
+  static int? _parseCurrentUserId(String? source) {
+    if (source == null) {
+      return null;
+    }
+    final match = RegExp(r'\bcurrentUserId\s*=\s*(\d+)\s*;').firstMatch(source);
+    if (match == null) {
+      return null;
+    }
+    return int.tryParse(match.group(1)!);
+  }
+
+  @visibleForTesting
+  static bool isSentByCurrentUserForTest(
+    Map<String, dynamic> message, {
+    required int? currentUserId,
+  }) =>
+      _isSentByCurrentUser(message, currentUserId: currentUserId);
+
+  static bool _isSentByCurrentUser(
+    Map<dynamic, dynamic> message, {
+    required int? currentUserId,
+  }) {
+    final fromUserId = getInt(message["fromUserId"]);
+    return currentUserId != null &&
+        fromUserId != null &&
+        fromUserId == currentUserId;
+  }
+
+  @visibleForTesting
+  static bool isMessageNotificationForIdsForTest(
+    Map<String, dynamic> notification,
+    Set<int> messageIds,
+  ) =>
+      _isMessageNotificationForIds(notification, messageIds);
+
+  static bool _isMessageNotificationForIds(
+    Map<dynamic, dynamic> notification,
+    Set<int> messageIds,
+  ) {
+    if (messageIds.isEmpty) {
+      return false;
+    }
+    final type = getString(notification["type"]);
+    final objectId = getInt(notification["objectId"]);
+    return type == "message" &&
+        objectId != null &&
+        messageIds.contains(objectId);
   }
 
   @visibleForTesting
