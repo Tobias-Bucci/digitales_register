@@ -82,7 +82,7 @@ Future<void> _logout(
     _clearRuntimeCaches();
     await androidWidgetSnapshotService.clear();
     wrapper = Wrapper();
-    await api.actions.mountAppState(AppState());
+    await api.actions.mountAppState(_emptyAppStateKeepingSettings(api.state));
     await api.actions.load();
   }
 }
@@ -377,7 +377,7 @@ Future<void> _addAccount(
       }),
     );
   }
-  await api.actions.mountAppState(AppState());
+  await api.actions.mountAppState(_emptyAppStateKeepingSettings(api.state));
   await api.actions.load();
 }
 
@@ -404,8 +404,12 @@ Future<void> _selectAccount(
   login["pass"] = selected["pass"];
   login["url"] = selected["url"];
   await secureStorage.write(key: "login", value: json.encode(login));
-  await api.actions.mountAppState(AppState());
+  await api.actions.mountAppState(_emptyAppStateKeepingSettings(api.state));
   await api.actions.load();
+}
+
+AppState _emptyAppStateKeepingSettings(AppState state) {
+  return AppState((b) => b.settingsState.replace(state.settingsState));
 }
 
 void _showUserTypeNotSupported(String url) {

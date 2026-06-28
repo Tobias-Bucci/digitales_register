@@ -43,6 +43,7 @@ import 'package:dr/i18n/app_localizations.dart';
 import 'package:dr/middleware/middleware.dart';
 import 'package:dr/notification_background_service.dart';
 import 'package:dr/reducer/reducer.dart';
+import 'package:dr/settings_persistence_service.dart';
 import 'package:dr/theme_controller.dart';
 import 'package:dr/ui/grade_calculator.dart';
 import 'package:dr/ui/grades_chart_page.dart';
@@ -59,6 +60,7 @@ GlobalKey<NavigatorState> nestedNavKey = GlobalKey();
 GlobalKey<ResponsiveScaffoldState<Pages>>? scaffoldKey;
 GlobalKey<ScaffoldMessengerState>? scaffoldMessengerKey;
 StreamSubscription<Uri?>? _uriLinkSubscription;
+SettingsState _startupSettingsState = SettingsState();
 
 typedef SingleArgumentVoidCallback<T> = void Function(T arg);
 
@@ -75,11 +77,10 @@ Future<void> main() async {
   scaffoldKey = GlobalKey();
   scaffoldMessengerKey = GlobalKey();
   secureStorage = getFlutterSecureStorage();
+  await _loadStartupUserPreferences();
   final store = Store<AppState, AppStateBuilder, AppActions>(
     appReducerBuilder.build(),
-    AppState(
-      (b) => b.settingsState.languageCode = appLanguageController.language.code,
-    ),
+    AppState((b) => b.settingsState.replace(_startupSettingsState)),
     actions,
     middleware: middleware(),
   );
@@ -105,11 +106,10 @@ Future<void> _initializeAfterFirstFrame({
   required Store<AppState, AppStateBuilder, AppActions> store,
   required Stopwatch startupStopwatch,
 }) async {
-  unawaited(_restoreUserPreferences(store));
   unawaited(AnalyticsService.initLich());
-  unawaited(_loadThemeController());
   unawaited(_loadPackageInfo());
   unawaited(_initializeNotificationBackgroundService());
+  unawaited(_restoreUserPreferences(store));
 
   await AnalyticsService.logCustomEvent("app_first_frame", <String, Object>{
     "elapsedMs": startupStopwatch.elapsedMilliseconds,
@@ -138,16 +138,23 @@ Future<void> _initializeAfterFirstFrame({
 Future<void> _restoreUserPreferences(
   Store<AppState, AppStateBuilder, AppActions> store,
 ) async {
-  await appLanguageController.load(
-    fallbackLocale: WidgetsBinding.instance.platformDispatcher.locale,
-  );
   await store.actions.settingsActions.setLanguage(
     appLanguageController.language.code,
   );
   await appSubjectTranslationController.load();
 }
 
-Future<void> _loadThemeController() async {
+Future<void> _loadStartupUserPreferences() async {
+  await appLanguageController.load(
+    fallbackLocale: WidgetsBinding.instance.platformDispatcher.locale,
+  );
+  _startupSettingsState = await settingsPersistenceService.load() ??
+      SettingsState(
+        (b) => b.languageCode = appLanguageController.language.code,
+      );
+  await appLanguageController.setLanguage(
+    AppLanguage.fromCode(_startupSettingsState.languageCode),
+  );
   final stopwatch = Stopwatch()..start();
   await themeController.load();
   stopwatch.stop();

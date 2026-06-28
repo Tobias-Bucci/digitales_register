@@ -56,6 +56,7 @@ import 'package:dr/main.dart';
 import 'package:dr/notification_background_service.dart';
 import 'package:dr/platform_adapter.dart';
 import 'package:dr/serializers.dart';
+import 'package:dr/settings_persistence_service.dart';
 import 'package:dr/state_persistence_service.dart';
 import 'package:dr/ui/debug_page.dart';
 import 'package:dr/ui/dialog.dart';
@@ -496,18 +497,10 @@ Future<void> _loggedIn(
           json.decode(state) as Object,
         );
         if (serializedState is SettingsState) {
+          final currentSettings = api.state.settingsState;
           await api.actions.mountAppState(
             api.state.rebuild(
-              (b) => b
-                ..settingsState.replace(
-                  // Override the previous password saving setting with whatever the user chose this time.
-                  serializedState.rebuild(
-                    (b) => b.noPasswordSaving =
-                        api.state.settingsState.noPasswordSaving,
-                  ),
-                )
-                ..settingsState.languageCode =
-                    api.state.settingsState.languageCode,
+              (b) => b..settingsState.replace(currentSettings),
             ),
           );
         } else if (serializedState is AppState) {
@@ -524,11 +517,7 @@ Future<void> _loggedIn(
                           ? serializedState.gradesState.semester
                           : currentState.gradesState.semester,
                     )
-                // Override the previous password saving setting with whatever the user chose this time.
-                ..settingsState.noPasswordSaving =
-                    api.state.settingsState.noPasswordSaving
-                ..settingsState.languageCode =
-                    api.state.settingsState.languageCode,
+                ..settingsState.replace(currentState.settingsState),
             ),
           );
         }
@@ -585,7 +574,12 @@ NextActionHandler _saveStateMiddleware(
   MiddlewareApi<AppState, AppStateBuilder, AppActions> api,
 ) =>
     (ActionHandler next) => (Action action) async {
+          final previousSettings = api.state.settingsState;
           await next(action);
+          if (action.name != AppActionsNames.mountAppState.name &&
+              api.state.settingsState != previousSettings) {
+            await settingsPersistenceService.save(api.state.settingsState);
+          }
           if (api.state.loginState.loggedIn &&
               api.state.loginState.username != null) {
             final immediately = action.name == AppActionsNames.saveState.name ||

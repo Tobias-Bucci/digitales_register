@@ -6,11 +6,14 @@ import 'package:dr/actions/app_actions.dart';
 import 'package:dr/actions/login_actions.dart';
 import 'package:dr/app_state.dart';
 import 'package:dr/middleware/middleware.dart';
+import 'package:dr/notification_background_service.dart';
 import 'package:dr/reducer/reducer.dart';
 import 'package:dr/serializers.dart';
+import 'package:dr/settings_persistence_service.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:mocktail/mocktail.dart';
 import 'package:quiver/testing/src/async/fake_async.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 import 'support/test_harness.dart';
 
@@ -22,6 +25,12 @@ void main() {
     mockWrapper = MockWrapper();
     when(() => mockWrapper.loginAddress).thenReturn(testLoginAddress);
     await bootstrapTestEnvironment(wrapperOverride: mockWrapper);
+    NotificationBackgroundService.initializeLocalNotificationsOverride =
+        () async {};
+    NotificationBackgroundService.syncBackgroundTaskOverride =
+        ({required enabled}) async {};
+    NotificationBackgroundService.requestNotificationPermissionOverride =
+        () async => true;
     storage = secureStorage as TestSecureStorage;
   });
 
@@ -167,6 +176,75 @@ void main() {
     final decoded = json.decode(key) as Map<String, dynamic>;
 
     expect(decoded.keys.toList(), <String>['username', 'server_url']);
+  });
+
+  test('profile switch keeps global settings', () async {
+    final persistedState = AppState(
+      (b) => b.settingsState
+        ..languageCode = 'de'
+        ..amoledMode = false
+        ..noPasswordSaving = false
+        ..askWhenDelete = false,
+    );
+    await storage.write(
+      key: escapeKey(getStorageKey('anna', testLoginAddress)),
+      value: json.encode(serializers.serialize(persistedState)),
+    );
+
+    final store = _createLoggedInStore(
+      username: 'anna',
+      state: AppState(
+        (b) => b.settingsState
+          ..languageCode = 'it'
+          ..amoledMode = true
+          ..noPasswordSaving = true
+          ..askWhenDelete = true,
+      ),
+    );
+
+    await store.actions.loginActions.loggedIn(
+      LoggedInPayload(
+        (b) => b
+          ..username = 'anna'
+          ..fromStorage = true
+          ..offlineOnly = true,
+      ),
+    );
+
+    expect(store.state.settingsState.languageCode, 'it');
+    expect(store.state.settingsState.amoledMode, isTrue);
+    expect(store.state.settingsState.noPasswordSaving, isTrue);
+    expect(store.state.settingsState.askWhenDelete, isTrue);
+  });
+
+  test('settings changes persist globally outside account storage', () async {
+    final store = _createLoggedInStore(username: 'global-settings-user');
+
+    await store.actions.settingsActions.askWhenDeleteReminder(true);
+
+    final prefs = await SharedPreferences.getInstance();
+    final raw = prefs.getString(globalSettingsPreferenceKey);
+    expect(raw, isNotNull);
+
+    final deserialized =
+        serializers.deserialize(json.decode(raw!) as Object) as SettingsState?;
+    expect(deserialized?.askWhenDelete, isTrue);
+  });
+
+  test('state reset does not overwrite global settings with defaults',
+      () async {
+    final store = _createLoggedInStore(username: 'logout-settings-user');
+
+    await store.actions.settingsActions.askWhenDeleteReminder(true);
+
+    await store.actions.mountAppState(AppState());
+
+    final prefs = await SharedPreferences.getInstance();
+    final raw = prefs.getString(globalSettingsPreferenceKey);
+    final deserialized =
+        serializers.deserialize(json.decode(raw!) as Object) as SettingsState?;
+
+    expect(deserialized?.askWhenDelete, isTrue);
   });
 }
 
