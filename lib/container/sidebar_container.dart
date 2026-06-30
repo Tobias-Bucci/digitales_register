@@ -24,6 +24,7 @@ import 'package:dr/app_state.dart';
 import 'package:dr/main.dart';
 import 'package:dr/middleware/middleware.dart';
 import 'package:dr/profile_picture.dart';
+import 'package:dr/ui/class_register_page.dart';
 import 'package:dr/ui/homework_summary_page.dart';
 import 'package:dr/ui/sidebar.dart';
 import 'package:flutter/material.dart' hide Builder;
@@ -56,6 +57,12 @@ class SidebarContainer extends StatelessWidget {
           username: state.username,
           showAbsences: actions.routingActions.showAbsences.call,
           showCalendar: actions.routingActions.showCalendar.call,
+          showClassRegister: () {
+            scaffoldKey!.currentState!.selectContentWidget(
+              ClassRegisterPage(key: UniqueKey()),
+              Pages.classRegister,
+            );
+          },
           showHomeworkSummary: () {
             scaffoldKey!.currentState!.selectContentWidget(
               const HomeworkSummaryPage(),

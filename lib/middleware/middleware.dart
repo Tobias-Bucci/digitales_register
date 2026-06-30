@@ -43,6 +43,7 @@ import 'package:dr/android_widget_service.dart';
 import 'package:dr/app_language_controller.dart';
 import 'package:dr/app_state.dart';
 import 'package:dr/calendar_sync_service.dart';
+import 'package:dr/class_register_cache.dart';
 import 'package:dr/container/absences_page_container.dart';
 import 'package:dr/container/calendar_container.dart';
 import 'package:dr/container/certificate_container.dart';
@@ -192,6 +193,54 @@ Future<String?> loadHomeworkSummaryHtml() async {
     method: 'GET',
   );
   return response?.toString();
+}
+
+Future<List<Map<String, dynamic>>?> loadClassRegisterLessonPayload() async {
+  final snapshot = await refreshClassRegisterLessonPayload();
+  return snapshot?.payload;
+}
+
+Future<ClassRegisterPayloadSnapshot?> loadCachedClassRegisterLessonPayload() {
+  return classRegisterCacheService.load(_classRegisterCacheKey());
+}
+
+Future<ClassRegisterPayloadSnapshot?>
+    refreshClassRegisterLessonPayload() async {
+  if (wrapper.demoMode) {
+    final snapshot = ClassRegisterPayloadSnapshot.fromPayload(
+      const <Map<String, dynamic>>[],
+    );
+    await classRegisterCacheService.save(_classRegisterCacheKey(), snapshot);
+    return snapshot;
+  }
+  await wrapper.send(
+    'register/student?_=${DateTime.now().millisecondsSinceEpoch}',
+    method: 'GET',
+  );
+  final response = await wrapper.send('api/lesson/student');
+  final rawLessons = switch (response) {
+    final List<dynamic> list => list,
+    final Map<dynamic, dynamic> map when map['data'] is List =>
+      map['data'] as List,
+    final Map<dynamic, dynamic> map when map['lessons'] is List =>
+      map['lessons'] as List,
+    _ => null,
+  };
+  final payload = rawLessons
+      ?.map((item) => getMap(item))
+      .nonNulls
+      .map((item) => Map<String, dynamic>.from(item))
+      .toList();
+  if (payload == null) {
+    return null;
+  }
+  final snapshot = ClassRegisterPayloadSnapshot.fromPayload(payload);
+  await classRegisterCacheService.save(_classRegisterCacheKey(), snapshot);
+  return snapshot;
+}
+
+String _classRegisterCacheKey() {
+  return 'classRegisterLessons:${getStorageKey(wrapper.user, wrapper.loginAddress)}';
 }
 
 List<Middleware<AppState, AppStateBuilder, AppActions>> middleware({
