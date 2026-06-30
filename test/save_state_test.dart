@@ -179,12 +179,23 @@ void main() {
   });
 
   test('profile switch keeps global settings', () async {
+    await settingsPersistenceService.save(
+      SettingsState(
+        (b) => b
+          ..languageCode = 'it'
+          ..amoledMode = true
+          ..noPasswordSaving = true
+          ..askWhenDelete = true
+          ..biometricAppLockEnabled = true,
+      ),
+    );
     final persistedState = AppState(
       (b) => b.settingsState
         ..languageCode = 'de'
         ..amoledMode = false
         ..noPasswordSaving = false
-        ..askWhenDelete = false,
+        ..askWhenDelete = false
+        ..biometricAppLockEnabled = false,
     );
     await storage.write(
       key: escapeKey(getStorageKey('anna', testLoginAddress)),
@@ -215,6 +226,53 @@ void main() {
     expect(store.state.settingsState.amoledMode, isTrue);
     expect(store.state.settingsState.noPasswordSaving, isTrue);
     expect(store.state.settingsState.askWhenDelete, isTrue);
+    expect(store.state.settingsState.biometricAppLockEnabled, isTrue);
+  });
+
+  test('account settings migrate to global settings when none exist', () async {
+    final persistedState = AppState(
+      (b) => b.settingsState
+        ..languageCode = 'lld'
+        ..amoledMode = true
+        ..noPasswordSaving = true
+        ..askWhenDelete = true
+        ..biometricAppLockEnabled = true,
+    );
+    await storage.write(
+      key: escapeKey(getStorageKey('anna', testLoginAddress)),
+      value: json.encode(serializers.serialize(persistedState)),
+    );
+
+    final store = _createLoggedInStore(
+      username: 'anna',
+      state: AppState(
+        (b) => b.settingsState
+          ..languageCode = 'it'
+          ..amoledMode = false
+          ..noPasswordSaving = false
+          ..askWhenDelete = false
+          ..biometricAppLockEnabled = false,
+      ),
+    );
+
+    await store.actions.loginActions.loggedIn(
+      LoggedInPayload(
+        (b) => b
+          ..username = 'anna'
+          ..fromStorage = true
+          ..offlineOnly = true,
+      ),
+    );
+
+    expect(store.state.settingsState.languageCode, 'lld');
+    expect(store.state.settingsState.amoledMode, isTrue);
+    expect(store.state.settingsState.noPasswordSaving, isTrue);
+    expect(store.state.settingsState.askWhenDelete, isTrue);
+    expect(store.state.settingsState.biometricAppLockEnabled, isTrue);
+
+    final globalSettings = await settingsPersistenceService.load();
+    expect(globalSettings?.languageCode, 'lld');
+    expect(globalSettings?.biometricAppLockEnabled, isTrue);
   });
 
   test('settings changes persist globally outside account storage', () async {

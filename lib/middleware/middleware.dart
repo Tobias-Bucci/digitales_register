@@ -497,7 +497,9 @@ Future<void> _loggedIn(
           json.decode(state) as Object,
         );
         if (serializedState is SettingsState) {
-          final currentSettings = api.state.settingsState;
+          final currentSettings = await _settingsForAccountLoad(
+            legacySettings: serializedState,
+          );
           await api.actions.mountAppState(
             api.state.rebuild(
               (b) => b..settingsState.replace(currentSettings),
@@ -505,6 +507,9 @@ Future<void> _loggedIn(
           );
         } else if (serializedState is AppState) {
           final currentState = api.state;
+          final currentSettings = await _settingsForAccountLoad(
+            legacySettings: serializedState.settingsState,
+          );
           await api.actions.mountAppState(
             serializedState.rebuild(
               (b) => b
@@ -517,7 +522,7 @@ Future<void> _loggedIn(
                           ? serializedState.gradesState.semester
                           : currentState.gradesState.semester,
                     )
-                ..settingsState.replace(currentState.settingsState),
+                ..settingsState.replace(currentSettings),
             ),
           );
         }
@@ -563,6 +568,17 @@ Future<void> _loggedIn(
     ]);
     unawaited(_ensureSubstituteTeacherHistoryLoaded(api));
   }
+}
+
+Future<SettingsState> _settingsForAccountLoad({
+  required SettingsState legacySettings,
+}) async {
+  final globalSettings = await settingsPersistenceService.load();
+  if (globalSettings != null) {
+    return globalSettings;
+  }
+  await settingsPersistenceService.save(legacySettings);
+  return legacySettings;
 }
 
 // This is to avoid saving data in an action right after deleting data,
