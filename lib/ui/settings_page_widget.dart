@@ -120,6 +120,8 @@ class SettingsPageWidget extends StatefulWidget {
 }
 
 class _SettingsPageWidgetState extends State<SettingsPageWidget> {
+  static const String _playStorePackageId = 'it.bucci.digitalesregister';
+
   late bool _translateSubjectsEnabled;
   late Future<List<CalendarSyncCalendar>> _calendarSyncCalendarsFuture;
   bool _handledSubjectNicksIntent = false;
@@ -439,6 +441,23 @@ class _SettingsPageWidgetState extends State<SettingsPageWidget> {
         ),
       ),
     );
+  }
+
+  Future<void> _openPlayStoreReview() async {
+    final marketUri = Uri.parse(
+      'market://details?id=$_playStorePackageId&showAllReviews=true',
+    );
+    final webUri = Uri.https(
+      'play.google.com',
+      '/store/apps/details',
+      {'id': _playStorePackageId},
+    );
+
+    if (await canLaunchUrl(marketUri)) {
+      await launchUrl(marketUri, mode: LaunchMode.externalApplication);
+      return;
+    }
+    await launchUrl(webUri, mode: LaunchMode.externalApplication);
   }
 
   String _favoriteSubjectsSummary(AppLocalizations l10n) {
@@ -808,6 +827,13 @@ class _SettingsPageWidgetState extends State<SettingsPageWidget> {
             );
           },
         ),
+        if (isAndroidPlatform)
+          ListTile(
+            leading: const Icon(Icons.star_rate_outlined),
+            title: Text(l10n.text('settings.advanced.ratePlayStore')),
+            trailing: const Icon(Icons.open_in_new),
+            onTap: _openPlayStoreReview,
+          ),
         ListTile(
           leading: const Icon(Icons.code),
           trailing: const Icon(Icons.open_in_new),

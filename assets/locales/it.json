@@ -71,6 +71,7 @@
   "settings.advanced.iosMode.subtitle": "Imita l'aspetto di un'app iOS",
   "settings.advanced.networkProtocol": "Protocollo di rete",
   "settings.advanced.feedback": "Invia feedback",
+  "settings.advanced.ratePlayStore": "Valuta su Google Play Store",
   "settings.advanced.privacy": "Impostazioni Privacy",
   "settings.advanced.sourceFork": "Vai al codice sorgente (Fork)",
   "settings.advanced.sourceOriginal": "Vai al codice sorgente originale",
