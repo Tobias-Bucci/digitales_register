@@ -75,6 +75,12 @@ dependencies:
 
 dependency_overrides:
   file: ^6.1.4
+  firebase_analytics:
+    path: packages/firebase_analytics
+  package_info_plus:
+    path: packages/package_info_plus
+  workmanager_android:
+    path: packages/workmanager_android
 
 dev_dependencies:
   build_runner: ^2.4.13

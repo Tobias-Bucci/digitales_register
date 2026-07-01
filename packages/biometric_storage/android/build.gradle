@@ -1,19 +1,6 @@
 group 'design.codeux.biometric_storage'
 version '1.0-SNAPSHOT'
 
-buildscript {
-    ext.kotlin_version = '1.8.10'
-    repositories {
-        google()
-        mavenCentral()
-    }
-
-    dependencies {
-        classpath 'com.android.tools.build:gradle:8.1.0'
-        classpath "org.jetbrains.kotlin:kotlin-gradle-plugin:$kotlin_version"
-    }
-}
-
 rootProject.allprojects {
     repositories {
         google()
@@ -21,27 +8,21 @@ rootProject.allprojects {
     }
 }
 
-def isAgp9OrAbove = com.android.Version.ANDROID_GRADLE_PLUGIN_VERSION.tokenize('.')[0].toInteger() >= 9
-def builtInKotlin = (providers.gradleProperty('android.builtInKotlin').orNull ?: 'true').toBoolean()
-
 apply plugin: 'com.android.library'
-
-if (!isAgp9OrAbove || !builtInKotlin) {
-    apply plugin: 'kotlin-android'
-    apply plugin: 'kotlin-kapt'
-
-    kotlin {
-        jvmToolchain(17)
-    }
-}
 
 android {
     namespace "design.codeux.biometric_storage"
     compileSdk 37
 
     sourceSets {
-        main.java.srcDirs += 'src/main/kotlin'
+        main.kotlin.srcDirs += 'src/main/kotlin'
     }
+
+    compileOptions {
+        sourceCompatibility JavaVersion.VERSION_17
+        targetCompatibility JavaVersion.VERSION_17
+    }
+
     defaultConfig {
         minSdkVersion 23
         testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"

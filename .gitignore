@@ -25,6 +25,7 @@ packages/uni_links/**/**/.settings/
 **/doc/api/
 **/ios/Flutter/.last_build_id
 **/.gradle/
+**/.kotlin/
 .dart_tool/
 .flutter-plugins
 .flutter-plugins-dependencies
@@ -60,6 +61,10 @@ app.*.map.json
 
 # Private requests & answers
 **/lib/requests/
+
+# Vendored plugin examples are not needed by the app overrides.
+packages/firebase_analytics/example/
+packages/package_info_plus/example/
 
 # Android signing secrets
 android/key.properties

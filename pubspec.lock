@@ -342,10 +342,9 @@ packages:
   firebase_analytics:
     dependency: "direct main"
     description:
-      name: firebase_analytics
-      sha256: "1c46136d9226e7e070013582097d997248a34cf94856c7e95f4fdf346bf4a397"
-      url: "https://pub.dev"
-    source: hosted
+      path: "packages/firebase_analytics"
+      relative: true
+    source: path
     version: "12.4.3"
   firebase_analytics_platform_interface:
     dependency: transitive
@@ -832,10 +831,9 @@ packages:
   package_info_plus:
     dependency: "direct main"
     description:
-      name: package_info_plus
-      sha256: "468c26b4254ab01979fa5e4a98cb343ea3631b9acee6f21028997419a80e1a20"
-      url: "https://pub.dev"
-    source: hosted
+      path: "packages/package_info_plus"
+      relative: true
+    source: path
     version: "9.0.1"
   package_info_plus_platform_interface:
     dependency: transitive
@@ -1369,12 +1367,11 @@ packages:
     source: hosted
     version: "0.9.0+3"
   workmanager_android:
-    dependency: transitive
+    dependency: "direct overridden"
     description:
-      name: workmanager_android
-      sha256: "9ae744db4ef891f5fcd2fb8671fccc712f4f96489a487a1411e0c8675e5e8cb7"
-      url: "https://pub.dev"
-    source: hosted
+      path: "packages/workmanager_android"
+      relative: true
+    source: path
     version: "0.9.0+2"
   workmanager_apple:
     dependency: transitive

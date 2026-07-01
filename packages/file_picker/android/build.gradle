@@ -1,21 +1,6 @@
 group 'com.mr.flutter.plugin.filepicker'
 version '1.0-SNAPSHOT'
 
-buildscript {
-    ext {
-        kotlin_version = '1.8.22'
-    }
-    repositories {
-        google()
-        mavenCentral()
-    }
-
-    dependencies {
-        classpath 'com.android.tools.build:gradle:8.5.1'
-        classpath "org.jetbrains.kotlin:kotlin-gradle-plugin:$kotlin_version"
-    }
-}
-
 rootProject.allprojects {
     repositories {
         google()
@@ -23,13 +8,7 @@ rootProject.allprojects {
     }
 }
 
-def isAgp9OrAbove = com.android.Version.ANDROID_GRADLE_PLUGIN_VERSION.tokenize('.')[0].toInteger() >= 9
-def builtInKotlin = (providers.gradleProperty('android.builtInKotlin').orNull ?: 'true').toBoolean()
-
 apply plugin: 'com.android.library'
-if (!isAgp9OrAbove || !builtInKotlin) {
-    apply plugin: 'org.jetbrains.kotlin.android'
-}
 
 android {
     compileSdk flutter.compileSdkVersion
@@ -48,12 +27,6 @@ android {
         targetCompatibility JavaVersion.VERSION_17
     }
 
-    if (!isAgp9OrAbove || !builtInKotlin) {
-        kotlinOptions {
-            jvmTarget = JavaVersion.VERSION_17.toString()
-        }
-    }
-    
     dependencies {
         implementation 'androidx.core:core:1.15.0'
         implementation 'androidx.annotation:annotation:1.9.1'
@@ -65,6 +38,7 @@ android {
         namespace 'com.mr.flutter.plugin.filepicker' 
     }
 }
+
 dependencies {
     implementation 'androidx.core:core-ktx:1.15.0'
 }
