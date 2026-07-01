@@ -410,7 +410,7 @@ class NotificationBackgroundService {
     );
 
     await _notificationsPlugin.initialize(
-      initSettings,
+      settings: initSettings,
       onDidReceiveNotificationResponse: (response) {
         _handleNotificationTap(response.payload);
       },
@@ -963,10 +963,10 @@ class NotificationBackgroundService {
     );
 
     await _notificationsPlugin.show(
-      request.id,
-      request.title,
-      request.body,
-      details,
+      id: request.id,
+      title: request.title,
+      body: request.body,
+      notificationDetails: details,
       payload: request.payload,
     );
   }
@@ -989,7 +989,7 @@ class NotificationBackgroundService {
       return;
     }
 
-    await _notificationsPlugin.cancel(id);
+    await _notificationsPlugin.cancel(id: id);
   }
 
   static int _stableHash(String input) {

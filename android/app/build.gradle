@@ -35,7 +35,12 @@ def allowDebugSigningForRelease = (localProperties.getProperty('allowDebugSignin
 
 android {
     namespace "it.bucci.digitalesregister"
-    compileSdk 36
+    compileSdk 37
+    ndkVersion "28.2.13676358"
+
+    buildFeatures {
+        resValues true
+    }
 
     compileOptions {
         coreLibraryDesugaringEnabled true
@@ -54,7 +59,7 @@ android {
     defaultConfig {
         applicationId "it.bucci.digitalesregister"
         minSdkVersion flutter.minSdkVersion
-        targetSdk 36
+        targetSdk 37
         versionCode flutterVersionCode.toInteger()
         versionName flutterVersionName
     }

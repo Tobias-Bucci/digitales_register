@@ -747,7 +747,7 @@ class _AbsencesStatisticWidgetState extends State<AbsencesStatisticWidget> {
               return ClipRect(
                 child: SizeTransition(
                   sizeFactor: animation,
-                  axisAlignment: -1,
+                  alignment: Alignment.topCenter,
                   child: FadeTransition(
                     opacity: animation,
                     child: SlideTransition(

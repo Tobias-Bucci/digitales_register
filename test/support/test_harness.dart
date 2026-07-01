@@ -1,4 +1,4 @@
-﻿// Copyright (C) 2026 Tobias Bucci
+// Copyright (C) 2026 Tobias Bucci
 //
 // This file is part of digitales_register.
 //
@@ -43,7 +43,7 @@ import 'package:mocktail/mocktail.dart';
 import 'package:responsive_scaffold/responsive_scaffold.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
-class TestSecureStorage implements FlutterSecureStorage {
+class TestSecureStorage extends FlutterSecureStorage {
   TestSecureStorage({Map<String, String>? storage})
       : storage = Map<String, String>.from(storage ?? const <String, String>{});
 
@@ -51,11 +51,11 @@ class TestSecureStorage implements FlutterSecureStorage {
 
   @override
   Future<bool> containsKey({
-    String? key,
-    IOSOptions? iOptions,
+    required String key,
+    AppleOptions? iOptions,
     AndroidOptions? aOptions,
     LinuxOptions? lOptions,
-    MacOsOptions? mOptions,
+    AppleOptions? mOptions,
     WindowsOptions? wOptions,
     WebOptions? webOptions,
   }) async {
@@ -64,11 +64,11 @@ class TestSecureStorage implements FlutterSecureStorage {
 
   @override
   Future<void> delete({
-    String? key,
-    IOSOptions? iOptions,
+    required String key,
+    AppleOptions? iOptions,
     AndroidOptions? aOptions,
     LinuxOptions? lOptions,
-    MacOsOptions? mOptions,
+    AppleOptions? mOptions,
     WindowsOptions? wOptions,
     WebOptions? webOptions,
   }) async {
@@ -77,10 +77,10 @@ class TestSecureStorage implements FlutterSecureStorage {
 
   @override
   Future<void> deleteAll({
-    IOSOptions? iOptions,
+    AppleOptions? iOptions,
     AndroidOptions? aOptions,
     LinuxOptions? lOptions,
-    MacOsOptions? mOptions,
+    AppleOptions? mOptions,
     WindowsOptions? wOptions,
     WebOptions? webOptions,
   }) async {
@@ -89,11 +89,11 @@ class TestSecureStorage implements FlutterSecureStorage {
 
   @override
   Future<String?> read({
-    String? key,
-    IOSOptions? iOptions,
+    required String key,
+    AppleOptions? iOptions,
     AndroidOptions? aOptions,
     LinuxOptions? lOptions,
-    MacOsOptions? mOptions,
+    AppleOptions? mOptions,
     WindowsOptions? wOptions,
     WebOptions? webOptions,
   }) async {
@@ -102,10 +102,10 @@ class TestSecureStorage implements FlutterSecureStorage {
 
   @override
   Future<Map<String, String>> readAll({
-    IOSOptions? iOptions,
+    AppleOptions? iOptions,
     AndroidOptions? aOptions,
     LinuxOptions? lOptions,
-    MacOsOptions? mOptions,
+    AppleOptions? mOptions,
     WindowsOptions? wOptions,
     WebOptions? webOptions,
   }) async {
@@ -114,16 +114,16 @@ class TestSecureStorage implements FlutterSecureStorage {
 
   @override
   Future<void> write({
-    String? key,
-    String? value,
-    IOSOptions? iOptions,
+    required String key,
+    required String? value,
+    AppleOptions? iOptions,
     AndroidOptions? aOptions,
     LinuxOptions? lOptions,
-    MacOsOptions? mOptions,
+    AppleOptions? mOptions,
     WindowsOptions? wOptions,
     WebOptions? webOptions,
   }) async {
-    if (key == null || value == null) {
+    if (value == null) {
       return;
     }
     storage[key] = value;
@@ -139,7 +139,7 @@ class TestSecureStorage implements FlutterSecureStorage {
   LinuxOptions get lOptions => throw UnimplementedError();
 
   @override
-  MacOsOptions get mOptions => throw UnimplementedError();
+  AppleOptions get mOptions => throw UnimplementedError();
 
   @override
   WindowsOptions get wOptions => throw UnimplementedError();
@@ -261,7 +261,8 @@ Widget buildTestApp({
         GlobalWidgetsLocalizations.delegate,
       ],
       supportedLocales: AppLocalizations.supportedLocales,
-      locale: AppLanguage.fromCode(store.state.settingsState.languageCode).locale,
+      locale:
+          AppLanguage.fromCode(store.state.settingsState.languageCode).locale,
       onGenerateRoute: onGenerateRoute,
       themeMode: themeMode,
       theme: theme ?? ThemeData(colorSchemeSeed: defaultContrastColor),
@@ -286,15 +287,15 @@ Future<void> pumpApp(
 }) {
   return tester
       .pumpWidget(
-    buildTestApp(
-      store: store,
-      home: home,
-      theme: theme,
-      darkTheme: darkTheme,
-      themeMode: themeMode,
-      onGenerateRoute: onGenerateRoute,
-    ),
-  )
+        buildTestApp(
+          store: store,
+          home: home,
+          theme: theme,
+          darkTheme: darkTheme,
+          themeMode: themeMode,
+          onGenerateRoute: onGenerateRoute,
+        ),
+      )
       .then((_) => tester.pump());
 }
 

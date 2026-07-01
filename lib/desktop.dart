@@ -35,17 +35,13 @@ secure_storage.FlutterSecureStorage getFlutterSecureStorage() {
   if (isDesktop() && !Platform.isWindows) {
     return DesktopSecureStorage();
   } else {
-    return const secure_storage.FlutterSecureStorage(
-      aOptions: secure_storage.AndroidOptions(
-        encryptedSharedPreferences: true,
-      ),
-    );
+    return const secure_storage.FlutterSecureStorage();
   }
 }
 
 // Uses a different implementation to work on desktop. We cannot switch to
 // this impl for every platform because that would break backwards compatibility.
-class DesktopSecureStorage implements secure_storage.FlutterSecureStorage {
+class DesktopSecureStorage extends secure_storage.FlutterSecureStorage {
   Future<Box<String>> hiveBox = getEncryptedBox();
   DesktopSecureStorage();
   static Future<Box<String>> getEncryptedBox() async {
@@ -74,10 +70,10 @@ class DesktopSecureStorage implements secure_storage.FlutterSecureStorage {
   @override
   Future<void> delete({
     required String key,
-    secure_storage.IOSOptions? iOptions,
+    secure_storage.AppleOptions? iOptions,
     secure_storage.AndroidOptions? aOptions,
     secure_storage.LinuxOptions? lOptions,
-    secure_storage.MacOsOptions? mOptions,
+    secure_storage.AppleOptions? mOptions,
     secure_storage.WindowsOptions? wOptions,
     secure_storage.WebOptions? webOptions,
   }) async {
@@ -86,10 +82,10 @@ class DesktopSecureStorage implements secure_storage.FlutterSecureStorage {
 
   @override
   Future<void> deleteAll({
-    secure_storage.IOSOptions? iOptions,
+    secure_storage.AppleOptions? iOptions,
     secure_storage.AndroidOptions? aOptions,
     secure_storage.LinuxOptions? lOptions,
-    secure_storage.MacOsOptions? mOptions,
+    secure_storage.AppleOptions? mOptions,
     secure_storage.WindowsOptions? wOptions,
     secure_storage.WebOptions? webOptions,
   }) async {
@@ -99,10 +95,10 @@ class DesktopSecureStorage implements secure_storage.FlutterSecureStorage {
   @override
   Future<String?> read({
     required String key,
-    secure_storage.IOSOptions? iOptions,
+    secure_storage.AppleOptions? iOptions,
     secure_storage.AndroidOptions? aOptions,
     secure_storage.LinuxOptions? lOptions,
-    secure_storage.MacOsOptions? mOptions,
+    secure_storage.AppleOptions? mOptions,
     secure_storage.WindowsOptions? wOptions,
     secure_storage.WebOptions? webOptions,
   }) async {
@@ -111,10 +107,10 @@ class DesktopSecureStorage implements secure_storage.FlutterSecureStorage {
 
   @override
   Future<Map<String, String>> readAll({
-    secure_storage.IOSOptions? iOptions,
+    secure_storage.AppleOptions? iOptions,
     secure_storage.AndroidOptions? aOptions,
     secure_storage.LinuxOptions? lOptions,
-    secure_storage.MacOsOptions? mOptions,
+    secure_storage.AppleOptions? mOptions,
     secure_storage.WindowsOptions? wOptions,
     secure_storage.WebOptions? webOptions,
   }) async {
@@ -125,10 +121,10 @@ class DesktopSecureStorage implements secure_storage.FlutterSecureStorage {
   Future<void> write({
     required String key,
     required String? value,
-    secure_storage.IOSOptions? iOptions,
+    secure_storage.AppleOptions? iOptions,
     secure_storage.AndroidOptions? aOptions,
     secure_storage.LinuxOptions? lOptions,
-    secure_storage.MacOsOptions? mOptions,
+    secure_storage.AppleOptions? mOptions,
     secure_storage.WindowsOptions? wOptions,
     secure_storage.WebOptions? webOptions,
   }) async {
@@ -138,10 +134,10 @@ class DesktopSecureStorage implements secure_storage.FlutterSecureStorage {
   @override
   Future<bool> containsKey({
     required String key,
-    secure_storage.IOSOptions? iOptions,
+    secure_storage.AppleOptions? iOptions,
     secure_storage.AndroidOptions? aOptions,
     secure_storage.LinuxOptions? lOptions,
-    secure_storage.MacOsOptions? mOptions,
+    secure_storage.AppleOptions? mOptions,
     secure_storage.WindowsOptions? wOptions,
     secure_storage.WebOptions? webOptions,
   }) async {
@@ -158,7 +154,7 @@ class DesktopSecureStorage implements secure_storage.FlutterSecureStorage {
   secure_storage.LinuxOptions get lOptions => throw UnimplementedError();
 
   @override
-  secure_storage.MacOsOptions get mOptions => throw UnimplementedError();
+  secure_storage.AppleOptions get mOptions => throw UnimplementedError();
 
   @override
   secure_storage.WindowsOptions get wOptions => throw UnimplementedError();

@@ -266,7 +266,7 @@ void _showProfileRequestFailedMessage(String message) {
 }
 
 Future<SelectedProfilePicture?> _defaultPickProfilePicture() async {
-  final result = await FilePicker.platform.pickFiles(
+  final result = await FilePicker.pickFiles(
     type: FileType.image,
     withData: true,
   );
