@@ -22,10 +22,10 @@ class PackageInfoPlusLinuxPlugin extends PackageInfoPlatform {
     final exeAttributes = await _getExeAttributes(exePath);
 
     return PackageInfoData(
-      appName: versionJson['app_name'] ?? '',
-      version: versionJson['version'] ?? '',
-      buildNumber: versionJson['build_number'] ?? '',
-      packageName: versionJson['package_name'] ?? '',
+      appName: (versionJson['app_name'] as String?) ?? '',
+      version: (versionJson['version'] as String?) ?? '',
+      buildNumber: (versionJson['build_number'] as String?) ?? '',
+      packageName: (versionJson['package_name'] as String?) ?? '',
       buildSignature: '',
       installTime: exeAttributes.created,
       updateTime: exeAttributes.modified,
@@ -38,7 +38,8 @@ class PackageInfoPlusLinuxPlugin extends PackageInfoPlatform {
       final assetPath = path.join(appPath, 'data', 'flutter_assets');
       final versionPath = path.join(assetPath, 'version.json');
 
-      return jsonDecode(await File(versionPath).readAsString());
+      final decoded = jsonDecode(await File(versionPath).readAsString());
+      return (decoded is Map<String, dynamic>) ? decoded : <String, dynamic>{};
     } catch (_) {
       return <String, dynamic>{};
     }
@@ -59,7 +60,7 @@ class PackageInfoPlusLinuxPlugin extends PackageInfoPlatform {
       }
 
       final String stdout =
-          statResult.stdout is String ? statResult.stdout : '';
+          (statResult.stdout is String ? statResult.stdout : '') as String;
 
       if (stdout.split(',').length != 2) {
         return await _fallbackAttributes(exePath);

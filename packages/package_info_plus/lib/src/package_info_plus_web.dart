@@ -62,10 +62,10 @@ class PackageInfoPlusWebPlugin extends PackageInfoPlatform {
             {};
 
     return PackageInfoData(
-      appName: versionMap['app_name'] ?? '',
-      version: versionMap['version'] ?? '',
-      buildNumber: versionMap['build_number'] ?? '',
-      packageName: versionMap['package_name'] ?? '',
+      appName: (versionMap['app_name'] as String?) ?? '',
+      version: (versionMap['version'] as String?) ?? '',
+      buildNumber: (versionMap['build_number'] as String?) ?? '',
+      packageName: (versionMap['package_name'] as String?) ?? '',
       // will remain empty on web
       buildSignature: '',
     );
@@ -92,7 +92,8 @@ class PackageInfoPlusWebPlugin extends PackageInfoPlatform {
   Map<String, dynamic>? _decodeVersionMap(Response response) {
     if (response.statusCode == 200) {
       try {
-        return jsonDecode(response.body);
+        final decoded = jsonDecode(response.body);
+        return (decoded is Map<String, dynamic>) ? decoded : null;
       } catch (_) {
         return null;
       }
