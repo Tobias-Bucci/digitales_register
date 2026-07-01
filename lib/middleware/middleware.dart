@@ -50,11 +50,13 @@ import 'package:dr/container/certificate_container.dart';
 import 'package:dr/container/grades_page_container.dart';
 import 'package:dr/container/messages_container.dart';
 import 'package:dr/container/settings_page.dart';
+import 'package:dr/course_materials.dart';
 import 'package:dr/data.dart';
 import 'package:dr/i18n/app_language.dart';
 import 'package:dr/i18n/app_localizations.dart';
 import 'package:dr/main.dart';
 import 'package:dr/notification_background_service.dart';
+import 'package:dr/page_payload_cache.dart';
 import 'package:dr/platform_adapter.dart';
 import 'package:dr/serializers.dart';
 import 'package:dr/settings_persistence_service.dart';
@@ -183,6 +185,18 @@ Wrapper wrapper = Wrapper();
 bool isOffline() => wrapper.noInternet;
 
 Future<String?> loadHomeworkSummaryHtml() async {
+  final snapshot = await refreshHomeworkSummaryHtmlPayload();
+  return snapshot?.payload;
+}
+
+Future<PagePayloadSnapshot<String>?> loadCachedHomeworkSummaryHtmlPayload() {
+  return pagePayloadCacheService.load(
+    _homeworkSummaryCacheKey(),
+    parseStringPayload,
+  );
+}
+
+Future<PagePayloadSnapshot<String>?> refreshHomeworkSummaryHtmlPayload() async {
   if (wrapper.noInternet) {
     return null;
   }
@@ -192,7 +206,392 @@ Future<String?> loadHomeworkSummaryHtml() async {
     'vorstand/homework&klasse?_=$timestamp',
     method: 'GET',
   );
-  return response?.toString();
+  final html = response?.toString();
+  if (html == null) {
+    return null;
+  }
+  final snapshot = PagePayloadSnapshot<String>.fromPayload(html);
+  await pagePayloadCacheService.save(_homeworkSummaryCacheKey(), snapshot);
+  return snapshot;
+}
+
+Future<List<CourseMaterialCourse>> loadCourseMaterials() async {
+  final snapshot = await refreshCourseMaterialsPayload();
+  if (snapshot == null) {
+    throw const CourseMaterialsLoadException();
+  }
+  return courseMaterialCoursesFromPayload(snapshot.payload);
+}
+
+Future<PagePayloadSnapshot<List<Map<String, dynamic>>>?>
+    loadCachedCourseMaterialsPayload() {
+  return pagePayloadCacheService.load(
+    _courseMaterialsCacheKey(),
+    parseMapListPayload,
+  );
+}
+
+Future<PagePayloadSnapshot<List<Map<String, dynamic>>>?>
+    refreshCourseMaterialsPayload() async {
+  final courses = await _loadCourseMaterialsRemote();
+  final payload = courseMaterialCoursesToPayload(courses);
+  final snapshot =
+      PagePayloadSnapshot<List<Map<String, dynamic>>>.fromPayload(payload);
+  await pagePayloadCacheService.save(_courseMaterialsCacheKey(), snapshot);
+  return snapshot;
+}
+
+Future<List<CourseMaterialCourse>> _loadCourseMaterialsRemote() async {
+  if (wrapper.demoMode) {
+    return const <CourseMaterialCourse>[];
+  }
+
+  final sources = await _loadCurrentCourseMaterialSources();
+  final courses = <CourseMaterialCourse>[];
+  final seenCourseIds = <int>{};
+  for (final source in sources) {
+    final response = await wrapper.send(
+      'api/courseContent/getCourse',
+      args: <String, Object?>{
+        'classId': source.classId,
+        'subjectId': source.subjectId,
+      },
+    );
+    final map = getMap(response);
+    if (map == null) {
+      continue;
+    }
+    final course = CourseMaterialCourse.fromJson(map, source);
+    if (seenCourseIds.add(course.id)) {
+      courses.add(course);
+    }
+  }
+  courses.sort((a, b) => a.subjectName.compareTo(b.subjectName));
+  return courses;
+}
+
+List<CourseMaterialCourse> courseMaterialCoursesFromPayload(
+  List<Map<String, dynamic>> payload,
+) {
+  return payload.map(CourseMaterialCourse.fromCacheJson).toList()
+    ..sort((a, b) => a.subjectName.compareTo(b.subjectName));
+}
+
+List<Map<String, dynamic>> courseMaterialCoursesToPayload(
+  List<CourseMaterialCourse> courses,
+) {
+  return courses
+      .map((course) => Map<String, dynamic>.from(course.toJson()))
+      .toList();
+}
+
+Future<List<CourseMaterialSource>> _loadCurrentCourseMaterialSources() async {
+  final sources = <String, CourseMaterialSource>{};
+
+  final monday = toMonday(now);
+  final response = await wrapper.send(
+    'api/calendar/student',
+    args: {'startDate': DateFormat('yyyy-MM-dd').format(monday)},
+  );
+  _addCourseMaterialSources(sources, response);
+
+  final lessonSnapshot = await refreshClassRegisterLessonPayload();
+  _addCourseMaterialSources(sources, lessonSnapshot?.payload);
+
+  if (sources.isEmpty && response == null && lessonSnapshot == null) {
+    throw const CourseMaterialsLoadException();
+  }
+
+  return sources.values.toList()
+    ..sort((a, b) => a.subjectName.compareTo(b.subjectName));
+}
+
+void _addCourseMaterialSources(
+  Map<String, CourseMaterialSource> sources,
+  dynamic root,
+) {
+  void visit(dynamic value) {
+    if (value is Map) {
+      final map = getMap(value)!;
+      final lesson = getMap(map['lesson']);
+      final lessonLike = lesson ?? map;
+      if (lessonLike.isNotEmpty) {
+        final classId = getInt(lessonLike['classId']);
+        final subject = getMap(lessonLike['subject']);
+        final subjectId = getInt(subject?['id']);
+        if (classId != null && subjectId != null) {
+          final key = '$classId|$subjectId';
+          sources.putIfAbsent(
+            key,
+            () => CourseMaterialSource(
+              classId: classId,
+              className: getString(lessonLike['className']) ?? '',
+              subjectId: subjectId,
+              subjectName: getString(subject?['name']) ?? '',
+            ),
+          );
+        }
+      }
+      for (final child in map.values) {
+        if (child is Map || child is List) {
+          visit(child);
+        }
+      }
+      return;
+    }
+    if (value is List) {
+      final list = getList(value)!;
+      for (final child in list) {
+        visit(child);
+      }
+    }
+  }
+
+  if (root != null) {
+    visit(root);
+  }
+}
+
+Future<bool> openCourseMaterialEntry(CourseMaterialEntry entry) async {
+  if (entry.isLink) {
+    final link = entry.link;
+    if (link == null || link.trim().isEmpty) {
+      return false;
+    }
+    return launchUrl(Uri.parse(link), mode: LaunchMode.externalApplication);
+  }
+
+  if (await canOpenFile(entry.uniqueName)) {
+    await openFile(entry.uniqueName);
+    return true;
+  }
+
+  if (await _downloadCourseMaterialFile(entry)) {
+    await openFile(entry.uniqueName);
+    return true;
+  }
+  return false;
+}
+
+Future<bool> _downloadCourseMaterialFile(CourseMaterialEntry entry) async {
+  await wrapper.ensureLoggedIn();
+
+  final saveFile =
+      File("${await _getAttachmentDownloadDirectory()}/${entry.uniqueName}");
+  if (await saveFile.exists()) {
+    final shouldOverwrite = await askShouldOverwriteFile(entry.uniqueName);
+    if (shouldOverwrite == null) {
+      return false;
+    }
+    if (!shouldOverwrite) {
+      return true;
+    }
+  }
+
+  for (final candidate in _downloadCandidatesFor(entry)) {
+    final bytes = await _downloadCourseMaterialCandidate(candidate);
+    if (bytes != null) {
+      await saveFile.parent.create(recursive: true);
+      await saveFile.writeAsBytes(bytes);
+      return true;
+    }
+  }
+
+  if (await saveFile.exists()) {
+    await saveFile.delete();
+  }
+  return false;
+}
+
+Future<List<int>?> _downloadCourseMaterialCandidate(
+  _CourseMaterialDownloadCandidate candidate,
+) async {
+  Future<List<int>?> validate(
+    Future<dio.Response<List<int>>> request,
+  ) async {
+    try {
+      final response = await request;
+      final bytes = response.data ?? const <int>[];
+      final contentType =
+          response.headers.value(HttpHeaders.contentTypeHeader) ?? '';
+      if (response.statusCode != 200 ||
+          bytes.isEmpty ||
+          _looksLikeErrorDocument(bytes, contentType)) {
+        return null;
+      }
+      return bytes;
+    } catch (error) {
+      log(
+        'failed course material download candidate ${candidate.url}',
+        error: error,
+      );
+      return null;
+    }
+  }
+
+  return await validate(
+        wrapper.dio.get<List<int>>(
+          candidate.url,
+          queryParameters: candidate.parameters,
+          options: dio.Options(responseType: dio.ResponseType.bytes),
+        ),
+      ) ??
+      await validate(
+        wrapper.dio.post<List<int>>(
+          candidate.url,
+          data: candidate.parameters,
+          options: dio.Options(responseType: dio.ResponseType.bytes),
+        ),
+      );
+}
+
+bool _looksLikeErrorDocument(List<int> bytes, String contentType) {
+  final normalizedContentType = contentType.toLowerCase();
+  if (normalizedContentType.contains('text/html') ||
+      normalizedContentType.contains('application/json')) {
+    return true;
+  }
+  final prefix = String.fromCharCodes(bytes.take(32)).trimLeft();
+  return prefix.startsWith('<') || prefix.startsWith('{');
+}
+
+List<_CourseMaterialDownloadCandidate> _downloadCandidatesFor(
+  CourseMaterialEntry entry,
+) {
+  return [
+    _CourseMaterialDownloadCandidate(
+      '${wrapper.baseAddress}courseContent/downloadEntry',
+      <String, dynamic>{
+        'course': entry.courseContentId,
+        'entry': entry.id,
+      },
+    ),
+    _CourseMaterialDownloadCandidate(
+      '${wrapper.baseAddress}courseContent/download',
+      <String, dynamic>{
+        'course': entry.courseContentId,
+        'entry': entry.id,
+      },
+    ),
+    _CourseMaterialDownloadCandidate(
+      '${wrapper.baseAddress}api/courseContent/download',
+      <String, dynamic>{
+        'course': entry.courseContentId,
+        'entry': entry.id,
+      },
+    ),
+    _CourseMaterialDownloadCandidate(
+      '${wrapper.baseAddress}api/courseContent/downloadEntry',
+      <String, dynamic>{'entryId': entry.id},
+    ),
+    _CourseMaterialDownloadCandidate(
+      '${wrapper.baseAddress}api/courseContent/downloadEntry',
+      <String, dynamic>{'id': entry.id},
+    ),
+    _CourseMaterialDownloadCandidate(
+      '${wrapper.baseAddress}api/courseContent/downloadEntry',
+      <String, dynamic>{'courseContentEntryId': entry.id},
+    ),
+    _CourseMaterialDownloadCandidate(
+      '${wrapper.baseAddress}api/courseContent/downloadFile',
+      <String, dynamic>{'entryId': entry.id},
+    ),
+    _CourseMaterialDownloadCandidate(
+      '${wrapper.baseAddress}api/courseContent/downloadFile',
+      <String, dynamic>{
+        'courseContentId': entry.courseContentId,
+        'entryId': entry.id,
+      },
+    ),
+    if (entry.file != null)
+      _CourseMaterialDownloadCandidate(
+        '${wrapper.baseAddress}api/courseContent/downloadFile',
+        <String, dynamic>{'file': entry.file},
+      ),
+    if (entry.file != null)
+      _CourseMaterialDownloadCandidate(
+        '${wrapper.baseAddress}courseContent/downloadFile',
+        <String, dynamic>{'file': entry.file},
+      ),
+    if (entry.file != null)
+      _CourseMaterialDownloadCandidate(
+        '${wrapper.baseAddress}courseContent/downloadFile/${Uri.encodeComponent(entry.file!)}',
+        const <String, dynamic>{},
+      ),
+    if (entry.file != null)
+      _CourseMaterialDownloadCandidate(
+        '${wrapper.baseAddress}api/courseContent/downloadFile/${Uri.encodeComponent(entry.file!)}',
+        const <String, dynamic>{},
+      ),
+    if (entry.file != null)
+      _CourseMaterialDownloadCandidate(
+        '${wrapper.baseAddress}courseContent/file/${Uri.encodeComponent(entry.file!)}',
+        const <String, dynamic>{},
+      ),
+    if (entry.file != null)
+      _CourseMaterialDownloadCandidate(
+        '${wrapper.baseAddress}api/courseContent/file/${Uri.encodeComponent(entry.file!)}',
+        const <String, dynamic>{},
+      ),
+    _CourseMaterialDownloadCandidate(
+      '${wrapper.baseAddress}courseContent/downloadEntry',
+      <String, dynamic>{'entry': entry.id},
+    ),
+    _CourseMaterialDownloadCandidate(
+      '${wrapper.baseAddress}api/courseContent/courseContentDownloadEntry',
+      <String, dynamic>{
+        'courseContentId': entry.courseContentId,
+        'entryId': entry.id,
+      },
+    ),
+    _CourseMaterialDownloadCandidate(
+      '${wrapper.baseAddress}api/courseContent/courseContentDownloadEntry',
+      <String, dynamic>{'entryId': entry.id},
+    ),
+    _CourseMaterialDownloadCandidate(
+      '${wrapper.baseAddress}api/courseContent/courseContentDownloadEntry',
+      <String, dynamic>{'courseContentEntryId': entry.id},
+    ),
+    _CourseMaterialDownloadCandidate(
+      '${wrapper.baseAddress}api/courseContent/courseContentDownloadEntry',
+      <String, dynamic>{'id': entry.id},
+    ),
+    _CourseMaterialDownloadCandidate(
+      '${wrapper.baseAddress}api/courseContent/courseContentDownloadEntry',
+      <String, dynamic>{
+        'courseContentId': entry.courseContentId,
+        'courseContentEntryId': entry.id,
+      },
+    ),
+    _CourseMaterialDownloadCandidate(
+      '${wrapper.baseAddress}api/courseContent/courseContentDownloadEntry',
+      <String, dynamic>{
+        'course': entry.courseContentId,
+        'entry': entry.id,
+      },
+    ),
+    _CourseMaterialDownloadCandidate(
+      '${wrapper.baseAddress}api/courseContent/courseContentDownloadEntry',
+      <String, dynamic>{
+        'parentId': entry.courseContentId,
+        'entryId': entry.id,
+      },
+    ),
+    _CourseMaterialDownloadCandidate(
+      '${wrapper.baseAddress}api/courseContent/courseContentDownloadEntry',
+      <String, dynamic>{
+        'parentId': entry.courseContentId,
+        'submissionId': entry.id,
+      },
+    ),
+  ];
+}
+
+class _CourseMaterialDownloadCandidate {
+  const _CourseMaterialDownloadCandidate(this.url, this.parameters);
+
+  final String url;
+  final Map<String, dynamic> parameters;
 }
 
 Future<List<Map<String, dynamic>>?> loadClassRegisterLessonPayload() async {
@@ -241,6 +640,14 @@ Future<ClassRegisterPayloadSnapshot?>
 
 String _classRegisterCacheKey() {
   return 'classRegisterLessons:${getStorageKey(wrapper.user, wrapper.loginAddress)}';
+}
+
+String _courseMaterialsCacheKey() {
+  return 'courseMaterials:${getStorageKey(wrapper.user, wrapper.loginAddress)}';
+}
+
+String _homeworkSummaryCacheKey() {
+  return 'homeworkSummary:${getStorageKey(wrapper.user, wrapper.loginAddress)}';
 }
 
 List<Middleware<AppState, AppStateBuilder, AppActions>> middleware({

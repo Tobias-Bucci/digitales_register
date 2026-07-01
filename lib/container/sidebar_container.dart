@@ -25,6 +25,7 @@ import 'package:dr/main.dart';
 import 'package:dr/middleware/middleware.dart';
 import 'package:dr/profile_picture.dart';
 import 'package:dr/ui/class_register_page.dart';
+import 'package:dr/ui/course_materials_page.dart';
 import 'package:dr/ui/homework_summary_page.dart';
 import 'package:dr/ui/sidebar.dart';
 import 'package:flutter/material.dart' hide Builder;
@@ -61,6 +62,12 @@ class SidebarContainer extends StatelessWidget {
             scaffoldKey!.currentState!.selectContentWidget(
               ClassRegisterPage(key: UniqueKey()),
               Pages.classRegister,
+            );
+          },
+          showCourseMaterials: () {
+            scaffoldKey!.currentState!.selectContentWidget(
+              CourseMaterialsPage(key: UniqueKey()),
+              Pages.courseMaterials,
             );
           },
           showHomeworkSummary: () {

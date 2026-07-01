@@ -53,6 +53,7 @@ void main() {
             showAbsences: _noopVoidCallback,
             showCalendar: _noopVoidCallback,
             showClassRegister: _noopVoidCallback,
+            showCourseMaterials: _noopVoidCallback,
             showHomeworkSummary: _noopVoidCallback,
             showCertificate: _noopVoidCallback,
             showMessages: _noopVoidCallback,

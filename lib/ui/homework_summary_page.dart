@@ -15,8 +15,11 @@
 // You should have received a copy of the GNU General Public License
 // along with digitales_register.  If not, see <http://www.gnu.org/licenses/>.
 
+import 'dart:async';
+
 import 'package:dr/i18n/app_localizations.dart';
 import 'package:dr/middleware/middleware.dart';
+import 'package:dr/page_payload_cache.dart';
 import 'package:dr/ui/animated_linear_progress_indicator.dart';
 import 'package:dr/ui/no_internet.dart';
 import 'package:flutter/material.dart';
@@ -28,12 +31,16 @@ import 'package:responsive_scaffold/responsive_scaffold.dart';
 class HomeworkSummaryPage extends StatefulWidget {
   const HomeworkSummaryPage({
     super.key,
-    this.loader = loadHomeworkSummaryHtml,
+    this.loader,
+    this.cachedLoader = loadCachedHomeworkSummaryHtmlPayload,
+    this.refreshLoader = refreshHomeworkSummaryHtmlPayload,
     this.translationPrefix = 'homeworkSummary',
     this.icon = Icons.assignment_outlined,
   });
 
-  final Future<String?> Function() loader;
+  final Future<String?> Function()? loader;
+  final Future<PagePayloadSnapshot<String>?> Function() cachedLoader;
+  final Future<PagePayloadSnapshot<String>?> Function() refreshLoader;
   final String translationPrefix;
   final IconData icon;
 
@@ -42,28 +49,160 @@ class HomeworkSummaryPage extends StatefulWidget {
 }
 
 class _HomeworkSummaryPageState extends State<HomeworkSummaryPage> {
-  late Future<HomeworkSummaryDocument> _future;
+  HomeworkSummaryDocument? _document;
   DateTime? _lastFetched;
+  String? _fingerprint;
+  Object? _loadError;
+  bool _loading = true;
+  Future<void>? _pendingRefresh;
 
   @override
   void initState() {
     super.initState();
-    _future = _load();
+    unawaited(_initialize());
   }
 
-  Future<HomeworkSummaryDocument> _load() async {
-    final response = await widget.loader();
-    if (response == null) throw const HomeworkSummaryLoadException();
-    _lastFetched = DateTime.now();
-    return HomeworkSummaryDocument.parse(response);
+  @override
+  void didUpdateWidget(covariant HomeworkSummaryPage oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.loader != widget.loader ||
+        oldWidget.cachedLoader != widget.cachedLoader ||
+        oldWidget.refreshLoader != widget.refreshLoader ||
+        oldWidget.translationPrefix != widget.translationPrefix) {
+      _pendingRefresh = null;
+      _document = null;
+      _lastFetched = null;
+      _fingerprint = null;
+      _loadError = null;
+      _loading = true;
+      unawaited(_initialize());
+    }
   }
 
-  Future<void> _refresh() async {
-    final future = _load();
+  Future<void> _initialize() async {
+    final directLoader = widget.loader;
+    if (directLoader != null) {
+      await _loadDirect(directLoader);
+      return;
+    }
+
+    final cached = await widget.cachedLoader();
+    if (!mounted) {
+      return;
+    }
+    if (cached != null) {
+      _applySnapshot(cached);
+      setState(() {
+        _loading = false;
+        _loadError = null;
+      });
+      unawaited(_refresh(silent: true));
+    } else {
+      await _refresh();
+    }
+  }
+
+  Future<void> _loadDirect(Future<String?> Function() loader) async {
     setState(() {
-      _future = future;
+      _loading = true;
+      _loadError = null;
     });
-    await future;
+    try {
+      final response = await loader();
+      if (!mounted) {
+        return;
+      }
+      if (response == null) {
+        throw const HomeworkSummaryLoadException();
+      }
+      setState(() {
+        _document = HomeworkSummaryDocument.parse(response);
+        _lastFetched = DateTime.now();
+        _fingerprint = null;
+        _loading = false;
+      });
+    } catch (error) {
+      if (!mounted) {
+        return;
+      }
+      setState(() {
+        _loadError = error;
+        _loading = false;
+      });
+    }
+  }
+
+  Future<void> _refresh({bool silent = false}) async {
+    final directLoader = widget.loader;
+    if (directLoader != null) {
+      await _loadDirect(directLoader);
+      return;
+    }
+
+    final pending = _pendingRefresh;
+    if (pending != null) {
+      await pending;
+      return;
+    }
+    if (!silent) {
+      setState(() {
+        _loading = true;
+        _loadError = null;
+      });
+    }
+
+    final future = _refreshFromRemote(silent: silent);
+    _pendingRefresh = future;
+    try {
+      await future;
+    } finally {
+      if (identical(_pendingRefresh, future)) {
+        _pendingRefresh = null;
+      }
+    }
+  }
+
+  Future<void> _refreshFromRemote({required bool silent}) async {
+    try {
+      final snapshot = await widget.refreshLoader();
+      if (!mounted) {
+        return;
+      }
+      if (snapshot == null) {
+        throw const HomeworkSummaryLoadException();
+      }
+      final changed = _fingerprint != snapshot.fingerprint || _document == null;
+      setState(() {
+        if (changed) {
+          _applySnapshot(snapshot);
+        } else {
+          _lastFetched = snapshot.fetchedAt;
+          _fingerprint = snapshot.fingerprint;
+        }
+        _loadError = null;
+        _loading = false;
+      });
+    } catch (error) {
+      if (!mounted) {
+        return;
+      }
+      if (_document == null || !silent) {
+        setState(() {
+          _loadError = error;
+          _loading = false;
+        });
+      } else {
+        setState(() {
+          _loading = false;
+        });
+      }
+    }
+  }
+
+  void _applySnapshot(PagePayloadSnapshot<String> snapshot) {
+    _document = HomeworkSummaryDocument.parse(snapshot.payload);
+    _lastFetched = snapshot.fetchedAt;
+    _fingerprint = snapshot.fingerprint;
   }
 
   @override
@@ -80,39 +219,37 @@ class _HomeworkSummaryPageState extends State<HomeworkSummaryPage> {
           ],
         ),
       ),
-      body: FutureBuilder<HomeworkSummaryDocument>(
-        future: _future,
-        builder: (context, snapshot) {
-          final loading = snapshot.connectionState == ConnectionState.waiting &&
-              !snapshot.hasData;
-          Widget body;
-          if (isOffline()) {
-            body = const NoInternet();
-          } else if (snapshot.hasError) {
-            body = _HomeworkSummaryError(
-              translationPrefix: widget.translationPrefix,
-              error: snapshot.error.toString(),
-              onRetry: _refresh,
-            );
-          } else if (!snapshot.hasData) {
-            body = const Center(child: CircularProgressIndicator());
-          } else {
-            body = _HomeworkSummaryContent(
-              translationPrefix: widget.translationPrefix,
-              document: snapshot.data!,
-              lastFetched: _lastFetched,
-              onRefresh: _refresh,
-            );
-          }
-          return Stack(
-            children: [
-              body,
-              AnimatedLinearProgressIndicator(show: loading),
-            ],
-          );
-        },
+      body: Stack(
+        children: [
+          _buildBody(),
+          AnimatedLinearProgressIndicator(show: _loading),
+        ],
       ),
     );
+  }
+
+  Widget _buildBody() {
+    final document = _document;
+    if (document != null) {
+      return _HomeworkSummaryContent(
+        translationPrefix: widget.translationPrefix,
+        document: document,
+        lastFetched: _lastFetched,
+        onRefresh: _refresh,
+      );
+    }
+    if (isOffline()) {
+      return const NoInternet();
+    }
+    final error = _loadError;
+    if (error != null) {
+      return _HomeworkSummaryError(
+        translationPrefix: widget.translationPrefix,
+        error: error.toString(),
+        onRetry: _refresh,
+      );
+    }
+    return const Center(child: CircularProgressIndicator());
   }
 }
 

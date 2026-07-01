@@ -477,7 +477,7 @@ class _LessonCard extends StatelessWidget {
           Padding(
             padding: const EdgeInsets.fromLTRB(19, 12, 14, 12),
             child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
+              crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
                 LayoutBuilder(
                   builder: (context, constraints) {
