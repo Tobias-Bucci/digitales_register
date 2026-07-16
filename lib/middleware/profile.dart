@@ -61,23 +61,27 @@ Future<void> _loadProfile(
   }
   await _runCoalescedLoad(_profileCacheKey, () async {
     await next(action);
-    dynamic result;
-    try {
-      result = await wrapper.send("api/profile/get");
-    } on UnexpectedLogoutException {
-      _showProfileRequestFailedMessage(tr('profile.loadFailed'));
-      return;
-    }
-    if (result == null) {
-      return;
-    }
-    final resultMap = getMap(result);
-    if (resultMap != null) {
-      await _syncServerLanguageToApp(api: api, profile: resultMap);
-    }
-    await api.actions.profileActions.loaded(result as Object);
-    _markRuntimeCacheFresh(_profileCacheKey);
+    await _refreshProfile(api);
   });
+}
+
+Future<void> _refreshProfile(
+  MiddlewareApi<AppState, AppStateBuilder, AppActions> api,
+) async {
+  dynamic result;
+  try {
+    result = await wrapper.send("api/profile/get");
+  } on UnexpectedLogoutException {
+    _showProfileRequestFailedMessage(tr('profile.loadFailed'));
+    return;
+  }
+  if (result == null) return;
+  final resultMap = getMap(result);
+  if (resultMap != null) {
+    await _syncServerLanguageToApp(api: api, profile: resultMap);
+  }
+  unawaited(api.actions.profileActions.loaded(result as Object));
+  _markRuntimeCacheFresh(_profileCacheKey);
 }
 
 Future<void> _syncServerLanguageToApp({
@@ -168,7 +172,7 @@ Future<void> _changeEmail(
     showSnackBar("[${result["error"]}]: ${result["message"]}");
   }
   _markRuntimeCacheStale(_profileCacheKey);
-  await api.actions.profileActions.load();
+  await _refreshProfile(api);
 }
 
 Future<void> _pickAndUploadProfilePicture(
@@ -208,7 +212,7 @@ Future<void> _pickAndUploadProfilePicture(
   if (resultMap["error"] == null) {
     showSnackBar(tr('profile.pictureUpdated'));
     _markRuntimeCacheStale(_profileCacheKey);
-    await api.actions.profileActions.load();
+    await _refreshProfile(api);
   } else {
     showSnackBar("[${resultMap["error"]}] ${resultMap["message"]}");
   }
@@ -253,7 +257,7 @@ Future<void> _updateCodiceFiscale(
   if (resultMap["error"] == null) {
     showSnackBar(getString(resultMap["message"]) ?? tr('profile.taxIdUpdated'));
     _markRuntimeCacheStale(_profileCacheKey);
-    await api.actions.profileActions.load();
+    await _refreshProfile(api);
   } else {
     showSnackBar("[${resultMap["error"]}]: ${resultMap["message"]}");
   }

@@ -588,7 +588,9 @@ Future<void> _reconcileCalendarSync(
   if (!api.state.settingsState.calendarSyncEnabled) {
     return;
   }
-  await CalendarSyncService.reconcile(api.state);
+  // Calendar synchronization may load localized assets. Do not block the
+  // action dispatcher while that asynchronous work completes.
+  unawaited(CalendarSyncService.reconcile(api.state));
 }
 
 Future<void> _setLanguage(
