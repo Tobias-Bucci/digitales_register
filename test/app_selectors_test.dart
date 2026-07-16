@@ -201,6 +201,7 @@ void main() {
       (b) {
         b.dashboardState
           ..blacklist = ListBuilder<HomeworkType>()
+          ..future = false
           ..allDays = ListBuilder<Day>(<Day>[
             buildDay(
               date: UtcDateTime(2026, 3, 27),
@@ -240,6 +241,7 @@ void main() {
       (b) {
         b.dashboardState
           ..blacklist = ListBuilder<HomeworkType>()
+          ..future = false
           ..allDays = ListBuilder<Day>(<Day>[
             buildDay(
               date: UtcDateTime(2026, 3, 27),

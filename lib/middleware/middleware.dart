@@ -798,6 +798,16 @@ void resetNoInternetRetryForTest() {
   noInternetRetryInterval = const Duration(seconds: 5);
 }
 
+/// Resets middleware state which is intentionally kept for the app lifetime.
+///
+/// Tests share an isolate within a test file, so an unfinished coalesced load
+/// from one test must never be allowed to affect the next one.
+@visibleForTesting
+void resetMiddlewareStateForTest() {
+  resetNoInternetRetryForTest();
+  _clearRuntimeCaches();
+}
+
 void _scheduleNoInternetRetry() {
   if (_noInternetRetryTimer != null) {
     return;

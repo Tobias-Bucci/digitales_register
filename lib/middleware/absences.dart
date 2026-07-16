@@ -38,31 +38,39 @@ Future<void> _loadAbsences(
   _absencesDebug('load -> request');
   await _runCoalescedLoad(_absencesCacheKey, () async {
     await next(action);
-    dynamic response;
-    try {
-      response = await wrapper.send("api/student/dashboard/absences");
-    } on UnexpectedLogoutException {
-      await _handleUnexpectedLogout(api, 'load');
-      return;
-    }
-    if (response != null) {
-      final responseMap = getMap(response);
-      if (responseMap != null) {
-        final absencesCount = (responseMap['absences'] as List?)?.length;
-        final futureCount = (responseMap['futureAbsences'] as List?)?.length;
-        final dynamic canEdit = responseMap['canEdit'];
-        _absencesDebug(
-          'load <- canEdit=$canEdit absences=$absencesCount futureAbsences=$futureCount',
-        );
-      } else {
-        _absencesDebug('load <- non-map response: $response');
-      }
-      await api.actions.absencesActions.loaded(response);
-      _markRuntimeCacheFresh(_absencesCacheKey);
-    } else {
-      _absencesDebug('load <- null response');
-    }
+    await _refreshAbsences(api);
   });
+}
+
+Future<void> _refreshAbsences(
+  MiddlewareApi<AppState, AppStateBuilder, AppActions> api,
+) async {
+  dynamic response;
+  try {
+    response = await wrapper.send("api/student/dashboard/absences");
+  } on UnexpectedLogoutException {
+    await _handleUnexpectedLogout(api, 'load');
+    return;
+  }
+  if (response == null) {
+    _absencesDebug('load <- null response');
+    return;
+  }
+  final responseMap = getMap(response);
+  if (responseMap != null) {
+    final absencesCount = (responseMap['absences'] as List?)?.length;
+    final futureCount = (responseMap['futureAbsences'] as List?)?.length;
+    final dynamic canEdit = responseMap['canEdit'];
+    _absencesDebug(
+      'load <- canEdit=$canEdit absences=$absencesCount futureAbsences=$futureCount',
+    );
+  } else {
+    _absencesDebug('load <- non-map response: $response');
+  }
+  // A middleware action must not await another dispatch on the same store:
+  // built_redux serializes dispatches, which otherwise creates a deadlock.
+  unawaited(api.actions.absencesActions.loaded(response));
+  _markRuntimeCacheFresh(_absencesCacheKey);
 }
 
 Future<void> _addFutureAbsence(
@@ -87,7 +95,7 @@ Future<void> _addFutureAbsence(
   if (_responseSucceeded(response)) {
     _absencesDebug('add -> success, reloading absences');
     _markRuntimeCacheStale(_absencesCacheKey);
-    await api.actions.absencesActions.load();
+    await _refreshAbsences(api);
     if (!wrapper.noInternet) {
       showSnackBar('Voraus-Absenz wurde eingetragen');
     }
@@ -131,7 +139,7 @@ Future<void> _removeFutureAbsence(
   if (_responseSucceeded(response)) {
     _absencesDebug('remove -> success, reloading absences');
     _markRuntimeCacheStale(_absencesCacheKey);
-    await api.actions.absencesActions.load();
+    await _refreshAbsences(api);
   } else if (!wrapper.noInternet) {
     _absencesDebug('remove -> failed');
     final message = _responseMessage(response);
@@ -173,10 +181,9 @@ Future<void> _justifyAbsence(
   if (_responseSucceeded(response)) {
     _absencesDebug('justify -> success, reloading absences');
     _markRuntimeCacheStale(_absencesCacheKey);
-    await api.actions.absencesActions.load();
+    await _refreshAbsences(api);
     if (!wrapper.noInternet) {
-      final l10n = await _loadMiddlewareLocalizations(api.state);
-      showSnackBar(l10n.text('absences.justification.success'));
+      unawaited(_showJustificationSuccess(api.state));
     }
   } else if (!wrapper.noInternet) {
     _absencesDebug('justify -> failed');
@@ -191,6 +198,11 @@ Future<void> _justifyAbsence(
             ),
     );
   }
+}
+
+Future<void> _showJustificationSuccess(AppState state) async {
+  final l10n = await _loadMiddlewareLocalizations(state);
+  showSnackBar(l10n.text('absences.justification.success'));
 }
 
 bool _responseSucceeded(dynamic response) {

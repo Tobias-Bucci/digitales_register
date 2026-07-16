@@ -173,6 +173,7 @@ Future<void> bootstrapTestEnvironment({
   passDio = null;
   deletedData = false;
   statePersistenceService.clear();
+  resetMiddlewareStateForTest();
   navigatorKey = GlobalKey<NavigatorState>();
   nestedNavKey = GlobalKey<NavigatorState>();
   scaffoldKey = GlobalKey<ResponsiveScaffoldState<Pages>>();
@@ -218,7 +219,7 @@ Future<void> resetTestState() async {
   deletedData = false;
   statePersistenceService.clear();
   passDio = null;
-  resetNoInternetRetryForTest();
+  resetMiddlewareStateForTest();
   await NotificationBackgroundService.resetForTest();
   await CalendarSyncService.resetForTest();
   isAndroidOverride = null;

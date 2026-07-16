@@ -21,10 +21,12 @@ import 'package:dr/app_state.dart';
 import 'package:dr/calendar_sync_service.dart';
 import 'package:dr/data.dart';
 import 'package:dr/i18n/app_language.dart';
+import 'package:dr/middleware/middleware.dart';
 import 'package:dr/platform_adapter.dart';
 import 'package:dr/utc_date_time.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:mocktail/mocktail.dart';
 
 import 'support/fixtures.dart';
 import 'support/test_harness.dart';
@@ -119,6 +121,15 @@ void main() {
     CalendarSyncService.deleteEventOverride = (eventId) async {
       deletedIds.add(eventId);
     };
+    final mockWrapper = MockWrapper();
+    when(() => mockWrapper.noInternet).thenReturn(false);
+    when(
+      () => mockWrapper.send(
+        'api/student/dashboard/toggle_reminder',
+        args: any(named: 'args'),
+      ),
+    ).thenAnswer((_) async => <String, Object>{'success': true});
+    wrapper = mockWrapper;
 
     final store = createStore(
       initialState: AppState((b) {
