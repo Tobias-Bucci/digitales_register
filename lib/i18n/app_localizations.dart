@@ -54,8 +54,8 @@ class AppLocalizations {
     Locale.fromSubtags(languageCode: 'de', countryCode: 'LLD'),
     Locale('en'),
   ];
-  static final Map<AppLanguage, Future<Map<String, String>>> _languageMapCache =
-      <AppLanguage, Future<Map<String, String>>>{};
+  static final Map<AppLanguage, Map<String, String>> _languageMapCache =
+      <AppLanguage, Map<String, String>>{};
 
   static const Map<String, Map<AppLanguage, String>> _subjectTranslations = {
     'Deutsch': {
@@ -418,21 +418,29 @@ class AppLocalizations {
 
   static Future<Map<String, String>> _loadLanguageMap(
     AppLanguage language,
-  ) {
-    return _languageMapCache.putIfAbsent(
-      language,
-      () => _loadLanguageMapUncached(language),
-    );
+  ) async {
+    final cached = _languageMapCache[language];
+    if (cached != null) {
+      return cached;
+    }
+    final loaded = await _loadLanguageMapUncached(language);
+    _languageMapCache[language] = loaded;
+    return loaded;
   }
 
   static Future<Map<String, String>> _loadLanguageMapUncached(
     AppLanguage language,
   ) async {
-    final merged = <String, String>{};
-    for (final assetPath in <String>[
-      'assets/locales/de.json',
-      if (language != AppLanguage.de) 'assets/locales/${language.code}.json',
-    ]) {
+    final merged = language == AppLanguage.de
+        ? <String, String>{}
+        : <String, String>{...await _loadLanguageMap(AppLanguage.de)};
+    final assetPaths = <String>[
+      if (language == AppLanguage.de)
+        'assets/locales/de.json'
+      else
+        'assets/locales/${language.code}.json',
+    ];
+    for (final assetPath in assetPaths) {
       try {
         final raw = await rootBundle.loadString(assetPath);
         final decoded = json.decode(raw) as Map<String, dynamic>;

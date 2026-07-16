@@ -42,6 +42,7 @@ class CalendarContainer extends StatelessWidget {
           },
           closeEditNicksBar: () =>
               actions.settingsActions.showCalendarSubjectNicksBar(false),
+          clearSelection: () => actions.calendarActions.select(null),
           dayCallback: actions.calendarActions.load.call,
           currentMondayCallback: actions.calendarActions.setCurrentMonday.call,
         );
@@ -79,8 +80,7 @@ class CalendarViewModel {
       substituteDetectionEnabled:
           state.settingsState.substituteDetectionEnabled,
       showSubstituteBar: state.settingsState.showCalendarSubstituteBar,
-      showEditNicksBar:
-          currentDays.any(
+      showEditNicksBar: currentDays.any(
             (day) => day.hours.any(
               (hour) => !state.settingsState.subjectNicks.entries.any(
                 (entry) => equalsIgnoreCase(entry.key, hour.subject),
@@ -126,18 +126,18 @@ class CalendarViewModel {
 
   @override
   int get hashCode => Object.hash(
-    showEditNicksBar,
-    noInternet,
-    first,
-    last,
-    currentMonday,
-    selection,
-    currentDays,
-    favoriteSubjects,
-    subjectThemes,
-    substituteDetectionEnabled,
-    showSubstituteBar,
-  );
+        showEditNicksBar,
+        noInternet,
+        first,
+        last,
+        currentMonday,
+        selection,
+        currentDays,
+        favoriteSubjects,
+        subjectThemes,
+        substituteDetectionEnabled,
+        showSubstituteBar,
+      );
 
   static List<CalendarDay> _calendarDays(AppState state) {
     return calendarDaysForWeekWithLocalReminderAssessments(

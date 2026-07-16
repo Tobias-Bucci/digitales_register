@@ -177,7 +177,6 @@ Future<void> _toggleDone(
   ActionHandler next,
   Action<ToggleDonePayload> action,
 ) async {
-  await next(action);
   _markRuntimeCacheStale(_dashboardCacheKey(api.state.dashboardState.future));
   final dynamic result = await wrapper.send(
     "api/student/dashboard/toggle_reminder",
@@ -188,21 +187,8 @@ Future<void> _toggleDone(
     },
   );
   if (result != null && result["success"] == true) {
-    // duplicate - protection from multiple, failing and not failing requests
-    // TODO: Does this even work??
     await next(action);
   } else {
-    await next(
-      Action<ToggleDonePayload>(
-        DashboardActionsNames.toggleDone.name,
-        ToggleDonePayload(
-          (b) => b
-            ..homeworkId = action.payload.homeworkId
-            ..type = action.payload.type
-            ..done = !action.payload.done,
-        ),
-      ),
-    );
     if (!wrapper.noInternet) {
       showSnackBar("Beim Speichern ist ein Fehler aufgetreten");
     }

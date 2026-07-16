@@ -230,6 +230,7 @@ void main() {
   testWidgets('changing the selected sync calendar reconciles entries again',
       (tester) async {
     final upserts = <CalendarSyncUpsertRequest>[];
+    CalendarSyncService.deleteEventOverride = (_) async {};
     CalendarSyncService.upsertEventOverride = (request) async {
       upserts.add(request);
       return 100;

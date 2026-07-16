@@ -808,27 +808,29 @@ void resetMiddlewareStateForTest() {
   _clearRuntimeCaches();
 }
 
-void _scheduleNoInternetRetry() {
+void _scheduleNoInternetRetry(Future<void> Function() refreshNoInternet) {
   if (_noInternetRetryTimer != null) {
     return;
   }
   _noInternetRetryTimer = Timer(noInternetRetryInterval, () {
     _noInternetRetryTimer = null;
-    unawaited(_runNoInternetRetry());
+    unawaited(_runNoInternetRetry(refreshNoInternet));
   });
 }
 
-Future<void> _runNoInternetRetry() async {
+Future<void> _runNoInternetRetry(
+  Future<void> Function() refreshNoInternet,
+) async {
   if (_noInternetRetryInFlight) {
     return;
   }
   _noInternetRetryInFlight = true;
   try {
-    await actions.refreshNoInternet();
+    await refreshNoInternet();
   } finally {
     _noInternetRetryInFlight = false;
     if (wrapper.noInternet) {
-      _scheduleNoInternetRetry();
+      _scheduleNoInternetRetry(refreshNoInternet);
     }
   }
 }
@@ -843,7 +845,7 @@ Future<void> _noInternet(
   final noInternet = api.state.noInternet;
   if (prevNoInternet != noInternet) {
     if (noInternet) {
-      _scheduleNoInternetRetry();
+      _scheduleNoInternetRetry(api.actions.refreshNoInternet.call);
       showSnackBar(tr('offline.title'));
     } else {
       _cancelNoInternetRetry();

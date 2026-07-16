@@ -31,7 +31,7 @@ import '../../support/test_harness.dart';
 
 void main() {
   setUp(() async {
-    await bootstrapTestEnvironment();
+    await bootstrapTestEnvironment(fixedNow: UtcDateTime(2026, 4, 7));
   });
 
   tearDown(resetTestState);
@@ -104,18 +104,18 @@ void main() {
     await tester.tap(find.text('Statistik'));
     await settleFor(tester);
 
-    expect(find.text('Abwesenheit im Verhaeltnis'), findsNothing);
+    expect(find.text('Abwesenheit im Verhältnis'), findsNothing);
 
     await tester.tap(find.text('Kreisdiagramm'));
     await settleFor(tester);
 
-    expect(find.text('Abwesenheit im Verhaeltnis'), findsOneWidget);
+    expect(find.text('Abwesenheit im Verhältnis'), findsOneWidget);
     expect(find.byType(charts.PieChart<String>), findsOneWidget);
 
     await tester.tap(find.text('Ausblenden'));
     await settleFor(tester);
 
-    expect(find.text('Abwesenheit im Verhaeltnis'), findsNothing);
+    expect(find.text('Abwesenheit im Verhältnis'), findsNothing);
   });
 
   testWidgets('shows empty state when there are no absences', (tester) async {
@@ -342,7 +342,7 @@ void main() {
     await settleFor(tester);
 
     await expectLater(
-      find.byType(AbsencesPageContainer),
+      find.byType(Scaffold).first,
       matchesGoldenFile('absences.png'),
     );
   });

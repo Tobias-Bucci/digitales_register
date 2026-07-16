@@ -22,7 +22,6 @@ import 'package:dr/container/calendar_detail_container.dart';
 import 'package:dr/container/calendar_week_container.dart';
 import 'package:dr/data.dart';
 import 'package:dr/i18n/app_localizations.dart';
-import 'package:dr/main.dart';
 import 'package:dr/ui/favorite_subject_filter.dart';
 import 'package:dr/utc_date_time.dart';
 import 'package:dr/util.dart';
@@ -42,6 +41,7 @@ class Calendar extends StatefulWidget {
   final VoidCallback showEditSubjectNicks;
   final VoidCallback showEditSubstituteSettings;
   final VoidCallback closeEditNicksBar;
+  final VoidCallback clearSelection;
 
   const Calendar({
     super.key,
@@ -51,6 +51,7 @@ class Calendar extends StatefulWidget {
     required this.showEditSubjectNicks,
     required this.showEditSubstituteSettings,
     required this.closeEditNicksBar,
+    required this.clearSelection,
   });
 
   @override
@@ -159,7 +160,7 @@ class _CalendarState extends State<Calendar> with TickerProviderStateMixin {
                 fullscreenDialog: true,
               ),
             )
-            .then((_) => actions.calendarActions.select(null));
+            .then((_) => widget.clearSelection());
       });
     }
     super.didUpdateWidget(oldWidget);
@@ -212,7 +213,7 @@ class _CalendarState extends State<Calendar> with TickerProviderStateMixin {
     if (!_selectionIsVisible(favoriteSubject)) {
       WidgetsBinding.instance.addPostFrameCallback((_) {
         if (mounted && widget.vm.selection != null) {
-          actions.calendarActions.select(null);
+          widget.clearSelection();
         }
       });
     }

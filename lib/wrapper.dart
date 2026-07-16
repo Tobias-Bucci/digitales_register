@@ -79,12 +79,13 @@ class AppRequestException implements Exception {
 class Wrapper {
   final cookieJar = DefaultCookieJar();
   late final Dio dio;
+  final bool allowInsecureConnections;
   String get loginAddress => "${baseAddress}api/auth/login";
   String get baseAddress => "$url/v2/";
   String? user, pass, _url;
   bool demoMode = false;
 
-  Wrapper() {
+  Wrapper({this.allowInsecureConnections = false}) {
     dio = Dio(
       BaseOptions(
         connectTimeout: const Duration(seconds: 15),
@@ -184,7 +185,8 @@ class Wrapper {
       assert(onAddProtocolItem != null);
     }
     this.url = url;
-    if ((this.url?.isNotEmpty ?? false) &&
+    if (!allowInsecureConnections &&
+        (this.url?.isNotEmpty ?? false) &&
         Uri.parse(this.url!).scheme != 'https') {
       _loggedIn = Future.value(false);
       error =
@@ -386,7 +388,7 @@ class Wrapper {
   Future<dynamic> changePass(
       String url, String user, String oldPass, String newPass) async {
     this.url = fixupUrl(url);
-    if (Uri.parse(this.url!).scheme != 'https') {
+    if (!allowInsecureConnections && Uri.parse(this.url!).scheme != 'https') {
       _loggedIn = Future.value(false);
       error =
           "Es konnte keine sichere HTTPS-Verbindung hergestellt werden. Bitte pruefe die eingegebene Adresse.";

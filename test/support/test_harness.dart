@@ -158,7 +158,6 @@ const MethodChannel _pathProviderChannel =
     MethodChannel('plugins.flutter.io/path_provider');
 
 Directory? _testAppDirectory;
-bool _pathProviderMockInstalled = false;
 
 Future<void> bootstrapTestEnvironment({
   Map<String, String>? storage,
@@ -196,9 +195,9 @@ Future<void> _ensurePathProviderMocks() async {
       marker.createSync(recursive: true);
     }
   }
-  if (_pathProviderMockInstalled) {
-    return;
-  }
+  // Flutter's test binding clears mock method-channel handlers after every
+  // test. Install this handler for every bootstrap even though the shared
+  // temporary directory itself only needs to be created once.
   binding.defaultBinaryMessenger.setMockMethodCallHandler(
     _pathProviderChannel,
     (call) async {
@@ -211,7 +210,6 @@ Future<void> _ensurePathProviderMocks() async {
       return null;
     },
   );
-  _pathProviderMockInstalled = true;
 }
 
 Future<void> resetTestState() async {

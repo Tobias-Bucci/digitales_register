@@ -249,8 +249,8 @@ class _FutureAbsenceDialogState extends State<_FutureAbsenceDialog> {
 
   final TextEditingController _reasonController = TextEditingController();
   final TextEditingController _signatureController = TextEditingController();
-  DateTime _startDate = DateTime.now();
-  DateTime _endDate = DateTime.now();
+  DateTime _startDate = now;
+  DateTime _endDate = now;
   int _startTime = 1;
   int _endTime = 1;
   bool _wholeDay = false;
@@ -378,8 +378,8 @@ class _FutureAbsenceDialogState extends State<_FutureAbsenceDialog> {
                 final picked = await showDatePicker(
                   context: context,
                   initialDate: _startDate,
-                  firstDate: DateTime.now().subtract(const Duration(days: 1)),
-                  lastDate: DateTime.now().add(const Duration(days: 365 * 2)),
+                  firstDate: now.subtract(const Duration(days: 1)),
+                  lastDate: now.add(const Duration(days: 365 * 2)),
                 );
                 if (picked != null) {
                   setState(() {
@@ -413,7 +413,7 @@ class _FutureAbsenceDialogState extends State<_FutureAbsenceDialog> {
                   context: context,
                   initialDate: _endDate,
                   firstDate: _startDate,
-                  lastDate: DateTime.now().add(const Duration(days: 365 * 2)),
+                  lastDate: now.add(const Duration(days: 365 * 2)),
                 );
                 if (picked != null) {
                   setState(() {

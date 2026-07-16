@@ -31,7 +31,7 @@ window.location = "https://vinzentinum.digitalesregister.it/v2/login";
         await request.response.close();
       });
 
-      final wrapper = Wrapper();
+      final wrapper = Wrapper(allowInsecureConnections: true);
       final result = await wrapper.login(
         'user',
         'pass',
@@ -88,7 +88,7 @@ window.location = "https://vinzentinum.digitalesregister.it/v2/login";
         await request.response.close();
       });
 
-      final wrapper = Wrapper();
+      final wrapper = Wrapper(allowInsecureConnections: true);
       await wrapper.login(
         'user',
         'pass',

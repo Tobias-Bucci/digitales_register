@@ -296,33 +296,29 @@ void main() {
   test('auto-populate keeps only the most frequent single teacher per subject',
       () async {
     await store.actions.calendarActions.loaded(
-      _calendarLoaded(_calendarPayloadForDate(
-        date: '2026-04-03',
-        teacherFirstName: 'Anna',
-        teacherLastName: 'Auer',
-      )),
-    );
-    await store.actions.calendarActions.loaded(
-      _calendarLoaded(_calendarPayloadForDate(
-        date: '2026-04-10',
-        teacherFirstName: 'Anna',
-        teacherLastName: 'Auer',
-        additionalTeachers: const [('Berta', 'Bacher')],
-      )),
-    );
-    await store.actions.calendarActions.loaded(
-      _calendarLoaded(_calendarPayloadForDate(
-        date: '2026-04-17',
-        teacherFirstName: 'Clara',
-        teacherLastName: 'Costa',
-      )),
-    );
-    await store.actions.calendarActions.loaded(
-      _calendarLoaded(_calendarPayloadForDate(
-        date: '2026-04-24',
-        teacherFirstName: 'Clara',
-        teacherLastName: 'Costa',
-      )),
+      _calendarLoaded(<String, dynamic>{
+        ..._calendarPayloadForDate(
+          date: '2026-04-03',
+          teacherFirstName: 'Anna',
+          teacherLastName: 'Auer',
+        ),
+        ..._calendarPayloadForDate(
+          date: '2026-04-10',
+          teacherFirstName: 'Anna',
+          teacherLastName: 'Auer',
+          additionalTeachers: const [('Berta', 'Bacher')],
+        ),
+        ..._calendarPayloadForDate(
+          date: '2026-04-17',
+          teacherFirstName: 'Clara',
+          teacherLastName: 'Costa',
+        ),
+        ..._calendarPayloadForDate(
+          date: '2026-04-24',
+          teacherFirstName: 'Clara',
+          teacherLastName: 'Costa',
+        ),
+      }),
     );
     await _flushAsyncActions();
 

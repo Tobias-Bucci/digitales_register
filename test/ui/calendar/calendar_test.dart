@@ -261,7 +261,12 @@ void main() {
     await tester.pump();
     await settleFor(tester);
 
-    expect(find.text('Kein Fokusfach'), findsOneWidget);
+    expect(
+      tester
+          .widget<ChoiceChip>(find.widgetWithText(ChoiceChip, 'Fach1'))
+          .selected,
+      isTrue,
+    );
     expect(store.state.calendarState.selection, isNull);
   });
 
