@@ -24,6 +24,7 @@ import 'package:dr/app_state.dart';
 import 'package:dr/data.dart';
 import 'package:dr/i18n/app_localizations.dart';
 import 'package:dr/ui/dialog.dart';
+import 'package:dr/ui/target_grade_calculator.dart';
 import 'package:dr/util.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_built_redux/flutter_built_redux.dart';
@@ -146,6 +147,16 @@ class _Grade {
 
 class _GradeCalculatorState extends State<GradeCalculator> {
   final List<_Grade> grades = [];
+
+  void showTargetCalculator() {
+    Navigator.of(context).push(
+      MaterialPageRoute<void>(
+        builder: (_) => const TargetGradeCalculator(),
+        fullscreenDialog: true,
+      ),
+    );
+  }
+
   Future<void> addGrade() async {
     final Tuple2<int, int>? grade = await showDialog(
       context: context,
@@ -225,7 +236,8 @@ class _GradeCalculatorState extends State<GradeCalculator> {
     setState(() {
       grades.addAll(result);
     });
-    await AnalyticsService.logCustomEvent('grade_calculator_imported_grades', {'count': result.length});
+    await AnalyticsService.logCustomEvent(
+        'grade_calculator_imported_grades', {'count': result.length});
   }
 
   void updateGrade(_Grade previous, _Grade? updated) {
@@ -247,11 +259,19 @@ class _GradeCalculatorState extends State<GradeCalculator> {
     return Scaffold(
       appBar: AppBar(
         title: Text(context.t('gradeCalculator.title')),
+        actions: [
+          IconButton(
+            onPressed: showTargetCalculator,
+            icon: const Icon(Icons.track_changes),
+            tooltip: context.t('targetCalculator.open'),
+          ),
+        ],
       ),
       body: AnimatedCrossFade(
         firstChild: Greeting(
           import: importGrades,
           add: addGrade,
+          showTargetCalculator: showTargetCalculator,
         ),
         secondChild: GradesList(
           grades: grades,
@@ -398,9 +418,14 @@ class GradeTile extends StatelessWidget {
 
 @visibleForTesting
 class Greeting extends StatelessWidget {
-  final VoidCallback import, add;
+  final VoidCallback import, add, showTargetCalculator;
 
-  const Greeting({super.key, required this.import, required this.add});
+  const Greeting({
+    super.key,
+    required this.import,
+    required this.add,
+    required this.showTargetCalculator,
+  });
   @override
   Widget build(BuildContext context) {
     return Column(
@@ -441,6 +466,22 @@ class Greeting extends StatelessWidget {
                   const Icon(Icons.add),
                   const SizedBox(width: 8),
                   Text(context.t('gradeCalculator.addGrade')),
+                ],
+              ),
+            ),
+          ),
+        ),
+        Center(
+          child: Padding(
+            padding: const EdgeInsets.all(16),
+            child: ElevatedButton(
+              onPressed: showTargetCalculator,
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  const Icon(Icons.track_changes),
+                  const SizedBox(width: 8),
+                  Text(context.t('targetCalculator.open')),
                 ],
               ),
             ),
