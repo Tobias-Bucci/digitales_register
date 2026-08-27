@@ -64,4 +64,10 @@ abstract class SettingsActions extends ReduxActions {
   abstract final ActionDispatcher<bool> dashboardColorTestsInRed;
   abstract final ActionDispatcher<bool> amoledMode;
   abstract final ActionDispatcher<bool> biometricAppLockEnabled;
+  abstract final ActionDispatcher<MapEntry<String, String>>
+      setAssessmentStudyProgress;
+  abstract final ActionDispatcher<MapEntry<String, String>>
+      setAssessmentStudyNote;
+  abstract final ActionDispatcher<MapEntry<String, String>>
+      setAssessmentStudyAttachments;
 }

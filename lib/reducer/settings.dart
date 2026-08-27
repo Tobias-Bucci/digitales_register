@@ -75,6 +75,11 @@ final settingsReducerBuilder = NestedReducerBuilder<AppState, AppStateBuilder,
   ..add(SettingsActionsNames.calendarSyncCalendarId, _calendarSyncCalendarId)
   ..add(SettingsActionsNames.amoledMode, _amoledMode)
   ..add(SettingsActionsNames.biometricAppLockEnabled, _biometricAppLockEnabled)
+  ..add(SettingsActionsNames.setAssessmentStudyProgress,
+      _setAssessmentStudyProgress)
+  ..add(SettingsActionsNames.setAssessmentStudyNote, _setAssessmentStudyNote)
+  ..add(SettingsActionsNames.setAssessmentStudyAttachments,
+      _setAssessmentStudyAttachments)
   ..add(
       SettingsActionsNames.dashboardColorTestsInRed, _dashboardColorTestsInRed);
 
@@ -271,6 +276,31 @@ void _amoledMode(
 void _biometricAppLockEnabled(
     SettingsState state, Action<bool> action, SettingsStateBuilder builder) {
   builder.biometricAppLockEnabled = action.payload;
+}
+
+void _setAssessmentStudyProgress(SettingsState state,
+    Action<MapEntry<String, String>> action, SettingsStateBuilder builder) {
+  builder.assessmentStudyProgress[action.payload.key] = action.payload.value;
+}
+
+void _setAssessmentStudyNote(SettingsState state,
+    Action<MapEntry<String, String>> action, SettingsStateBuilder builder) {
+  final value = action.payload.value.trim();
+  if (value.isEmpty) {
+    builder.assessmentStudyNotes.remove(action.payload.key);
+  } else {
+    builder.assessmentStudyNotes[action.payload.key] = value;
+  }
+}
+
+void _setAssessmentStudyAttachments(SettingsState state,
+    Action<MapEntry<String, String>> action, SettingsStateBuilder builder) {
+  if (action.payload.value.isEmpty) {
+    builder.assessmentStudyAttachments.remove(action.payload.key);
+  } else {
+    builder.assessmentStudyAttachments[action.payload.key] =
+        action.payload.value;
+  }
 }
 
 void _updateSubjectThemes(SettingsState? state, Action<List<String>> action,

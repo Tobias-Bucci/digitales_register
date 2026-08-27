@@ -358,6 +358,17 @@ abstract class SettingsState
   bool get dashboardColorTestsInRed;
   bool get amoledMode;
   bool get biometricAppLockEnabled;
+
+  /// Local learning-plan state, keyed by the stable dashboard assessment id.
+  /// Values are compact strings of completed phase ids so the state remains
+  /// serializable together with the user's other settings.
+  BuiltMap<String, String> get assessmentStudyProgress;
+
+  /// Learner-supplied material notes for an assessment.
+  BuiltMap<String, String> get assessmentStudyNotes;
+
+  /// JSON metadata for files copied into this app's private local storage.
+  BuiltMap<String, String> get assessmentStudyAttachments;
   BuiltMap<String, SubjectTheme> get subjectThemes;
   BuiltList<String> get ignoreForGradesAverage;
   BuiltList<String> get favoriteSubjects;
@@ -404,6 +415,9 @@ abstract class SettingsState
       ..dashboardColorTestsInRed = true
       ..amoledMode = false
       ..biometricAppLockEnabled = false
+      ..assessmentStudyProgress = MapBuilder<String, String>()
+      ..assessmentStudyNotes = MapBuilder<String, String>()
+      ..assessmentStudyAttachments = MapBuilder<String, String>()
       ..substitutePrimaryTeachers =
           MapBuilder<String, BuiltList<String>>(<String, BuiltList<String>>{})
       ..substituteKnownTeachers = ListBuilder<String>()
