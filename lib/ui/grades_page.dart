@@ -197,12 +197,12 @@ class _GradesPageState extends State<GradesPage> {
                                 vm.colorGrades,
                               ),
                             ),
+                            const GradesForecastContainer(),
                             const Divider(
                               height: 0,
                             ),
                           ],
                           SortedGradesContainer(),
-                          const GradesForecastContainer(),
                           const SizedBox(height: 50),
                         ],
                       ),

@@ -14,80 +14,76 @@ class GradesForecastContainer extends StatelessWidget {
       connect: (state) => state,
       builder: (context, state, actions) => AnimatedBuilder(
         animation: appClock,
-        builder: (context, _) {
-          final forecast = calculateGradeForecast(
+        builder: (context, _) => _GradesForecastRow(
+          forecast: calculateGradeForecast(
             subjects: state.gradesState.subjects,
             semester: state.gradesState.semester,
             ignoredSubjects: state.settingsState.ignoreForGradesAverage,
-          );
-          return _GradesForecastCard(forecast: forecast);
-        },
+          ),
+        ),
       ),
     );
   }
 }
 
-class _GradesForecastCard extends StatelessWidget {
-  const _GradesForecastCard({required this.forecast});
+class _GradesForecastRow extends StatelessWidget {
+  const _GradesForecastRow({required this.forecast});
   final GradeForecast? forecast;
 
   @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    final body = forecast == null
-        ? const Text(
-            'Für eine zuverlässige Prognose werden noch weitere Noten benötigt.')
-        : Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              _line(context, 'Aktueller Schnitt',
-                  _format(forecast!.currentAverage)),
-              _line(context, 'Prognose Schuljahresende',
-                  'ca. ${_format(forecast!.predictedAverage)}'),
-              _line(context, 'Trend', _trendLabel(forecast!)),
-              const SizedBox(height: 4),
-              Text(
-                'Statistische Einschätzung – zukünftige Noten können den tatsächlichen Schnitt verändern.',
-                style: theme.textTheme.bodySmall,
-              ),
-            ],
-          );
-    return Card(
-      margin: const EdgeInsets.fromLTRB(12, 8, 12, 8),
-      child: Padding(
-        padding: const EdgeInsets.all(16),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
+    final value =
+        forecast == null ? '—' : 'ca. ${_format(forecast!.predictedAverage)}';
+    return Padding(
+      padding: const EdgeInsetsDirectional.fromSTEB(16, 2, 16, 2),
+      child: SizedBox(
+        height: 44,
+        child: Row(
           children: [
-            Text('Schnitt-Prognose', style: theme.textTheme.titleMedium),
-            const SizedBox(height: 8),
-            body,
+            Expanded(
+              child: Text('Schnitt-Prognose',
+                  style: Theme.of(context).textTheme.titleMedium),
+            ),
+            IconButton(
+              icon: const Icon(Icons.info_outline),
+              tooltip: 'Informationen zur Schnitt-Prognose',
+              onPressed: () => _showExplanation(context),
+            ),
+            SizedBox(
+              width: 112,
+              child: Align(
+                alignment: AlignmentDirectional.centerEnd,
+                child:
+                    Text(value, style: Theme.of(context).textTheme.titleMedium),
+              ),
+            ),
           ],
         ),
       ),
     );
   }
 
-  static Widget _line(BuildContext context, String label, String value) =>
-      Padding(
-        padding: const EdgeInsets.symmetric(vertical: 2),
-        child: Row(children: [
-          Expanded(child: Text(label)),
-          Text(value, style: Theme.of(context).textTheme.titleSmall),
-        ]),
-      );
+  static void _showExplanation(BuildContext context) {
+    showDialog<void>(
+      context: context,
+      builder: (dialogContext) => AlertDialog(
+        title: const Text('Schnitt-Prognose'),
+        content: const Text(
+          'Die Prognose ist eine statistische Einschätzung und keine offizielle Zeugnisnote. '
+          'Dafür werden deine gültigen, gewichteten Noten dieses Schuljahres chronologisch ausgewertet. '
+          'Aus den kumulierten Durchschnittswerten wird ein linearer Trend bis zum Schuljahresende hochgerechnet. '
+          'Mindestens vier Noten an drei verschiedenen Tagen sind nötig. Neue Noten können das Ergebnis jederzeit verändern.',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(dialogContext).pop(),
+            child: const Text('Schließen'),
+          ),
+        ],
+      ),
+    );
+  }
 
   static String _format(double value) =>
       (value / 100).toStringAsFixed(1).replaceAll('.', ',');
-
-  static String _trendLabel(GradeForecast forecast) {
-    final direction = switch (forecast.trend) {
-      GradeForecastTrend.rising => 'Steigend',
-      GradeForecastTrend.falling => 'Fallend',
-      GradeForecastTrend.stable => 'Stabil',
-    };
-    final change = forecast.changePerMonth / 100;
-    if (forecast.trend == GradeForecastTrend.stable) return direction;
-    return '$direction (${change >= 0 ? '+' : ''}${change.toStringAsFixed(1).replaceAll('.', ',')} / Monat)';
-  }
 }
