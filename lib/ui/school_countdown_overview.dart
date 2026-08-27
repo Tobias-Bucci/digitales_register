@@ -168,14 +168,14 @@ class _CountdownCard extends StatelessWidget {
     final scheme = theme.colorScheme;
     final progressValue = progress?.clamp(0.0, 1.0);
     return SizedBox(
-      height: 220,
+      height: 184,
       child: Material(
         color: Colors.transparent,
         child: InkWell(
           onTap: onTap == null ? null : () => onTap!(),
           borderRadius: BorderRadius.circular(14),
           child: Container(
-            padding: const EdgeInsets.all(14),
+            padding: const EdgeInsets.all(11),
             decoration: BoxDecoration(
               color: scheme.primaryContainer.withValues(alpha: 0.36),
               borderRadius: BorderRadius.circular(14),
@@ -200,7 +200,7 @@ class _CountdownCard extends StatelessWidget {
                     ),
                   ],
                 ),
-                const SizedBox(height: 9),
+                const SizedBox(height: 6),
                 Text(
                   primaryText,
                   maxLines: 2,

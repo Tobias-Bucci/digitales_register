@@ -22,6 +22,7 @@ import 'package:dr/container/grades_chart_container.dart';
 import 'package:dr/container/grades_forecast_container.dart';
 import 'package:dr/container/grades_history_container.dart';
 import 'package:dr/container/grades_page_container.dart';
+import 'package:dr/container/grades_statistics_container.dart';
 import 'package:dr/container/sorted_grades_container.dart';
 import 'package:dr/i18n/app_localizations.dart';
 import 'package:dr/ui/animated_linear_progress_indicator.dart';
@@ -205,6 +206,7 @@ class _GradesPageState extends State<GradesPage> {
                             ),
                           ],
                           SortedGradesContainer(),
+                          const GradesStatisticsContainer(),
                           const SizedBox(height: 50),
                         ],
                       ),
