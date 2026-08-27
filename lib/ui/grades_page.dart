@@ -20,6 +20,7 @@ import 'package:dr/analytics_service.dart';
 import 'package:dr/app_state.dart';
 import 'package:dr/container/grades_chart_container.dart';
 import 'package:dr/container/grades_forecast_container.dart';
+import 'package:dr/container/grades_history_container.dart';
 import 'package:dr/container/grades_page_container.dart';
 import 'package:dr/container/sorted_grades_container.dart';
 import 'package:dr/i18n/app_localizations.dart';
@@ -145,6 +146,7 @@ class _GradesPageState extends State<GradesPage> {
       appBar: ResponsiveAppBar(
         title: Text(l10n.text('sidebar.grades')),
         actions: <Widget>[
+          const GradesHistoryContainer(),
           Padding(
             padding: const EdgeInsets.only(right: 12),
             child: _SemesterSwitcher(
