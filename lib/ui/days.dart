@@ -29,11 +29,13 @@ import 'package:dr/i18n/app_localizations.dart';
 import 'package:dr/local_reminder_assessments.dart';
 import 'package:dr/main.dart';
 import 'package:dr/middleware/middleware.dart';
+import 'package:dr/school_timeline.dart';
 import 'package:dr/ui/animated_linear_progress_indicator.dart';
 import 'package:dr/ui/dialog.dart';
 import 'package:dr/ui/favorite_subject_filter.dart';
 import 'package:dr/ui/last_fetched_overlay.dart';
 import 'package:dr/ui/no_internet.dart';
+import 'package:dr/ui/school_countdown_overview.dart';
 import 'package:dr/utc_date_time.dart';
 import 'package:dr/util.dart';
 import 'package:flutter/material.dart';
@@ -55,6 +57,7 @@ typedef RemoveReminderCallback = void Function(Homework hw, Day day);
 typedef ToggleDoneCallback = void Function(Homework hw, bool done);
 typedef MarkAsNotNewOrChangedCallback = void Function(Homework hw);
 typedef MarkDeletedHomeworkAsSeenCallback = void Function(Day day);
+typedef OpenCalendarAtCallback = Future<void> Function(DateTime date);
 
 const _localReminderAssessmentHintKey = 'localReminderAssessmentHintShown';
 
@@ -73,6 +76,7 @@ class DaysWidget extends StatefulWidget {
   final AsyncCallback refresh;
   final VoidCallback refreshNoInternet;
   final AttachmentCallback onOpenAttachment;
+  final OpenCalendarAtCallback openCalendarAt;
 
   const DaysWidget({
     super.key,
@@ -89,6 +93,7 @@ class DaysWidget extends StatefulWidget {
     required this.refresh,
     required this.refreshNoInternet,
     required this.onOpenAttachment,
+    required this.openCalendarAt,
   });
   @override
   _DaysWidgetState createState() => _DaysWidgetState();
@@ -280,6 +285,10 @@ class _DaysWidgetState extends State<DaysWidget> {
     required String? activeFavoriteSubject,
   }) {
     if (n == 0) {
+      final timeline = SchoolTimeline.fromCalendarData(
+        dashboardDays: widget.vm.schoolTimelineDays,
+        calendarDays: widget.vm.schoolTimelineCalendarDays,
+      );
       return DashboardHeader(
         future: widget.vm.future,
         onSwitchFuture: widget.onSwitchFuture,
@@ -301,6 +310,8 @@ class _DaysWidgetState extends State<DaysWidget> {
           });
         },
         subjectThemes: widget.vm.subjectThemes,
+        schoolTimeline: timeline,
+        openCalendarAt: widget.openCalendarAt,
       );
     }
     if (isLast) {
@@ -355,6 +366,10 @@ class _DaysWidgetState extends State<DaysWidget> {
     final visibleDays = _filteredDays(activeFavoriteSubject);
     final noInternet = widget.vm.noInternet;
     final noEntries = visibleDays.isEmpty;
+    final schoolTimeline = SchoolTimeline.fromCalendarData(
+      dashboardDays: widget.vm.schoolTimelineDays,
+      calendarDays: widget.vm.schoolTimelineCalendarDays,
+    );
     Widget body;
     if (noEntries) {
       Widget fullScreenBody;
@@ -404,6 +419,8 @@ class _DaysWidgetState extends State<DaysWidget> {
               });
             },
             subjectThemes: widget.vm.subjectThemes,
+            schoolTimeline: schoolTimeline,
+            openCalendarAt: widget.openCalendarAt,
           ),
           Expanded(
             child: Center(child: fullScreenBody),
@@ -718,6 +735,8 @@ class DashboardHeader extends StatelessWidget {
   final ValueChanged<bool> onShowEmptyDaysChanged;
   final BuiltMap<String, SubjectTheme> subjectThemes;
   final bool future;
+  final SchoolTimeline schoolTimeline;
+  final OpenCalendarAtCallback openCalendarAt;
   const DashboardHeader({
     super.key,
     required this.future,
@@ -728,6 +747,8 @@ class DashboardHeader extends StatelessWidget {
     required this.showEmptyDays,
     required this.onShowEmptyDaysChanged,
     required this.subjectThemes,
+    required this.schoolTimeline,
+    required this.openCalendarAt,
   });
 
   @override
@@ -762,6 +783,14 @@ class DashboardHeader extends StatelessWidget {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
+              if (schoolTimeline.holidays.isNotEmpty ||
+                  schoolTimeline.gradeDeadlines.isNotEmpty) ...[
+                SchoolCountdownOverview(
+                  timeline: schoolTimeline,
+                  onOpenCalendarAt: openCalendarAt,
+                ),
+                const SizedBox(height: 10),
+              ],
               Row(
                 children: [
                   Expanded(
@@ -771,6 +800,17 @@ class DashboardHeader extends StatelessWidget {
                     ),
                   ),
                   const SizedBox(width: 8),
+                  if (schoolTimeline.holidays.isEmpty &&
+                      schoolTimeline.gradeDeadlines.isEmpty) ...[
+                    Tooltip(
+                      message: l10n.text('schoolCountdown.missingData'),
+                      child: Icon(
+                        Icons.event_busy_outlined,
+                        color: scheme.onSurfaceVariant,
+                      ),
+                    ),
+                    const SizedBox(width: 8),
+                  ],
                   AnimatedSwitcher(
                     duration: const Duration(milliseconds: 220),
                     transitionBuilder: (child, animation) {

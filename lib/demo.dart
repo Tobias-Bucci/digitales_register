@@ -2091,6 +2091,14 @@ final List<_DemoDashboardEvent> _demoDashboardEvents = <_DemoDashboardEvent>[
         homework: true,
         checkable: true),
     _DemoDashboardEvent(
+        id: 31018,
+        date: DateTime(2026, 1, 23),
+        hour: 1,
+        title: 'Chiusura valutazioni',
+        subtitle: 'Ultimo giorno per le valutazioni del primo periodo',
+        subject: null,
+        type: 'observation'),
+    _DemoDashboardEvent(
         id: 31009,
         date: DateTime(2026, 1, 30),
         hour: 5,

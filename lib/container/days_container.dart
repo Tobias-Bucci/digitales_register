@@ -25,6 +25,7 @@ import 'package:dr/app_state.dart';
 import 'package:dr/data.dart';
 import 'package:dr/local_reminder_assessments.dart';
 import 'package:dr/ui/days.dart';
+import 'package:dr/utc_date_time.dart';
 import 'package:flutter/material.dart' hide Builder;
 import 'package:flutter_built_redux/flutter_built_redux.dart';
 
@@ -80,6 +81,14 @@ class DaysContainer extends StatelessWidget {
           markAllAsSeenCallback: actions.dashboardActions.markAllAsSeen.call,
           refreshNoInternet: actions.refreshNoInternet.call,
           onOpenAttachment: actions.dashboardActions.openAttachment.call,
+          openCalendarAt: (date) async {
+            await actions.routingActions.showCalendar();
+            await actions.calendarActions.select(
+              CalendarSelection(
+                (b) => b..date = UtcDateTime.makeUtc(date),
+              ),
+            );
+          },
         );
       },
       connect: (state) {
@@ -114,6 +123,8 @@ abstract class DaysViewModel
 
   bool get showNotifications;
   BuiltList<Day> get days;
+  BuiltList<Day> get schoolTimelineDays;
+  BuiltList<CalendarDay> get schoolTimelineCalendarDays;
   BuiltList<String> get favoriteSubjects;
   BuiltList<String> get allSubjects;
 
@@ -125,6 +136,10 @@ abstract class DaysViewModel
     return DaysViewModel(
       (b) => b
         ..days = appSelectors.dashboardDays(state).toBuilder()
+        ..schoolTimelineDays =
+            (state.dashboardState.allDays ?? BuiltList<Day>()).toBuilder()
+        ..schoolTimelineCalendarDays =
+            state.calendarState.days.values.toBuiltList().toBuilder()
         ..noInternet = state.noInternet
         ..future = state.dashboardState.future
         ..loading = state.dashboardState.loading || state.loginState.loading

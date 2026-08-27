@@ -45,6 +45,8 @@ void main() {
             ],
           ),
         ])
+        ..schoolTimelineDays = ListBuilder<Day>()
+        ..schoolTimelineCalendarDays = ListBuilder<CalendarDay>()
         ..favoriteSubjects = ListBuilder<String>(),
     );
 
@@ -67,6 +69,7 @@ void main() {
         },
         refreshNoInternet: () {},
         onOpenAttachment: (_) {},
+        openCalendarAt: (_) async {},
       ),
     );
     await settleFor(tester);
