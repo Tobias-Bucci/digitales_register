@@ -20,6 +20,7 @@ import 'dart:io';
 import 'package:built_redux/built_redux.dart';
 import 'package:dio/dio.dart';
 import 'package:dr/actions/app_actions.dart';
+import 'package:dr/app_clock.dart';
 import 'package:dr/app_state.dart';
 import 'package:dr/calendar_sync_service.dart';
 import 'package:dr/i18n/app_language.dart';
@@ -167,6 +168,7 @@ Future<void> bootstrapTestEnvironment({
 }) async {
   TestWidgetsFlutterBinding.ensureInitialized();
   SharedPreferences.setMockInitialValues(sharedPreferences);
+  appClock.resetForTest();
   secureStorage = TestSecureStorage(storage: storage);
   wrapper = wrapperOverride ?? Wrapper();
   passDio = null;
@@ -213,6 +215,7 @@ Future<void> _ensurePathProviderMocks() async {
 }
 
 Future<void> resetTestState() async {
+  appClock.resetForTest();
   mockNow = null;
   deletedData = false;
   statePersistenceService.clear();

@@ -1,4 +1,4 @@
-﻿// Copyright (C) 2021 Michael Debertol
+// Copyright (C) 2021 Michael Debertol
 // Copyright (C) 2026 Tobias Bucci
 //
 // This file is part of digitales_register.
@@ -176,22 +176,22 @@ class _HoursChunk extends StatelessWidget {
                           displayHours[n ~/ 2].toHour >= selectedHour!,
                       backgroundColor: colorBackground
                           ? (subjectThemes[displayHours[n ~/ 2].subject] != null
-                                  ? Color(
-                                      subjectThemes[displayHours[n ~/ 2].subject]!
-                                          .color,
-                                    ).withValues(alpha: 0.25)
-                                  : Colors.transparent)
+                              ? Color(
+                                  subjectThemes[displayHours[n ~/ 2].subject]!
+                                      .color,
+                                ).withValues(alpha: 0.25)
+                              : Colors.transparent)
                           : Colors.transparent,
                       selectedBackgroundColor: colorBackground
                           ? (subjectThemes[displayHours[n ~/ 2].subject] != null
-                                  ? Color(
-                                      subjectThemes[displayHours[n ~/ 2].subject]!
-                                          .color,
-                                    ).withValues(alpha: 0.5)
-                                  : Theme.of(context)
-                                      .colorScheme
-                                      .secondary
-                                      .withAlpha(35))
+                              ? Color(
+                                  subjectThemes[displayHours[n ~/ 2].subject]!
+                                      .color,
+                                ).withValues(alpha: 0.5)
+                              : Theme.of(context)
+                                  .colorScheme
+                                  .secondary
+                                  .withAlpha(35))
                           : Theme.of(context)
                               .colorScheme
                               .secondary
@@ -228,7 +228,8 @@ List<CalendarHour> _mergeDisplayHours(List<CalendarHour> hours) {
             ...previous.teachers,
             for (final teacher in hour.teachers)
               if (!previous.teachers.any(
-                (existing) => equalsIgnoreCase(existing.fullName, teacher.fullName),
+                (existing) =>
+                    equalsIgnoreCase(existing.fullName, teacher.fullName),
               ))
                 teacher,
           ])
@@ -255,7 +256,8 @@ bool _canMergeDisplayHour(CalendarHour previous, CalendarHour next) {
   if (!equalsIgnoreCase(previous.subject, next.subject)) {
     return false;
   }
-  if (previous.classId != next.classId || previous.className != next.className) {
+  if (previous.classId != next.classId ||
+      previous.className != next.className) {
     return false;
   }
   if (previous.subjectId != next.subjectId) {
@@ -281,7 +283,6 @@ bool _sameStringList(Iterable<String> a, Iterable<String> b) {
   return true;
 }
 
-
 class CalendarDayWidget extends StatelessWidget {
   final int max;
   final CalendarDay calendarDay;
@@ -306,6 +307,9 @@ class CalendarDayWidget extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final localeTag = Localizations.localeOf(context).toLanguageTag();
+    final today = Day.dateToday();
+    final isToday = calendarDay.date == today;
+    final colorScheme = Theme.of(context).colorScheme;
     final chunks = <List<CalendarHour>>[];
     for (final hour in calendarDay.hours) {
       if (chunks.isEmpty) {
@@ -321,14 +325,37 @@ class CalendarDayWidget extends StatelessWidget {
     }
     return Column(
       children: <Widget>[
-        Text(
-          context.l10n.capitalize(
-            DateFormat("E", localeTag).format(calendarDay.date),
+        Container(
+          key: isToday ? const Key('calendar-today-indicator') : null,
+          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+          decoration: isToday
+              ? BoxDecoration(
+                  color: colorScheme.primaryContainer,
+                  borderRadius: BorderRadius.circular(12),
+                )
+              : null,
+          child: Column(
+            children: [
+              Text(
+                context.l10n.capitalize(
+                  DateFormat("E", localeTag).format(calendarDay.date),
+                ),
+                style: isToday
+                    ? TextStyle(
+                        color: colorScheme.onPrimaryContainer,
+                        fontWeight: FontWeight.w700,
+                      )
+                    : null,
+              ),
+              Text(
+                DateFormat("dd.MM", localeTag).format(calendarDay.date),
+                style: DefaultTextStyle.of(context).style.copyWith(
+                      fontSize: 12,
+                      color: isToday ? colorScheme.onPrimaryContainer : null,
+                    ),
+              ),
+            ],
           ),
-        ),
-        Text(
-          DateFormat("dd.MM", localeTag).format(calendarDay.date),
-          style: DefaultTextStyle.of(context).style.copyWith(fontSize: 12),
         ),
         if (chunks.isNotEmpty) ...[
           for (var i = 0; i < chunks.length; i++) ...[

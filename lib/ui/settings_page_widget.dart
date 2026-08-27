@@ -19,6 +19,7 @@
 import 'package:built_collection/built_collection.dart';
 import 'package:deleteable_tile/deleteable_tile.dart';
 import 'package:dr/analytics_service.dart';
+import 'package:dr/app_clock.dart';
 import 'package:dr/app_state.dart';
 import 'package:dr/app_subject_translation_controller.dart';
 import 'package:dr/calendar_sync_service.dart';
@@ -78,6 +79,7 @@ class SettingsPageWidget extends StatefulWidget {
   final VoidCallback onShowDebug;
   final SettingsViewModel vm;
   final AppThemePreference currentThemePreference;
+  final Future<void> Function(DateTime? date) onSetSimulatedDate;
 
   const SettingsPageWidget({
     super.key,
@@ -113,6 +115,7 @@ class SettingsPageWidget extends StatefulWidget {
     required this.onSetContrastColor,
     required this.onSetFavoriteSubjects,
     required this.currentThemePreference,
+    required this.onSetSimulatedDate,
   });
 
   @override
@@ -515,6 +518,69 @@ class _SettingsPageWidgetState extends State<SettingsPageWidget> {
     );
   }
 
+  Future<void> _pickSimulatedDate() async {
+    final picked = await showDatePicker(
+      context: context,
+      initialDate: appClock.simulatedDate,
+      firstDate: AppClock.demoSchoolYearStart,
+      lastDate: AppClock.demoSchoolYearEnd,
+    );
+    if (picked != null && mounted) {
+      await widget.onSetSimulatedDate(picked);
+    }
+  }
+
+  Widget _buildDemoDateSection(AppLocalizations l10n) {
+    final localizations = MaterialLocalizations.of(context);
+    final selectedDate = appClock.simulatedDate;
+    return _SettingsSectionCard(
+      title: l10n.text('settings.demoDate.section'),
+      children: [
+        ListTile(
+          key: const Key('settings-demo-date-picker'),
+          leading: const Icon(Icons.today_outlined),
+          title: Text(l10n.text('settings.demoDate.title')),
+          subtitle: Text(localizations.formatFullDate(selectedDate)),
+          trailing: const Icon(Icons.chevron_right),
+          onTap: _pickSimulatedDate,
+        ),
+        Padding(
+          padding: const EdgeInsets.fromLTRB(16, 0, 16, 12),
+          child: Wrap(
+            spacing: 8,
+            runSpacing: 8,
+            children: [
+              ActionChip(
+                key: const Key('settings-demo-date-start'),
+                avatar: const Icon(Icons.first_page, size: 18),
+                label: Text(l10n.text('settings.demoDate.start')),
+                onPressed: () => widget.onSetSimulatedDate(
+                  AppClock.demoSchoolYearStart,
+                ),
+              ),
+              ActionChip(
+                key: const Key('settings-demo-date-end'),
+                avatar: const Icon(Icons.last_page, size: 18),
+                label: Text(l10n.text('settings.demoDate.end')),
+                onPressed: () => widget.onSetSimulatedDate(
+                  AppClock.demoSchoolYearEnd,
+                ),
+              ),
+              ActionChip(
+                key: const Key('settings-demo-date-reset'),
+                avatar: const Icon(Icons.restart_alt, size: 18),
+                label: Text(l10n.text('settings.demoDate.reset')),
+                onPressed: appClock.selectedDemoDate == null
+                    ? null
+                    : () => widget.onSetSimulatedDate(null),
+              ),
+            ],
+          ),
+        ),
+      ],
+    );
+  }
+
   Widget _buildAppearanceSection(AppLocalizations l10n, _Theme currentTheme) {
     return _SettingsSectionCard(
       title: l10n.text('settings.section.appearance'),
@@ -888,6 +954,10 @@ class _SettingsPageWidgetState extends State<SettingsPageWidget> {
       body: ListView(
         padding: const EdgeInsets.fromLTRB(16, 16, 16, 24),
         children: <Widget>[
+          if (widget.vm.demoMode) ...[
+            _buildDemoDateSection(l10n),
+            const SizedBox(height: 16),
+          ],
           _buildAccountSection(l10n),
           const SizedBox(height: 16),
           _buildAppearanceSection(l10n, currentTheme),

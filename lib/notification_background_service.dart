@@ -157,9 +157,9 @@ class NotificationReminderEntry {
       body: getString(json["body"]),
       kind: _readPrivacyKind(getString(json["kind"])),
       firstSeenAt:
-          UtcDateTime.tryParse(getString(json["firstSeenAt"]) ?? "") ?? now,
+          UtcDateTime.tryParse(getString(json["firstSeenAt"]) ?? "") ?? realNow,
       lastSeenAt:
-          UtcDateTime.tryParse(getString(json["lastSeenAt"]) ?? "") ?? now,
+          UtcDateTime.tryParse(getString(json["lastSeenAt"]) ?? "") ?? realNow,
       lastAlertedAt:
           UtcDateTime.tryParse(getString(json["lastAlertedAt"]) ?? ""),
     );
@@ -459,7 +459,7 @@ class NotificationBackgroundService {
       }
       final prefs = await SharedPreferences.getInstance();
       final previousEntries = _readReminderEntries(prefs);
-      final currentTime = now;
+      final currentTime = realNow;
       final evaluation = evaluateNotificationReminders(
         previousEntries: previousEntries,
         unreadCandidates: dedupedUnread,
@@ -1048,7 +1048,7 @@ class NotificationBackgroundService {
     required String trigger,
   }) async {
     final prefs = await SharedPreferences.getInstance();
-    final currentTime = now;
+    final currentTime = realNow;
     final lastCompleted =
         UtcDateTime.tryParse(prefs.getString(_pollLastCompletedKey) ?? "");
     if (lastCompleted != null &&
@@ -1102,11 +1102,11 @@ class NotificationBackgroundService {
         await prefs.remove(_pollLeaseKey);
       }
     }
-    await prefs.setString(_pollLastCompletedKey, now.toIso8601String());
+    await prefs.setString(_pollLastCompletedKey, realNow.toIso8601String());
   }
 
   static Future<void> appendLog(String entry) async {
-    final timestamp = now.toIso8601String();
+    final timestamp = realNow.toIso8601String();
     final msg = "$timestamp $entry";
     log(msg, name: "NotificationBackgroundService");
 

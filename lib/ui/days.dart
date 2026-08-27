@@ -1159,7 +1159,7 @@ class ItemWidget extends StatelessWidget {
     Widget child = Deleteable(
       // this is a new entry or a reminder the user has just entered
       showEntryAnimation:
-          now.difference(item.firstSeen) < const Duration(seconds: 1),
+          realNow.difference(item.firstSeen) < const Duration(seconds: 1),
       builder: (context, delete) => Card(
         margin: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
         elevation: 0,

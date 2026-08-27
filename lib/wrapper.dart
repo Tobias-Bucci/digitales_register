@@ -24,6 +24,7 @@ import 'package:cookie_jar/cookie_jar.dart';
 import 'package:dio/dio.dart';
 import 'package:dio/io.dart';
 import 'package:dio_cookie_manager/dio_cookie_manager.dart';
+import 'package:dr/app_clock.dart';
 import 'package:dr/app_state.dart';
 import 'package:dr/demo.dart';
 import 'package:dr/main.dart';
@@ -143,6 +144,7 @@ class Wrapper {
   }) async {
     if (user == 'demo' && pass == 'demo' && (url?.trim().isEmpty ?? true)) {
       demoMode = true;
+      appClock.setDemoMode(true);
       this.url = '';
       _loggedIn = Future.value(true);
       this.user = user;
@@ -161,6 +163,7 @@ class Wrapper {
       return;
     } else {
       demoMode = false;
+      appClock.setDemoMode(false);
     }
 
     noInternet = false;

@@ -18,6 +18,7 @@
 
 import 'package:built_collection/built_collection.dart';
 import 'package:dr/actions/app_actions.dart';
+import 'package:dr/app_clock.dart';
 import 'package:dr/app_state.dart';
 import 'package:dr/data.dart';
 import 'package:dr/local_reminder_assessments.dart';
@@ -67,6 +68,7 @@ class CalendarViewModel {
   final BuiltMap<String, SubjectTheme> subjectThemes;
   final bool substituteDetectionEnabled;
   final bool showSubstituteBar;
+  final int clockRevision;
 
   factory CalendarViewModel(AppState state) {
     final currentDays = BuiltList<CalendarDay>(_calendarDays(state));
@@ -90,6 +92,7 @@ class CalendarViewModel {
           state.settingsState.showCalendarNicksBar,
       noInternet: state.noInternet,
       selection: state.calendarState.selection,
+      clockRevision: appClock.revision,
     );
   }
 
@@ -105,6 +108,7 @@ class CalendarViewModel {
     required this.subjectThemes,
     required this.substituteDetectionEnabled,
     required this.showSubstituteBar,
+    required this.clockRevision,
   });
 
   @override
@@ -121,7 +125,8 @@ class CalendarViewModel {
             other.favoriteSubjects == favoriteSubjects &&
             other.subjectThemes == subjectThemes &&
             other.substituteDetectionEnabled == substituteDetectionEnabled &&
-            other.showSubstituteBar == showSubstituteBar;
+            other.showSubstituteBar == showSubstituteBar &&
+            other.clockRevision == clockRevision;
   }
 
   @override
@@ -137,6 +142,7 @@ class CalendarViewModel {
         subjectThemes,
         substituteDetectionEnabled,
         showSubstituteBar,
+        clockRevision,
       );
 
   static List<CalendarDay> _calendarDays(AppState state) {

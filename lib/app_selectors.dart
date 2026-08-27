@@ -16,6 +16,7 @@
 // along with digitales_register.  If not, see <http://www.gnu.org/licenses/>.
 
 import 'package:built_collection/built_collection.dart';
+import 'package:dr/app_clock.dart';
 import 'package:dr/app_state.dart';
 import 'package:dr/data.dart';
 import 'package:dr/local_reminder_assessments.dart';
@@ -116,12 +117,14 @@ class _DashboardDaysSelector {
   DashboardState? _dashboardState;
   CalendarState? _calendarState;
   BuiltList<HomeworkType>? _blacklist;
+  int? _clockRevision;
   BuiltList<Day>? _lastResult;
 
   BuiltList<Day> select(AppState state) {
     if (identical(state.dashboardState, _dashboardState) &&
         identical(state.calendarState, _calendarState) &&
         identical(state.dashboardState.blacklist, _blacklist) &&
+        _clockRevision == appClock.revision &&
         _lastResult != null) {
       return _lastResult!;
     }
@@ -180,6 +183,7 @@ class _DashboardDaysSelector {
     _dashboardState = state.dashboardState;
     _calendarState = state.calendarState;
     _blacklist = state.dashboardState.blacklist;
+    _clockRevision = appClock.revision;
     _lastResult = result;
     return result;
   }

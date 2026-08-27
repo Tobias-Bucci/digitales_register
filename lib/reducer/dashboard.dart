@@ -51,7 +51,8 @@ final dashboardReducerBuilder = NestedReducerBuilder<AppState, AppStateBuilder,
 
 void _loaded(DashboardState state, Action<DaysLoadedPayload> action,
     DashboardStateBuilder builder) {
-  final loadTime = now;
+  final today = now;
+  final loadTime = realNow;
   final loadedDays = [
     for (final day in action.payload.data as Iterable)
       tryParse<Day, dynamic>(
@@ -79,7 +80,7 @@ void _loaded(DashboardState state, Action<DaysLoadedPayload> action,
         if (newDay == null) {
           if (!action.payload.future &&
               day.date.isBefore(
-                loadTime.subtract(
+                today.subtract(
                   const Duration(days: 1),
                 ), // subtract to not accidentally delete today
               )) {
@@ -287,8 +288,8 @@ void _homeworkAdded(DashboardState state, Action<HomeworkAddedPayload> action,
               ..homework.add(
                 _parseHomework(getMap(action.payload.data)!).rebuild(
                   (b) => b
-                    ..firstSeen = now
-                    ..lastNotSeen = now,
+                    ..firstSeen = realNow
+                    ..lastNotSeen = realNow,
                 ),
               ),
           )
@@ -309,8 +310,8 @@ void _reminderEdited(DashboardState state, Action<HomeworkEditedPayload> action,
     DashboardStateBuilder builder) {
   final newHomework = _parseHomework(getMap(action.payload.data)!).rebuild(
     (b) => b
-      ..firstSeen = now
-      ..lastNotSeen = now,
+      ..firstSeen = realNow
+      ..lastNotSeen = realNow,
   );
 
   builder.allDays.map(

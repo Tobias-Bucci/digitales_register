@@ -40,6 +40,7 @@ import 'package:dr/actions/save_pass_actions.dart';
 import 'package:dr/actions/settings_actions.dart';
 import 'package:dr/analytics_service.dart';
 import 'package:dr/android_widget_service.dart';
+import 'package:dr/app_clock.dart';
 import 'package:dr/app_language_controller.dart';
 import 'package:dr/app_state.dart';
 import 'package:dr/calendar_sync_service.dart';
@@ -129,7 +130,7 @@ bool _isFresh(UtcDateTime? timestamp, Duration ttl) {
   if (timestamp == null) {
     return false;
   }
-  final age = now.difference(timestamp);
+  final age = realNow.difference(timestamp);
   return !age.isNegative && age < ttl;
 }
 
@@ -138,7 +139,7 @@ bool _isRuntimeCacheFresh(String key, Duration ttl) {
 }
 
 void _markRuntimeCacheFresh(String key) {
-  _runtimeCacheTimes[key] = now;
+  _runtimeCacheTimes[key] = realNow;
   _staleCacheKeys.remove(key);
 }
 

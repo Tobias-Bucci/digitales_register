@@ -52,7 +52,7 @@ abstract class Day implements Built<Day, DayBuilder> {
 
   static void _initializeBuilder(DayBuilder builder) {
     builder
-      ..lastRequested = now
+      ..lastRequested = realNow
       ..deletedHomework = ListBuilder();
   }
 
@@ -181,7 +181,7 @@ abstract class Homework implements Built<Homework, HomeworkBuilder> {
     ..checkable = false
     ..deleteable = false
     ..deleted = false
-    ..firstSeen = now;
+    ..firstSeen = realNow;
 }
 
 String formatGradeFromString(String? grade) {

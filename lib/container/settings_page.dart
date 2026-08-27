@@ -22,6 +22,7 @@ import 'package:built_collection/built_collection.dart';
 import 'package:collection/collection.dart';
 import 'package:dr/actions/app_actions.dart';
 import 'package:dr/actions/calendar_actions.dart';
+import 'package:dr/app_clock.dart';
 import 'package:dr/app_state.dart';
 import 'package:dr/i18n/app_language.dart';
 import 'package:dr/main.dart';
@@ -40,7 +41,7 @@ class SettingsPageContainer extends StatelessWidget {
     return StoreConnection<AppState, AppActions, SettingsViewModel>(
       builder: (context, vm, actions) {
         return AnimatedBuilder(
-          animation: themeController,
+          animation: Listenable.merge([themeController, appClock]),
           builder: (context, _) => SettingsPageWidget(
             vm: vm,
             currentThemePreference: themeController.themePreference,
@@ -114,8 +115,8 @@ class SettingsPageContainer extends StatelessWidget {
                 .substituteKnownTeachers(BuiltList<String>.from(teachers)),
             onSetSubstitutePrimaryTeachersLockedSubjects: (subjects) =>
                 actions.settingsActions.substitutePrimaryTeachersLockedSubjects(
-                  BuiltList<String>.from(subjects),
-                ),
+              BuiltList<String>.from(subjects),
+            ),
             onSetCalendarSyncEnabled:
                 actions.settingsActions.calendarSyncEnabled.call,
             onSetCalendarSyncCalendarId:
@@ -126,6 +127,19 @@ class SettingsPageContainer extends StatelessWidget {
             onSetSubjectTheme: actions.settingsActions.setSubjectTheme.call,
             onSetContrastColor: (color) {
               unawaited(setGlobalContrastColor(color));
+            },
+            onSetSimulatedDate: (date) async {
+              if (date == null) {
+                await appClock.resetSimulatedDate();
+              } else {
+                await appClock.setSimulatedDate(date);
+              }
+              final monday = toMonday(now);
+              await actions.calendarActions.setCurrentMonday(monday);
+              await Future.wait([
+                actions.calendarActions.load(monday),
+                actions.dashboardActions.refresh(),
+              ]);
             },
           ),
         );
@@ -172,53 +186,52 @@ class SettingsViewModel {
   final List<String> allTeachers;
   final BuiltMap<String, SubjectTheme> subjectThemes;
   SettingsViewModel(AppState state)
-    : username = state.loginState.username ?? '',
-      language = AppLanguage.fromCode(state.settingsState.languageCode),
-      noPassSaving = state.settingsState.noPasswordSaving,
-      noDataSaving = state.settingsState.noDataSaving,
-      askWhenDelete = state.settingsState.askWhenDelete,
-      deleteDataOnLogout = state.settingsState.deleteDataOnLogout,
-      subjectNicks = state.settingsState.subjectNicks.toMap(),
-      showSubjectNicks = state.settingsState.scrollToSubjectNicks,
-      showGradesSettings = state.settingsState.scrollToGrades,
-      showCalendarSubstituteSettings =
-          state.settingsState.scrollToCalendarSubstituteSettings,
-      showCalendarEditNicksBar = state.settingsState.showCalendarNicksBar,
-      showGradesDiagram = state.settingsState.showGradesDiagram,
-      showAllSubjectsAverage = state.settingsState.showAllSubjectsAverage,
-      dashboardMarkNewOrChangedEntries =
-          state.settingsState.dashboardMarkNewOrChangedEntries,
-      dashboardDeduplicateEntries =
-          state.settingsState.dashboardDeduplicateEntries,
-      dashboardColorBorders = state.settingsState.dashboardColorBorders,
-      calendarColorBackground = state.settingsState.calendarColorBackground,
-      dashboardColorTestsInRed = state.settingsState.dashboardColorTestsInRed,
-      pushNotificationsEnabled = state.settingsState.pushNotificationsEnabled,
-      substituteDetectionEnabled =
-          state.settingsState.substituteDetectionEnabled,
-      calendarSyncEnabled = state.settingsState.calendarSyncEnabled,
-      calendarSyncCalendarId = state.settingsState.calendarSyncCalendarId,
-      amoledMode = state.settingsState.amoledMode,
-      allSubjects = _sortedIgnoreCase(state.extractAllSubjects()),
-      allTeachers = _mergedTeachers(
-        state.extractAllTeachers(),
-        state.settingsState.substituteKnownTeachers.toList(),
-      ),
-      ignoreForGradesAverage = state.settingsState.ignoreForGradesAverage
-          .toList(),
-      favoriteSubjects = state.settingsState.favoriteSubjects.toList(),
-      substitutePrimaryTeachers =
-          _normalizedSubstitutePrimaryTeachers(state.extractAllSubjects(), {
-            for (final entry
-                in state.settingsState.substitutePrimaryTeachers.entries)
-              entry.key: entry.value.toList(),
-          }),
-      substitutePrimaryTeachersLockedSubjects = state
-          .settingsState
-          .substitutePrimaryTeachersLockedSubjects
-          .toList(),
-      subjectThemes = state.settingsState.subjectThemes,
-      demoMode = state.isDemo;
+      : username = state.loginState.username ?? '',
+        language = AppLanguage.fromCode(state.settingsState.languageCode),
+        noPassSaving = state.settingsState.noPasswordSaving,
+        noDataSaving = state.settingsState.noDataSaving,
+        askWhenDelete = state.settingsState.askWhenDelete,
+        deleteDataOnLogout = state.settingsState.deleteDataOnLogout,
+        subjectNicks = state.settingsState.subjectNicks.toMap(),
+        showSubjectNicks = state.settingsState.scrollToSubjectNicks,
+        showGradesSettings = state.settingsState.scrollToGrades,
+        showCalendarSubstituteSettings =
+            state.settingsState.scrollToCalendarSubstituteSettings,
+        showCalendarEditNicksBar = state.settingsState.showCalendarNicksBar,
+        showGradesDiagram = state.settingsState.showGradesDiagram,
+        showAllSubjectsAverage = state.settingsState.showAllSubjectsAverage,
+        dashboardMarkNewOrChangedEntries =
+            state.settingsState.dashboardMarkNewOrChangedEntries,
+        dashboardDeduplicateEntries =
+            state.settingsState.dashboardDeduplicateEntries,
+        dashboardColorBorders = state.settingsState.dashboardColorBorders,
+        calendarColorBackground = state.settingsState.calendarColorBackground,
+        dashboardColorTestsInRed = state.settingsState.dashboardColorTestsInRed,
+        pushNotificationsEnabled = state.settingsState.pushNotificationsEnabled,
+        substituteDetectionEnabled =
+            state.settingsState.substituteDetectionEnabled,
+        calendarSyncEnabled = state.settingsState.calendarSyncEnabled,
+        calendarSyncCalendarId = state.settingsState.calendarSyncCalendarId,
+        amoledMode = state.settingsState.amoledMode,
+        allSubjects = _sortedIgnoreCase(state.extractAllSubjects()),
+        allTeachers = _mergedTeachers(
+          state.extractAllTeachers(),
+          state.settingsState.substituteKnownTeachers.toList(),
+        ),
+        ignoreForGradesAverage =
+            state.settingsState.ignoreForGradesAverage.toList(),
+        favoriteSubjects = state.settingsState.favoriteSubjects.toList(),
+        substitutePrimaryTeachers =
+            _normalizedSubstitutePrimaryTeachers(state.extractAllSubjects(), {
+          for (final entry
+              in state.settingsState.substitutePrimaryTeachers.entries)
+            entry.key: entry.value.toList(),
+        }),
+        substitutePrimaryTeachersLockedSubjects = state
+            .settingsState.substitutePrimaryTeachersLockedSubjects
+            .toList(),
+        subjectThemes = state.settingsState.subjectThemes,
+        demoMode = state.isDemo;
 
   @override
   bool operator ==(Object other) {
@@ -276,38 +289,39 @@ class SettingsViewModel {
 
   @override
   int get hashCode => Object.hashAll(<Object?>[
-    username,
-    _settingsViewModelEquality.hash(subjectNicks),
-    noPassSaving,
-    language,
-    noDataSaving,
-    askWhenDelete,
-    deleteDataOnLogout,
-    showCalendarEditNicksBar,
-    showGradesDiagram,
-    showAllSubjectsAverage,
-    dashboardMarkNewOrChangedEntries,
-    dashboardDeduplicateEntries,
-    showSubjectNicks,
-    showGradesSettings,
-    showCalendarSubstituteSettings,
-    dashboardColorBorders,
-    calendarColorBackground,
-    dashboardColorTestsInRed,
-    pushNotificationsEnabled,
-    substituteDetectionEnabled,
-    calendarSyncEnabled,
-    calendarSyncCalendarId,
-    amoledMode,
-    demoMode,
-    _settingsViewModelEquality.hash(allSubjects),
-    _settingsViewModelEquality.hash(ignoreForGradesAverage),
-    _settingsViewModelEquality.hash(favoriteSubjects),
-    _settingsViewModelEquality.hash(substitutePrimaryTeachers),
-    _settingsViewModelEquality.hash(substitutePrimaryTeachersLockedSubjects),
-    _settingsViewModelEquality.hash(allTeachers),
-    subjectThemes,
-  ]);
+        username,
+        _settingsViewModelEquality.hash(subjectNicks),
+        noPassSaving,
+        language,
+        noDataSaving,
+        askWhenDelete,
+        deleteDataOnLogout,
+        showCalendarEditNicksBar,
+        showGradesDiagram,
+        showAllSubjectsAverage,
+        dashboardMarkNewOrChangedEntries,
+        dashboardDeduplicateEntries,
+        showSubjectNicks,
+        showGradesSettings,
+        showCalendarSubstituteSettings,
+        dashboardColorBorders,
+        calendarColorBackground,
+        dashboardColorTestsInRed,
+        pushNotificationsEnabled,
+        substituteDetectionEnabled,
+        calendarSyncEnabled,
+        calendarSyncCalendarId,
+        amoledMode,
+        demoMode,
+        _settingsViewModelEquality.hash(allSubjects),
+        _settingsViewModelEquality.hash(ignoreForGradesAverage),
+        _settingsViewModelEquality.hash(favoriteSubjects),
+        _settingsViewModelEquality.hash(substitutePrimaryTeachers),
+        _settingsViewModelEquality
+            .hash(substitutePrimaryTeachersLockedSubjects),
+        _settingsViewModelEquality.hash(allTeachers),
+        subjectThemes,
+      ]);
 }
 
 List<String> _mergedTeachers(

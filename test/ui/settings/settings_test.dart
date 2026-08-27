@@ -16,6 +16,7 @@
 // along with digitales_register.  If not, see <http://www.gnu.org/licenses/>.
 
 import 'package:dr/app_state.dart';
+import 'package:dr/app_clock.dart';
 import 'package:dr/container/settings_page.dart';
 import 'package:dr/i18n/app_language.dart';
 import 'package:dr/theme_controller.dart';
@@ -77,5 +78,29 @@ void main() {
     expect(find.text('Restore default abbreviations'), findsNothing);
     expect(find.text('Add primary teacher'), findsNothing);
     expect(find.text('Exclude subjects from the grade average'), findsNothing);
+    expect(find.byKey(const Key('settings-demo-date-picker')), findsNothing);
+  });
+
+  testWidgets('shows simulated date controls only for the demo guest',
+      (tester) async {
+    await useLargeSurface(tester);
+    appClock.setDemoMode(true);
+    final store = createStore(
+      initialState: AppState(
+        (b) => b
+          ..url = ''
+          ..loginState.username = 'demo'
+          ..settingsState.languageCode = AppLanguage.en.code,
+      ),
+    );
+
+    await pumpApp(tester, store: store, home: SettingsPageContainer());
+    await settleFor(tester);
+
+    expect(find.text('Simulated date'), findsOneWidget);
+    expect(find.byKey(const Key('settings-demo-date-picker')), findsOneWidget);
+    expect(find.byKey(const Key('settings-demo-date-start')), findsOneWidget);
+    expect(find.byKey(const Key('settings-demo-date-end')), findsOneWidget);
+    expect(find.byKey(const Key('settings-demo-date-reset')), findsOneWidget);
   });
 }

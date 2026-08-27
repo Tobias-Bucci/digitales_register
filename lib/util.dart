@@ -21,6 +21,7 @@ import 'dart:developer';
 import 'dart:io';
 
 import 'package:collection/collection.dart';
+import 'package:dr/app_clock.dart';
 import 'package:dr/utc_date_time.dart';
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
@@ -157,7 +158,12 @@ UtcDateTime toMonday(UtcDateTime date) {
   return UtcDateTime(s.year, s.month, s.day);
 }
 
-UtcDateTime get now => mockNow ?? UtcDateTime.now();
+/// User-facing application time. In the demo account its date comes from the
+/// central simulated clock; for every other account it is the real time.
+UtcDateTime get now => mockNow ?? UtcDateTime.makeUtc(appClock.now);
+
+/// Real wall-clock time for technical timestamps, TTLs and animations.
+UtcDateTime get realNow => mockNow ?? UtcDateTime.now();
 @visibleForTesting
 UtcDateTime? mockNow;
 

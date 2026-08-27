@@ -25,6 +25,7 @@ import 'package:built_redux/built_redux.dart';
 import 'package:dr/actions/app_actions.dart';
 import 'package:dr/analytics_service.dart';
 import 'package:dr/android_widget_service.dart';
+import 'package:dr/app_clock.dart';
 import 'package:dr/app_language_controller.dart';
 import 'package:dr/app_state.dart';
 import 'package:dr/app_subject_translation_controller.dart';
@@ -77,6 +78,7 @@ Future<void> main() async {
   scaffoldKey = GlobalKey();
   scaffoldMessengerKey = GlobalKey();
   secureStorage = getFlutterSecureStorage();
+  await appClock.initialize();
   await _loadStartupUserPreferences();
   final store = Store<AppState, AppStateBuilder, AppActions>(
     appReducerBuilder.build(),
@@ -206,7 +208,7 @@ class RegisterApp extends StatelessWidget {
             ).locale,
           ),
           builder: (context, vm, actions) => AnimatedBuilder(
-            animation: themeController,
+            animation: Listenable.merge([themeController, appClock]),
             builder: (context, _) => MaterialApp(
               localizationsDelegates: const [
                 AppLocalizations.delegate,

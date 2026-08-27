@@ -19,6 +19,7 @@
 import 'package:built_collection/built_collection.dart';
 import 'package:built_value/built_value.dart';
 import 'package:dr/actions/app_actions.dart';
+import 'package:dr/app_clock.dart';
 import 'package:dr/app_state.dart';
 import 'package:dr/data.dart';
 import 'package:dr/local_reminder_assessments.dart';
@@ -68,11 +69,15 @@ abstract class CalendarWeekViewModel
   CalendarSelection? get selection;
   bool get colorBackground;
   BuiltMap<String, SubjectTheme> get subjectThemes;
+  int get clockRevision;
 
   factory CalendarWeekViewModel(
           [void Function(CalendarWeekViewModelBuilder)? updates]) =
       _$CalendarWeekViewModel;
   CalendarWeekViewModel._();
+  static void _initializeBuilder(CalendarWeekViewModelBuilder builder) {
+    builder.clockRevision = 0;
+  }
 
   factory CalendarWeekViewModel.fromStateAndWeek(
       AppState state, UtcDateTime monday) {
@@ -93,7 +98,8 @@ abstract class CalendarWeekViewModel
         ..noInternet = state.noInternet
         ..selection = state.calendarState.selection?.toBuilder()
         ..colorBackground = state.settingsState.calendarColorBackground
-        ..subjectThemes = state.settingsState.subjectThemes.toBuilder(),
+        ..subjectThemes = state.settingsState.subjectThemes.toBuilder()
+        ..clockRevision = appClock.revision,
     );
   }
 }

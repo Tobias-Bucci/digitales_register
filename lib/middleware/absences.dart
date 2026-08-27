@@ -319,7 +319,7 @@ Map<String, dynamic>? _buildJustifyAbsencePayload(
   }
 
   final dateFormat = DateFormat('yyyy-MM-dd');
-  final timestamp = UtcDateTime.now();
+  final timestamp = now;
   final groupDate = absenceGroup.date ?? absenceGroup.absences.first.date;
   final locale = AppLanguage.fromCode(
     state.settingsState.languageCode,

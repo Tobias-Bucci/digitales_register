@@ -76,6 +76,9 @@ Future<void> _logout(
     assert(action.payload.hard);
     wrapper.logout(hard: action.payload.hard);
   }
+  if (action.payload.hard) {
+    appClock.setDemoMode(false);
+  }
   await next(action);
   if (action.payload.hard) {
     statePersistenceService.clear();
