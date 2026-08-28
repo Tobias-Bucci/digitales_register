@@ -113,6 +113,7 @@ class _DaysWidgetState extends State<DaysWidget> {
   final Map<int, Day> _dayIndexes = {};
 
   final ValueNotifier<bool> _showScrollUp = ValueNotifier(false);
+  bool _reachedHomeworksUpdateScheduled = false;
 
   void _updateShowScrollUp() {
     if (controller.hasClients) {
@@ -122,11 +123,13 @@ class _DaysWidgetState extends State<DaysWidget> {
 
   double? _distanceToItem(int item) {
     final ctx = controller.tagMap[item]?.context;
-    if (ctx != null) {
-      final renderBox = ctx.findRenderObject()! as RenderBox;
-      final RenderAbstractViewport viewport =
-          RenderAbstractViewport.of(renderBox);
-      var offsetToReveal = viewport.getOffsetToReveal(renderBox, 0.5).offset;
+    final renderObject = ctx?.findRenderObject();
+    if (renderObject is RenderBox &&
+        renderObject.attached &&
+        renderObject.hasSize) {
+      final viewport = RenderAbstractViewport.maybeOf(renderObject);
+      if (viewport == null) return null;
+      var offsetToReveal = viewport.getOffsetToReveal(renderObject, 0.5).offset;
       if (offsetToReveal < 0) offsetToReveal = 0;
       final currentOffset = controller.offset;
       return (offsetToReveal - currentOffset).abs();
@@ -169,6 +172,15 @@ class _DaysWidgetState extends State<DaysWidget> {
   void update() {
     _updateShowScrollUp();
     _updateReachedHomeworks();
+  }
+
+  void _scheduleReachedHomeworksUpdate() {
+    if (_reachedHomeworksUpdateScheduled) return;
+    _reachedHomeworksUpdateScheduled = true;
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _reachedHomeworksUpdateScheduled = false;
+      if (mounted) update();
+    });
   }
 
   List<String> _availableFavoriteSubjects() {
@@ -271,7 +283,10 @@ class _DaysWidgetState extends State<DaysWidget> {
     final availableFavoriteSubjects = _availableFavoriteSubjects();
     updateValues(
         _filteredDays(_resolvedFavoriteSubject(availableFavoriteSubjects)));
-    update();
+    // New dashboard data replaces AutoScrollTag children. Their render boxes
+    // are not laid out until the following frame, so geometry must not be read
+    // synchronously from didUpdateWidget.
+    _scheduleReachedHomeworksUpdate();
 
     super.didUpdateWidget(oldWidget);
   }
