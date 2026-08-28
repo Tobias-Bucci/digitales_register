@@ -521,5 +521,15 @@
   "update.title": "Nuev ajornament a disposizion!",
   "update.content": "Cëria ju la verscion plu nueva śën.",
   "update.later": "Plu tert",
-  "update.now": "Ajorna"
+  "update.now": "Ajorna",
+  "settings.demo.section": "Demo",
+  "settings.demo.assessments": "Verifiches tla demo",
+  "settings.demo.assessmentsSubtitle": "Selezioné coche verifiches demo da mostrë.",
+  "settings.demo.random": "A cajo",
+  "settings.demo.fullYear": "Dut l ann scolastich",
+  "settings.demo.custom": "Personalisé",
+  "settings.demo.count": "Numer: {count}",
+  "settings.demo.clearCache": "Neté la cache demo",
+  "settings.demo.clearCacheSubtitle": "Reimposta duc i dac demo locai zën conferma.",
+  "settings.demo.cacheCleared": "Cache demo neteda"
 }

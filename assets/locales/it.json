@@ -521,5 +521,15 @@
   "update.title": "Nuovo aggiornamento disponibile!",
   "update.content": "Scarica ora l'ultima versione.",
   "update.later": "Più tardi",
-  "update.now": "Aggiorna"
+  "update.now": "Aggiorna",
+  "settings.demo.section": "Demo",
+  "settings.demo.assessments": "Verifiche future",
+  "settings.demo.assessmentsSubtitle": "Scegli quali verifiche demo mostrare.",
+  "settings.demo.random": "Casuale",
+  "settings.demo.fullYear": "Intero anno scolastico",
+  "settings.demo.custom": "Personalizzato",
+  "settings.demo.count": "Numero: {count}",
+  "settings.demo.clearCache": "Svuota cache demo",
+  "settings.demo.clearCacheSubtitle": "Reimposta tutti i dati demo locali senza conferma.",
+  "settings.demo.cacheCleared": "Cache demo svuotata"
 }

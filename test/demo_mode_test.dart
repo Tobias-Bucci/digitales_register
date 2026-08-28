@@ -75,9 +75,8 @@ void main() {
     final reloadedToday = reloadedDashboard
         .cast<Map<String, Object?>>()
         .firstWhere((entry) => entry['date'] == today);
-    final reloadedItems =
-        (reloadedToday['items'] as List<dynamic>?)!
-            .cast<Map<String, Object?>>();
+    final reloadedItems = (reloadedToday['items'] as List<dynamic>?)!
+        .cast<Map<String, Object?>>();
     expect(
       reloadedItems.any((item) => item['subtitle'] == 'Mathematik wiederholen'),
       isFalse,
@@ -98,5 +97,38 @@ void main() {
     expect((messages.first as Map<String, Object?>)['subject'], isNotEmpty);
     expect(certificate, contains('Demo-Zeugnis'));
     expect(certificate, contains('Durchschnitt'));
+  });
+
+  test('assessment settings persist, filter, and reset with the demo cache',
+      () async {
+    await setDemoAssessmentSettings(const DemoAssessmentSettings(
+      range: DemoAssessmentRange.firstSemester,
+      customCount: 3,
+    ));
+    expect(
+      (await getDemoAssessmentSettings()).range,
+      DemoAssessmentRange.firstSemester,
+    );
+
+    final calendar = await getDemoResponse(
+      'api/calendar/student',
+      <String, Object?>{'startDate': '2026-03-02'},
+    ) as Map<String, dynamic>;
+    final exams = calendar.values
+        .cast<Map<String, dynamic>>()
+        .expand((day) =>
+            ((day['1'] as Map<String, dynamic>)['1'] as Map<String, dynamic>)
+                .values)
+        .cast<Map<String, dynamic>>()
+        .expand((entry) => ((entry['lesson']
+            as Map<String, dynamic>)['homeworkExams'] as List))
+        .where((entry) => (entry as Map<String, dynamic>)['warning'] == true);
+    expect(exams, isEmpty);
+
+    await clearDemoCache();
+    expect(
+      (await getDemoAssessmentSettings()).range,
+      DemoAssessmentRange.fullYear,
+    );
   });
 }

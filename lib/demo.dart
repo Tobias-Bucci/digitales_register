@@ -23,6 +23,26 @@ import 'package:flutter/foundation.dart';
 import 'package:intl/intl.dart';
 import 'package:path_provider/path_provider.dart';
 
+/// Controls which generated assessments are exposed by the local demo account.
+/// This is deliberately kept in the demo store, never in the user settings.
+enum DemoAssessmentRange {
+  random,
+  fullYear,
+  firstSemester,
+  secondSemester,
+  custom
+}
+
+class DemoAssessmentSettings {
+  const DemoAssessmentSettings({
+    required this.range,
+    required this.customCount,
+  });
+
+  final DemoAssessmentRange range;
+  final int customCount;
+}
+
 Future<dynamic> getDemoResponse(String url, dynamic args) async {
   await _demoStore.ensureLoaded();
   return _demoStore.handle(url, (args as Map<String, Object?>?) ?? const {});
@@ -44,6 +64,19 @@ Future<dynamic> getDemoBytesResponse(
 }
 
 Future<void> initializeDemoStore() => _demoStore.ensureLoaded();
+
+Future<DemoAssessmentSettings> getDemoAssessmentSettings() async {
+  await _demoStore.ensureLoaded();
+  return _demoStore.assessmentSettings;
+}
+
+Future<void> setDemoAssessmentSettings(DemoAssessmentSettings settings) async {
+  await _demoStore.ensureLoaded();
+  await _demoStore.setAssessmentSettings(settings);
+}
+
+/// Replaces the complete local demo store. It never touches normal accounts.
+Future<void> clearDemoCache() => _demoStore.clear();
 
 @visibleForTesting
 Future<void> resetDemoStoreForTest() async {
@@ -180,6 +213,12 @@ class _DemoStore {
     return <String, dynamic>{
       'nextReminderId': 10000,
       'nextFutureAbsenceId': 20000,
+      'assessmentSettings': <String, dynamic>{
+        'range': DemoAssessmentRange.fullYear.name,
+        'customCount': 8,
+        // A persisted seed keeps the random selection stable across reloads.
+        'randomSeed': 202526,
+      },
       'profile': <String, dynamic>{
         'name': 'Demo',
         'email': 'demo@local.invalid',
@@ -291,6 +330,43 @@ class _DemoStore {
 
   List<Map<String, dynamic>> get _generalNotifications =>
       (_state['generalNotifications'] as List).cast<Map<String, dynamic>>();
+
+  DemoAssessmentSettings get assessmentSettings {
+    final raw = _state['assessmentSettings'] as Map<String, dynamic>? ??
+        const <String, dynamic>{};
+    final range = DemoAssessmentRange.values.firstWhere(
+      (value) => value.name == raw['range'],
+      orElse: () => DemoAssessmentRange.fullYear,
+    );
+    final count = (raw['customCount'] as num?)?.toInt() ?? 8;
+    return DemoAssessmentSettings(
+        range: range, customCount: count.clamp(1, 40));
+  }
+
+  Future<void> setAssessmentSettings(DemoAssessmentSettings settings) async {
+    final previous = assessmentSettings;
+    _state['assessmentSettings'] = <String, dynamic>{
+      'range': settings.range.name,
+      'customCount': settings.customCount.clamp(1, 40),
+      'randomSeed': settings.range == DemoAssessmentRange.random &&
+              previous.range != DemoAssessmentRange.random
+          ? DateTime.now().microsecondsSinceEpoch
+          : ((_state['assessmentSettings'] as Map?)?['randomSeed'] ?? 202526),
+    };
+    await _persist();
+  }
+
+  Future<void> clear() async {
+    await ensureLoaded();
+    final file = await _storageFile();
+    // Delete the sole demo-store file first instead of producing deleted
+    // records. The freshly written state has no references to old records.
+    if (await file.exists()) {
+      await file.delete();
+    }
+    _state = _initialState();
+    await _persist();
+  }
 
   String _text(String key) {
     final values = _demoTranslations[key];
@@ -1014,7 +1090,9 @@ class _DemoStore {
     }
 
     for (final event in _demoDashboardEvents.where(
-      (entry) => _sameDay(entry.date, date),
+      (entry) =>
+          _sameDay(entry.date, date) &&
+          (entry.type != 'gradeGroup' || _showsAssessment(entry)),
     )) {
       items.add(
         _dashboardItem(
@@ -1232,7 +1310,8 @@ class _DemoStore {
             (event) =>
                 _sameDay(event.date, date) &&
                 event.subject == lesson.subject &&
-                (event.type == 'gradeGroup' || event.homework),
+                ((event.type == 'gradeGroup' && _showsAssessment(event)) ||
+                    event.homework),
           )
           .map(
             (event) => <String, Object?>{
@@ -1249,6 +1328,41 @@ class _DemoStore {
             },
           )
           .toList();
+
+  bool _showsAssessment(_DemoDashboardEvent event) {
+    final settings = assessmentSettings;
+    if (settings.range == DemoAssessmentRange.fullYear) {
+      return true;
+    }
+    final firstSemesterEnd = DateTime(2026, 1, 31);
+    if (settings.range == DemoAssessmentRange.firstSemester) {
+      return !event.date.isAfter(firstSemesterEnd);
+    }
+    if (settings.range == DemoAssessmentRange.secondSemester) {
+      return event.date.isAfter(firstSemesterEnd);
+    }
+
+    final upcoming = _demoDashboardEvents
+        .where((candidate) =>
+            candidate.type == 'gradeGroup' &&
+            !candidate.date.isBefore(_today()))
+        .toList()
+      ..sort((a, b) => a.date.compareTo(b.date));
+    if (settings.range == DemoAssessmentRange.custom) {
+      return upcoming
+          .take(settings.customCount)
+          .any((item) => item.id == event.id);
+    }
+
+    // A stable pseudo-random subset: no refresh churn, but a new random mode
+    // selection receives a new persisted seed.
+    final seed = ((_state['assessmentSettings'] as Map?)?['randomSeed'] as num?)
+            ?.toInt() ??
+        202526;
+    return upcoming
+        .where((item) => (item.id * 1103515245 + seed).abs() % 3 != 0)
+        .any((item) => item.id == event.id);
+  }
 
   _TimeObjects _timeObjectsForPeriod(int period) {
     const values = <int, (int, int, int, int)>{

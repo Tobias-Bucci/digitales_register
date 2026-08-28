@@ -24,8 +24,10 @@ import 'package:dr/actions/app_actions.dart';
 import 'package:dr/actions/calendar_actions.dart';
 import 'package:dr/app_clock.dart';
 import 'package:dr/app_state.dart';
+import 'package:dr/demo.dart';
 import 'package:dr/i18n/app_language.dart';
 import 'package:dr/main.dart';
+import 'package:dr/middleware/middleware.dart';
 import 'package:dr/theme_controller.dart';
 import 'package:dr/ui/settings_page_widget.dart';
 import 'package:dr/util.dart';
@@ -136,6 +138,26 @@ class SettingsPageContainer extends StatelessWidget {
               }
               final monday = toMonday(now);
               await actions.calendarActions.setCurrentMonday(monday);
+              await Future.wait([
+                actions.calendarActions.load(monday),
+                actions.dashboardActions.refresh(),
+              ]);
+            },
+            onSetDemoAssessmentSettings: (settings) async {
+              if (!vm.demoMode) return;
+              await setDemoAssessmentSettings(settings);
+              clearRuntimeCaches();
+              final monday = toMonday(now);
+              await Future.wait([
+                actions.calendarActions.load(monday),
+                actions.dashboardActions.refresh(),
+              ]);
+            },
+            onClearDemoCache: () async {
+              if (!vm.demoMode) return;
+              await clearDemoCache();
+              clearRuntimeCaches();
+              final monday = toMonday(now);
               await Future.wait([
                 actions.calendarActions.load(monday),
                 actions.dashboardActions.refresh(),

@@ -521,5 +521,15 @@
   "update.title": "Neues Update verfügbar!",
   "update.content": "Lade dir jetzt die neueste Version herunter.",
   "update.later": "Später",
-  "update.now": "Aktualisieren"
+  "update.now": "Aktualisieren",
+  "settings.demo.section": "Demo",
+  "settings.demo.assessments": "Kommende Schularbeiten & Prüfungen",
+  "settings.demo.assessmentsSubtitle": "Legt fest, welche Demo-Prüfungen angezeigt werden.",
+  "settings.demo.random": "Zufällig",
+  "settings.demo.fullYear": "Ganzes Schuljahr",
+  "settings.demo.custom": "Individuell",
+  "settings.demo.count": "Anzahl: {count}",
+  "settings.demo.clearCache": "Demo-Cache leeren",
+  "settings.demo.clearCacheSubtitle": "Setzt alle lokalen Demo-Daten ohne Rückfrage zurück.",
+  "settings.demo.cacheCleared": "Demo-Cache geleert"
 }

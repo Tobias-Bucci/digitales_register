@@ -521,5 +521,15 @@
   "update.title": "New update available!",
   "update.content": "Download the latest version now.",
   "update.later": "Later",
-  "update.now": "Update"
+  "update.now": "Update",
+  "settings.demo.section": "Demo",
+  "settings.demo.assessments": "Upcoming assessments",
+  "settings.demo.assessmentsSubtitle": "Choose which demo assessments are shown.",
+  "settings.demo.random": "Random",
+  "settings.demo.fullYear": "Whole school year",
+  "settings.demo.custom": "Custom",
+  "settings.demo.count": "Count: {count}",
+  "settings.demo.clearCache": "Clear demo cache",
+  "settings.demo.clearCacheSubtitle": "Reset all local demo data without confirmation.",
+  "settings.demo.cacheCleared": "Demo cache cleared"
 }

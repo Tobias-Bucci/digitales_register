@@ -79,6 +79,11 @@ void main() {
     expect(find.text('Add primary teacher'), findsNothing);
     expect(find.text('Exclude subjects from the grade average'), findsNothing);
     expect(find.byKey(const Key('settings-demo-date-picker')), findsNothing);
+    expect(
+      find.byKey(const Key('settings-demo-assessment-range')),
+      findsNothing,
+    );
+    expect(find.byKey(const Key('settings-demo-clear-cache')), findsNothing);
   });
 
   testWidgets('shows simulated date controls only for the demo guest',
@@ -102,5 +107,10 @@ void main() {
     expect(find.byKey(const Key('settings-demo-date-start')), findsOneWidget);
     expect(find.byKey(const Key('settings-demo-date-end')), findsOneWidget);
     expect(find.byKey(const Key('settings-demo-date-reset')), findsOneWidget);
+    expect(
+      find.byKey(const Key('settings-demo-assessment-range')),
+      findsOneWidget,
+    );
+    expect(find.byKey(const Key('settings-demo-clear-cache')), findsOneWidget);
   });
 }

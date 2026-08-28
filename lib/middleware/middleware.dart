@@ -159,6 +159,10 @@ void _clearRuntimeCaches() {
   _authenticatedBytesInFlight.clear();
 }
 
+/// Invalidates only in-memory response caches. Used after demo data changes so
+/// freshly generated local data is shown immediately.
+void clearRuntimeCaches() => _clearRuntimeCaches();
+
 Future<void> _runCoalescedLoad(String key, Future<void> Function() load) async {
   final existing = _inFlightLoads[key];
   if (existing != null) {

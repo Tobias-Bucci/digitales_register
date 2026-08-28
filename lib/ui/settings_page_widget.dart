@@ -24,6 +24,7 @@ import 'package:dr/app_state.dart';
 import 'package:dr/app_subject_translation_controller.dart';
 import 'package:dr/calendar_sync_service.dart';
 import 'package:dr/container/settings_page.dart';
+import 'package:dr/demo.dart';
 import 'package:dr/i18n/app_language.dart';
 import 'package:dr/i18n/app_localizations.dart';
 import 'package:dr/platform_adapter.dart';
@@ -80,6 +81,9 @@ class SettingsPageWidget extends StatefulWidget {
   final SettingsViewModel vm;
   final AppThemePreference currentThemePreference;
   final Future<void> Function(DateTime? date) onSetSimulatedDate;
+  final Future<void> Function(DemoAssessmentSettings settings)
+      onSetDemoAssessmentSettings;
+  final Future<void> Function() onClearDemoCache;
 
   const SettingsPageWidget({
     super.key,
@@ -116,6 +120,8 @@ class SettingsPageWidget extends StatefulWidget {
     required this.onSetFavoriteSubjects,
     required this.currentThemePreference,
     required this.onSetSimulatedDate,
+    required this.onSetDemoAssessmentSettings,
+    required this.onClearDemoCache,
   });
 
   @override
@@ -130,6 +136,10 @@ class _SettingsPageWidgetState extends State<SettingsPageWidget> {
   bool _handledSubjectNicksIntent = false;
   bool _handledGradesIntent = false;
   bool _handledCalendarSubstituteIntent = false;
+  DemoAssessmentSettings _demoAssessmentSettings = const DemoAssessmentSettings(
+    range: DemoAssessmentRange.fullYear,
+    customCount: 8,
+  );
 
   List<String> get subjectsWithoutNick => widget.vm.allSubjects
       .where((element) => !widget.vm.subjectNicks.keys.contains(element))
@@ -148,6 +158,11 @@ class _SettingsPageWidgetState extends State<SettingsPageWidget> {
   void initState() {
     _translateSubjectsEnabled = appSubjectTranslationController.enabled;
     _calendarSyncCalendarsFuture = _loadCalendarSyncCalendars();
+    if (widget.vm.demoMode) {
+      getDemoAssessmentSettings().then((settings) {
+        if (mounted) setState(() => _demoAssessmentSettings = settings);
+      });
+    }
     super.initState();
     _handleScrollIntents();
   }
@@ -581,6 +596,113 @@ class _SettingsPageWidgetState extends State<SettingsPageWidget> {
     );
   }
 
+  Future<void> _changeDemoAssessmentRange(DemoAssessmentRange range) async {
+    final next = DemoAssessmentSettings(
+      range: range,
+      customCount: _demoAssessmentSettings.customCount,
+    );
+    setState(() => _demoAssessmentSettings = next);
+    await widget.onSetDemoAssessmentSettings(next);
+  }
+
+  Future<void> _changeDemoAssessmentCount(int count) async {
+    final next = DemoAssessmentSettings(
+      range: DemoAssessmentRange.custom,
+      customCount: count,
+    );
+    setState(() => _demoAssessmentSettings = next);
+    await widget.onSetDemoAssessmentSettings(next);
+  }
+
+  String _demoAssessmentRangeLabel(
+    AppLocalizations l10n,
+    DemoAssessmentRange range,
+  ) =>
+      switch (range) {
+        DemoAssessmentRange.random => l10n.text('settings.demo.random'),
+        DemoAssessmentRange.fullYear => l10n.text('settings.demo.fullYear'),
+        DemoAssessmentRange.firstSemester => l10n.text('semester.first'),
+        DemoAssessmentRange.secondSemester => l10n.text('semester.second'),
+        DemoAssessmentRange.custom => l10n.text('settings.demo.custom'),
+      };
+
+  Widget _buildDemoSection(AppLocalizations l10n) {
+    return _SettingsSectionCard(
+      title: l10n.text('settings.demo.section'),
+      children: [
+        ListTile(
+          leading: const Icon(Icons.assignment_outlined),
+          title: Text(l10n.text('settings.demo.assessments')),
+          subtitle: Text(l10n.text('settings.demo.assessmentsSubtitle')),
+        ),
+        Padding(
+          padding: const EdgeInsets.fromLTRB(16, 0, 16, 12),
+          child: DropdownButtonFormField<DemoAssessmentRange>(
+            key: const Key('settings-demo-assessment-range'),
+            initialValue: _demoAssessmentSettings.range,
+            isExpanded: true,
+            decoration: const InputDecoration(border: OutlineInputBorder()),
+            items: DemoAssessmentRange.values
+                .map(
+                  (range) => DropdownMenuItem(
+                    value: range,
+                    child: Text(_demoAssessmentRangeLabel(l10n, range)),
+                  ),
+                )
+                .toList(),
+            onChanged: (range) {
+              if (range != null) _changeDemoAssessmentRange(range);
+            },
+          ),
+        ),
+        if (_demoAssessmentSettings.range == DemoAssessmentRange.custom)
+          Padding(
+            padding: const EdgeInsets.fromLTRB(16, 0, 16, 12),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(l10n.text(
+                  'settings.demo.count',
+                  args: {
+                    'count': _demoAssessmentSettings.customCount.toString()
+                  },
+                )),
+                Slider(
+                  key: const Key('settings-demo-assessment-count'),
+                  value: _demoAssessmentSettings.customCount.toDouble(),
+                  min: 1,
+                  max: 20,
+                  divisions: 19,
+                  label: _demoAssessmentSettings.customCount.toString(),
+                  onChanged: (value) =>
+                      _changeDemoAssessmentCount(value.round()),
+                ),
+              ],
+            ),
+          ),
+        _buildDemoDateSection(l10n),
+        ListTile(
+          key: const Key('settings-demo-clear-cache'),
+          leading: const Icon(Icons.delete_sweep_outlined),
+          title: Text(l10n.text('settings.demo.clearCache')),
+          subtitle: Text(l10n.text('settings.demo.clearCacheSubtitle')),
+          onTap: () async {
+            await widget.onClearDemoCache();
+            if (!mounted) return;
+            final settings = await getDemoAssessmentSettings();
+            if (mounted) setState(() => _demoAssessmentSettings = settings);
+            if (mounted) {
+              ScaffoldMessenger.of(context).showSnackBar(
+                SnackBar(
+                    content: Text(l10n.text('settings.demo.cacheCleared'))),
+              );
+            }
+          },
+        ),
+      ],
+    );
+  }
+
   Widget _buildAppearanceSection(AppLocalizations l10n, _Theme currentTheme) {
     return _SettingsSectionCard(
       title: l10n.text('settings.section.appearance'),
@@ -955,7 +1077,7 @@ class _SettingsPageWidgetState extends State<SettingsPageWidget> {
         padding: const EdgeInsets.fromLTRB(16, 16, 16, 24),
         children: <Widget>[
           if (widget.vm.demoMode) ...[
-            _buildDemoDateSection(l10n),
+            _buildDemoSection(l10n),
             const SizedBox(height: 16),
           ],
           _buildAccountSection(l10n),
