@@ -81,6 +81,17 @@ void main() {
     );
   });
 
+  test('accepts relative existing weights above 100 from the school API', () {
+    final result = calculateTargetGrades(
+      existingGrades: [grade(7, 250), grade(9, 100)],
+      targetGrade: 800,
+      futureWeights: [100],
+    );
+
+    expect(result.isReachable, isTrue);
+    expect(result.resultingAverage, greaterThanOrEqualTo(800));
+  });
+
   test('rounds a non-exact target up to a permitted quarter-grade', () {
     final result = calculateTargetGrades(
       existingGrades: [grade(8)],

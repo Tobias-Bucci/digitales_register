@@ -33,6 +33,68 @@ void main() {
     expect(assessment.id, 'assessment-7');
   });
 
+  test('finds only distinct future calendar assessments for the subject', () {
+    final state = AppState((b) {
+      b.dashboardState.allDays = ListBuilder<Day>([
+        buildDay(
+          date: UtcDateTime(2026, 4, 20),
+          homework: [
+            buildHomework(
+              id: 1,
+              title: 'Test',
+              subtitle: 'Textanalyse',
+              label: 'Deutsch',
+              type: HomeworkType.gradeGroup,
+            ),
+            buildHomework(
+              id: 2,
+              title: 'Test',
+              subtitle: 'Grammatik',
+              label: 'Englisch',
+              type: HomeworkType.gradeGroup,
+            ),
+          ],
+        ),
+        buildDay(
+          date: UtcDateTime(2026, 4, 21),
+          homework: [
+            buildHomework(
+              id: 1,
+              title: 'Test',
+              subtitle: 'Textanalyse',
+              label: 'Deutsch',
+              type: HomeworkType.gradeGroup,
+            ),
+          ],
+        ),
+        buildDay(
+          date: UtcDateTime(2026, 4, 19),
+          homework: [
+            buildHomework(
+              id: 3,
+              title: 'Test',
+              subtitle: 'Vergangen',
+              label: 'Deutsch',
+              type: HomeworkType.gradeGroup,
+            ),
+          ],
+        ),
+      ]);
+      b.gradesState.subjects =
+          ListBuilder<Subject>([buildSubject(name: 'Deutsch')]);
+    });
+
+    final assessments = upcomingExamAssessmentsForSubject(
+      state,
+      state.gradesState.subjects.single,
+      DateTime(2026, 4, 20),
+    );
+
+    expect(assessments, hasLength(1));
+    expect(assessments.single.id, 'assessment-1');
+    expect(assessments.single.type, 'Test');
+  });
+
   test('plans remain before the exam and adapt to short deadlines', () {
     final assessment = ExamAssessment(
       id: 'a',

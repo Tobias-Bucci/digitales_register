@@ -1,32 +1,39 @@
-import 'package:built_collection/built_collection.dart';
 import 'package:dr/actions/app_actions.dart';
+import 'package:dr/app_clock.dart';
 import 'package:dr/app_state.dart';
 import 'package:dr/data.dart';
+import 'package:dr/exam_study_plan.dart';
 import 'package:dr/i18n/app_localizations.dart';
 import 'package:dr/target_grade_calculation.dart';
 import 'package:dr/ui/grade_calculator.dart' show tryParseFormattedGrade;
 import 'package:dr/util.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_built_redux/flutter_built_redux.dart';
+import 'package:intl/intl.dart';
 
 class TargetGradeCalculator extends StatelessWidget {
   const TargetGradeCalculator({super.key});
 
   @override
   Widget build(BuildContext context) {
-    return StoreConnection<AppState, AppActions, BuiltList<Subject>>(
-      connect: (state) => state.gradesState.subjects,
-      builder: (context, subjects, actions) => _TargetGradeCalculatorPage(
-        subjects: subjects.toList(),
+    return StoreConnection<AppState, AppActions, AppState>(
+      connect: (state) => state,
+      builder: (context, state, actions) => AnimatedBuilder(
+        animation: appClock,
+        builder: (context, _) => _TargetGradeCalculatorPage(
+          state: state,
+          now: appClock.now,
+        ),
       ),
     );
   }
 }
 
 class _TargetGradeCalculatorPage extends StatefulWidget {
-  const _TargetGradeCalculatorPage({required this.subjects});
+  const _TargetGradeCalculatorPage({required this.state, required this.now});
 
-  final List<Subject> subjects;
+  final AppState state;
+  final DateTime now;
 
   @override
   State<_TargetGradeCalculatorPage> createState() =>
@@ -35,19 +42,43 @@ class _TargetGradeCalculatorPage extends StatefulWidget {
 
 class _TargetGradeCalculatorPageState
     extends State<_TargetGradeCalculatorPage> {
-  static const _minimumFutureGrades = 1;
+  static const _minimumFutureGrades = 0;
   static const _maximumFutureGrades = 10;
 
   final _targetController = TextEditingController();
   final List<TextEditingController> _weightControllers =
-      <TextEditingController>[
-    TextEditingController(text: '100'),
-    TextEditingController(text: '100'),
-  ];
+      <TextEditingController>[];
+  final List<TargetGradeEntry> _additionalExistingGrades = <TargetGradeEntry>[];
+  bool _includeCalendarAssessments = true;
   Subject? _subject;
   Semester _semester = Semester.all;
   TargetGradeCalculation? _calculation;
   String? _error;
+
+  List<Subject> get _subjects => widget.state.gradesState.subjects.toList();
+
+  List<ExamAssessment> get _calendarAssessments => _subject == null
+      ? const <ExamAssessment>[]
+      : upcomingExamAssessmentsForSubject(widget.state, _subject!, widget.now);
+
+  List<ExamAssessment> get _includedCalendarAssessments =>
+      _includeCalendarAssessments
+          ? _calendarAssessments
+          : const <ExamAssessment>[];
+
+  List<int> get _futureWeights => <int>[
+        ...List<int>.filled(_includedCalendarAssessments.length, 100),
+        ..._weightControllers.map((controller) => int.parse(controller.text)),
+      ];
+
+  @override
+  void didUpdateWidget(covariant _TargetGradeCalculatorPage oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (widget.state != oldWidget.state || widget.now != oldWidget.now) {
+      _calculation = null;
+      _error = null;
+    }
+  }
 
   @override
   void dispose() {
@@ -65,14 +96,15 @@ class _TargetGradeCalculatorPageState
           .toList() ??
       <GradeAll>[];
 
-  List<TargetGradeEntry> get _calculationGrades => _grades
-      .map(
-        (grade) => TargetGradeEntry(
-          grade: grade.grade!,
-          weightPercentage: grade.weightPercentage,
+  List<TargetGradeEntry> get _calculationGrades => <TargetGradeEntry>[
+        ..._grades.map(
+          (grade) => TargetGradeEntry(
+            grade: grade.grade!,
+            weightPercentage: grade.weightPercentage,
+          ),
         ),
-      )
-      .toList();
+        ..._additionalExistingGrades,
+      ];
 
   void _changeFutureGradeCount(int delta) {
     final nextCount = _weightControllers.length + delta;
@@ -93,7 +125,7 @@ class _TargetGradeCalculatorPageState
   void _calculate() {
     final l10n = context.l10n;
     final target = tryParseFormattedGrade(_targetController.text);
-    final weights = _weightControllers
+    final manualWeights = _weightControllers
         .map((controller) => int.tryParse(controller.text))
         .toList();
     if (_subject == null) {
@@ -101,7 +133,7 @@ class _TargetGradeCalculatorPageState
           () => _error = l10n.text('targetCalculator.error.selectSubject'));
       return;
     }
-    if (_grades.isEmpty) {
+    if (_calculationGrades.isEmpty) {
       setState(() => _error = l10n.text('targetCalculator.error.noGrades'));
       return;
     }
@@ -111,22 +143,33 @@ class _TargetGradeCalculatorPageState
       return;
     }
     if (_calculationGrades.any(
-      (grade) => grade.grade < minimumGrade || grade.grade > maximumGrade,
+      (grade) =>
+          grade.grade < minimumGrade ||
+          grade.grade > maximumGrade ||
+          grade.weightPercentage < 0,
     )) {
       setState(
           () => _error = l10n.text('targetCalculator.error.invalidExisting'));
       return;
     }
-    if (weights
+    if (manualWeights
         .any((weight) => weight == null || weight <= 0 || weight > 100)) {
       setState(
           () => _error = l10n.text('targetCalculator.error.invalidWeight'));
       return;
     }
+    if (_includedCalendarAssessments.isEmpty && manualWeights.isEmpty) {
+      setState(
+          () => _error = l10n.text('targetCalculator.error.noFutureGrades'));
+      return;
+    }
     final calculation = calculateTargetGrades(
       existingGrades: _calculationGrades,
       targetGrade: target,
-      futureWeights: weights.cast<int>(),
+      futureWeights: <int>[
+        ...List<int>.filled(_includedCalendarAssessments.length, 100),
+        ...manualWeights.cast<int>(),
+      ],
     );
     setState(() {
       _calculation = calculation;
@@ -140,10 +183,87 @@ class _TargetGradeCalculatorPageState
   String _formatContribution(int value) =>
       gradeAverageFormat.format(value / 10000);
 
+  Future<void> _addExistingGrade() async {
+    final gradeController = TextEditingController();
+    final weightController = TextEditingController(text: '100');
+    String? error;
+    final added = await showDialog<bool>(
+      context: context,
+      builder: (dialogContext) => StatefulBuilder(
+        builder: (context, setDialogState) => AlertDialog(
+          title: Text(context.l10n.text('targetCalculator.addExistingGrade')),
+          content: Column(mainAxisSize: MainAxisSize.min, children: [
+            TextField(
+              controller: gradeController,
+              keyboardType:
+                  const TextInputType.numberWithOptions(decimal: true),
+              decoration: InputDecoration(
+                  labelText: context.l10n.text('gradeCalculator.grade')),
+            ),
+            const SizedBox(height: 12),
+            TextField(
+              controller: weightController,
+              keyboardType: TextInputType.number,
+              decoration: InputDecoration(
+                labelText: context.l10n.text('gradeCalculator.weight'),
+                suffixText: '%',
+              ),
+            ),
+            if (error != null) ...[
+              const SizedBox(height: 8),
+              Text(error!,
+                  style: TextStyle(color: Theme.of(context).colorScheme.error)),
+            ],
+          ]),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(dialogContext),
+              child: Text(context.l10n.text('dialog.close')),
+            ),
+            ElevatedButton(
+              onPressed: () {
+                final grade = tryParseFormattedGrade(gradeController.text);
+                final weight = int.tryParse(weightController.text);
+                if (grade == null ||
+                    grade < minimumGrade ||
+                    grade > maximumGrade ||
+                    weight == null ||
+                    weight < 0) {
+                  setDialogState(() => error = context.l10n
+                      .text('targetCalculator.error.invalidExisting'));
+                  return;
+                }
+                Navigator.pop(dialogContext, true);
+              },
+              child:
+                  Text(context.l10n.text('targetCalculator.addExistingGrade')),
+            ),
+          ],
+        ),
+      ),
+    );
+    if (!mounted || added != true) {
+      gradeController.dispose();
+      weightController.dispose();
+      return;
+    }
+    setState(() {
+      _additionalExistingGrades.add(TargetGradeEntry(
+        grade: tryParseFormattedGrade(gradeController.text)!,
+        weightPercentage: int.parse(weightController.text),
+      ));
+      _calculation = null;
+      _error = null;
+    });
+    gradeController.dispose();
+    weightController.dispose();
+  }
+
   @override
   Widget build(BuildContext context) {
     final l10n = context.l10n;
     final grades = _grades;
+    final calendarAssessments = _calendarAssessments;
     final existingWeight = _calculationGrades.fold<int>(
       0,
       (sum, grade) => sum + grade.weightPercentage,
@@ -165,7 +285,7 @@ class _TargetGradeCalculatorPageState
             initialValue: _subject,
             decoration: InputDecoration(
                 labelText: l10n.text('targetCalculator.subject')),
-            items: widget.subjects
+            items: _subjects
                 .map(
                   (subject) => DropdownMenuItem<Subject>(
                     value: subject,
@@ -228,12 +348,38 @@ class _TargetGradeCalculatorPageState
                             ),
                         ],
                       ),
+                    ],
+                    if (_additionalExistingGrades.isNotEmpty) ...[
                       const SizedBox(height: 12),
-                      Text(
-                        '${l10n.text('targetCalculator.currentAverage')}: ${currentAverage == null ? '/' : _formatAverage(currentAverage)}',
-                        style: Theme.of(context).textTheme.titleMedium,
+                      Wrap(
+                        spacing: 8,
+                        runSpacing: 6,
+                        children: [
+                          for (final grade in _additionalExistingGrades)
+                            InputChip(
+                              label: Text(
+                                  '${formatGradeFromInt(grade.grade)} · ${grade.weightPercentage}%'),
+                              onDeleted: () => setState(() {
+                                _additionalExistingGrades.remove(grade);
+                                _calculation = null;
+                                _error = null;
+                              }),
+                            ),
+                        ],
                       ),
                     ],
+                    const SizedBox(height: 12),
+                    OutlinedButton.icon(
+                      onPressed: _addExistingGrade,
+                      icon: const Icon(Icons.add),
+                      label:
+                          Text(l10n.text('targetCalculator.addExistingGrade')),
+                    ),
+                    const SizedBox(height: 12),
+                    Text(
+                      '${l10n.text('targetCalculator.currentAverage')}: ${currentAverage == null ? '/' : _formatAverage(currentAverage)}',
+                      style: Theme.of(context).textTheme.titleMedium,
+                    ),
                   ],
                 ),
               ),
@@ -263,6 +409,61 @@ class _TargetGradeCalculatorPageState
                   Text(l10n.text('targetCalculator.futureGrades'),
                       style: Theme.of(context).textTheme.titleMedium),
                   const SizedBox(height: 8),
+                  if (calendarAssessments.isNotEmpty) ...[
+                    Row(children: [
+                      Expanded(
+                        child: Text(
+                          l10n.text('targetCalculator.calendarAssessments',
+                              args: {
+                                'count': calendarAssessments.length.toString(),
+                              }),
+                          style: Theme.of(context).textTheme.titleSmall,
+                        ),
+                      ),
+                      TextButton(
+                        key: const Key('target-calculator-toggle-calendar'),
+                        onPressed: () => setState(() {
+                          _includeCalendarAssessments =
+                              !_includeCalendarAssessments;
+                          _calculation = null;
+                          _error = null;
+                        }),
+                        child: Text(l10n.text(_includeCalendarAssessments
+                            ? 'targetCalculator.ignoreCalendarAssessments'
+                            : 'targetCalculator.useCalendarAssessments')),
+                      ),
+                    ]),
+                    const SizedBox(height: 4),
+                    Text(l10n.text('targetCalculator.calendarAssessmentsInfo'),
+                        style: Theme.of(context).textTheme.bodySmall),
+                    const SizedBox(height: 8),
+                    if (_includeCalendarAssessments)
+                      for (final assessment in calendarAssessments)
+                        ListTile(
+                          key: Key(
+                              'target-calculator-calendar-${assessment.id}'),
+                          contentPadding: EdgeInsets.zero,
+                          leading: const Icon(Icons.event_note_outlined),
+                          title: Text(assessment.title),
+                          subtitle: Text([
+                            DateFormat('dd.MM.yyyy').format(assessment.date),
+                            l10n.translateSubjectName(assessment.subject!),
+                            if (assessment.type != null &&
+                                assessment.type!.isNotEmpty)
+                              assessment.type!,
+                          ].join(' · ')),
+                          trailing: const Text('100%'),
+                        )
+                    else
+                      Text(
+                          l10n.text(
+                              'targetCalculator.calendarAssessmentsIgnored'),
+                          style: Theme.of(context).textTheme.bodySmall),
+                    const Divider(),
+                  ],
+                  Text(l10n.text('targetCalculator.additionalFutureGrades'),
+                      style: Theme.of(context).textTheme.titleSmall),
+                  const SizedBox(height: 4),
                   Row(
                     children: [
                       IconButton(
@@ -334,9 +535,14 @@ class _TargetGradeCalculatorPageState
             const SizedBox(height: 20),
             _ResultCard(
               calculation: _calculation!,
-              futureWeights: _weightControllers
-                  .map((controller) => int.parse(controller.text))
-                  .toList(),
+              futureWeights: _futureWeights,
+              futureLabels: <String>[
+                for (final assessment in _includedCalendarAssessments)
+                  '${DateFormat('dd.MM.yyyy').format(assessment.date)} · ${assessment.title}',
+                for (var index = 0; index < _weightControllers.length; index++)
+                  l10n.text('targetCalculator.additionalFutureGrade',
+                      args: {'count': (index + 1).toString()}),
+              ],
               target: _targetController.text,
               formatAverage: _formatAverage,
               formatContribution: _formatContribution,
@@ -353,6 +559,7 @@ class _ResultCard extends StatelessWidget {
   const _ResultCard({
     required this.calculation,
     required this.futureWeights,
+    required this.futureLabels,
     required this.target,
     required this.formatAverage,
     required this.formatContribution,
@@ -360,6 +567,7 @@ class _ResultCard extends StatelessWidget {
 
   final TargetGradeCalculation calculation;
   final List<int> futureWeights;
+  final List<String> futureLabels;
   final String target;
   final String Function(double value) formatAverage;
   final String Function(int value) formatContribution;
@@ -368,15 +576,21 @@ class _ResultCard extends StatelessWidget {
   Widget build(BuildContext context) {
     final l10n = context.l10n;
     final hasDifferentWeights = futureWeights.toSet().length > 1;
-    final grades = List<String>.generate(
+    final grades = List<Widget>.generate(
       calculation.suggestedGrades.length,
       (index) {
         final grade = formatGradeFromInt(calculation.suggestedGrades[index]);
-        return hasDifferentWeights
-            ? '$grade (${futureWeights[index]}%)'
-            : grade;
+        final weight = hasDifferentWeights ? ' (${futureWeights[index]}%)' : '';
+        return ListTile(
+          contentPadding: EdgeInsets.zero,
+          leading: const Icon(Icons.assignment_turned_in_outlined),
+          title: Text(futureLabels[index]),
+          subtitle:
+              Text('${l10n.text('targetCalculator.requiredGrade')}$weight'),
+          trailing: Text(grade, style: Theme.of(context).textTheme.titleMedium),
+        );
       },
-    ).join(' & ');
+    );
     final isReachable = calculation.isReachable;
     return Card(
       color: isReachable ? null : Theme.of(context).colorScheme.errorContainer,
@@ -397,7 +611,13 @@ class _ResultCard extends StatelessWidget {
                 '${l10n.text('targetCalculator.requiredContribution')}: ${formatContribution(calculation.requiredFutureScore < 0 ? 0 : calculation.requiredFutureScore)}'),
             const SizedBox(height: 8),
             Text(
-                '${isReachable ? l10n.text('targetCalculator.suggestedGrades') : l10n.text('targetCalculator.bestGrades')}: $grades'),
+              isReachable
+                  ? l10n.text('targetCalculator.suggestedGrades')
+                  : l10n.text('targetCalculator.bestGrades'),
+              style: Theme.of(context).textTheme.titleSmall,
+            ),
+            const SizedBox(height: 4),
+            ...grades,
             const SizedBox(height: 8),
             Text(
               isReachable

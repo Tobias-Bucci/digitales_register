@@ -3,6 +3,7 @@ import 'package:dr/app_state.dart';
 import 'package:dr/data.dart';
 import 'package:dr/local_reminder_assessments.dart';
 import 'package:dr/utc_date_time.dart';
+import 'package:dr/util.dart';
 
 /// A view of an existing, graded dashboard entry.  It intentionally does not
 /// duplicate appointments: the dashboard/calendar stay the source of truth.
@@ -13,6 +14,7 @@ class ExamAssessment {
     required this.subject,
     required this.title,
     required this.material,
+    this.type,
   });
 
   final String id;
@@ -20,6 +22,7 @@ class ExamAssessment {
   final String? subject;
   final String title;
   final String? material;
+  final String? type;
 
   int daysUntil(DateTime today) =>
       date.stripTime().difference(_date(today)).inDays;
@@ -65,11 +68,37 @@ List<ExamAssessment> examAssessments(AppState state) {
         subject: local?.subject ?? homework.label,
         title: title,
         material: material,
+        type: local?.serverTypeName ?? homework.title.trim(),
       ));
     }
   }
   result.sort((a, b) => a.date.compareTo(b.date));
   return result;
+}
+
+/// Returns the ungraded assessment opportunities from the exam calendar that
+/// belong to [subject]. Dates are compared as calendar dates so an assessment
+/// scheduled for today is never accidentally treated as a future assessment
+/// because of a time-zone or time-of-day difference.
+List<ExamAssessment> upcomingExamAssessmentsForSubject(
+  AppState state,
+  Subject subject,
+  DateTime today,
+) {
+  final todayDate = DateTime(today.year, today.month, today.day);
+  final seenIds = <String>{};
+  return examAssessments(state).where((assessment) {
+    final assessmentSubject = assessment.subject;
+    final assessmentDate = DateTime(
+      assessment.date.year,
+      assessment.date.month,
+      assessment.date.day,
+    );
+    return assessmentSubject != null &&
+        equalsIgnoreCase(assessmentSubject, subject.name) &&
+        assessmentDate.isAfter(todayDate) &&
+        seenIds.add(assessment.id);
+  }).toList(growable: false);
 }
 
 /// Generates a small, date-safe plan from the currently available time.

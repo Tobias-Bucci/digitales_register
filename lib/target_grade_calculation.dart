@@ -42,6 +42,8 @@ class TargetGradeCalculation {
 /// Grades support the quarter-grade steps accepted by the existing grade
 /// calculator (4, 4.25, ..., 10). Future weights belong one-to-one to the
 /// future assessments and use the existing percentage-based weighting model.
+/// Existing weights are relative values supplied by the school API and may be
+/// greater than 100.
 TargetGradeCalculation calculateTargetGrades({
   required List<TargetGradeEntry> existingGrades,
   required int targetGrade,
@@ -60,8 +62,7 @@ TargetGradeCalculation calculateTargetGrades({
     (grade) =>
         grade.grade < minimumGrade ||
         grade.grade > maximumGrade ||
-        grade.weightPercentage < 0 ||
-        grade.weightPercentage > 100,
+        grade.weightPercentage < 0,
   )) {
     throw ArgumentError.value(existingGrades, 'existingGrades',
         'contains an invalid grade or weight');
@@ -161,13 +162,6 @@ TargetGradeCalculation calculateTargetGrades({
     suggestedGrades[index - 1] = selectedUnits[index][score] * gradeIncrement;
     score = previousScores[index][score];
   }
-  // With identical weights, sorting makes the suggestion easier to read. For
-  // distinct weights the list keeps its assessment order so every proposed
-  // grade remains paired with the correct future weight.
-  if (futureWeights.toSet().length == 1) {
-    suggestedGrades.sort();
-  }
-
   final actualFutureScore = selectedScore * gradeIncrement;
   return TargetGradeCalculation._(
     isReachable: true,
