@@ -46,6 +46,7 @@
   "settings.dashboard.deduplicate": "Ignore duplicate entries",
   "settings.dashboard.askDeleteReminder": "Ask before deleting reminders",
   "settings.grades.diagram": "Show grades in a chart",
+  "grades.chart.title": "Grade trend",
   "settings.grades.averageAllSubjects": "Show average across all subjects",
   "settings.grades.excludeAverage": "Exclude subjects from the grade average",
   "settings.grades.noExcludedSubject": "No subject excluded",

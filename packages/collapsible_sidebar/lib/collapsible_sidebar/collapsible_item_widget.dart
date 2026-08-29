@@ -9,7 +9,9 @@ class CollapsibleItemWidget extends StatelessWidget {
     required this.tooltip,
     required this.textStyle,
     required this.padding,
+    required this.height,
     required this.offsetX,
+    required this.titleOpacity,
     required this.selected,
     this.onTap,
     this.selectedBoxColor,
@@ -21,7 +23,7 @@ class CollapsibleItemWidget extends StatelessWidget {
   final Widget? title;
   final String tooltip;
   final TextStyle textStyle;
-  final double offsetX, padding;
+  final double offsetX, padding, height, titleOpacity;
   final VoidCallback? onTap;
   final bool selected, hasDivider;
   final Color? selectedBoxColor;
@@ -41,66 +43,75 @@ class CollapsibleItemWidget extends StatelessWidget {
               endIndent: 5,
               indent: 5,
             ),
-          Stack(
-            children: [
-              Positioned(
-                top: 0,
-                left: 0,
-                bottom: 0,
-                right: 0,
-                child: AnimatedOpacity(
-                  opacity: selected ? 1 : 0,
-                  duration: const Duration(milliseconds: 1000),
-                  curve: curve ?? Curves.linear,
-                  child: Container(
-                    decoration: BoxDecoration(
-                      color: selectedBoxColor,
-                      borderRadius: BorderRadius.circular(10),
+          SizedBox(
+            height: height,
+            child: Stack(
+              children: [
+                Positioned(
+                  top: 0,
+                  left: 0,
+                  bottom: 0,
+                  right: 0,
+                  child: AnimatedOpacity(
+                    opacity: selected ? 1 : 0,
+                    duration: const Duration(milliseconds: 1000),
+                    curve: curve ?? Curves.linear,
+                    child: Container(
+                      key: selected
+                          ? const ValueKey('collapsible-sidebar-selected-box')
+                          : null,
+                      decoration: BoxDecoration(
+                        color: selectedBoxColor,
+                        borderRadius: BorderRadius.circular(10),
+                      ),
                     ),
                   ),
                 ),
-              ),
-              InkWell(
-                borderRadius: BorderRadius.circular(10),
-                onTap: onTap,
-                child: ShaderMask(
-                  shaderCallback: (Rect bounds) {
-                    return ui.Gradient.linear(
-                      Offset(bounds.right - 10, 0),
-                      Offset(bounds.right, 0),
-                      [Colors.white, Colors.white.withAlpha(0)],
-                    );
-                  },
-                  child: Padding(
-                    padding: EdgeInsets.all(padding),
-                    child: IntrinsicHeight(
-                      child: OverflowBox(
-                        maxWidth: 300,
-                        alignment: Alignment.centerLeft,
-                        child: Row(
-                          children: [
-                            Tooltip(
-                              message: tooltip,
-                              child: leading,
-                            ),
-                            if (title != null)
-                              Container(
-                                padding:
-                                    const EdgeInsets.symmetric(horizontal: 10),
-                                width: 210,
-                                child: DefaultTextStyle(
-                                  style: textStyle,
-                                  child: title!,
-                                ),
+                InkWell(
+                  borderRadius: BorderRadius.circular(10),
+                  onTap: onTap,
+                  child: ShaderMask(
+                    shaderCallback: (Rect bounds) {
+                      return ui.Gradient.linear(
+                        Offset(bounds.right - 10, 0),
+                        Offset(bounds.right, 0),
+                        [Colors.white, Colors.white.withAlpha(0)],
+                      );
+                    },
+                    child: Padding(
+                      padding: EdgeInsets.all(padding),
+                      child: IntrinsicHeight(
+                        child: OverflowBox(
+                          maxWidth: 300,
+                          alignment: Alignment.centerLeft,
+                          child: Row(
+                            children: [
+                              Tooltip(
+                                message: tooltip,
+                                child: leading,
                               ),
-                          ],
+                              if (title != null)
+                                Container(
+                                  padding: const EdgeInsets.symmetric(
+                                      horizontal: 10),
+                                  width: 210,
+                                  child: Opacity(
+                                    opacity: titleOpacity,
+                                    child: DefaultTextStyle(
+                                      style: textStyle,
+                                      child: title!,
+                                    ),
+                                  ),
+                                ),
+                            ],
+                          ),
                         ),
                       ),
                     ),
                   ),
                 ),
-              ),
-            ],
+              ],
+            ),
           ),
         ],
       ),

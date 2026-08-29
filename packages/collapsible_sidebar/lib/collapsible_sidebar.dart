@@ -260,14 +260,18 @@ class _CollapsibleSidebarState extends State<CollapsibleSidebar>
   Widget get _avatar {
     return CollapsibleItemWidget(
       selected: false,
-      padding: 10,
+      padding: 8,
+      // The account selector is taller than a navigation icon. Keeping the
+      // compact 42 px item height here would clip its label and border.
+      height: 56,
       offsetX: _offsetX,
+      titleOpacity: _fraction,
       leading: SizedBox(
         height: widget.iconSize,
         width: widget.iconSize,
         child: widget.avatar,
       ),
-      title: _isCollapsed ? null : widget.title,
+      title: widget.title,
       textStyle: _textStyle(widget.unselectedTextColor, widget.titleStyle),
       tooltip: widget.titleTooltip,
     );
@@ -288,14 +292,16 @@ class _CollapsibleSidebarState extends State<CollapsibleSidebar>
         hasDivider: item.hasDivider,
         selectedBoxColor: widget.selectedIconBox,
         selected: item.isSelected,
-        padding: 10,
+        padding: 8,
+        height: widget.iconSize + 16,
         offsetX: _offsetX,
+        titleOpacity: _fraction,
         leading: Icon(
           item.icon,
           size: widget.iconSize,
           color: iconColor,
         ),
-        title: _isCollapsed ? null : Text(item.text),
+        title: Text(item.text),
         textStyle: _textStyle(textColor, widget.textStyle),
         onTap: () {
           if (item.isSelected) return;
@@ -311,8 +317,10 @@ class _CollapsibleSidebarState extends State<CollapsibleSidebar>
   Widget get _toggleButton {
     return CollapsibleItemWidget(
       selected: false,
-      padding: 10,
+      padding: 8,
+      height: widget.iconSize + 16,
       offsetX: _offsetX,
+      titleOpacity: _fraction,
       leading: Transform.rotate(
         angle: _currAngle,
         child: Icon(
@@ -321,7 +329,7 @@ class _CollapsibleSidebarState extends State<CollapsibleSidebar>
           color: widget.unselectedIconColor,
         ),
       ),
-      title: _isCollapsed ? null : widget.toggleTitle ?? const SizedBox(),
+      title: widget.toggleTitle ?? const SizedBox(),
       textStyle:
           _textStyle(widget.unselectedTextColor, widget.toggleTitleStyle),
       onTap: () {
@@ -335,7 +343,8 @@ class _CollapsibleSidebarState extends State<CollapsibleSidebar>
     );
   }
 
-  double get _fraction => (_currWidth - widget.minWidth) / _delta;
+  double get _fraction =>
+      ((_currWidth - widget.minWidth) / _delta).clamp(0.0, 1.0);
   double get _currAngle => -math.pi * _fraction;
   double get _offsetX => _maxOffsetX * _fraction;
 

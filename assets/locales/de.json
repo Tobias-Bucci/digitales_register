@@ -46,6 +46,7 @@
   "settings.dashboard.deduplicate": "Doppelte Einträge ignorieren",
   "settings.dashboard.askDeleteReminder": "Beim Löschen von Erinnerungen fragen",
   "settings.grades.diagram": "Noten in einem Diagramm darstellen",
+  "grades.chart.title": "Notenverlauf",
   "settings.grades.averageAllSubjects": "Durchschnitt aller Fächer anzeigen",
   "settings.grades.excludeAverage": "Fächer aus dem Notendurchschnitt ausschließen",
   "settings.grades.noExcludedSubject": "Kein Fach ausgeschlossen",

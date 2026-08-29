@@ -861,15 +861,15 @@ class DashboardHeader extends StatelessWidget {
                 ),
                 const SizedBox(height: 10),
               ],
-              Row(
+              Wrap(
+                spacing: 8,
+                runSpacing: 8,
+                crossAxisAlignment: WrapCrossAlignment.center,
                 children: [
-                  Expanded(
-                    child: HomeworkFilterContainer(
-                      showEmptyDays: showEmptyDays,
-                      onShowEmptyDaysChanged: onShowEmptyDaysChanged,
-                    ),
+                  HomeworkFilterContainer(
+                    showEmptyDays: showEmptyDays,
+                    onShowEmptyDaysChanged: onShowEmptyDaysChanged,
                   ),
-                  const SizedBox(width: 8),
                   if (schoolTimeline.holidays.isEmpty &&
                       schoolTimeline.gradeDeadlines.isEmpty) ...[
                     Tooltip(
@@ -879,7 +879,6 @@ class DashboardHeader extends StatelessWidget {
                         color: scheme.onSurfaceVariant,
                       ),
                     ),
-                    const SizedBox(width: 8),
                   ],
                   AnimatedSwitcher(
                     duration: const Duration(milliseconds: 220),

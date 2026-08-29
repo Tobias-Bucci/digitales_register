@@ -46,6 +46,7 @@
   "settings.dashboard.deduplicate": "Ignora voci duplicate",
   "settings.dashboard.askDeleteReminder": "Chiedi prima di eliminare i promemoria",
   "settings.grades.diagram": "Mostra i voti in un grafico",
+  "grades.chart.title": "Andamento dei voti",
   "settings.grades.averageAllSubjects": "Mostra la media di tutte le materie",
   "settings.grades.excludeAverage": "Escludi materie dalla media voti",
   "settings.grades.noExcludedSubject": "Nessuna materia esclusa",

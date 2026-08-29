@@ -1,4 +1,4 @@
-﻿// Copyright (C) 2021 Michael Debertol
+// Copyright (C) 2021 Michael Debertol
 // Copyright (C) 2026 Tobias Bucci
 //
 // This file is part of digitales_register.
@@ -227,6 +227,7 @@ class _HomeworkFilterState extends State<HomeworkFilter>
     ].where((isDisabled) => isDisabled).length;
     return Align(
       alignment: Alignment.centerLeft,
+      widthFactor: 1,
       child: FilledButton.tonalIcon(
         onPressed: () => _openFilterSheet(context),
         style: FilledButton.styleFrom(

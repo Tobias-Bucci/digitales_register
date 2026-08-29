@@ -1,4 +1,4 @@
-﻿// Copyright (C) 2021 Michael Debertol
+// Copyright (C) 2021 Michael Debertol
 // Copyright (C) 2026 Tobias Bucci
 //
 // This file is part of digitales_register.
@@ -185,10 +185,14 @@ class GradesChart extends StatelessWidget {
                 roundEndCaps: true,
               ),
               layoutConfig: charts.LayoutConfig(
-                bottomMarginSpec: charts.MarginSpec.fixedPixel(16),
+                bottomMarginSpec: charts.MarginSpec.fixedPixel(
+                  isFullscreen ? 16 : 22,
+                ),
                 rightMarginSpec: charts.MarginSpec.fixedPixel(8),
-                leftMarginSpec: charts.MarginSpec.fixedPixel(20),
-                topMarginSpec: charts.MarginSpec.fixedPixel(16),
+                leftMarginSpec:
+                    charts.MarginSpec.fixedPixel(isFullscreen ? 20 : 28),
+                topMarginSpec:
+                    charts.MarginSpec.fixedPixel(isFullscreen ? 16 : 8),
               ),
               selectionModels: [
                 charts.SelectionModelConfig(
@@ -244,7 +248,7 @@ class GradesChart extends StatelessWidget {
                         : charts.MaterialPalette.black,
                   ),
                   lineStyle: charts.LineStyleSpec(
-                    thickness: 0,
+                    thickness: isFullscreen ? 0 : 1,
                     color: charts.MaterialPalette.gray.shadeDefault,
                   ),
                 ),
@@ -288,12 +292,6 @@ class GradesChart extends StatelessWidget {
                     ),
                   );
                 }),
-          if (!isFullscreen)
-            const Positioned(
-              right: 20,
-              bottom: 20,
-              child: Icon(Icons.fullscreen),
-            ),
         ],
       ),
     );

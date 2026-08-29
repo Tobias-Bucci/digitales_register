@@ -171,10 +171,53 @@ class _GradesPageState extends State<GradesPage> {
                       child: ListView(
                         children: <Widget>[
                           if (vm.showGradesDiagram)
-                            const SizedBox(
-                              height: 150,
-                              width: 250,
-                              child: GradesChartContainer(isFullscreen: false),
+                            Padding(
+                              padding: const EdgeInsets.fromLTRB(12, 12, 12, 4),
+                              child: Card(
+                                margin: EdgeInsets.zero,
+                                clipBehavior: Clip.antiAlias,
+                                child: SizedBox(
+                                  height: 220,
+                                  child: Column(
+                                    children: [
+                                      Padding(
+                                        padding: const EdgeInsets.fromLTRB(
+                                          16,
+                                          10,
+                                          10,
+                                          0,
+                                        ),
+                                        child: Row(
+                                          children: [
+                                            Icon(
+                                              Icons.show_chart_rounded,
+                                              color: Theme.of(context)
+                                                  .colorScheme
+                                                  .primary,
+                                            ),
+                                            const SizedBox(width: 8),
+                                            Expanded(
+                                              child: Text(
+                                                l10n.text('grades.chart.title'),
+                                                style: Theme.of(context)
+                                                    .textTheme
+                                                    .titleMedium,
+                                              ),
+                                            ),
+                                            const Icon(
+                                                Icons.open_in_full_rounded),
+                                          ],
+                                        ),
+                                      ),
+                                      const Expanded(
+                                        child: GradesChartContainer(
+                                          isFullscreen: false,
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                              ),
                             ),
                           if (vm.showAllSubjectsAverage) ...[
                             _AverageRow(

@@ -46,6 +46,7 @@
   "settings.dashboard.deduplicate": "Ignorè entries doplá",
   "settings.dashboard.askDeleteReminder": "Damandè canche an sodes i monitoranza",
   "settings.grades.diagram": "Rappresentè i proi te n diagram",
+  "grades.chart.title": "Andamënt di proi",
   "settings.grades.averageAllSubjects": "Mostrè la media de dotes les dicipines",
   "settings.grades.excludeAverage": "Esclüde dicipines dala media di proi",
   "settings.grades.noExcludedSubject": "Degüna dicipina esclüda",
