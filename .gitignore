@@ -70,6 +70,14 @@ packages/package_info_plus/example/
 # Android signing secrets
 android/key.properties
 android/*.jks
+*.pfx
+*.p12
+*.pvk
+*.pem
+*.key
+*.cer
+*.msix
+*.msixbundle
 **/google-services.json
 ios/Flutter/ephemeral/
 macos/Flutter/GeneratedPluginRegistrant.swift

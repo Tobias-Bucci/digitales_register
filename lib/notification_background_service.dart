@@ -400,7 +400,7 @@ class NotificationBackgroundService {
     const macOsSettings = DarwinInitializationSettings();
     const windowsSettings = WindowsInitializationSettings(
       appName: 'Digitales Register - Schulplaner',
-      appUserModelId: 'Bucci.DigitalesRegister',
+      appUserModelId: 'TobiasBucci.DigitalesRegisterSchulplaner',
       guid: 'c9af52bd-6584-4a5b-9630-e51ae0b6d5d8',
     );
     const initSettings = InitializationSettings(
