@@ -13,10 +13,12 @@ class SchoolCountdownOverview extends StatelessWidget {
     super.key,
     required this.timeline,
     this.onOpenCalendarAt,
+    this.onEditGradeDeadline,
   });
 
   final SchoolTimeline timeline;
   final Future<void> Function(DateTime date)? onOpenCalendarAt;
+  final Future<void> Function(GradeDeadline deadline)? onEditGradeDeadline;
 
   @override
   Widget build(BuildContext context) {
@@ -40,7 +42,7 @@ class SchoolCountdownOverview extends StatelessWidget {
             Expanded(
               child: _GradeDeadlineCountdownCard(
                 countdown: deadline,
-                onOpenCalendarAt: onOpenCalendarAt,
+                onEditGradeDeadline: onEditGradeDeadline,
               ),
             ),
           ],
@@ -106,11 +108,11 @@ class _HolidayCountdownCard extends StatelessWidget {
 class _GradeDeadlineCountdownCard extends StatelessWidget {
   const _GradeDeadlineCountdownCard({
     required this.countdown,
-    required this.onOpenCalendarAt,
+    required this.onEditGradeDeadline,
   });
 
   final GradeDeadlineCountdown? countdown;
-  final Future<void> Function(DateTime date)? onOpenCalendarAt;
+  final Future<void> Function(GradeDeadline deadline)? onEditGradeDeadline;
 
   @override
   Widget build(BuildContext context) {
@@ -137,9 +139,9 @@ class _GradeDeadlineCountdownCard extends StatelessWidget {
         args: {'date': _formatDate(context, value.deadline.date)},
       ),
       progress: value.progress,
-      onTap: onOpenCalendarAt == null
+      onTap: onEditGradeDeadline == null
           ? null
-          : () => onOpenCalendarAt!(value.deadline.date),
+          : () => onEditGradeDeadline!(value.deadline),
     );
   }
 }
@@ -168,7 +170,7 @@ class _CountdownCard extends StatelessWidget {
     final scheme = theme.colorScheme;
     final progressValue = progress?.clamp(0.0, 1.0);
     return SizedBox(
-      height: 184,
+      height: 176,
       child: Material(
         color: Colors.transparent,
         child: InkWell(
@@ -181,70 +183,86 @@ class _CountdownCard extends StatelessWidget {
               borderRadius: BorderRadius.circular(14),
               border: Border.all(color: scheme.primary.withValues(alpha: 0.16)),
             ),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Row(
+            child: LayoutBuilder(
+              builder: (context, _) {
+                return Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Icon(icon, size: 22, color: scheme.primary),
-                    const SizedBox(width: 8),
-                    Expanded(
-                      child: Text(
-                        title,
-                        maxLines: 2,
-                        overflow: TextOverflow.ellipsis,
-                        style: theme.textTheme.titleMedium?.copyWith(
-                          fontWeight: FontWeight.w700,
+                    Row(
+                      children: [
+                        Icon(
+                          icon,
+                          size: 20,
+                          color: scheme.primary,
+                        ),
+                        const SizedBox(width: 6),
+                        Expanded(
+                          child: Text(
+                            title,
+                            maxLines: 1,
+                            softWrap: false,
+                            overflow: TextOverflow.ellipsis,
+                            style: theme.textTheme.titleSmall?.copyWith(
+                              fontWeight: FontWeight.w700,
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 4),
+                    Text(
+                      primaryText,
+                      maxLines: 1,
+                      softWrap: false,
+                      overflow: TextOverflow.ellipsis,
+                      style: theme.textTheme.titleLarge?.copyWith(
+                        fontWeight: FontWeight.w700,
+                      ),
+                    ),
+                    const SizedBox(height: 2),
+                    Text(
+                      secondaryText,
+                      maxLines: 1,
+                      softWrap: false,
+                      overflow: TextOverflow.ellipsis,
+                      style: theme.textTheme.bodySmall?.copyWith(
+                        color: scheme.onSurfaceVariant,
+                      ),
+                    ),
+                    if (progressValue != null) ...[
+                      const Spacer(),
+                      Semantics(
+                        label: context.l10n.text('schoolCountdown.progress'),
+                        value: '${(progressValue * 100).round()} %',
+                        child: ClipRRect(
+                          borderRadius: BorderRadius.circular(20),
+                          child: LinearProgressIndicator(
+                            minHeight: 8,
+                            value: progressValue,
+                            backgroundColor: scheme.surfaceContainerHighest,
+                          ),
                         ),
                       ),
-                    ),
+                      const SizedBox(height: 3),
+                      Align(
+                        alignment: Alignment.centerRight,
+                        child: Text(
+                          context.l10n.text(
+                            'schoolCountdown.progressValue',
+                            args: {
+                              'percent': '${(progressValue * 100).round()}',
+                            },
+                          ),
+                          maxLines: 1,
+                          softWrap: false,
+                          overflow: TextOverflow.ellipsis,
+                          style: theme.textTheme.labelSmall,
+                        ),
+                      ),
+                    ],
                   ],
-                ),
-                const SizedBox(height: 6),
-                Text(
-                  primaryText,
-                  maxLines: 2,
-                  overflow: TextOverflow.ellipsis,
-                  style: theme.textTheme.headlineSmall?.copyWith(
-                    fontWeight: FontWeight.w700,
-                  ),
-                ),
-                const SizedBox(height: 2),
-                Text(
-                  secondaryText,
-                  maxLines: 2,
-                  overflow: TextOverflow.ellipsis,
-                  style: theme.textTheme.bodySmall?.copyWith(
-                    color: scheme.onSurfaceVariant,
-                  ),
-                ),
-                if (progressValue != null) ...[
-                  const Spacer(),
-                  Semantics(
-                    label: context.l10n.text('schoolCountdown.progress'),
-                    value: '${(progressValue * 100).round()} %',
-                    child: ClipRRect(
-                      borderRadius: BorderRadius.circular(20),
-                      child: LinearProgressIndicator(
-                        minHeight: 8,
-                        value: progressValue,
-                        backgroundColor: scheme.surfaceContainerHighest,
-                      ),
-                    ),
-                  ),
-                  const SizedBox(height: 5),
-                  Align(
-                    alignment: Alignment.centerRight,
-                    child: Text(
-                      context.l10n.text(
-                        'schoolCountdown.progressValue',
-                        args: {'percent': '${(progressValue * 100).round()}'},
-                      ),
-                      style: theme.textTheme.labelSmall,
-                    ),
-                  ),
-                ],
-              ],
+                );
+              },
             ),
           ),
         ),

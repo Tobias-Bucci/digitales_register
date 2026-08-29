@@ -58,6 +58,7 @@ class LoginPage extends StatelessWidget {
           onReload: actions.load.call,
           onRequestPassReset: actions.routingActions.showRequestPassReset.call,
           onSelectAccount: actions.loginActions.selectAccount.call,
+          onRemoveAccount: actions.loginActions.removeAccount.call,
         );
       },
       connect: (state) {
@@ -79,16 +80,16 @@ class LoginPageViewModel {
   final List<String> otherAccounts;
 
   LoginPageViewModel.from(AppState state)
-    : error = state.loginState.errorMsg,
-      loading = state.loginState.loading,
-      safeMode = state.settingsState.noPasswordSaving,
-      noInternet = state.noInternet,
-      servers = schools,
-      changePass = state.loginState.changePassword,
-      mustChangePass = state.loginState.mustChangePassword,
-      username = state.loginState.username,
-      url = state.url,
-      otherAccounts = state.loginState.otherAccounts.toList();
+      : error = state.loginState.errorMsg,
+        loading = state.loginState.loading,
+        safeMode = state.settingsState.noPasswordSaving,
+        noInternet = state.noInternet,
+        servers = schools,
+        changePass = state.loginState.changePassword,
+        mustChangePass = state.loginState.mustChangePassword,
+        username = state.loginState.username,
+        url = state.url,
+        otherAccounts = state.loginState.otherAccounts.toList();
 
   static const _collectionEquality = DeepCollectionEquality();
 
@@ -110,15 +111,15 @@ class LoginPageViewModel {
 
   @override
   int get hashCode => Object.hash(
-    error,
-    username,
-    url,
-    loading,
-    safeMode,
-    noInternet,
-    changePass,
-    mustChangePass,
-    _collectionEquality.hash(servers),
-    _collectionEquality.hash(otherAccounts),
-  );
+        error,
+        username,
+        url,
+        loading,
+        safeMode,
+        noInternet,
+        changePass,
+        mustChangePass,
+        _collectionEquality.hash(servers),
+        _collectionEquality.hash(otherAccounts),
+      );
 }

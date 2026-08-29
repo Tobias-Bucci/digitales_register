@@ -54,6 +54,53 @@ class CourseMaterialSource {
   }
 }
 
+/// Finds class/subject pairs in calendar and class-register payloads. The two
+/// endpoints use both nested (`subject.id`) and flattened (`subjectId`) forms.
+List<CourseMaterialSource> courseMaterialSourcesFromPayload(dynamic root) {
+  final sources = <String, CourseMaterialSource>{};
+
+  void visit(dynamic value) {
+    if (value is Map) {
+      final map = getMap(value)!;
+      final lessonLike = getMap(map['lesson']) ?? map;
+      final subject = getMap(lessonLike['subject']);
+      final classObject =
+          getMap(lessonLike['class']) ?? getMap(lessonLike['schoolClass']);
+      final classId =
+          getInt(lessonLike['classId']) ?? getInt(classObject?['id']);
+      final subjectId =
+          getInt(lessonLike['subjectId']) ?? getInt(subject?['id']);
+      if (classId != null && subjectId != null) {
+        final key = '$classId|$subjectId';
+        sources.putIfAbsent(
+          key,
+          () => CourseMaterialSource(
+            classId: classId,
+            className: getString(lessonLike['className']) ??
+                getString(classObject?['name']) ??
+                '',
+            subjectId: subjectId,
+            subjectName: getString(lessonLike['subjectName']) ??
+                getString(subject?['name']) ??
+                '',
+          ),
+        );
+      }
+      for (final child in map.values) {
+        if (child is Map || child is List) visit(child);
+      }
+    } else if (value is List) {
+      for (final child in value) {
+        visit(child);
+      }
+    }
+  }
+
+  if (root != null) visit(root);
+  return sources.values.toList()
+    ..sort((a, b) => a.subjectName.compareTo(b.subjectName));
+}
+
 class CourseMaterialCourse {
   const CourseMaterialCourse({
     required this.id,

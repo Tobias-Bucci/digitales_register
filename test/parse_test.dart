@@ -52,6 +52,31 @@ void main() {
     expect(secondDay.hours.single.subject, 'Mathematik');
   });
 
+  test('remembers a completely prefetched school year', () async {
+    await store.actions.calendarActions.loaded(
+      CalendarLoadedPayload(
+        data: const <String, dynamic>{},
+        config: _substituteDetectionConfig(
+          primaryTeachers: const <String, BuiltList<String>>{},
+          lockedSubjects: const <String>[],
+        ),
+        completedSchoolYear: 2026,
+      ),
+    );
+
+    expect(store.state.calendarState.prefetchedSchoolYears, contains(2026));
+  });
+
+  test('covers every calendar week from September through June', () {
+    expect(schoolYearForDate(DateTime(2026, 6, 30)), 2025);
+    expect(schoolYearForDate(DateTime(2026, 7, 1)), 2026);
+
+    final mondays = schoolYearCalendarMondays(2026);
+    expect(mondays, hasLength(44));
+    expect(mondays.first, UtcDateTime(2026, 8, 31));
+    expect(mondays.last, UtcDateTime(2027, 6, 28));
+  });
+
   test('generates automatic subject nick from first and last word', () {
     expect(
       generateAutomaticSubjectNick('Soziale Bildung'),

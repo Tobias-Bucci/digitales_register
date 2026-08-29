@@ -235,7 +235,14 @@ class _CourseMaterialsPageState extends State<CourseMaterialsPage> {
           children: [
             const Icon(Icons.folder_copy_outlined),
             const SizedBox(width: 8),
-            Text(l10n.text('courseMaterials.title')),
+            Flexible(
+              child: Text(
+                l10n.text('courseMaterials.title'),
+                maxLines: 1,
+                softWrap: false,
+                overflow: TextOverflow.ellipsis,
+              ),
+            ),
           ],
         ),
       ),
@@ -357,6 +364,9 @@ class _CourseMaterialsHeader extends StatelessWidget {
                   children: [
                     Text(
                       l10n.text('courseMaterials.title'),
+                      maxLines: 1,
+                      softWrap: false,
+                      overflow: TextOverflow.ellipsis,
                       style: theme.textTheme.headlineSmall,
                     ),
                     if (lastFetched != null) ...[

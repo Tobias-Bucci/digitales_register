@@ -59,6 +59,10 @@ void _loaded(CalendarState state, Action<CalendarLoadedPayload> action,
   final mergedDays = Map<UtcDateTime, CalendarDay>.from(state.days.toMap())
     ..addAll(loadedDays);
   builder.days.replace(_detectSubstitutes(mergedDays, action.payload.config));
+  final completedSchoolYear = action.payload.completedSchoolYear;
+  if (completedSchoolYear != null) {
+    builder.prefetchedSchoolYears.add(completedSchoolYear);
+  }
 }
 
 void _currentMonday(CalendarState state, Action<UtcDateTime> action,
@@ -71,10 +75,8 @@ void _selectedDay(CalendarState state, Action<CalendarSelection?> action,
   builder.selection = action.payload?.toBuilder();
 }
 
-void _recalculateSubstitutes(
-    CalendarState state,
-    Action<SubstituteDetectionConfig> action,
-    CalendarStateBuilder builder) {
+void _recalculateSubstitutes(CalendarState state,
+    Action<SubstituteDetectionConfig> action, CalendarStateBuilder builder) {
   builder.days.replace(
     _detectSubstitutes(
       state.days.toMap(),
@@ -234,8 +236,7 @@ Map<UtcDateTime, CalendarDay> _detectSubstitutes(
         (day) => day.hours = ListBuilder<CalendarHour>(
           entry.value.hours.map(
             (hour) => hour.rebuild(
-              (b) => b.isDetectedSubstitute =
-                  _isDetectedSubstitute(
+              (b) => b.isDetectedSubstitute = _isDetectedSubstitute(
                 entry.key,
                 hour,
                 teacherCountsBySlot,
@@ -264,7 +265,8 @@ bool _isDetectedSubstitute(
   }
   final configuredPrimaryTeachers =
       _configuredPrimaryTeachersForSubject(settings, hour.subject);
-  if ((configuredPrimaryTeachers == null || configuredPrimaryTeachers.isEmpty) &&
+  if ((configuredPrimaryTeachers == null ||
+          configuredPrimaryTeachers.isEmpty) &&
       _isSubjectConfigurationLocked(settings, hour.subject)) {
     return false;
   }
@@ -316,7 +318,8 @@ bool _isSubjectConfigurationLocked(
   dynamic settings,
   String subject,
 ) {
-  for (final lockedSubject in _substitutePrimaryTeachersLockedSubjects(settings)) {
+  for (final lockedSubject
+      in _substitutePrimaryTeachersLockedSubjects(settings)) {
     if (equalsIgnoreCase(lockedSubject, subject)) {
       return true;
     }
@@ -374,7 +377,9 @@ BuiltList<String> _substitutePrimaryTeachersLockedSubjects(dynamic settings) {
 
 List<String> _slotKeysForHour(UtcDateTime date, CalendarHour hour) {
   return [
-    for (var lessonHour = hour.fromHour; lessonHour <= hour.toHour; lessonHour++)
+    for (var lessonHour = hour.fromHour;
+        lessonHour <= hour.toHour;
+        lessonHour++)
       _slotKeyForLessonHour(date, hour, lessonHour),
   ];
 }

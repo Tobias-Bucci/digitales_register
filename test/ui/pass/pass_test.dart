@@ -17,7 +17,8 @@ void main() {
 
   tearDown(resetTestState);
 
-  testWidgets('request pass reset sends the request and shows the success message',
+  testWidgets(
+      'request pass reset sends the request and shows the success message',
       (tester) async {
     final dio = MockDio();
     passDio = dio;
@@ -70,7 +71,8 @@ void main() {
     ).called(1);
   });
 
-  testWidgets('change password screen requires matching passwords before submit',
+  testWidgets(
+      'change password screen requires matching passwords before submit',
       (tester) async {
     String? capturedUser;
     String? capturedOldPass;
@@ -100,6 +102,7 @@ void main() {
         onReload: () {},
         onRequestPassReset: (_) {},
         onSelectAccount: (_) {},
+        onRemoveAccount: (_) {},
       ),
     );
 
@@ -147,8 +150,8 @@ void main() {
     );
     await tester.pump();
 
-    final enabledSubmitButton =
-        tester.widget<ElevatedButton>(find.widgetWithText(ElevatedButton, 'Passwort ändern'));
+    final enabledSubmitButton = tester.widget<ElevatedButton>(
+        find.widgetWithText(ElevatedButton, 'Passwort ändern'));
     enabledSubmitButton.onPressed!();
     await tester.pump();
 

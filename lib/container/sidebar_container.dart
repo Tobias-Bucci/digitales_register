@@ -84,6 +84,7 @@ class SidebarContainer extends StatelessWidget {
           otherAccounts: state.otherAccounts.toList(),
           selectAccount: actions.loginActions.selectAccount.call,
           addAccount: actions.loginActions.addAccount.call,
+          removeCurrentAccount: actions.loginActions.removeCurrentAccount.call,
           logout: () => actions.loginActions.logout(
             LogoutPayload(
               (b) => b

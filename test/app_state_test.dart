@@ -127,4 +127,19 @@ void main() {
       BuiltList<String>(const <String>['Informatik']),
     );
   });
+
+  test('prefetched school years persist with calendar data', () {
+    final state = AppState(
+      (b) => b.calendarState.prefetchedSchoolYears.add(2026),
+    );
+
+    final serialized =
+        serializers.serialize(state, specifiedType: const FullType(AppState));
+    final deserialized = serializers.deserialize(
+      serialized,
+      specifiedType: const FullType(AppState),
+    )! as AppState;
+
+    expect(deserialized.calendarState.prefetchedSchoolYears, contains(2026));
+  });
 }

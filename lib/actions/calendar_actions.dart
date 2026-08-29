@@ -44,10 +44,12 @@ abstract class CalendarActions extends ReduxActions {
 class CalendarLoadedPayload {
   final Map<String, dynamic> data;
   final SubstituteDetectionConfig config;
+  final int? completedSchoolYear;
 
   const CalendarLoadedPayload({
     required this.data,
     required this.config,
+    this.completedSchoolYear,
   });
 }
 

@@ -118,6 +118,37 @@ void main() {
     expect(timeline.gradeDeadlineCountdownAt(DateTime(2026, 5, 30)), isNull);
   });
 
+  test('supplies standard grading dates and keeps overrides per school year',
+      () {
+    const emptyTimeline = SchoolTimeline(
+      schoolYearStart: null,
+      holidays: <SchoolHoliday>[],
+      gradeDeadlines: <GradeDeadline>[],
+    );
+    final defaults = emptyTimeline.withGradeDeadlineDefaults(
+      DateTime(2026, 8, 29),
+    );
+    expect(
+      defaults.gradeDeadlineCountdownAt(DateTime(2026, 8, 29))!.deadline.date,
+      DateTime(2027, 1, 31),
+    );
+
+    final timeline = emptyTimeline.withGradeDeadlineDefaults(
+      DateTime(2026, 8, 29),
+      overrides: <String, DateTime>{
+        gradeDeadlinePreferenceKey(2026, 1): DateTime(2027, 2, 2),
+      },
+    );
+
+    final first = timeline.gradeDeadlineCountdownAt(DateTime(2026, 8, 29))!;
+    expect(first.deadline.date, DateTime(2027, 2, 2));
+    expect(first.deadline.preferenceKey, '2026:1');
+
+    final second = timeline.gradeDeadlineCountdownAt(DateTime(2027, 2, 3))!;
+    expect(second.deadline.date, DateTime(2027, 6, 5));
+    expect(second.deadline.preferenceKey, '2026:2');
+  });
+
   test('extracts multilingual grading deadline events', () {
     final timeline = SchoolTimeline.fromCalendarData(
       dashboardDays: <Day>[

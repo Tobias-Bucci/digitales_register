@@ -1,4 +1,4 @@
-﻿// Copyright (C) 2026 Tobias Bucci
+// Copyright (C) 2026 Tobias Bucci
 //
 // This file is part of digitales_register.
 //
@@ -41,6 +41,7 @@ class AppPopupButton<T> extends StatefulWidget {
     this.padding = const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
     this.borderRadius = const BorderRadius.all(Radius.circular(18)),
     this.expand = false,
+    this.onLongPress,
   });
 
   final T selectedValue;
@@ -50,6 +51,7 @@ class AppPopupButton<T> extends StatefulWidget {
   final EdgeInsetsGeometry padding;
   final BorderRadius borderRadius;
   final bool expand;
+  final VoidCallback? onLongPress;
 
   @override
   State<AppPopupButton<T>> createState() => _AppPopupButtonState<T>();
@@ -64,9 +66,7 @@ class _AppPopupButtonState<T> extends State<AppPopupButton<T>> {
     final theme = Theme.of(context);
     final colorScheme = theme.colorScheme;
     final isDark = theme.brightness == Brightness.dark;
-    final buttonColor = isDark
-        ? const Color(0xFF1C1C1E)
-        : Colors.transparent;
+    final buttonColor = isDark ? const Color(0xFF1C1C1E) : Colors.transparent;
     final menuColor = isDark ? const Color(0xFF141414) : colorScheme.surface;
     final borderColor = isDark
         ? const Color(0xFF323236)
@@ -84,6 +84,7 @@ class _AppPopupButtonState<T> extends State<AppPopupButton<T>> {
         child: InkWell(
           borderRadius: widget.borderRadius,
           onTap: () => _showMenu(menuColor, selectedIconColor),
+          onLongPress: widget.onLongPress,
           onHighlightChanged: (value) {
             if (_pressed != value) {
               setState(() {

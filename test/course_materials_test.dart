@@ -12,6 +12,29 @@ import 'package:dr/page_payload_cache.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 void main() {
+  test('finds flattened and nested class/subject source identifiers', () {
+    final sources = courseMaterialSourcesFromPayload({
+      'data': [
+        {
+          'classId': 775,
+          'className': '3. Gymnasium E',
+          'subjectId': 7,
+          'subjectName': 'E',
+        },
+        {
+          'lesson': {
+            'schoolClass': {'id': 775, 'name': '3. Gymnasium E'},
+            'subject': {'id': 8, 'name': 'Geschichte'},
+          },
+        },
+      ],
+    });
+
+    expect(sources, hasLength(2));
+    expect(sources.first.classId, 775);
+    expect(sources.map((source) => source.subjectId), containsAll(<int>[7, 8]));
+  });
+
   test('parses course content getCourse response', () {
     final course = CourseMaterialCourse.fromJson(
       {

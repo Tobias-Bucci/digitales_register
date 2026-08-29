@@ -469,6 +469,7 @@ abstract class AbsencesState
 abstract class CalendarState
     implements Built<CalendarState, CalendarStateBuilder> {
   BuiltMap<UtcDateTime, CalendarDay> get days;
+  BuiltSet<int> get prefetchedSchoolYears;
 
   @BuiltValueField(serialize: false)
   UtcDateTime? get currentMonday;
@@ -492,7 +493,9 @@ abstract class CalendarState
   CalendarState._();
   static Serializer<CalendarState> get serializer => _$calendarStateSerializer;
   static void _initializeBuilder(CalendarStateBuilder builder) {
-    builder.days = MapBuilder<UtcDateTime, CalendarDay>();
+    builder
+      ..days = MapBuilder<UtcDateTime, CalendarDay>()
+      ..prefetchedSchoolYears = SetBuilder<int>();
   }
 }
 

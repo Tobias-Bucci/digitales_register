@@ -63,6 +63,7 @@ void main() {
             otherAccounts: <String>[],
             selectAccount: _noopSelectAccount,
             addAccount: _noopVoidCallback,
+            removeCurrentAccount: _noopVoidCallback,
             passwordSavingEnabled: true,
           ),
         ),
@@ -73,6 +74,55 @@ void main() {
 
     expect(find.byType(ProfileAvatar), findsOneWidget);
     expect(find.text('Anna Beispiel'), findsNothing);
+  });
+
+  testWidgets('long press on the active account confirms its removal',
+      (tester) async {
+    var removalRequested = false;
+
+    await tester.pumpWidget(
+      buildTestApp(
+        store: createStore(initialState: AppState(), withMiddleware: true),
+        appNavigatorKey: GlobalKey<NavigatorState>(),
+        messengerKey: GlobalKey<ScaffoldMessengerState>(),
+        home: Scaffold(
+          body: Sidebar(
+            tabletMode: false,
+            drawerExpanded: true,
+            onDrawerExpansionChange: _noopDrawerCallback,
+            username: 'Anna Beispiel',
+            userIcon: null,
+            goHome: _noopVoidCallback,
+            currentSelected: Pages.homework,
+            showGrades: _noopVoidCallback,
+            showAbsences: _noopVoidCallback,
+            showCalendar: _noopVoidCallback,
+            showClassRegister: _noopVoidCallback,
+            showCourseMaterials: _noopVoidCallback,
+            showHomeworkSummary: _noopVoidCallback,
+            showCertificate: _noopVoidCallback,
+            showMessages: _noopVoidCallback,
+            showProfile: _noopVoidCallback,
+            showSettings: _noopVoidCallback,
+            logout: _noopVoidCallback,
+            otherAccounts: const <String>[],
+            selectAccount: _noopSelectAccount,
+            addAccount: _noopVoidCallback,
+            removeCurrentAccount: () => removalRequested = true,
+            passwordSavingEnabled: true,
+          ),
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    await tester.longPress(find.text('Anna Beispiel'));
+    await tester.pumpAndSettle();
+    expect(find.byType(AlertDialog), findsOneWidget);
+
+    await tester.tap(find.text('Konto entfernen'));
+    await tester.pumpAndSettle();
+    expect(removalRequested, isTrue);
   });
 }
 

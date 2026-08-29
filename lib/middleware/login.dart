@@ -28,7 +28,9 @@ final _loginMiddleware =
       ..add(LoginActionsNames.requestPassReset, _requestPassReset)
       ..add(LoginActionsNames.resetPass, _resetPass)
       ..add(LoginActionsNames.addAccount, _addAccount)
-      ..add(LoginActionsNames.selectAccount, _selectAccount);
+      ..add(LoginActionsNames.selectAccount, _selectAccount)
+      ..add(LoginActionsNames.removeAccount, _removeAccount)
+      ..add(LoginActionsNames.removeCurrentAccount, _removeCurrentAccount);
 
 Future<String> _loginText(
   String key, {
@@ -409,6 +411,100 @@ Future<void> _selectAccount(
   await secureStorage.write(key: "login", value: json.encode(login));
   await api.actions.mountAppState(_emptyAppStateKeepingSettings(api.state));
   await api.actions.load();
+}
+
+Future<void> _removeAccount(
+  MiddlewareApi<AppState, AppStateBuilder, AppActions> api,
+  ActionHandler next,
+  Action<int> action,
+) async {
+  await next(action);
+  final rawLogin = await secureStorage.read(key: 'login');
+  if (rawLogin == null) return;
+  final login = getMap(rawLogin);
+  final rawAccounts = login?['otherAccounts'];
+  if (rawAccounts is! List ||
+      action.payload < 0 ||
+      action.payload >= rawAccounts.length) {
+    return;
+  }
+  final removed = getMap(rawAccounts.removeAt(action.payload));
+  final user = getString(removed?['user']);
+  final url = getString(removed?['url']);
+  if (user != null && url != null) {
+    await _deleteLocalAccountData(user: user, url: url);
+  }
+  login!['otherAccounts'] = rawAccounts;
+  await secureStorage.write(key: 'login', value: json.encode(login));
+  await api.actions.loginActions.setAvailableAccounts(
+    rawAccounts
+        .map((account) => getString(getMap(account)?['user']))
+        .whereType<String>()
+        .toList(),
+  );
+}
+
+Future<void> _removeCurrentAccount(
+  MiddlewareApi<AppState, AppStateBuilder, AppActions> api,
+  ActionHandler next,
+  Action<void> action,
+) async {
+  await next(action);
+
+  final rawLogin = await secureStorage.read(key: 'login');
+  final login = rawLogin == null ? null : getMap(rawLogin);
+  final user = getString(login?['user']) ?? wrapper.user;
+  final url = getString(login?['url']) ?? wrapper.url;
+  if (user != null && url != null) {
+    await _deleteLocalAccountData(user: user, url: url);
+  }
+
+  final otherAccounts = login?['otherAccounts'];
+  if (otherAccounts is List && otherAccounts.isNotEmpty) {
+    await secureStorage.write(
+      key: 'login',
+      value: json.encode(<String, Object?>{'otherAccounts': otherAccounts}),
+    );
+  } else {
+    await secureStorage.delete(key: 'login');
+  }
+
+  await NotificationBackgroundService.handleAppPaused();
+  appClock.setDemoMode(false);
+  statePersistenceService.clear();
+  _clearRuntimeCaches();
+  await androidWidgetSnapshotService.clear();
+  wrapper.logout(hard: true);
+  wrapper = Wrapper();
+  await api.actions.mountAppState(_emptyAppStateKeepingSettings(api.state));
+  await api.actions.loginActions.setAvailableAccounts(
+    otherAccounts is List
+        ? otherAccounts
+            .map((account) => getString(getMap(account)?['user']))
+            .whereType<String>()
+            .toList()
+        : <String>[],
+  );
+  await api.actions.routingActions.showLogin();
+}
+
+Future<void> _deleteLocalAccountData({
+  required String user,
+  required String url,
+}) async {
+  final loginAddress = '${fixupUrl(url)}/v2/api/auth/login';
+  final storageKey = getStorageKey(user, loginAddress);
+  await secureStorage.delete(key: escapeKey(storageKey));
+
+  final prefs = await SharedPreferences.getInstance();
+  for (final namespace in <String>[
+    'classRegisterLessons',
+    'courseMaterials',
+    'homeworkSummary',
+    'gradeDeadlineOverrides',
+  ]) {
+    await prefs.remove('$namespace:$storageKey');
+  }
 }
 
 AppState _emptyAppStateKeepingSettings(AppState state) {

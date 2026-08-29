@@ -27,10 +27,12 @@ class GradeDeadline {
   const GradeDeadline({
     required this.name,
     required this.date,
+    this.preferenceKey,
   });
 
   final String name;
   final DateTime date;
+  final String? preferenceKey;
 }
 
 class HolidayCountdown {
@@ -75,6 +77,52 @@ class SchoolTimeline {
   final List<SchoolHoliday> holidays;
   final List<GradeDeadline> gradeDeadlines;
   final DateTime? schoolYearStart;
+
+  /// Completes calendar data with the conventional grading deadlines.
+  /// A user-selected date takes precedence over a calendar date, which in
+  /// turn takes precedence over the 31 January / 5 June defaults.
+  SchoolTimeline withGradeDeadlineDefaults(
+    DateTime reference, {
+    Map<String, DateTime> overrides = const <String, DateTime>{},
+  }) {
+    final normalizedReference = _dateOnly(reference);
+    final scheduled = <GradeDeadline>[];
+
+    for (var schoolYear = normalizedReference.year - 1;
+        schoolYear <= normalizedReference.year + 1;
+        schoolYear++) {
+      for (final period in <int>[1, 2]) {
+        final key = gradeDeadlinePreferenceKey(schoolYear, period);
+        GradeDeadline? calendarDeadline;
+        for (final deadline in gradeDeadlines) {
+          if (_gradeDeadlineSchoolYear(deadline.date) == schoolYear &&
+              _gradeDeadlinePeriod(deadline.date) == period) {
+            calendarDeadline = deadline;
+            break;
+          }
+        }
+        final defaultDate = period == 1
+            ? DateTime(schoolYear + 1, DateTime.january, 31)
+            : DateTime(schoolYear + 1, DateTime.june, 5);
+        scheduled.add(
+          GradeDeadline(
+            name: calendarDeadline?.name ?? '$period. Notenschluss',
+            date: _dateOnly(
+              overrides[key] ?? calendarDeadline?.date ?? defaultDate,
+            ),
+            preferenceKey: key,
+          ),
+        );
+      }
+    }
+
+    scheduled.sort((a, b) => a.date.compareTo(b.date));
+    return SchoolTimeline(
+      holidays: holidays,
+      gradeDeadlines: scheduled,
+      schoolYearStart: schoolYearStart,
+    );
+  }
 
   factory SchoolTimeline.fromCalendarData({
     required Iterable<Day> dashboardDays,
@@ -215,6 +263,14 @@ class SchoolTimeline {
     );
   }
 }
+
+String gradeDeadlinePreferenceKey(int schoolYear, int period) =>
+    '$schoolYear:$period';
+
+int _gradeDeadlineSchoolYear(DateTime date) =>
+    date.month >= DateTime.july ? date.year : date.year - 1;
+
+int _gradeDeadlinePeriod(DateTime date) => date.month <= DateTime.march ? 1 : 2;
 
 List<SchoolHoliday> _groupNamedHolidayDays(Map<DateTime, String> values) {
   final dates = values.keys.toList()..sort();

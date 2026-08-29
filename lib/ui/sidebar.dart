@@ -50,6 +50,7 @@ class Sidebar extends StatelessWidget {
     required this.otherAccounts,
     required this.selectAccount,
     required this.addAccount,
+    required this.removeCurrentAccount,
     required this.passwordSavingEnabled,
   });
 
@@ -66,7 +67,8 @@ class Sidebar extends StatelessWidget {
       showProfile,
       showSettings,
       logout,
-      addAccount;
+      addAccount,
+      removeCurrentAccount;
   final bool tabletMode, drawerExpanded, passwordSavingEnabled;
   final Pages currentSelected;
   final String? username, userIcon;
@@ -124,6 +126,7 @@ class Sidebar extends StatelessWidget {
                 borderRadius: const BorderRadius.all(Radius.circular(16)),
                 entries: accountEntries,
                 labelBuilder: (_) => username ?? "?",
+                onLongPress: () => _confirmRemoveCurrentAccount(context),
                 onSelected: (value) {
                   scaffoldKey?.currentState?.closeDrawerIfOpen();
                   if (value == otherAccounts.length + 1) {
@@ -227,5 +230,32 @@ class Sidebar extends StatelessWidget {
       ],
       body: const SizedBox(),
     );
+  }
+
+  Future<void> _confirmRemoveCurrentAccount(BuildContext context) async {
+    final l10n = context.l10n;
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (dialogContext) => AlertDialog(
+        title: Text(l10n.text('login.removeAccount.title')),
+        content: Text(
+          l10n.text('login.removeAccount.body',
+              args: {'account': username ?? '?'}),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(dialogContext).pop(false),
+            child: Text(l10n.text('common.cancel')),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.of(dialogContext).pop(true),
+            child: Text(l10n.text('login.removeAccount')),
+          ),
+        ],
+      ),
+    );
+    if (confirmed == true) {
+      removeCurrentAccount();
+    }
   }
 }

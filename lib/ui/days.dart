@@ -16,9 +16,13 @@
 // You should have received a copy of the GNU General Public License
 // along with digitales_register.  If not, see <http://www.gnu.org/licenses/>.
 
+import 'dart:async';
+import 'dart:convert';
+
 import 'package:badges/badges.dart' as badge;
 import 'package:built_collection/built_collection.dart';
 import 'package:deleteable_tile/deleteable_tile.dart';
+import 'package:dr/app_clock.dart';
 import 'package:dr/app_state.dart';
 import 'package:dr/container/days_container.dart';
 import 'package:dr/container/homework_filter_container.dart';
@@ -60,6 +64,7 @@ typedef MarkDeletedHomeworkAsSeenCallback = void Function(Day day);
 typedef OpenCalendarAtCallback = Future<void> Function(DateTime date);
 
 const _localReminderAssessmentHintKey = 'localReminderAssessmentHintShown';
+const _gradeDeadlineOverridesKey = 'gradeDeadlineOverrides';
 
 class DaysWidget extends StatefulWidget {
   final DaysViewModel vm;
@@ -103,6 +108,7 @@ class _DaysWidgetState extends State<DaysWidget> {
   final controller = AutoScrollController(suggestedRowHeight: 100);
   String? _favoriteSubject;
   bool _showEmptyDays = true;
+  Map<String, DateTime> _gradeDeadlineOverrides = const <String, DateTime>{};
 
   bool _afterFirstFrame = false;
 
@@ -114,6 +120,55 @@ class _DaysWidgetState extends State<DaysWidget> {
 
   final ValueNotifier<bool> _showScrollUp = ValueNotifier(false);
   bool _reachedHomeworksUpdateScheduled = false;
+
+  Future<void> _loadGradeDeadlineOverrides() async {
+    final raw = (await SharedPreferences.getInstance())
+        .getString(_gradeDeadlinePreferenceStorageKey());
+    if (raw == null) return;
+    final decoded = getMap(raw);
+    if (decoded == null) return;
+    final values = <String, DateTime>{};
+    for (final entry in decoded.entries) {
+      final date = DateTime.tryParse(entry.value.toString());
+      if (date != null) values[entry.key.toString()] = date;
+    }
+    if (mounted) setState(() => _gradeDeadlineOverrides = values);
+  }
+
+  String _gradeDeadlinePreferenceStorageKey() =>
+      userScopedStorageKey(_gradeDeadlineOverridesKey);
+
+  SchoolTimeline _schoolTimeline() => SchoolTimeline.fromCalendarData(
+        dashboardDays: widget.vm.schoolTimelineDays,
+        calendarDays: widget.vm.schoolTimelineCalendarDays,
+      ).withGradeDeadlineDefaults(
+        appClock.now,
+        overrides: _gradeDeadlineOverrides,
+      );
+
+  Future<void> _editGradeDeadline(GradeDeadline deadline) async {
+    final selected = await showDatePicker(
+      context: context,
+      initialDate: deadline.date,
+      firstDate: DateTime(deadline.date.year - 1),
+      lastDate: DateTime(deadline.date.year + 1, DateTime.december, 31),
+    );
+    if (selected == null || !mounted || deadline.preferenceKey == null) return;
+    final updated = <String, DateTime>{
+      ..._gradeDeadlineOverrides,
+      deadline.preferenceKey!:
+          DateTime(selected.year, selected.month, selected.day),
+    };
+    setState(() => _gradeDeadlineOverrides = updated);
+    await (await SharedPreferences.getInstance()).setString(
+      _gradeDeadlinePreferenceStorageKey(),
+      jsonEncode(
+        updated.map(
+          (key, value) => MapEntry(key, value.toIso8601String()),
+        ),
+      ),
+    );
+  }
 
   void _updateShowScrollUp() {
     if (controller.hasClients) {
@@ -266,6 +321,8 @@ class _DaysWidgetState extends State<DaysWidget> {
 
   @override
   void initState() {
+    super.initState();
+    unawaited(_loadGradeDeadlineOverrides());
     updateValues(widget.vm.days.toList());
     controller.addListener(() {
       update();
@@ -275,7 +332,6 @@ class _DaysWidgetState extends State<DaysWidget> {
       _afterFirstFrame = true;
       setState(() {});
     });
-    super.initState();
   }
 
   @override
@@ -300,10 +356,7 @@ class _DaysWidgetState extends State<DaysWidget> {
     required String? activeFavoriteSubject,
   }) {
     if (n == 0) {
-      final timeline = SchoolTimeline.fromCalendarData(
-        dashboardDays: widget.vm.schoolTimelineDays,
-        calendarDays: widget.vm.schoolTimelineCalendarDays,
-      );
+      final timeline = _schoolTimeline();
       return DashboardHeader(
         future: widget.vm.future,
         onSwitchFuture: widget.onSwitchFuture,
@@ -327,6 +380,7 @@ class _DaysWidgetState extends State<DaysWidget> {
         subjectThemes: widget.vm.subjectThemes,
         schoolTimeline: timeline,
         openCalendarAt: widget.openCalendarAt,
+        editGradeDeadline: _editGradeDeadline,
       );
     }
     if (isLast) {
@@ -381,10 +435,7 @@ class _DaysWidgetState extends State<DaysWidget> {
     final visibleDays = _filteredDays(activeFavoriteSubject);
     final noInternet = widget.vm.noInternet;
     final noEntries = visibleDays.isEmpty;
-    final schoolTimeline = SchoolTimeline.fromCalendarData(
-      dashboardDays: widget.vm.schoolTimelineDays,
-      calendarDays: widget.vm.schoolTimelineCalendarDays,
-    );
+    final schoolTimeline = _schoolTimeline();
     Widget body;
     if (noEntries) {
       Widget fullScreenBody;
@@ -436,6 +487,7 @@ class _DaysWidgetState extends State<DaysWidget> {
             subjectThemes: widget.vm.subjectThemes,
             schoolTimeline: schoolTimeline,
             openCalendarAt: widget.openCalendarAt,
+            editGradeDeadline: _editGradeDeadline,
           ),
           Expanded(
             child: Center(child: fullScreenBody),
@@ -752,6 +804,7 @@ class DashboardHeader extends StatelessWidget {
   final bool future;
   final SchoolTimeline schoolTimeline;
   final OpenCalendarAtCallback openCalendarAt;
+  final Future<void> Function(GradeDeadline deadline) editGradeDeadline;
   const DashboardHeader({
     super.key,
     required this.future,
@@ -764,6 +817,7 @@ class DashboardHeader extends StatelessWidget {
     required this.subjectThemes,
     required this.schoolTimeline,
     required this.openCalendarAt,
+    required this.editGradeDeadline,
   });
 
   @override
@@ -803,6 +857,7 @@ class DashboardHeader extends StatelessWidget {
                 SchoolCountdownOverview(
                   timeline: schoolTimeline,
                   onOpenCalendarAt: openCalendarAt,
+                  onEditGradeDeadline: editGradeDeadline,
                 ),
                 const SizedBox(height: 10),
               ],

@@ -44,6 +44,10 @@ abstract class LoginActions extends ReduxActions {
   abstract final VoidActionDispatcher addAccount;
   // payload: the index of the selected account
   abstract final ActionDispatcher<int> selectAccount;
+  // payload: the index of the saved account to remove
+  abstract final ActionDispatcher<int> removeAccount;
+  // Removes the account that is currently signed in.
+  abstract final VoidActionDispatcher removeCurrentAccount;
 }
 
 abstract class LoginPayload

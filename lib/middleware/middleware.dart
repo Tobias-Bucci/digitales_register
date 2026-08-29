@@ -77,6 +77,7 @@ import 'package:mocktail/mocktail.dart';
 import 'package:mutex/mutex.dart';
 import 'package:open_file/open_file.dart';
 import 'package:path_provider/path_provider.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import 'package:url_launcher/url_launcher.dart';
 
 part 'absences.dart';
@@ -294,11 +295,19 @@ Future<List<CourseMaterialSource>> _loadCurrentCourseMaterialSources() async {
   final sources = <String, CourseMaterialSource>{};
 
   final monday = toMonday(now);
-  final response = await wrapper.send(
-    'api/calendar/student',
-    args: {'startDate': DateFormat('yyyy-MM-dd').format(monday)},
-  );
-  _addCourseMaterialSources(sources, response);
+  dynamic response;
+  for (final offset in <int>[0, -7, 7, -14, 14]) {
+    response = await wrapper.send(
+      'api/calendar/student',
+      args: {
+        'startDate': DateFormat('yyyy-MM-dd').format(
+          monday.add(Duration(days: offset)),
+        ),
+      },
+    );
+    _addCourseMaterialSources(sources, response);
+    if (sources.isNotEmpty) break;
+  }
 
   final lessonSnapshot = await refreshClassRegisterLessonPayload();
   _addCourseMaterialSources(sources, lessonSnapshot?.payload);
@@ -315,45 +324,11 @@ void _addCourseMaterialSources(
   Map<String, CourseMaterialSource> sources,
   dynamic root,
 ) {
-  void visit(dynamic value) {
-    if (value is Map) {
-      final map = getMap(value)!;
-      final lesson = getMap(map['lesson']);
-      final lessonLike = lesson ?? map;
-      if (lessonLike.isNotEmpty) {
-        final classId = getInt(lessonLike['classId']);
-        final subject = getMap(lessonLike['subject']);
-        final subjectId = getInt(subject?['id']);
-        if (classId != null && subjectId != null) {
-          final key = '$classId|$subjectId';
-          sources.putIfAbsent(
-            key,
-            () => CourseMaterialSource(
-              classId: classId,
-              className: getString(lessonLike['className']) ?? '',
-              subjectId: subjectId,
-              subjectName: getString(subject?['name']) ?? '',
-            ),
-          );
-        }
-      }
-      for (final child in map.values) {
-        if (child is Map || child is List) {
-          visit(child);
-        }
-      }
-      return;
-    }
-    if (value is List) {
-      final list = getList(value)!;
-      for (final child in list) {
-        visit(child);
-      }
-    }
-  }
-
-  if (root != null) {
-    visit(root);
+  for (final source in courseMaterialSourcesFromPayload(root)) {
+    sources.putIfAbsent(
+      '${source.classId}|${source.subjectId}',
+      () => source,
+    );
   }
 }
 
@@ -650,6 +625,9 @@ String _classRegisterCacheKey() {
 String _courseMaterialsCacheKey() {
   return 'courseMaterials:${getStorageKey(wrapper.user, wrapper.loginAddress)}';
 }
+
+String userScopedStorageKey(String namespace) =>
+    '$namespace:${getStorageKey(wrapper.user, wrapper.loginAddress)}';
 
 String _homeworkSummaryCacheKey() {
   return 'homeworkSummary:${getStorageKey(wrapper.user, wrapper.loginAddress)}';

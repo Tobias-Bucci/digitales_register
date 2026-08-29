@@ -26,6 +26,90 @@ final _calendarMiddleware =
       ..add(CalendarActionsNames.onOpenFile, _openSubmission)
       ..add(RoutingActionsNames.showCalendar, _clearSelection);
 
+Future<void> _ensureSchoolYearCalendarLoaded(
+  MiddlewareApi<AppState, AppStateBuilder, AppActions> api,
+) async {
+  if (wrapper.demoMode || api.state.noInternet) return;
+
+  final schoolYear = schoolYearForDate(now);
+  if (api.state.calendarState.prefetchedSchoolYears.contains(schoolYear)) {
+    return;
+  }
+  final sessionKey =
+      '${api.state.url ?? ''}|${api.state.loginState.username ?? ''}';
+
+  await _runCoalescedLoad('calendar-school-year:$sessionKey:$schoolYear',
+      () async {
+    if (api.state.calendarState.prefetchedSchoolYears.contains(schoolYear)) {
+      return;
+    }
+
+    final loadedMondays = {
+      for (final date in api.state.calendarState.days.keys) toMonday(date),
+    };
+    var complete = true;
+    for (final monday in schoolYearCalendarMondays(schoolYear)) {
+      final currentSessionKey =
+          '${api.state.url ?? ''}|${api.state.loginState.username ?? ''}';
+      if (!api.state.loginState.loggedIn || currentSessionKey != sessionKey) {
+        return;
+      }
+      if (loadedMondays.contains(monday)) continue;
+      final dynamic data = await wrapper.send(
+        'api/calendar/student',
+        args: {'startDate': DateFormat('yyyy-MM-dd').format(monday)},
+      );
+      if (data is! Map<String, dynamic>) {
+        complete = false;
+        continue;
+      }
+      await api.actions.calendarActions.loaded(
+        CalendarLoadedPayload(
+          data: data,
+          config: _currentSubstituteDetectionConfig(api.state),
+        ),
+      );
+      loadedMondays.add(monday);
+    }
+
+    if (!complete) return;
+    await api.actions.calendarActions.loaded(
+      CalendarLoadedPayload(
+        data: const <String, dynamic>{},
+        config: _currentSubstituteDetectionConfig(api.state),
+        completedSchoolYear: schoolYear,
+      ),
+    );
+    await api.actions.saveState();
+  });
+}
+
+SubstituteDetectionConfig _currentSubstituteDetectionConfig(AppState state) =>
+    SubstituteDetectionConfig(
+      (b) => b
+        ..enabled = state.settingsState.substituteDetectionEnabled
+        ..primaryTeachers =
+            state.settingsState.substitutePrimaryTeachers.toBuilder()
+        ..lockedSubjects = state
+            .settingsState.substitutePrimaryTeachersLockedSubjects
+            .toBuilder(),
+    );
+
+int schoolYearForDate(DateTime date) =>
+    date.month >= DateTime.july ? date.year : date.year - 1;
+
+List<UtcDateTime> schoolYearCalendarMondays(int schoolYear) {
+  final first = toMonday(UtcDateTime(schoolYear, DateTime.september));
+  final last = toMonday(UtcDateTime(schoolYear + 1, DateTime.june, 30));
+  final mondays = <UtcDateTime>[];
+  for (var monday = first;
+      !monday.isAfter(last);
+      monday = monday.add(const Duration(days: 7))) {
+    mondays.add(UtcDateTime(monday.year, monday.month, monday.day));
+  }
+  return mondays;
+}
+
 Future<void> _loadCalendar(
   MiddlewareApi<AppState, AppStateBuilder, AppActions> api,
   ActionHandler next,
@@ -52,15 +136,10 @@ Future<void> _loadCalendar(
           config: SubstituteDetectionConfig(
             (b) => b
               ..enabled = api.state.settingsState.substituteDetectionEnabled
-              ..primaryTeachers = api
-                  .state
-                  .settingsState
-                  .substitutePrimaryTeachers
-                  .toBuilder()
+              ..primaryTeachers =
+                  api.state.settingsState.substitutePrimaryTeachers.toBuilder()
               ..lockedSubjects = api
-                  .state
-                  .settingsState
-                  .substitutePrimaryTeachersLockedSubjects
+                  .state.settingsState.substitutePrimaryTeachersLockedSubjects
                   .toBuilder(),
           ),
         ),
