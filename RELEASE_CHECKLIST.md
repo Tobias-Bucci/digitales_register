@@ -5,5 +5,8 @@
 - Push all changes and check that CI is green
 - Create the release on Github
 - Update the Flathub repo (new version and sha256, check by running `flatpak-builder --user --install --force-clean build-dir io.github.mideb.digitales_register.yaml`)
-- Publish to Windows Store (run `dart run msix:create --store`)
+- Confirm the Microsoft Store identity and publisher values in `pubspec.yaml`
+- Build and smoke-test Windows (`flutter build windows --release`)
+- Build the Store MSIX with `.\tool\build_windows_store.ps1`
+- Publish the generated MSIX from `build/windows/msix`
 - Publish Android, iOS and macOS versions

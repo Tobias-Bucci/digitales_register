@@ -16,6 +16,7 @@
 // along with digitales_register.  If not, see <http://www.gnu.org/licenses/>.
 
 import 'dart:async';
+import 'dart:io';
 
 import 'package:dr/i18n/app_localizations.dart';
 import 'package:firebase_analytics/firebase_analytics.dart';
@@ -40,6 +41,12 @@ class AnalyticsService {
   static bool _initialized = false;
   static bool _firebaseHandlersInstalled = false;
   static PrivacyConsentChoice? _choice;
+
+  // Firebase Analytics and Crashlytics don't provide native Windows or Linux
+  // implementations. Keep consent preferences available there, but don't call
+  // unsupported method channels during startup.
+  static bool get _firebaseSupported =>
+      Platform.isAndroid || Platform.isIOS || Platform.isMacOS;
 
   static bool get statisticsEnabled => _choice == PrivacyConsentChoice.all;
   static bool get hasCurrentConsent => _choice != null;
@@ -66,6 +73,11 @@ class AnalyticsService {
     _choice = _readChoice(prefs.getString(_consentChoiceKey));
     if (_choice == null && prefs.containsKey(_legacyConsentGivenKey)) {
       await prefs.remove(_legacyConsentGivenKey);
+    }
+
+    if (!_firebaseSupported) {
+      _initialized = true;
+      return;
     }
 
     await _ensureFirebaseInitialized();
@@ -101,6 +113,11 @@ class AnalyticsService {
     await prefs.setString(_consentChoiceKey, _writeChoice(choice));
     await prefs.remove(_legacyConsentGivenKey);
     _choice = choice;
+
+    if (!_firebaseSupported) {
+      _initialized = true;
+      return;
+    }
 
     await _ensureFirebaseInitialized();
     if (choice == PrivacyConsentChoice.all) {
@@ -169,7 +186,7 @@ class AnalyticsService {
     Map<String, Object>? parameters,
   ]) async {
     await initLich();
-    if (!statisticsEnabled || Firebase.apps.isEmpty) {
+    if (!_firebaseSupported || !statisticsEnabled || Firebase.apps.isEmpty) {
       return;
     }
 
@@ -183,7 +200,7 @@ class AnalyticsService {
 
   static Future<void> logScreenView(String screenName) async {
     await initLich();
-    if (!statisticsEnabled || Firebase.apps.isEmpty) {
+    if (!_firebaseSupported || !statisticsEnabled || Firebase.apps.isEmpty) {
       return;
     }
 
@@ -282,8 +299,7 @@ class _PrivacyConsentDialog extends StatelessWidget {
           child: Text(l10n.text('privacyConsent.necessaryOnly')),
         ),
         FilledButton(
-          onPressed: () =>
-              Navigator.of(context).pop(PrivacyConsentChoice.all),
+          onPressed: () => Navigator.of(context).pop(PrivacyConsentChoice.all),
           child: Text(l10n.text('privacyConsent.acceptAll')),
         ),
       ],

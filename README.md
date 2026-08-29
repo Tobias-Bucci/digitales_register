@@ -15,7 +15,7 @@ It builds upon the original implementation and may include modifications, improv
 Digitales Register (App) provides a mobile-friendly interface to access the Digital Register system.  
 The goal of this project is to improve usability, accessibility, and convenience compared to the web version by offering a native mobile experience.
 
-The application is developed using Flutter and currently targets Android devices.
+The application is developed using Flutter and targets Android and Windows devices.
 
 ---
 
@@ -95,6 +95,32 @@ ALLOW_DEBUG_SIGNING_FOR_RELEASE=true
 ### Build APK
 
 flutter build apk --release
+
+---
+
+## Build (Windows / Microsoft Store)
+
+The Windows app uses the Microsoft Store name **Digitales Register - Schulplaner**.
+Android keeps its existing name and application ID.
+
+Build and run the unpackaged release app:
+
+```powershell
+flutter build windows --release
+.\build\windows\x64\runner\Release\DigitalesRegister.exe
+```
+
+Create the x64 MSIX package for Partner Center (including a compliant
+monochrome Windows badge generated from the app logo):
+
+```powershell
+.\tool\build_windows_store.ps1
+```
+
+The resulting package is written to `build/windows/msix`. Before uploading a
+new package, verify that `identity_name`, `publisher`, and
+`publisher_display_name` in `pubspec.yaml` exactly match **Partner Center >
+Product identity**.
 
 ---
 

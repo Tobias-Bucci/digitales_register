@@ -108,6 +108,17 @@ Future<void> _initializeAfterFirstFrame({
   required Store<AppState, AppStateBuilder, AppActions> store,
   required Stopwatch startupStopwatch,
 }) async {
+  // On Windows the first post-frame callback can run before MaterialApp has
+  // finished creating its Navigator (for example while localizations load).
+  // Startup routing must wait for it, otherwise showLogin has nowhere to push
+  // its route and the splash screen remains visible indefinitely.
+  for (var attempt = 0; navigatorKey?.currentState == null; attempt++) {
+    if (attempt == 120) {
+      throw StateError('Navigator was not mounted during app startup.');
+    }
+    await WidgetsBinding.instance.endOfFrame;
+  }
+
   unawaited(AnalyticsService.initLich());
   unawaited(_loadPackageInfo());
   unawaited(_initializeNotificationBackgroundService());

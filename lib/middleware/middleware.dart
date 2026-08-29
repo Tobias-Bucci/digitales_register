@@ -871,9 +871,6 @@ Future<void> _load(
     }
   }
 
-  await _checkShowUnmaintainedAlert();
-  await _checkShowPrivacyConsentAlert();
-
   final user = getString(login["user"]);
   final pass = getString(login["pass"]);
   final url = getString(login["url"]);
@@ -905,6 +902,13 @@ Future<void> _load(
       await api.actions.routingActions.showLogin();
     }
   }
+
+  // The first-run dialogs must be pushed after the login or dashboard route is
+  // visible. On Windows, pushing them while the opaque splash is still the
+  // only route can leave the dialog future pending without a visible dialog.
+  await WidgetsBinding.instance.endOfFrame;
+  await _checkShowUnmaintainedAlert();
+  await _checkShowPrivacyConsentAlert();
 }
 
 Future<void> _refresh(

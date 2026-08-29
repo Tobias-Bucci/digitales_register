@@ -319,13 +319,6 @@ class NotificationBackgroundService {
     WidgetsFlutterBinding.ensureInitialized();
     await ensureLocalNotificationsInitialized();
 
-    if (!_workmanagerInitialized) {
-      await Workmanager().initialize(
-        notificationBackgroundDispatcher,
-      );
-      _workmanagerInitialized = true;
-    }
-
     final enabled = await isEnabled();
     await _syncBackgroundTask(enabled: enabled);
     await _syncForegroundPolling(enabled: enabled, triggerImmediate: false);
@@ -404,9 +397,17 @@ class NotificationBackgroundService {
     const androidSettings =
         AndroidInitializationSettings("@mipmap/launcher_icon");
     const iosSettings = DarwinInitializationSettings();
+    const macOsSettings = DarwinInitializationSettings();
+    const windowsSettings = WindowsInitializationSettings(
+      appName: 'Digitales Register - Schulplaner',
+      appUserModelId: 'Bucci.DigitalesRegister',
+      guid: 'c9af52bd-6584-4a5b-9630-e51ae0b6d5d8',
+    );
     const initSettings = InitializationSettings(
       android: androidSettings,
       iOS: iosSettings,
+      macOS: macOsSettings,
+      windows: windowsSettings,
     );
 
     await _notificationsPlugin.initialize(
@@ -537,6 +538,15 @@ class NotificationBackgroundService {
   static Future<void> _syncBackgroundTask({required bool enabled}) async {
     if (syncBackgroundTaskOverride != null) {
       await syncBackgroundTaskOverride!(enabled: enabled);
+      return;
+    }
+
+    // Workmanager has no Windows implementation. Foreground polling remains
+    // active while the Windows app is open.
+    if (!(Platform.isAndroid || Platform.isIOS || Platform.isMacOS)) {
+      await appendLog(
+        "Background-Task auf dieser Plattform nicht verfuegbar",
+      );
       return;
     }
 
@@ -957,9 +967,13 @@ class NotificationBackgroundService {
       presentSound: true,
     );
 
+    const windowsDetails = WindowsNotificationDetails();
+
     final details = NotificationDetails(
       android: androidDetails,
       iOS: iosDetails,
+      macOS: iosDetails,
+      windows: windowsDetails,
     );
 
     await _notificationsPlugin.show(
