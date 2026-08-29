@@ -369,6 +369,9 @@ abstract class SettingsState
 
   /// JSON metadata for files copied into this app's private local storage.
   BuiltMap<String, String> get assessmentStudyAttachments;
+
+  /// User-edited learning phases, encoded as JSON per assessment.
+  BuiltMap<String, String> get assessmentStudyPhases;
   BuiltMap<String, SubjectTheme> get subjectThemes;
   BuiltList<String> get ignoreForGradesAverage;
   BuiltList<String> get favoriteSubjects;
@@ -418,6 +421,7 @@ abstract class SettingsState
       ..assessmentStudyProgress = MapBuilder<String, String>()
       ..assessmentStudyNotes = MapBuilder<String, String>()
       ..assessmentStudyAttachments = MapBuilder<String, String>()
+      ..assessmentStudyPhases = MapBuilder<String, String>()
       ..substitutePrimaryTeachers =
           MapBuilder<String, BuiltList<String>>(<String, BuiltList<String>>{})
       ..substituteKnownTeachers = ListBuilder<String>()

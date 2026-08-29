@@ -81,6 +81,8 @@ final settingsReducerBuilder = NestedReducerBuilder<AppState, AppStateBuilder,
   ..add(SettingsActionsNames.setAssessmentStudyAttachments,
       _setAssessmentStudyAttachments)
   ..add(
+      SettingsActionsNames.setAssessmentStudyPhases, _setAssessmentStudyPhases)
+  ..add(
       SettingsActionsNames.dashboardColorTestsInRed, _dashboardColorTestsInRed);
 
 void _setLanguage(
@@ -300,6 +302,15 @@ void _setAssessmentStudyAttachments(SettingsState state,
   } else {
     builder.assessmentStudyAttachments[action.payload.key] =
         action.payload.value;
+  }
+}
+
+void _setAssessmentStudyPhases(SettingsState state,
+    Action<MapEntry<String, String>> action, SettingsStateBuilder builder) {
+  if (action.payload.value.isEmpty) {
+    builder.assessmentStudyPhases.remove(action.payload.key);
+  } else {
+    builder.assessmentStudyPhases[action.payload.key] = action.payload.value;
   }
 }
 

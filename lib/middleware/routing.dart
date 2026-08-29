@@ -23,6 +23,7 @@ enum Pages {
   grades,
   absences,
   calendar,
+  examCalendar,
   classRegister,
   courseMaterials,
   homeworkSummary,

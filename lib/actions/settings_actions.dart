@@ -70,4 +70,6 @@ abstract class SettingsActions extends ReduxActions {
       setAssessmentStudyNote;
   abstract final ActionDispatcher<MapEntry<String, String>>
       setAssessmentStudyAttachments;
+  abstract final ActionDispatcher<MapEntry<String, String>>
+      setAssessmentStudyPhases;
 }

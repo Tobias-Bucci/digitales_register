@@ -133,4 +133,36 @@ void main() {
   test('completed phase ids persist independently of dynamic plan dates', () {
     expect(encodeCompletedPhaseIds({'final', 'start'}), 'final,start');
   });
+
+  test('custom learning phases keep their date and effort', () {
+    final phases = [
+      StudyPhase('custom-1', 'Zusammenfassung schreiben', DateTime(2026, 4, 4),
+          effort: 'Intensiv', durationDays: 3),
+    ];
+
+    final decoded = decodeStudyPhases(encodeStudyPhases(phases));
+    expect(decoded.single.id, 'custom-1');
+    expect(decoded.single.date, DateTime(2026, 4, 4));
+    expect(decoded.single.effort, 'Intensiv');
+    expect(decoded.single.durationDays, 3);
+  });
+
+  test('an explicitly empty custom plan overrides generated phases', () {
+    final assessment = ExamAssessment(
+      id: 'a',
+      date: UtcDateTime(2026, 4, 20),
+      subject: 'Deutsch',
+      title: 'Test',
+      material: null,
+    );
+
+    expect(
+      studyPhases(
+        assessment,
+        DateTime(2026, 4, 1),
+        customPhases: '[]',
+      ),
+      isEmpty,
+    );
+  });
 }

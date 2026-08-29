@@ -39,6 +39,7 @@ class Sidebar extends StatelessWidget {
     required this.showGrades,
     required this.showAbsences,
     required this.showCalendar,
+    required this.showExamCalendar,
     required this.showClassRegister,
     required this.showCourseMaterials,
     required this.showHomeworkSummary,
@@ -59,6 +60,7 @@ class Sidebar extends StatelessWidget {
       showGrades,
       showAbsences,
       showCalendar,
+      showExamCalendar,
       showClassRegister,
       showCourseMaterials,
       showHomeworkSummary,
@@ -183,6 +185,12 @@ class Sidebar extends StatelessWidget {
           icon: Icons.calendar_month_outlined,
           isSelected: currentSelected == Pages.calendar,
           onPressed: showCalendar,
+        ),
+        CollapsibleItem(
+          text: l10n.text('sidebar.examCalendar'),
+          icon: Icons.school_outlined,
+          isSelected: currentSelected == Pages.examCalendar,
+          onPressed: showExamCalendar,
         ),
         CollapsibleItem(
           text: l10n.text('sidebar.classRegister'),

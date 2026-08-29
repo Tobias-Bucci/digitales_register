@@ -20,7 +20,6 @@ import 'package:built_collection/built_collection.dart';
 import 'package:dr/actions/app_actions.dart';
 import 'package:dr/app_clock.dart';
 import 'package:dr/app_state.dart';
-import 'package:dr/container/exam_calendar_container.dart';
 import 'package:dr/data.dart';
 import 'package:dr/local_reminder_assessments.dart';
 import 'package:dr/ui/calendar.dart';
@@ -45,9 +44,6 @@ class CalendarContainer extends StatelessWidget {
           closeEditNicksBar: () =>
               actions.settingsActions.showCalendarSubjectNicksBar(false),
           clearSelection: () => actions.calendarActions.select(null),
-          showExamCalendar: () => Navigator.of(context).push(
-              MaterialPageRoute<void>(
-                  builder: (_) => const ExamCalendarContainer())),
           dayCallback: actions.calendarActions.load.call,
           currentMondayCallback: actions.calendarActions.setCurrentMonday.call,
         );

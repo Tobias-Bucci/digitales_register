@@ -42,7 +42,6 @@ class Calendar extends StatefulWidget {
   final VoidCallback showEditSubstituteSettings;
   final VoidCallback closeEditNicksBar;
   final VoidCallback clearSelection;
-  final VoidCallback showExamCalendar;
 
   const Calendar({
     super.key,
@@ -53,7 +52,6 @@ class Calendar extends StatefulWidget {
     required this.showEditSubstituteSettings,
     required this.closeEditNicksBar,
     required this.clearSelection,
-    required this.showExamCalendar,
   });
 
   @override
@@ -247,12 +245,6 @@ class _CalendarState extends State<Calendar> with TickerProviderStateMixin {
                   appBar: ResponsiveAppBar(
                     title: Text(context.t('calendar.title')),
                     actions: <Widget>[
-                      IconButton(
-                        key: const Key('open-exam-calendar'),
-                        tooltip: 'Prüfungskalender',
-                        onPressed: widget.showExamCalendar,
-                        icon: const Icon(Icons.school_outlined),
-                      ),
                       if (toMonday(now) != widget.vm.currentMonday)
                         TextButton(
                           style: TextButton.styleFrom(

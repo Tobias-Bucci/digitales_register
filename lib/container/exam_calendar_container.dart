@@ -20,12 +20,16 @@ class ExamCalendarContainer extends StatelessWidget {
             assessments: examAssessments(state),
             now: studyPlanNow,
             completedFor: (id) => completedPhaseIds(state, id),
+            phasesFor: (id) => state.settingsState.assessmentStudyPhases[id],
             noteFor: (id) => state.settingsState.assessmentStudyNotes[id],
             attachmentsFor: (id) => decodeAssessmentAttachments(
                 state.settingsState.assessmentStudyAttachments[id]),
             onProgressChanged: (id, completed) => actions.settingsActions
                 .setAssessmentStudyProgress(
                     MapEntry(id, encodeCompletedPhaseIds(completed))),
+            onPhasesChanged: (id, phases) => actions.settingsActions
+                .setAssessmentStudyPhases(
+                    MapEntry(id, encodeStudyPhases(phases))),
             onNoteChanged: (id, note) => actions.settingsActions
                 .setAssessmentStudyNote(MapEntry(id, note)),
             onAttachmentsChanged: (id, attachments) => actions.settingsActions
