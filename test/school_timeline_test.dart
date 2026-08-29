@@ -95,7 +95,7 @@ void main() {
     expect(timeline.holidayCountdownAt(DateTime(2026, 1, 6)), isNull);
   });
 
-  test('grade deadline today reaches 100 percent and next period restarts', () {
+  test('grade deadline progress follows the two fixed grading periods', () {
     final timeline = SchoolTimeline(
       schoolYearStart: DateTime(2025, 9),
       holidays: const <SchoolHoliday>[],
@@ -105,6 +105,15 @@ void main() {
       ],
     );
 
+    final beforeSchoolStart =
+        timeline.gradeDeadlineCountdownAt(DateTime(2025, 8, 25))!;
+    expect(beforeSchoolStart.periodStart, DateTime(2025, 9, 7));
+    expect(beforeSchoolStart.progress, 0);
+
+    final firstSchoolDay =
+        timeline.gradeDeadlineCountdownAt(DateTime(2025, 9, 7))!;
+    expect(firstSchoolDay.progress, 0);
+
     final today = timeline.gradeDeadlineCountdownAt(DateTime(2026, 1, 20))!;
     expect(today.remainingDays, 0);
     expect(today.progress, 1);
@@ -112,7 +121,7 @@ void main() {
     final nextPeriod =
         timeline.gradeDeadlineCountdownAt(DateTime(2026, 1, 21))!;
     expect(nextPeriod.deadline.date, DateTime(2026, 5, 29));
-    expect(nextPeriod.periodStart, DateTime(2026, 1, 21));
+    expect(nextPeriod.periodStart, DateTime(2026, 2, 1));
     expect(nextPeriod.progress, 0);
 
     expect(timeline.gradeDeadlineCountdownAt(DateTime(2026, 5, 30)), isNull);

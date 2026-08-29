@@ -236,11 +236,10 @@ class SchoolTimeline {
 
   GradeDeadlineCountdown? gradeDeadlineCountdownAt(DateTime value) {
     final today = _dateOnly(value);
-    GradeDeadline? previous;
     GradeDeadline? next;
     for (final deadline in gradeDeadlines) {
       if (deadline.date.isBefore(today)) {
-        previous = deadline;
+        continue;
       } else {
         next = deadline;
         break;
@@ -250,11 +249,7 @@ class SchoolTimeline {
       return null;
     }
 
-    var periodStart =
-        previous?.date.add(const Duration(days: 1)) ?? schoolYearStart ?? today;
-    if (periodStart.isAfter(today)) {
-      periodStart = today;
-    }
+    final periodStart = _gradeDeadlinePeriodStart(next);
     return GradeDeadlineCountdown(
       deadline: next,
       remainingDays: next.date.difference(today).inDays,
@@ -271,6 +266,13 @@ int _gradeDeadlineSchoolYear(DateTime date) =>
     date.month >= DateTime.july ? date.year : date.year - 1;
 
 int _gradeDeadlinePeriod(DateTime date) => date.month <= DateTime.march ? 1 : 2;
+
+DateTime _gradeDeadlinePeriodStart(GradeDeadline deadline) {
+  final schoolYear = _gradeDeadlineSchoolYear(deadline.date);
+  return _gradeDeadlinePeriod(deadline.date) == 1
+      ? DateTime(schoolYear, DateTime.september, 7)
+      : DateTime(schoolYear + 1, DateTime.february);
+}
 
 List<SchoolHoliday> _groupNamedHolidayDays(Map<DateTime, String> values) {
   final dates = values.keys.toList()..sort();
