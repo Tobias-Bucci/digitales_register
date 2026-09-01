@@ -1,14 +1,30 @@
 $ErrorActionPreference = 'Stop'
 
 $projectRoot = (Resolve-Path (Join-Path $PSScriptRoot '..')).Path
+$storeConfigPath = Join-Path $projectRoot 'tool\microsoft_store.local.psd1'
 $stagingImages = Join-Path $projectRoot 'build\windows\x64\runner\Release\Images'
 $sourceLogo = Join-Path $projectRoot 'assets\index.png'
-$outputPackage = Join-Path $projectRoot 'build\windows\msix\DigitalesRegister-Schulplaner-1.13.0.39-x64.msix'
+$outputPackage = Join-Path $projectRoot 'build\windows\msix\Digitales-Schulregister-1.13.0.39-x64.msix'
+
+if (-not (Test-Path -LiteralPath $storeConfigPath)) {
+    throw "Microsoft Store configuration not found: $storeConfigPath. Copy tool\\microsoft_store.local.psd1.example and enter the Partner Center values."
+}
+
+$storeConfig = Import-PowerShellDataFile -LiteralPath $storeConfigPath
+$requiredStoreConfigKeys = @('PublisherDisplayName', 'IdentityName', 'Publisher')
+foreach ($key in $requiredStoreConfigKeys) {
+    if ([string]::IsNullOrWhiteSpace([string]$storeConfig[$key])) {
+        throw "Microsoft Store configuration is missing '$key': $storeConfigPath"
+    }
+}
 
 function Invoke-DartMsix {
     param([Parameter(Mandatory = $true)][string]$Command)
 
-    & dart run "msix:$Command" --store
+    & dart run "msix:$Command" --store `
+        --publisher-display-name $storeConfig.PublisherDisplayName `
+        --identity-name $storeConfig.IdentityName `
+        --publisher $storeConfig.Publisher
     if ($LASTEXITCODE -ne 0) {
         throw "msix:$Command failed with exit code $LASTEXITCODE."
     }

@@ -143,11 +143,11 @@ flutter:
   # see https://flutter.io/custom-fonts/#from-packages
 
 msix_config:
-  display_name: Digitales Register - Schulplaner
-  publisher_display_name: Tobias Bucci
-  identity_name: TobiasBucci.DigitalesRegisterSchulplaner
-  publisher: CN=350DE7B1-B70B-4CF9-B749-B34C8445A004
-  msix_version: 1.13.0.0
+  # This name is used exclusively for the Microsoft Store package.
+  display_name: Digitales Schulregister
+  # Partner Center identity and publisher data are intentionally supplied from
+  # tool/microsoft_store.local.psd1 by the Store build script, not Git.
+  msix_version: 1.13.0.39
   logo_path: assets/index.png
   trim_logo: false
   architecture: x64
@@ -155,4 +155,4 @@ msix_config:
   languages: de-de, it-it, en-us
   store: true
   output_path: build/windows/msix
-  output_name: DigitalesRegister-Schulplaner-1.13.0.0-x64
+  output_name: Digitales-Schulregister-1.13.0.39-x64

@@ -1,0 +1,6 @@
+@{
+    # Obtain these exact values from Partner Center > Product identity.
+    PublisherDisplayName = 'Your Partner Center publisher display name'
+    IdentityName = 'Your.PartnerCenter.Identity'
+    Publisher = 'CN=Your-Partner-Center-Publisher-ID'
+}

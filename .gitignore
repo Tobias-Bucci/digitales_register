@@ -78,6 +78,7 @@ android/*.jks
 *.cer
 *.msix
 *.msixbundle
+tool/microsoft_store.local.psd1
 **/google-services.json
 ios/Flutter/ephemeral/
 macos/Flutter/GeneratedPluginRegistrant.swift
