@@ -144,10 +144,11 @@ flutter:
 
 msix_config:
   # This name is used exclusively for the Microsoft Store package.
-  display_name: Digitales Schulregister
+  display_name: Schulregister Südtirol
   # Partner Center identity and publisher data are intentionally supplied from
   # tool/microsoft_store.local.psd1 by the Store build script, not Git.
-  msix_version: 1.13.0.39
+  # Microsoft Store requires the fourth (revision) component to be zero.
+  msix_version: 1.13.39.0
   logo_path: assets/index.png
   trim_logo: false
   architecture: x64
@@ -155,4 +156,4 @@ msix_config:
   languages: de-de, it-it, en-us
   store: true
   output_path: build/windows/msix
-  output_name: Digitales-Schulregister-1.13.0.39-x64
+  output_name: Schulregister-Suedtirol-1.13.39.0-x64
