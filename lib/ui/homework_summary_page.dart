@@ -23,6 +23,7 @@ import 'package:dr/page_payload_cache.dart';
 import 'package:dr/ui/animated_linear_progress_indicator.dart';
 import 'package:dr/ui/no_internet.dart';
 import 'package:flutter/material.dart';
+import 'package:dr/tutorial/tutorial_target.dart';
 import 'package:html/dom.dart' as dom;
 import 'package:html/parser.dart' as html_parser;
 import 'package:intl/intl.dart';
@@ -210,14 +211,16 @@ class _HomeworkSummaryPageState extends State<HomeworkSummaryPage> {
     final l10n = context.l10n;
     return Scaffold(
       appBar: ResponsiveAppBar(
-        title: Row(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Icon(widget.icon),
-            const SizedBox(width: 8),
-            Text(l10n.text('${widget.translationPrefix}.title')),
-          ],
-        ),
+        title: TutorialTarget(
+            id: 'homework-summary-page',
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Icon(widget.icon),
+                const SizedBox(width: 8),
+                Text(l10n.text('${widget.translationPrefix}.title')),
+              ],
+            )),
       ),
       body: Stack(
         children: [

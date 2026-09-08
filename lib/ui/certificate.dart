@@ -21,6 +21,7 @@ import 'package:dr/i18n/app_localizations.dart';
 import 'package:dr/ui/last_fetched_overlay.dart';
 import 'package:dr/ui/no_internet.dart';
 import 'package:flutter/material.dart';
+import 'package:dr/tutorial/tutorial_target.dart';
 import 'package:flutter_widget_from_html_core/flutter_widget_from_html_core.dart';
 import 'package:responsive_scaffold/responsive_scaffold.dart';
 
@@ -31,7 +32,10 @@ class Certificate extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: ResponsiveAppBar(title: Text(context.t('certificate.title'))),
+      appBar: ResponsiveAppBar(
+          title: TutorialTarget(
+              id: 'certificate-page',
+              child: Text(context.t('certificate.title')))),
       body: vm.html == null
           ? Center(
               child: vm.noInternet

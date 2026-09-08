@@ -4,6 +4,7 @@ import 'package:dr/assessment_attachments.dart';
 import 'package:dr/exam_study_plan.dart';
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
+import 'package:dr/tutorial/tutorial_target.dart';
 
 class ExamCalendarPage extends StatelessWidget {
   const ExamCalendarPage({
@@ -45,72 +46,79 @@ class ExamCalendarPage extends StatelessWidget {
       appBar: AppBar(
         title: const Text('Prüfungskalender'),
         actions: [
-          IconButton(
-            key: const Key('exam-calendar-week-view'),
-            tooltip: 'Kalenderansicht',
-            icon: const Icon(Icons.calendar_month_outlined),
-            onPressed: () => Navigator.of(context).push(MaterialPageRoute<void>(
-              builder: (_) => _ExamWeekCalendar(
-                assessments: upcoming,
-                now: now,
-                completedFor: completedFor,
-                phasesFor: phasesFor,
-                noteFor: noteFor,
-                attachmentsFor: attachmentsFor,
-                onProgressChanged: onProgressChanged,
-                onPhasesChanged: onPhasesChanged,
-                onNoteChanged: onNoteChanged,
-                onAttachmentsChanged: onAttachmentsChanged,
-              ),
-            )),
+          TutorialTarget(
+            id: 'exams-week',
+            child: IconButton(
+              key: const Key('exam-calendar-week-view'),
+              tooltip: 'Kalenderansicht',
+              icon: const Icon(Icons.calendar_month_outlined),
+              onPressed: () =>
+                  Navigator.of(context).push(MaterialPageRoute<void>(
+                builder: (_) => _ExamWeekCalendar(
+                  assessments: upcoming,
+                  now: now,
+                  completedFor: completedFor,
+                  phasesFor: phasesFor,
+                  noteFor: noteFor,
+                  attachmentsFor: attachmentsFor,
+                  onProgressChanged: onProgressChanged,
+                  onPhasesChanged: onPhasesChanged,
+                  onNoteChanged: onNoteChanged,
+                  onAttachmentsChanged: onAttachmentsChanged,
+                ),
+              )),
+            ),
           ),
         ],
       ),
-      body: upcoming.isEmpty && past.isEmpty
-          ? const _EmptyExamCalendar()
-          : ListView(
-              padding: const EdgeInsets.fromLTRB(12, 16, 12, 32),
-              children: [
-                if (upcoming.isNotEmpty) ...[
-                  Text('Kommende Prüfungen',
-                      style: Theme.of(context).textTheme.titleLarge),
-                  const SizedBox(height: 8),
-                  for (final assessment in upcoming)
-                    _AssessmentCard(
-                      assessment: assessment,
-                      now: now,
-                      completed: completedFor(assessment.id),
-                      customPhases: phasesFor(assessment.id),
-                      note: noteFor(assessment.id),
-                      attachments: attachmentsFor(assessment.id),
-                      onProgressChanged: (value) =>
-                          onProgressChanged(assessment.id, value),
-                      onPhasesChanged: (value) =>
-                          onPhasesChanged(assessment.id, value),
-                      onNoteChanged: (value) =>
-                          onNoteChanged(assessment.id, value),
-                      onAttachmentsChanged: (value) =>
-                          onAttachmentsChanged(assessment.id, value),
+      body: TutorialTarget(
+        id: 'exams-page',
+        child: upcoming.isEmpty && past.isEmpty
+            ? const _EmptyExamCalendar()
+            : ListView(
+                padding: const EdgeInsets.fromLTRB(12, 16, 12, 32),
+                children: [
+                  if (upcoming.isNotEmpty) ...[
+                    Text('Kommende Prüfungen',
+                        style: Theme.of(context).textTheme.titleLarge),
+                    const SizedBox(height: 8),
+                    for (final assessment in upcoming)
+                      _AssessmentCard(
+                        assessment: assessment,
+                        now: now,
+                        completed: completedFor(assessment.id),
+                        customPhases: phasesFor(assessment.id),
+                        note: noteFor(assessment.id),
+                        attachments: attachmentsFor(assessment.id),
+                        onProgressChanged: (value) =>
+                            onProgressChanged(assessment.id, value),
+                        onPhasesChanged: (value) =>
+                            onPhasesChanged(assessment.id, value),
+                        onNoteChanged: (value) =>
+                            onNoteChanged(assessment.id, value),
+                        onAttachmentsChanged: (value) =>
+                            onAttachmentsChanged(assessment.id, value),
+                      ),
+                  ],
+                  if (past.isNotEmpty) ...[
+                    const SizedBox(height: 16),
+                    ExpansionTile(
+                      title: Text('Vergangene Prüfungen (${past.length})'),
+                      children: [
+                        for (final assessment in past)
+                          ListTile(
+                            leading: const Icon(Icons.history_rounded),
+                            title: Text(assessment.title),
+                            subtitle: Text(_subtitle(assessment)),
+                            trailing: Text(DateFormat('dd.MM.yyyy')
+                                .format(assessment.date)),
+                          ),
+                      ],
                     ),
+                  ],
                 ],
-                if (past.isNotEmpty) ...[
-                  const SizedBox(height: 16),
-                  ExpansionTile(
-                    title: Text('Vergangene Prüfungen (${past.length})'),
-                    children: [
-                      for (final assessment in past)
-                        ListTile(
-                          leading: const Icon(Icons.history_rounded),
-                          title: Text(assessment.title),
-                          subtitle: Text(_subtitle(assessment)),
-                          trailing: Text(
-                              DateFormat('dd.MM.yyyy').format(assessment.date)),
-                        ),
-                    ],
-                  ),
-                ],
-              ],
-            ),
+              ),
+      ),
     );
   }
 }

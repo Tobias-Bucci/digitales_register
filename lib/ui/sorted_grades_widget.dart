@@ -24,6 +24,7 @@ import 'package:dr/i18n/app_localizations.dart';
 import 'package:dr/ui/animated_linear_progress_indicator.dart';
 import 'package:dr/ui/favorite_subject_filter.dart';
 import 'package:dr/util.dart';
+import 'package:dr/tutorial/tutorial_target.dart';
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 
@@ -258,16 +259,20 @@ class _SortedGradesWidgetState extends State<SortedGradesWidget> {
               style: const TextStyle(color: Colors.grey),
             ),
           ),
-        Padding(
-          padding: const EdgeInsets.symmetric(vertical: 16),
-          child: ListTile(
-            title: Row(
-              children: [
-                Text(context.t('grades.calculator')),
-              ],
+        TutorialTarget(
+          id: 'grades-calculator',
+          action: true,
+          child: Padding(
+            padding: const EdgeInsets.symmetric(vertical: 16),
+            child: ListTile(
+              title: Row(
+                children: [
+                  Text(context.t('grades.calculator')),
+                ],
+              ),
+              subtitle: Text(context.t('grades.calculator.subtitle')),
+              onTap: widget.showGradeCalculator,
             ),
-            subtitle: Text(context.t('grades.calculator.subtitle')),
-            onTap: widget.showGradeCalculator,
           ),
         ),
       ],

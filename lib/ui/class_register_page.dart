@@ -25,6 +25,7 @@ import 'package:dr/ui/animated_linear_progress_indicator.dart';
 import 'package:dr/ui/no_internet.dart';
 import 'package:dr/util.dart';
 import 'package:flutter/material.dart';
+import 'package:dr/tutorial/tutorial_target.dart';
 import 'package:intl/intl.dart';
 import 'package:responsive_scaffold/responsive_scaffold.dart';
 
@@ -204,14 +205,16 @@ class _ClassRegisterPageState extends State<ClassRegisterPage> {
     final l10n = context.l10n;
     return Scaffold(
       appBar: ResponsiveAppBar(
-        title: Row(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            const Icon(Icons.fact_check_outlined),
-            const SizedBox(width: 8),
-            Text(l10n.text('classRegister.title')),
-          ],
-        ),
+        title: TutorialTarget(
+            id: 'class-register-page',
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                const Icon(Icons.fact_check_outlined),
+                const SizedBox(width: 8),
+                Text(l10n.text('classRegister.title')),
+              ],
+            )),
       ),
       body: Stack(
         children: [

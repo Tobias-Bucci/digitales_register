@@ -29,6 +29,7 @@ import 'package:dr/i18n/app_language.dart';
 import 'package:dr/i18n/app_localizations.dart';
 import 'package:dr/platform_adapter.dart';
 import 'package:dr/theme_controller.dart';
+import 'package:dr/tutorial/tutorial_page.dart';
 import 'package:dr/ui/autocomplete_options.dart';
 import 'package:dr/ui/dialog.dart';
 import 'package:dr/ui/network_protocol_page.dart';
@@ -1060,6 +1061,21 @@ class _SettingsPageWidgetState extends State<SettingsPageWidget> {
     );
   }
 
+  Widget _buildTutorialSection(AppLocalizations l10n) => _SettingsSectionCard(
+        title: l10n.text('tutorial.settings.title'),
+        children: [
+          ListTile(
+            leading: const Icon(Icons.explore_outlined),
+            title: Text(l10n.text('tutorial.settings.open')),
+            subtitle: Text(l10n.text('tutorial.settings.openBody')),
+            trailing: const Icon(Icons.chevron_right),
+            onTap: () => Navigator.of(context).push(
+              MaterialPageRoute<void>(builder: (_) => const TutorialPage()),
+            ),
+          ),
+        ],
+      );
+
   @override
   Widget build(BuildContext context) {
     final l10n = context.l10n;
@@ -1087,6 +1103,8 @@ class _SettingsPageWidgetState extends State<SettingsPageWidget> {
           _buildDashboardSection(l10n),
           const SizedBox(height: 16),
           _buildCalendarSection(l10n),
+          const SizedBox(height: 16),
+          _buildTutorialSection(l10n),
           const SizedBox(height: 16),
           _buildAdvancedSection(l10n),
           if (widget.vm.username == 'debug')

@@ -1,4 +1,4 @@
-﻿// Copyright (C) 2021 Michael Debertol
+// Copyright (C) 2021 Michael Debertol
 // Copyright (C) 2026 Tobias Bucci
 //
 // This file is part of digitales_register.
@@ -28,6 +28,7 @@ import 'package:dr/ui/last_fetched_overlay.dart';
 import 'package:dr/ui/no_internet.dart';
 import 'package:dr/util.dart';
 import 'package:flutter/material.dart';
+import 'package:dr/tutorial/tutorial_target.dart';
 import 'package:intl/intl.dart';
 import 'package:quill_delta/quill_delta.dart';
 import 'package:quill_delta_viewer/quill_delta_viewer.dart';
@@ -87,7 +88,8 @@ class _MessagesPageState extends State<MessagesPage> {
     final visibleMessages = _visibleMessages(widget.state);
     return Scaffold(
       appBar: ResponsiveAppBar(
-        title: Text(context.t('messages.title')),
+        title: TutorialTarget(
+            id: 'messages-page', child: Text(context.t('messages.title'))),
       ),
       body: widget.state == null
           ? widget.noInternet
@@ -211,7 +213,8 @@ class _MessageWidgetState extends State<MessageWidget> {
   String _getTranslatedBadge(BuildContext context, String badgeKey) {
     if (badgeKey == "agree") return context.t('messages.agree');
     if (badgeKey == "not_agree") return context.t('messages.not_agree');
-    if (badgeKey == "Nicht beantwortet") return context.t('messages.not_answered');
+    if (badgeKey == "Nicht beantwortet")
+      return context.t('messages.not_answered');
     return badgeKey;
   }
 
@@ -257,26 +260,31 @@ class _MessageWidgetState extends State<MessageWidget> {
               overflow: TextOverflow.ellipsis,
             ),
           ),
-          if (widget.message.responseRequired == 1 || (widget.message.badge != null && widget.message.badge!.isNotEmpty))
+          if (widget.message.responseRequired == 1 ||
+              (widget.message.badge != null &&
+                  widget.message.badge!.isNotEmpty))
             Builder(builder: (context) {
-              final badgeStr = (widget.message.needsResponse == true) 
-                  ? "Nicht beantwortet" 
-                  : (widget.message.badge ?? (widget.message.isNew ? "new" : ""));
+              final badgeStr = (widget.message.needsResponse == true)
+                  ? "Nicht beantwortet"
+                  : (widget.message.badge ??
+                      (widget.message.isNew ? "new" : ""));
 
               if (badgeStr == "new") {
-                return !widget.expand ? Padding(
-                  padding: const EdgeInsets.only(left: 8.0),
-                  child: badge.Badge(
-                    badgeStyle: badge.BadgeStyle(
-                      shape: badge.BadgeShape.square,
-                      borderRadius: BorderRadius.circular(20),
-                    ),
-                    badgeContent: Text(
-                      context.t('messages.new'),
-                      style: const TextStyle(color: Colors.white),
-                    ),
-                  ),
-                ) : const SizedBox.shrink();
+                return !widget.expand
+                    ? Padding(
+                        padding: const EdgeInsets.only(left: 8.0),
+                        child: badge.Badge(
+                          badgeStyle: badge.BadgeStyle(
+                            shape: badge.BadgeShape.square,
+                            borderRadius: BorderRadius.circular(20),
+                          ),
+                          badgeContent: Text(
+                            context.t('messages.new'),
+                            style: const TextStyle(color: Colors.white),
+                          ),
+                        ),
+                      )
+                    : const SizedBox.shrink();
               }
 
               if (badgeStr.isEmpty) return const SizedBox.shrink();
@@ -291,7 +299,10 @@ class _MessageWidgetState extends State<MessageWidget> {
                   ),
                   badgeContent: Text(
                     _getTranslatedBadge(context, badgeStr),
-                    style: const TextStyle(color: Colors.white, fontSize: 12, fontWeight: FontWeight.bold),
+                    style: const TextStyle(
+                        color: Colors.white,
+                        fontSize: 12,
+                        fontWeight: FontWeight.bold),
                   ),
                 ),
               );
@@ -331,9 +342,9 @@ class _MessageWidgetState extends State<MessageWidget> {
                     ),
                     TextSpan(
                         text: DateFormat(
-                          "d.M.yy H:mm",
-                          Localizations.localeOf(context).toLanguageTag(),
-                        ).format(widget.message.timeSent))
+                      "d.M.yy H:mm",
+                      Localizations.localeOf(context).toLanguageTag(),
+                    ).format(widget.message.timeSent))
                   ],
                 ),
               ),
@@ -393,7 +404,8 @@ class _MessageWidgetState extends State<MessageWidget> {
                     ),
                   ]
               ].intersperse(const Divider()),
-              if (widget.message.historyString != null && widget.message.historyString!.isNotEmpty) ...[
+              if (widget.message.historyString != null &&
+                  widget.message.historyString!.isNotEmpty) ...[
                 const Divider(),
                 Center(
                   child: Padding(
@@ -406,7 +418,8 @@ class _MessageWidgetState extends State<MessageWidget> {
                   ),
                 ),
               ],
-              if (widget.message.showReply == true && widget.message.needsResponse == true) ...[
+              if (widget.message.showReply == true &&
+                  widget.message.needsResponse == true) ...[
                 const Divider(),
                 Row(
                   mainAxisAlignment: MainAxisAlignment.spaceEvenly,
@@ -416,7 +429,8 @@ class _MessageWidgetState extends State<MessageWidget> {
                         backgroundColor: Colors.green,
                         foregroundColor: Colors.white,
                       ),
-                      onPressed: () => widget.onReply(widget.message.id, "agree"),
+                      onPressed: () =>
+                          widget.onReply(widget.message.id, "agree"),
                       child: Text(context.t('messages.agree')),
                     ),
                     ElevatedButton(
@@ -424,7 +438,8 @@ class _MessageWidgetState extends State<MessageWidget> {
                         backgroundColor: Colors.red,
                         foregroundColor: Colors.white,
                       ),
-                      onPressed: () => widget.onReply(widget.message.id, "not_agree"),
+                      onPressed: () =>
+                          widget.onReply(widget.message.id, "not_agree"),
                       child: Text(context.t('messages.not_agree')),
                     ),
                   ],
@@ -437,7 +452,6 @@ class _MessageWidgetState extends State<MessageWidget> {
     );
   }
 }
-
 
 bool _canRenderMessage(Message message) {
   try {

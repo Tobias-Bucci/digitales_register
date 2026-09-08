@@ -40,6 +40,8 @@ import 'package:dr/ui/favorite_subject_filter.dart';
 import 'package:dr/ui/last_fetched_overlay.dart';
 import 'package:dr/ui/no_internet.dart';
 import 'package:dr/ui/school_countdown_overview.dart';
+import 'package:dr/tutorial/tutorial_service.dart';
+import 'package:dr/tutorial/tutorial_target.dart';
 import 'package:dr/utc_date_time.dart';
 import 'package:dr/util.dart';
 import 'package:flutter/material.dart';
@@ -109,6 +111,7 @@ class _DaysWidgetState extends State<DaysWidget> {
   String? _favoriteSubject;
   bool _showEmptyDays = true;
   Map<String, DateTime> _gradeDeadlineOverrides = const <String, DateTime>{};
+  int _gradeDeadlineCount = 2;
 
   bool _afterFirstFrame = false;
 
@@ -132,41 +135,133 @@ class _DaysWidgetState extends State<DaysWidget> {
       final date = DateTime.tryParse(entry.value.toString());
       if (date != null) values[entry.key.toString()] = date;
     }
-    if (mounted) setState(() => _gradeDeadlineOverrides = values);
+    final storedCount = int.tryParse(decoded['count']?.toString() ?? '');
+    if (mounted) {
+      setState(() {
+        _gradeDeadlineOverrides = values;
+        _gradeDeadlineCount = storedCount == 1 ? 1 : 2;
+      });
+    }
   }
 
-  String _gradeDeadlinePreferenceStorageKey() =>
-      userScopedStorageKey(_gradeDeadlineOverridesKey);
+  String _gradeDeadlinePreferenceStorageKey() {
+    try {
+      return userScopedStorageKey(_gradeDeadlineOverridesKey);
+    } catch (_) {
+      return _gradeDeadlineOverridesKey;
+    }
+  }
 
-  SchoolTimeline _schoolTimeline() => SchoolTimeline.fromCalendarData(
-        dashboardDays: widget.vm.schoolTimelineDays,
-        calendarDays: widget.vm.schoolTimelineCalendarDays,
-      ).withGradeDeadlineDefaults(
-        appClock.now,
-        overrides: _gradeDeadlineOverrides,
-      );
+  SchoolTimeline _schoolTimeline() {
+    final timeline = SchoolTimeline.fromCalendarData(
+      dashboardDays: widget.vm.schoolTimelineDays,
+      calendarDays: widget.vm.schoolTimelineCalendarDays,
+    ).withGradeDeadlineDefaults(
+      appClock.now,
+      overrides: _gradeDeadlineOverrides,
+    );
+    if (_gradeDeadlineCount == 2) return timeline;
+    return SchoolTimeline(
+      holidays: timeline.holidays,
+      gradeDeadlines: timeline.gradeDeadlines
+          .where((deadline) => deadline.preferenceKey?.endsWith(':1') ?? true)
+          .toList(),
+      schoolYearStart: timeline.schoolYearStart,
+    );
+  }
 
   Future<void> _editGradeDeadline(GradeDeadline deadline) async {
-    final selected = await showDatePicker(
+    var count = _gradeDeadlineCount;
+    final candidates = SchoolTimeline.fromCalendarData(
+      dashboardDays: widget.vm.schoolTimelineDays,
+      calendarDays: widget.vm.schoolTimelineCalendarDays,
+    )
+        .withGradeDeadlineDefaults(appClock.now,
+            overrides: _gradeDeadlineOverrides)
+        .gradeDeadlines
+        .where((item) => !item.date.isBefore(
+            DateTime(appClock.now.year, appClock.now.month, appClock.now.day)))
+        .take(2)
+        .toList();
+    if (candidates.isEmpty) candidates.add(deadline);
+    while (candidates.length < 2) {
+      final first = candidates.first;
+      candidates.add(GradeDeadline(
+        name: '2. Notenschluss',
+        date: first.date.add(const Duration(days: 120)),
+        preferenceKey: first.preferenceKey?.replaceFirst(':1', ':2'),
+      ));
+    }
+    final dates = candidates.map((item) => item.date).toList();
+    final save = await showDialog<bool>(
       context: context,
-      initialDate: deadline.date,
-      firstDate: DateTime(deadline.date.year - 1),
-      lastDate: DateTime(deadline.date.year + 1, DateTime.december, 31),
-    );
-    if (selected == null || !mounted || deadline.preferenceKey == null) return;
-    final updated = <String, DateTime>{
-      ..._gradeDeadlineOverrides,
-      deadline.preferenceKey!:
-          DateTime(selected.year, selected.month, selected.day),
-    };
-    setState(() => _gradeDeadlineOverrides = updated);
-    await (await SharedPreferences.getInstance()).setString(
-      _gradeDeadlinePreferenceStorageKey(),
-      jsonEncode(
-        updated.map(
-          (key, value) => MapEntry(key, value.toIso8601String()),
+      builder: (dialogContext) => StatefulBuilder(
+        builder: (context, setDialogState) => AlertDialog(
+          title: Text(context.t('tutorial.deadlineDialog.title')),
+          content: Column(mainAxisSize: MainAxisSize.min, children: [
+            SegmentedButton<int>(
+              segments: [
+                ButtonSegment(
+                    value: 1,
+                    label: Text(context.t('tutorial.deadlineDialog.one'))),
+                ButtonSegment(
+                    value: 2,
+                    label: Text(context.t('tutorial.deadlineDialog.two'))),
+              ],
+              selected: {count},
+              onSelectionChanged: (value) =>
+                  setDialogState(() => count = value.first),
+            ),
+            const SizedBox(height: 12),
+            for (var index = 0; index < count; index++)
+              ListTile(
+                leading: const Icon(Icons.event_outlined),
+                title: Text(context.t('tutorial.deadlineDialog.date',
+                    args: {'number': '${index + 1}'})),
+                subtitle: Text(MaterialLocalizations.of(context)
+                    .formatMediumDate(dates[index])),
+                onTap: () async {
+                  final selected = await showDatePicker(
+                    context: context,
+                    initialDate: dates[index],
+                    firstDate: DateTime(appClock.now.year - 1),
+                    lastDate:
+                        DateTime(appClock.now.year + 2, DateTime.december, 31),
+                  );
+                  if (selected != null)
+                    setDialogState(() => dates[index] = selected);
+                },
+              ),
+          ]),
+          actions: [
+            TextButton(
+                onPressed: () => Navigator.pop(dialogContext, false),
+                child: Text(context.t('common.cancel'))),
+            FilledButton(
+                onPressed: () => Navigator.pop(dialogContext, true),
+                child: Text(context.t('button.save'))),
+          ],
         ),
       ),
+    );
+    if (save != true || !mounted) return;
+    final updated = <String, DateTime>{..._gradeDeadlineOverrides};
+    for (var index = 0; index < count; index++) {
+      final key = candidates[index].preferenceKey;
+      if (key != null)
+        updated[key] =
+            DateTime(dates[index].year, dates[index].month, dates[index].day);
+    }
+    setState(() {
+      _gradeDeadlineOverrides = updated;
+      _gradeDeadlineCount = count;
+    });
+    await (await SharedPreferences.getInstance()).setString(
+      _gradeDeadlinePreferenceStorageKey(),
+      jsonEncode(<String, Object>{
+        'count': count,
+        ...updated.map((key, value) => MapEntry(key, value.toIso8601String())),
+      }),
     );
   }
 
@@ -331,6 +426,7 @@ class _DaysWidgetState extends State<DaysWidget> {
       update();
       _afterFirstFrame = true;
       setState(() {});
+      unawaited(tutorialService.maybeOffer(context));
     });
   }
 
@@ -357,30 +453,33 @@ class _DaysWidgetState extends State<DaysWidget> {
   }) {
     if (n == 0) {
       final timeline = _schoolTimeline();
-      return DashboardHeader(
-        future: widget.vm.future,
-        onSwitchFuture: widget.onSwitchFuture,
-        favoriteSubjects: availableFavoriteSubjects,
-        selectedFavoriteSubject: activeFavoriteSubject,
-        onFavoriteSubjectChanged: (favoriteSubject) {
-          setState(() {
-            _favoriteSubject = favoriteSubject;
-            updateValues(_filteredDays(favoriteSubject));
-            update();
-          });
-        },
-        showEmptyDays: _showEmptyDays,
-        onShowEmptyDaysChanged: (value) {
-          setState(() {
-            _showEmptyDays = value;
-            updateValues(_filteredDays(activeFavoriteSubject));
-            update();
-          });
-        },
-        subjectThemes: widget.vm.subjectThemes,
-        schoolTimeline: timeline,
-        openCalendarAt: widget.openCalendarAt,
-        editGradeDeadline: _editGradeDeadline,
+      return TutorialTarget(
+        id: 'dashboard-page',
+        child: DashboardHeader(
+          future: widget.vm.future,
+          onSwitchFuture: widget.onSwitchFuture,
+          favoriteSubjects: availableFavoriteSubjects,
+          selectedFavoriteSubject: activeFavoriteSubject,
+          onFavoriteSubjectChanged: (favoriteSubject) {
+            setState(() {
+              _favoriteSubject = favoriteSubject;
+              updateValues(_filteredDays(favoriteSubject));
+              update();
+            });
+          },
+          showEmptyDays: _showEmptyDays,
+          onShowEmptyDaysChanged: (value) {
+            setState(() {
+              _showEmptyDays = value;
+              updateValues(_filteredDays(activeFavoriteSubject));
+              update();
+            });
+          },
+          subjectThemes: widget.vm.subjectThemes,
+          schoolTimeline: timeline,
+          openCalendarAt: widget.openCalendarAt,
+          editGradeDeadline: _editGradeDeadline,
+        ),
       );
     }
     if (isLast) {
@@ -854,10 +953,13 @@ class DashboardHeader extends StatelessWidget {
             children: [
               if (schoolTimeline.holidays.isNotEmpty ||
                   schoolTimeline.gradeDeadlines.isNotEmpty) ...[
-                SchoolCountdownOverview(
-                  timeline: schoolTimeline,
-                  onOpenCalendarAt: openCalendarAt,
-                  onEditGradeDeadline: editGradeDeadline,
+                TutorialTarget(
+                  id: 'dashboard-holidays',
+                  child: SchoolCountdownOverview(
+                    timeline: schoolTimeline,
+                    onOpenCalendarAt: openCalendarAt,
+                    onEditGradeDeadline: editGradeDeadline,
+                  ),
                 ),
                 const SizedBox(height: 10),
               ],
@@ -866,9 +968,13 @@ class DashboardHeader extends StatelessWidget {
                 runSpacing: 8,
                 crossAxisAlignment: WrapCrossAlignment.center,
                 children: [
-                  HomeworkFilterContainer(
-                    showEmptyDays: showEmptyDays,
-                    onShowEmptyDaysChanged: onShowEmptyDaysChanged,
+                  TutorialTarget(
+                    id: 'dashboard-filter',
+                    action: true,
+                    child: HomeworkFilterContainer(
+                      showEmptyDays: showEmptyDays,
+                      onShowEmptyDaysChanged: onShowEmptyDaysChanged,
+                    ),
                   ),
                   if (schoolTimeline.holidays.isEmpty &&
                       schoolTimeline.gradeDeadlines.isEmpty) ...[
@@ -880,31 +986,36 @@ class DashboardHeader extends StatelessWidget {
                       ),
                     ),
                   ],
-                  AnimatedSwitcher(
-                    duration: const Duration(milliseconds: 220),
-                    transitionBuilder: (child, animation) {
-                      return FadeTransition(
-                        opacity: animation,
-                        child: ScaleTransition(scale: animation, child: child),
-                      );
-                    },
-                    child: FilledButton.tonalIcon(
-                      key: ValueKey(future),
-                      onPressed: onSwitchFuture,
-                      icon: Icon(
-                        future
-                            ? Icons.history_toggle_off
-                            : Icons.upcoming_rounded,
-                      ),
-                      label: Text(future
-                          ? l10n.text('dashboard.past')
-                          : l10n.text('dashboard.future')),
-                      style: FilledButton.styleFrom(
-                        shape: const StadiumBorder(),
-                        visualDensity: VisualDensity.compact,
-                        padding: const EdgeInsets.symmetric(
-                          horizontal: 14,
-                          vertical: 12,
+                  TutorialTarget(
+                    id: 'dashboard-past',
+                    action: true,
+                    child: AnimatedSwitcher(
+                      duration: const Duration(milliseconds: 220),
+                      transitionBuilder: (child, animation) {
+                        return FadeTransition(
+                          opacity: animation,
+                          child:
+                              ScaleTransition(scale: animation, child: child),
+                        );
+                      },
+                      child: FilledButton.tonalIcon(
+                        key: ValueKey(future),
+                        onPressed: onSwitchFuture,
+                        icon: Icon(
+                          future
+                              ? Icons.history_toggle_off
+                              : Icons.upcoming_rounded,
+                        ),
+                        label: Text(future
+                            ? l10n.text('dashboard.past')
+                            : l10n.text('dashboard.future')),
+                        style: FilledButton.styleFrom(
+                          shape: const StadiumBorder(),
+                          visualDensity: VisualDensity.compact,
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 14,
+                            vertical: 12,
+                          ),
                         ),
                       ),
                     ),
@@ -1058,17 +1169,20 @@ class DayWidget extends StatelessWidget {
                 ),
               const Spacer(),
               if (vm.showAddReminder)
-                IconButton(
-                  icon: const Icon(Icons.add),
-                  onPressed: vm.noInternet
-                      ? null
-                      : () async {
-                          final message =
-                              await showEnterReminderDialog(context);
-                          if (message != null) {
-                            addReminderCallback(day, message);
-                          }
-                        },
+                TutorialTarget(
+                  id: 'dashboard-reminder',
+                  child: IconButton(
+                    icon: const Icon(Icons.add),
+                    onPressed: vm.noInternet
+                        ? null
+                        : () async {
+                            final message =
+                                await showEnterReminderDialog(context);
+                            if (message != null) {
+                              addReminderCallback(day, message);
+                            }
+                          },
+                  ),
                 ),
             ],
           ),

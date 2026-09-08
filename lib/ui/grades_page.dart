@@ -29,6 +29,7 @@ import 'package:dr/ui/animated_linear_progress_indicator.dart';
 import 'package:dr/ui/app_popup_button.dart';
 import 'package:dr/ui/last_fetched_overlay.dart';
 import 'package:dr/ui/no_internet.dart';
+import 'package:dr/tutorial/tutorial_target.dart';
 import 'package:flutter/material.dart';
 import 'package:responsive_scaffold/responsive_scaffold.dart';
 
@@ -147,12 +148,18 @@ class _GradesPageState extends State<GradesPage> {
       appBar: ResponsiveAppBar(
         title: Text(l10n.text('sidebar.grades')),
         actions: <Widget>[
-          const GradesHistoryContainer(),
+          const TutorialTarget(
+              id: 'grades-history',
+              action: true,
+              child: GradesHistoryContainer()),
           Padding(
             padding: const EdgeInsets.only(right: 12),
-            child: _SemesterSwitcher(
-              selectedSemester: vm.showSemester,
-              onChanged: widget.changeSemester,
+            child: TutorialTarget(
+              id: 'grades-semester',
+              child: _SemesterSwitcher(
+                selectedSemester: vm.showSemester,
+                onChanged: widget.changeSemester,
+              ),
             ),
           ),
         ],
@@ -220,15 +227,18 @@ class _GradesPageState extends State<GradesPage> {
                               ),
                             ),
                           if (vm.showAllSubjectsAverage) ...[
-                            _AverageRow(
-                              label: l10n.text('grades.average'),
-                              icon: Icons.settings,
-                              onIconPressed: widget.showGradesSettings,
-                              value: _buildAverageValue(
-                                context,
-                                vm.allSubjectsAverage,
-                                averageStyle,
-                                vm.colorGrades,
+                            TutorialTarget(
+                              id: 'grades-averages',
+                              child: _AverageRow(
+                                label: l10n.text('grades.average'),
+                                icon: Icons.settings,
+                                onIconPressed: widget.showGradesSettings,
+                                value: _buildAverageValue(
+                                  context,
+                                  vm.allSubjectsAverage,
+                                  averageStyle,
+                                  vm.colorGrades,
+                                ),
                               ),
                             ),
                             _AverageRow(
@@ -248,7 +258,9 @@ class _GradesPageState extends State<GradesPage> {
                               height: 0,
                             ),
                           ],
-                          SortedGradesContainer(),
+                          TutorialTarget(
+                              id: 'grades-list',
+                              child: SortedGradesContainer()),
                           const GradesStatisticsContainer(),
                           const SizedBox(height: 50),
                         ],

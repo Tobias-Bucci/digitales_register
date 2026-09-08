@@ -7,6 +7,7 @@ import 'package:dr/i18n/app_localizations.dart';
 import 'package:dr/school_timeline.dart';
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
+import 'package:dr/tutorial/tutorial_target.dart';
 
 class SchoolCountdownOverview extends StatelessWidget {
   const SchoolCountdownOverview({
@@ -40,9 +41,13 @@ class SchoolCountdownOverview extends StatelessWidget {
             ),
             const SizedBox(width: 10),
             Expanded(
-              child: _GradeDeadlineCountdownCard(
-                countdown: deadline,
-                onEditGradeDeadline: onEditGradeDeadline,
+              child: TutorialTarget(
+                id: 'dashboard-deadline',
+                action: true,
+                child: _GradeDeadlineCountdownCard(
+                  countdown: deadline,
+                  onEditGradeDeadline: onEditGradeDeadline,
+                ),
               ),
             ),
           ],

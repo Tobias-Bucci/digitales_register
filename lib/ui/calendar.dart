@@ -23,6 +23,7 @@ import 'package:dr/container/calendar_week_container.dart';
 import 'package:dr/data.dart';
 import 'package:dr/i18n/app_localizations.dart';
 import 'package:dr/ui/favorite_subject_filter.dart';
+import 'package:dr/tutorial/tutorial_target.dart';
 import 'package:dr/utc_date_time.dart';
 import 'package:dr/util.dart';
 import 'package:flutter/material.dart';
@@ -239,170 +240,189 @@ class _CalendarState extends State<Calendar> with TickerProviderStateMixin {
       return Row(
         children: [
           Expanded(
-            child: Stack(
-              children: [
-                Scaffold(
-                  appBar: ResponsiveAppBar(
-                    title: Text(context.t('calendar.title')),
-                    actions: <Widget>[
-                      if (toMonday(now) != widget.vm.currentMonday)
-                        TextButton(
-                          style: TextButton.styleFrom(
-                            foregroundColor: Colors.white,
-                            padding: const EdgeInsets.symmetric(horizontal: 16),
-                          ),
-                          onPressed: () {
-                            final date = toMonday(now);
-                            _controller.animateToPage(pageOf(date),
-                                curve: _animatePageCurve,
-                                duration: _animatePageDuration);
-                          },
-                          child: Text(context.t('calendar.currentWeek')),
-                        ),
-                    ],
-                  ),
-                  body: Column(
-                    children: <Widget>[
-                      Material(
-                        clipBehavior: Clip.antiAlias,
-                        elevation: 4,
-                        child: Row(
-                          children: <Widget>[
-                            Expanded(
-                              child: FadeTransition(
-                                opacity: _chevronOpacityAnimation,
-                                child: TextButton(
-                                  onPressed: () {
-                                    _controller.previousPage(
-                                      curve: _animatePageCurve,
-                                      duration: _animatePageDuration,
-                                    );
-                                  },
-                                  child: const Icon(Icons.chevron_left),
-                                ),
-                              ),
+            child: TutorialTarget(
+              id: 'calendar-page',
+              child: Stack(
+                children: [
+                  Scaffold(
+                    appBar: ResponsiveAppBar(
+                      title: Text(context.t('calendar.title')),
+                      actions: <Widget>[
+                        if (toMonday(now) != widget.vm.currentMonday)
+                          TextButton(
+                            style: TextButton.styleFrom(
+                              foregroundColor: Colors.white,
+                              padding:
+                                  const EdgeInsets.symmetric(horizontal: 16),
                             ),
-                            FadeTransition(
-                              opacity: _dateRangeOpacityAnimation,
-                              child: TextButton(
-                                style: ButtonStyle(
-                                  textStyle: WidgetStateProperty.all(
-                                      Theme.of(context).textTheme.titleLarge),
-                                ),
-                                onPressed: () async {
-                                  final result = await showDatePicker(
-                                    context: context,
-                                    firstDate: UtcDateTime(2018),
-                                    lastDate: UtcDateTime(2050),
-                                    initialDate: widget.vm.currentMonday,
-                                    selectableDayPredicate: (day) {
-                                      return day.weekday != DateTime.sunday &&
-                                          day.weekday != DateTime.saturday;
-                                    },
-                                  );
-                                  if (result == null) return;
-                                  final date = toMonday(result.makeUtc());
-                                  if (date != widget.vm.currentMonday) {
-                                    await _controller.animateToPage(
-                                      pageOf(date),
-                                      curve: _animatePageCurve,
-                                      duration: _animatePageDuration,
-                                    );
-                                  }
-                                },
-                                child: widget.vm.first != null &&
-                                        widget.vm.last != null
-                                    ? Text(
-                                        "${_dateFormat.format(widget.vm.first!)} - ${_dateFormat.format(widget.vm.last!)}",
-                                      )
-                                    : widget.vm.noInternet
-                                        ? Text(context.t('calendar.chooseDate'))
-                                        : const CircularProgressIndicator(),
-                              ),
-                            ),
-                            Expanded(
-                              child: FadeTransition(
-                                opacity: _chevronOpacityAnimation,
-                                child: TextButton(
-                                  onPressed: () {
-                                    _controller.nextPage(
-                                        curve: _animatePageCurve,
-                                        duration: _animatePageDuration);
-                                  },
-                                  child: const Icon(Icons.chevron_right),
-                                ),
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
-                      if (availableFavoriteSubjects.isNotEmpty)
-                        FavoriteSubjectFilter(
-                          subjects: availableFavoriteSubjects,
-                          selectedSubject: selectedFavoriteSubject,
-                          onSelected: (favoriteSubject) {
-                            setState(() {
-                              _favoriteSubject = favoriteSubject;
-                            });
-                            _ensureSelectionVisible(favoriteSubject);
-                          },
-                          subjectThemes: widget.vm.subjectThemes,
-                          padding: const EdgeInsets.fromLTRB(12, 12, 12, 0),
-                        ),
-                      const SizedBox(
-                        height: 8,
-                      ),
-                      Expanded(
-                        child: NotificationListener<ScrollStartNotification>(
-                          onNotification: (n) {
-                            _chevronOpacityController.forward();
-                            _dateRangeOpacityController.forward();
-                            return false;
-                          },
-                          child: NotificationListener<ScrollEndNotification>(
-                            onNotification: (_) {
-                              _chevronOpacityController.reverse();
-                              _dateRangeOpacityController.reverse();
-                              return false;
+                            onPressed: () {
+                              final date = toMonday(now);
+                              _controller.animateToPage(pageOf(date),
+                                  curve: _animatePageCurve,
+                                  duration: _animatePageDuration);
                             },
-                            child: pageView,
+                            child: Text(context.t('calendar.currentWeek')),
+                          ),
+                      ],
+                    ),
+                    body: Column(
+                      children: <Widget>[
+                        TutorialTarget(
+                          id: 'calendar-navigation',
+                          child: Material(
+                            clipBehavior: Clip.antiAlias,
+                            elevation: 4,
+                            child: Row(
+                              children: <Widget>[
+                                Expanded(
+                                  child: FadeTransition(
+                                    opacity: _chevronOpacityAnimation,
+                                    child: TextButton(
+                                      onPressed: () {
+                                        _controller.previousPage(
+                                          curve: _animatePageCurve,
+                                          duration: _animatePageDuration,
+                                        );
+                                      },
+                                      child: const Icon(Icons.chevron_left),
+                                    ),
+                                  ),
+                                ),
+                                FadeTransition(
+                                  opacity: _dateRangeOpacityAnimation,
+                                  child: TextButton(
+                                    style: ButtonStyle(
+                                      textStyle: WidgetStateProperty.all(
+                                          Theme.of(context)
+                                              .textTheme
+                                              .titleLarge),
+                                    ),
+                                    onPressed: () async {
+                                      final result = await showDatePicker(
+                                        context: context,
+                                        firstDate: UtcDateTime(2018),
+                                        lastDate: UtcDateTime(2050),
+                                        initialDate: widget.vm.currentMonday,
+                                        selectableDayPredicate: (day) {
+                                          return day.weekday !=
+                                                  DateTime.sunday &&
+                                              day.weekday != DateTime.saturday;
+                                        },
+                                      );
+                                      if (result == null) return;
+                                      final date = toMonday(result.makeUtc());
+                                      if (date != widget.vm.currentMonday) {
+                                        await _controller.animateToPage(
+                                          pageOf(date),
+                                          curve: _animatePageCurve,
+                                          duration: _animatePageDuration,
+                                        );
+                                      }
+                                    },
+                                    child: widget.vm.first != null &&
+                                            widget.vm.last != null
+                                        ? Text(
+                                            "${_dateFormat.format(widget.vm.first!)} - ${_dateFormat.format(widget.vm.last!)}",
+                                          )
+                                        : widget.vm.noInternet
+                                            ? Text(context
+                                                .t('calendar.chooseDate'))
+                                            : const CircularProgressIndicator(),
+                                  ),
+                                ),
+                                Expanded(
+                                  child: FadeTransition(
+                                    opacity: _chevronOpacityAnimation,
+                                    child: TextButton(
+                                      onPressed: () {
+                                        _controller.nextPage(
+                                            curve: _animatePageCurve,
+                                            duration: _animatePageDuration);
+                                      },
+                                      child: const Icon(Icons.chevron_right),
+                                    ),
+                                  ),
+                                ),
+                              ],
+                            ),
                           ),
                         ),
-                      ),
-                      EditNickBar(
-                        show: widget.vm.showEditNicksBar,
-                        onShowEditNicks: widget.showEditSubjectNicks,
-                        onClose: widget.closeEditNicksBar,
-                      ),
-                      CalendarSubstituteBar(
-                        show: widget.vm.showSubstituteBar,
-                        onOpenSettings: widget.showEditSubstituteSettings,
-                        enabled: widget.vm.substituteDetectionEnabled,
-                      ),
-                    ],
+                        if (availableFavoriteSubjects.isNotEmpty)
+                          FavoriteSubjectFilter(
+                            subjects: availableFavoriteSubjects,
+                            selectedSubject: selectedFavoriteSubject,
+                            onSelected: (favoriteSubject) {
+                              setState(() {
+                                _favoriteSubject = favoriteSubject;
+                              });
+                              _ensureSelectionVisible(favoriteSubject);
+                            },
+                            subjectThemes: widget.vm.subjectThemes,
+                            padding: const EdgeInsets.fromLTRB(12, 12, 12, 0),
+                          ),
+                        const SizedBox(
+                          height: 8,
+                        ),
+                        Expanded(
+                          child: TutorialTarget(
+                            id: 'calendar-week',
+                            child:
+                                NotificationListener<ScrollStartNotification>(
+                              onNotification: (n) {
+                                _chevronOpacityController.forward();
+                                _dateRangeOpacityController.forward();
+                                return false;
+                              },
+                              child:
+                                  NotificationListener<ScrollEndNotification>(
+                                onNotification: (_) {
+                                  _chevronOpacityController.reverse();
+                                  _dateRangeOpacityController.reverse();
+                                  return false;
+                                },
+                                child: pageView,
+                              ),
+                            ),
+                          ),
+                        ),
+                        EditNickBar(
+                          show: widget.vm.showEditNicksBar,
+                          onShowEditNicks: widget.showEditSubjectNicks,
+                          onClose: widget.closeEditNicksBar,
+                        ),
+                        TutorialTarget(
+                          id: 'calendar-substitutions',
+                          child: CalendarSubstituteBar(
+                            show: widget.vm.showSubstituteBar,
+                            onOpenSettings: widget.showEditSubstituteSettings,
+                            enabled: widget.vm.substituteDetectionEnabled,
+                          ),
+                        ),
+                      ],
+                    ),
                   ),
-                ),
-                if (tabletMode && widget.vm.selection != null)
-                  Positioned(
-                    right: 0,
-                    top: -4,
-                    bottom: -4,
-                    child: ClipRect(
-                      child: Container(
-                        width: 5,
-                        decoration: const BoxDecoration(
-                          color: Colors.transparent,
-                          boxShadow: [
-                            BoxShadow(
-                              offset: Offset(7, 0),
-                              blurRadius: 4,
-                            )
-                          ],
+                  if (tabletMode && widget.vm.selection != null)
+                    Positioned(
+                      right: 0,
+                      top: -4,
+                      bottom: -4,
+                      child: ClipRect(
+                        child: Container(
+                          width: 5,
+                          decoration: const BoxDecoration(
+                            color: Colors.transparent,
+                            boxShadow: [
+                              BoxShadow(
+                                offset: Offset(7, 0),
+                                blurRadius: 4,
+                              )
+                            ],
+                          ),
                         ),
                       ),
                     ),
-                  ),
-              ],
+                ],
+              ),
             ),
           ),
           CalendarDetailContainer(
