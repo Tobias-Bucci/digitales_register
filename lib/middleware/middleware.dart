@@ -62,6 +62,7 @@ import 'package:dr/platform_adapter.dart';
 import 'package:dr/serializers.dart';
 import 'package:dr/settings_persistence_service.dart';
 import 'package:dr/state_persistence_service.dart';
+import 'package:dr/tutorial/tutorial_service.dart';
 import 'package:dr/ui/debug_page.dart';
 import 'package:dr/ui/dialog.dart';
 import 'package:dr/utc_date_time.dart';
@@ -1023,6 +1024,12 @@ Future<void> _loggedIn(
     ]);
     unawaited(_ensureSubstituteTeacherHistoryLoaded(api));
   }
+  WidgetsBinding.instance.addPostFrameCallback((_) {
+    final context = navigatorKey?.currentContext;
+    if (context != null && api.state.loginState.loggedIn) {
+      unawaited(tutorialService.maybeOffer(context));
+    }
+  });
 }
 
 Future<SettingsState> _settingsForAccountLoad({

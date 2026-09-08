@@ -40,7 +40,6 @@ import 'package:dr/ui/favorite_subject_filter.dart';
 import 'package:dr/ui/last_fetched_overlay.dart';
 import 'package:dr/ui/no_internet.dart';
 import 'package:dr/ui/school_countdown_overview.dart';
-import 'package:dr/tutorial/tutorial_service.dart';
 import 'package:dr/tutorial/tutorial_target.dart';
 import 'package:dr/utc_date_time.dart';
 import 'package:dr/util.dart';
@@ -426,7 +425,6 @@ class _DaysWidgetState extends State<DaysWidget> {
       update();
       _afterFirstFrame = true;
       setState(() {});
-      unawaited(tutorialService.maybeOffer(context));
     });
   }
 

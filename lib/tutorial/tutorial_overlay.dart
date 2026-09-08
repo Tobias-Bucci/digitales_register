@@ -31,83 +31,84 @@ class TutorialOverlay extends StatelessWidget {
               : preferBelow
                   ? math.min(target.bottom + 12, screen.height - 270)
                   : math.max(16, target.top - 210);
-          return Material(
-            color: Colors.transparent,
-            child: Stack(children: [
-              ..._barriers(screen, target),
-              if (target != null)
-                Positioned.fromRect(
-                  rect: target,
-                  child: IgnorePointer(
-                    child: DecoratedBox(
-                      decoration: BoxDecoration(
-                        borderRadius: BorderRadius.circular(14),
-                        border: Border.all(
-                            color: Theme.of(context).colorScheme.primary,
-                            width: 3),
-                        boxShadow: [
-                          BoxShadow(
-                              color: Theme.of(context)
-                                  .colorScheme
-                                  .primary
-                                  .withValues(alpha: .35),
-                              blurRadius: 18)
-                        ],
-                      ),
+          return Stack(children: [
+            ..._barriers(screen, target),
+            if (target != null)
+              Positioned.fromRect(
+                rect: target,
+                child: IgnorePointer(
+                  child: DecoratedBox(
+                    decoration: BoxDecoration(
+                      borderRadius: BorderRadius.circular(14),
+                      border: Border.all(
+                          color: Theme.of(context).colorScheme.primary,
+                          width: 3),
+                      boxShadow: [
+                        BoxShadow(
+                            color: Theme.of(context)
+                                .colorScheme
+                                .primary
+                                .withValues(alpha: .35),
+                            blurRadius: 18)
+                      ],
                     ),
                   ),
                 ),
-              AnimatedPositioned(
-                duration: const Duration(milliseconds: 260),
-                curve: Curves.easeOutCubic,
-                top: top.toDouble(),
-                left: (screen.width - cardWidth) / 2,
-                width: cardWidth,
-                child: Card(
-                  elevation: 12,
-                  clipBehavior: Clip.antiAlias,
-                  child: Padding(
-                    padding: const EdgeInsets.all(18),
-                    child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Row(children: [
-                            CircleAvatar(
-                                radius: 16,
-                                child: Text('${service.index + 1}')),
-                            const SizedBox(width: 10),
-                            Expanded(
-                                child: Text(service.stepTitle(),
-                                    style: Theme.of(context)
-                                        .textTheme
-                                        .titleMedium
-                                        ?.copyWith(
-                                            fontWeight: FontWeight.w700))),
-                          ]),
-                          const SizedBox(height: 10),
-                          Text(service.stepBody()),
-                          if (service.step.requiresAction &&
-                              !service.canContinue) ...[
-                            const SizedBox(height: 10),
-                            Text(service.text('actionHint'),
-                                style: Theme.of(context)
-                                    .textTheme
-                                    .labelMedium
-                                    ?.copyWith(
-                                        color: Theme.of(context)
-                                            .colorScheme
-                                            .primary)),
-                          ],
+              ),
+            AnimatedPositioned(
+              duration: const Duration(milliseconds: 260),
+              curve: Curves.easeOutCubic,
+              top: top.toDouble(),
+              left: (screen.width - cardWidth) / 2,
+              width: cardWidth,
+              child: Card(
+                elevation: 12,
+                clipBehavior: Clip.antiAlias,
+                child: Padding(
+                  padding: const EdgeInsets.all(18),
+                  child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Row(children: [
+                          CircleAvatar(
+                              radius: 16, child: Text('${service.index + 1}')),
+                          const SizedBox(width: 10),
+                          Expanded(
+                              child: Text(service.stepTitle(),
+                                  style: Theme.of(context)
+                                      .textTheme
+                                      .titleMedium
+                                      ?.copyWith(fontWeight: FontWeight.w700))),
                         ]),
-                  ),
+                        const SizedBox(height: 10),
+                        Text(service.stepBody()),
+                        if (service.step.requiresAction &&
+                            !service.canContinue) ...[
+                          const SizedBox(height: 10),
+                          Text(service.text('actionHint'),
+                              style: Theme.of(context)
+                                  .textTheme
+                                  .labelMedium
+                                  ?.copyWith(
+                                      color: Theme.of(context)
+                                          .colorScheme
+                                          .primary)),
+                        ],
+                      ]),
                 ),
               ),
-              Positioned(
-                left: 12,
-                right: 12,
-                bottom: 12,
+            ),
+            Positioned(
+              left: 12,
+              right: 12,
+              bottom: 12,
+              child: Material(
+                color: Theme.of(context).colorScheme.surface,
+                elevation: 16,
+                borderRadius: BorderRadius.circular(18),
                 child: SafeArea(
                   top: false,
+                  minimum: const EdgeInsets.all(8),
                   child: Row(children: [
                     TextButton.icon(
                         onPressed: service.cancel,
@@ -129,8 +130,8 @@ class TutorialOverlay extends StatelessWidget {
                   ]),
                 ),
               ),
-            ]),
-          );
+            ),
+          ]);
         },
       );
 

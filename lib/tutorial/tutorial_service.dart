@@ -124,10 +124,10 @@ const _steps = <TutorialStep>[
 ];
 
 class TutorialService extends ChangeNotifier {
-  static const _offeredKey = 'tutorial.v1.offered';
-  static const _progressKey = 'tutorial.v1.progress';
-  static const _languageKey = 'tutorial.v1.language';
-  static const _completedPrefix = 'tutorial.v1.completed.';
+  static const _offeredKey = 'tutorial.v2.offered';
+  static const _progressKey = 'tutorial.v2.progress';
+  static const _languageKey = 'tutorial.v2.language';
+  static const _completedPrefix = 'tutorial.v2.completed.';
   OverlayEntry? _entry;
   AppLocalizations? _l10n;
   List<TutorialStep> _active = const [];
