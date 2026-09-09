@@ -27,6 +27,8 @@ import 'package:dr/analytics_service.dart';
 import 'package:dr/android_widget_service.dart';
 import 'package:dr/app_clock.dart';
 import 'package:dr/app_language_controller.dart';
+import 'package:dr/tutorial/tutorial_overlay.dart';
+import 'package:dr/tutorial/tutorial_service.dart';
 import 'package:dr/app_state.dart';
 import 'package:dr/app_subject_translation_controller.dart';
 import 'package:dr/biometric_app_lock.dart';
@@ -335,7 +337,9 @@ class RegisterApp extends StatelessWidget {
                     color: Theme.of(context).scaffoldBackgroundColor,
                     child: SafeArea(
                       top: false,
-                      child: child ?? const SizedBox.shrink(),
+                      child: TutorialHost(
+                          service: tutorialService,
+                          child: child ?? const SizedBox.shrink()),
                     ),
                   ),
                 ),

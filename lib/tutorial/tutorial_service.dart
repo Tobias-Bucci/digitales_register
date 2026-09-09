@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'package:dr/app_language_controller.dart';
 
 import 'package:dr/container/exam_calendar_container.dart';
 import 'package:dr/i18n/app_language.dart';
@@ -10,6 +11,7 @@ import 'package:dr/ui/course_materials_page.dart';
 import 'package:dr/ui/homework_summary_page.dart';
 import 'package:dr/tutorial/tutorial_overlay.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/rendering.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 enum TutorialChapter {
@@ -23,29 +25,103 @@ enum TutorialChapter {
 
 class TutorialStep {
   const TutorialStep(this.chapter, this.key,
-      {this.target, this.requiresAction = false});
+      {this.target, this.openedTarget, this.requiresAction = false});
   final TutorialChapter chapter;
   final String key;
   final String? target;
+  final String? openedTarget;
   final bool requiresAction;
 }
 
 class TutorialTargetRegistry {
-  final Map<String, BuildContext> _contexts = {};
-  void register(String id, BuildContext context) => _contexts[id] = context;
+  final Map<String, List<BuildContext>> _contexts = {};
+  void register(String id, BuildContext context) {
+    final entries = _contexts.putIfAbsent(id, () => []);
+    if (!entries.contains(context)) entries.add(context);
+  }
+
   void remove(String id, BuildContext context) {
-    if (identical(_contexts[id], context)) _contexts.remove(id);
+    _contexts[id]?.remove(context);
+  }
+
+  BuildContext? _contextFor(String? id) {
+    final candidates = _contexts[id] ?? [];
+    BuildContext? fallback;
+    for (final context in candidates) {
+      if (!context.mounted) continue;
+      if (ModalRoute.of(context)?.isCurrent == false) continue;
+      var hidden = false;
+      context.visitAncestorElements((element) {
+        final widget = element.widget;
+        if ((widget is Offstage && widget.offstage) ||
+            (widget is Opacity && widget.opacity == 0)) hidden = true;
+        return !hidden;
+      });
+      if (hidden) continue;
+      final box = context.findRenderObject();
+      if (box is! RenderBox ||
+          !box.attached ||
+          !box.hasSize ||
+          box.size.isEmpty) continue;
+      fallback ??= context;
+      final rect = _visibleBounds(box);
+      if (rect == null) continue;
+      if (rect.overlaps(Offset.zero & MediaQuery.sizeOf(context)))
+        return context;
+    }
+    return fallback;
   }
 
   Rect? rectFor(String? id) {
-    final context = id == null ? null : _contexts[id];
-    final box = context?.findRenderObject();
+    final context = _contextFor(id);
+    if (context == null || !context.mounted) return null;
+    final box = context.findRenderObject();
     if (box is! RenderBox || !box.attached || !box.hasSize) return null;
+    if (box.size.isEmpty) return null;
+    return _visibleBounds(box);
+  }
+
+  Rect? _visibleBounds(RenderBox box) {
+    var rect = _bounds(box);
+    if (rect == null) return null;
+    RenderObject? ancestor = box.parent;
+    while (ancestor != null) {
+      if (ancestor is RenderBox &&
+          (ancestor is RenderAbstractViewport ||
+              ancestor is RenderClipRect ||
+              ancestor is RenderClipRRect)) {
+        final clip = _bounds(ancestor);
+        if (clip == null) return null;
+        rect = rect!.intersect(clip);
+      }
+      ancestor = ancestor.parent;
+    }
+    return rect!.isEmpty ? null : rect;
+  }
+
+  Rect? _bounds(RenderBox box) {
+    // Route transitions use fractional transforms which need their ancestors'
+    // layout. During the first build these may not have a size yet.
+    RenderObject? ancestor = box;
+    while (ancestor != null) {
+      if (ancestor is RenderBox && !ancestor.hasSize) return null;
+      ancestor = ancestor.parent;
+    }
     return box.localToGlobal(Offset.zero) & box.size;
   }
 
+  Rect? boundsFor(BuildContext context) {
+    final box = context.findRenderObject();
+    return box is RenderBox && box.attached ? _bounds(box) : null;
+  }
+
+  Route<dynamic>? routeFor(String? id) {
+    final context = _contextFor(id);
+    return context == null ? null : ModalRoute.of(context);
+  }
+
   Future<void> reveal(String? id) async {
-    final context = id == null ? null : _contexts[id];
+    final context = _contextFor(id);
     if (context == null) return;
     await Scrollable.ensureVisible(
       context,
@@ -69,16 +145,21 @@ const _steps = <TutorialStep>[
   TutorialStep(TutorialChapter.dashboard, 'past',
       target: 'dashboard-past', requiresAction: true),
   TutorialStep(TutorialChapter.dashboard, 'reminders',
-      target: 'dashboard-reminder'),
+      target: 'tutorial-create', requiresAction: true),
+  TutorialStep(TutorialChapter.dashboard, 'deleteReminder',
+      target: 'tutorial-delete', requiresAction: true),
   TutorialStep(TutorialChapter.dashboard, 'assessmentShortcuts',
-      target: 'dashboard-reminder'),
+      target: 'tutorial-create', requiresAction: true),
+  TutorialStep(TutorialChapter.dashboard, 'deleteAssessment',
+      target: 'tutorial-delete', requiresAction: true),
   TutorialStep(TutorialChapter.grades, 'semester', target: 'grades-semester'),
   TutorialStep(TutorialChapter.grades, 'gradeHistory',
       target: 'grades-history', requiresAction: true),
   TutorialStep(TutorialChapter.grades, 'averages', target: 'grades-averages'),
-  TutorialStep(TutorialChapter.grades, 'gradeFilters', target: 'grades-list'),
-  TutorialStep(TutorialChapter.grades, 'view', target: 'grades-list'),
-  TutorialStep(TutorialChapter.grades, 'absenceLink', target: 'grades-list'),
+  TutorialStep(TutorialChapter.grades, 'gradeFilters',
+      target: 'grades-filters'),
+  TutorialStep(TutorialChapter.grades, 'view', target: 'grades-subject'),
+  TutorialStep(TutorialChapter.grades, 'absenceLink', target: 'grades-absence'),
   TutorialStep(TutorialChapter.grades, 'calculator',
       target: 'grades-calculator', requiresAction: true),
   TutorialStep(TutorialChapter.grades, 'calculatorImport',
@@ -94,25 +175,30 @@ const _steps = <TutorialStep>[
   TutorialStep(TutorialChapter.absences, 'futureAbsence',
       target: 'absences-add'),
   TutorialStep(TutorialChapter.absences, 'absenceHistory',
-      target: 'absences-page'),
+      target: 'absences-history'),
   TutorialStep(TutorialChapter.calendar, 'navigation',
       target: 'calendar-navigation'),
   TutorialStep(TutorialChapter.calendar, 'lessons', target: 'calendar-week'),
   TutorialStep(TutorialChapter.calendar, 'calendarDetails',
-      target: 'calendar-week'),
+      target: 'calendar-week', openedTarget: 'calendar-detail'),
   TutorialStep(TutorialChapter.calendar, 'calendarEntries',
-      target: 'calendar-week'),
+      target: 'calendar-week', openedTarget: 'calendar-detail'),
   TutorialStep(TutorialChapter.calendar, 'abbreviations',
-      target: 'calendar-week'),
+      target: 'calendar-nicks'),
   TutorialStep(TutorialChapter.calendar, 'substitutions',
       target: 'calendar-substitutions'),
   TutorialStep(TutorialChapter.calendar, 'calendarFilters',
-      target: 'calendar-page'),
+      target: 'calendar-filters'),
   TutorialStep(TutorialChapter.exams, 'examOverview', target: 'exams-page'),
-  TutorialStep(TutorialChapter.exams, 'examCards', target: 'exams-page'),
-  TutorialStep(TutorialChapter.exams, 'studyPlan', target: 'exams-page'),
-  TutorialStep(TutorialChapter.exams, 'examDetails', target: 'exams-page'),
-  TutorialStep(TutorialChapter.exams, 'weekView', target: 'exams-week'),
+  TutorialStep(TutorialChapter.exams, 'examCards', target: 'exams-card'),
+  TutorialStep(TutorialChapter.exams, 'studyPlan',
+      target: 'exams-card', openedTarget: 'exams-plan', requiresAction: true),
+  TutorialStep(TutorialChapter.exams, 'examDetails',
+      target: 'exams-card', openedTarget: 'exams-notes', requiresAction: true),
+  TutorialStep(TutorialChapter.exams, 'examFiles',
+      target: 'exams-card', openedTarget: 'exams-files', requiresAction: true),
+  TutorialStep(TutorialChapter.exams, 'weekView',
+      target: 'exams-week', openedTarget: 'exams-week-navigation'),
   TutorialStep(TutorialChapter.other, 'classRegister',
       target: 'class-register-page'),
   TutorialStep(TutorialChapter.other, 'materials', target: 'materials-page'),
@@ -134,7 +220,76 @@ class TutorialService extends ChangeNotifier {
   int _index = 0;
   bool _actionComplete = false;
   bool _checkingOffer = false;
+  bool _starting = false;
   bool _fullTour = false;
+  Timer? _tracking;
+  Route<dynamic>? _rootRoute;
+  Route<dynamic>? _nestedRoute;
+  bool suspended = false;
+  bool _advancing = false;
+  Rect? _lastRect;
+  int _missingTicks = 0;
+  String? _targetFor(bool covered) {
+    if (step.openedTarget != null &&
+        tutorialTargets.rectFor(step.openedTarget) != null) {
+      final root = _top(navigatorKey);
+      if (root != _rootRoute &&
+          tutorialTargets.routeFor(step.openedTarget) != root) {
+        return null;
+      }
+      return step.openedTarget;
+    }
+    return covered ? null : step.target;
+  }
+
+  String? get highlightTarget => _targetFor(suspended);
+
+  Route<dynamic>? _top(GlobalKey<NavigatorState>? key) {
+    Route<dynamic>? result;
+    key?.currentState?.popUntil((route) {
+      result = route;
+      return true;
+    });
+    return result;
+  }
+
+  void _captureRoutes() {
+    _rootRoute = _top(navigatorKey);
+    _nestedRoute = _top(nestedNavKey);
+    suspended = false;
+    _missingTicks = 0;
+  }
+
+  void _track() {
+    if (!active || _advancing) return;
+    final covered =
+        _top(navigatorKey) != _rootRoute || _top(nestedNavKey) != _nestedRoute;
+    final rect = tutorialTargets.rectFor(_targetFor(covered));
+    if (covered &&
+        step.requiresAction &&
+        !step.target!.startsWith('tutorial-')) {
+      _actionComplete = true;
+    }
+    if (covered &&
+        step.key == 'calculator' &&
+        tutorialTargets.rectFor('calculator-import') != null) {
+      _actionComplete = true;
+      unawaited(next());
+      return;
+    }
+    if (covered != suspended || rect != _lastRect) {
+      final opened = covered && !suspended;
+      suspended = covered;
+      _lastRect = rect;
+      notifyListeners();
+      if (opened) unawaited(tutorialTargets.reveal(step.openedTarget));
+    }
+    if (!covered && rect == null && ++_missingTicks == 30) {
+      _actionComplete = true;
+      notifyListeners();
+    }
+    if (rect != null) _missingTicks = 0;
+  }
 
   bool get active => _entry != null;
   TutorialStep get step => _active[_index];
@@ -143,7 +298,12 @@ class TutorialService extends ChangeNotifier {
   bool get canContinue => !step.requiresAction || _actionComplete;
   String text(String suffix) => _l10n?.text('tutorial.$suffix') ?? suffix;
   String stepTitle() => text('step.${step.key}.title');
-  String stepBody() => text('step.${step.key}.body');
+  String stepBody() => switch (step.key) {
+        'reminders' => text('practiceReminder'),
+        'assessmentShortcuts' => text('practiceAssessment'),
+        'deleteReminder' || 'deleteAssessment' => text('deleteExampleBody'),
+        _ => text('step.${step.key}.body'),
+      };
 
   Future<bool> isChapterCompleted(TutorialChapter chapter) async =>
       (await SharedPreferences.getInstance())
@@ -205,6 +365,7 @@ class TutorialService extends ChangeNotifier {
           content: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
+              Text(dialogContext.l10n.text('tutorial.languageScope')),
               for (final language in AppLanguage.values)
                 ListTile(
                   leading: const Icon(Icons.language),
@@ -224,27 +385,43 @@ class TutorialService extends ChangeNotifier {
       };
 
   Future<void> startAll(BuildContext context, {AppLanguage? language}) async {
-    await _start(context, _steps, language: language, resume: language == null);
+    if (_starting) return;
+    _starting = true;
+    try {
+      language ??= await _chooseLanguage(context);
+      if (language == null || !context.mounted) return;
+      await _start(context, _steps, language: language);
+    } finally {
+      _starting = false;
+    }
   }
 
   Future<void> startChapter(
       BuildContext context, TutorialChapter chapter) async {
-    await _start(
-        context, _steps.where((item) => item.chapter == chapter).toList());
+    if (_starting) return;
+    _starting = true;
+    try {
+      await _start(
+          context, _steps.where((item) => item.chapter == chapter).toList());
+    } finally {
+      _starting = false;
+    }
   }
 
   Future<void> _start(BuildContext context, List<TutorialStep> steps,
-      {AppLanguage? language, bool resume = false}) async {
+      {AppLanguage? language}) async {
     await cancel(saveProgress: false);
     final prefs = await SharedPreferences.getInstance();
-    final selected =
-        language ?? AppLanguage.fromCode(prefs.getString(_languageKey));
+    final selected = language ?? appLanguageController.language;
+    if (language != null) {
+      await actions.settingsActions.setLanguage(selected.code);
+    }
     await prefs.setString(_languageKey, selected.code);
     _l10n = await AppLocalizations.load(selected.locale);
     _active = steps;
     _fullTour = steps.length == _steps.length;
-    final savedIndex = resume ? prefs.getInt(_progressKey) : null;
-    _index = savedIndex == null ? 0 : savedIndex.clamp(0, steps.length - 1);
+    _index = 0;
+    if (_fullTour) await prefs.remove(_progressKey);
     _actionComplete = false;
     await _showPage(step);
     _entry = OverlayEntry(builder: (_) => TutorialOverlay(service: this));
@@ -254,6 +431,10 @@ class TutorialService extends ChangeNotifier {
       return;
     }
     overlay.insert(_entry!);
+    notifyListeners();
+    _captureRoutes();
+    _tracking =
+        Timer.periodic(const Duration(milliseconds: 80), (_) => _track());
     _refreshAfterNavigation();
   }
 
@@ -264,24 +445,50 @@ class TutorialService extends ChangeNotifier {
   }
 
   Future<void> next() async {
-    if (!canContinue) return;
-    if (_index + 1 >= _active.length) {
-      await _finish();
-      return;
+    if (_advancing || !active || !canContinue) return;
+    _advancing = true;
+    try {
+      final enteringCalculator = step.key == 'calculator' &&
+          tutorialTargets.rectFor('calculator-import') != null;
+      if (!enteringCalculator) {
+        // Close only the routes opened while exploring this step. Never submit
+        // a form on the user's behalf; its Save button remains the only commit.
+        for (final entry in [
+          (navigatorKey, _rootRoute),
+          (nestedNavKey, _nestedRoute)
+        ]) {
+          final baseline = entry.$2;
+          if (baseline != null && baseline.isActive) {
+            entry.$1?.currentState?.popUntil((route) => route == baseline);
+          }
+        }
+      }
+      if (_index + 1 >= _active.length) {
+        await _finish();
+        return;
+      }
+      final previous = step;
+      _index++;
+      _actionComplete = false;
+      if (step.chapter != previous.chapter ||
+          _pageGroup(step) != _pageGroup(previous)) {
+        if (!(previous.key == 'calculator' &&
+            step.key == 'calculatorImport' &&
+            tutorialTargets.rectFor('calculator-import') != null)) {
+          await _showPage(step);
+        }
+      }
+      if (!active) return;
+      _captureRoutes();
+      if (_fullTour) {
+        final prefs = await SharedPreferences.getInstance();
+        await prefs.setInt(_progressKey, _index);
+      }
+      notifyListeners();
+      _refreshAfterNavigation();
+    } finally {
+      _advancing = false;
     }
-    final previous = step;
-    _index++;
-    _actionComplete = false;
-    if (step.chapter != previous.chapter ||
-        _pageGroup(step) != _pageGroup(previous)) {
-      await _showPage(step);
-    }
-    if (_fullTour) {
-      final prefs = await SharedPreferences.getInstance();
-      await prefs.setInt(_progressKey, _index);
-    }
-    notifyListeners();
-    _refreshAfterNavigation();
   }
 
   Future<void> _finish() async {
@@ -294,6 +501,8 @@ class TutorialService extends ChangeNotifier {
   }
 
   Future<void> cancel({bool saveProgress = true}) async {
+    _tracking?.cancel();
+    _tracking = null;
     if (saveProgress && active && _fullTour) {
       await (await SharedPreferences.getInstance())
           .setInt(_progressKey, _index);
@@ -304,10 +513,12 @@ class TutorialService extends ChangeNotifier {
     _active = const [];
     _index = 0;
     _fullTour = false;
+    notifyListeners();
   }
 
   String _pageGroup(TutorialStep value) {
-    if (value.key.startsWith('calculator')) return 'calculator';
+    if (value.key.startsWith('calculator') && value.key != 'calculator')
+      return 'calculator';
     if (value.chapter == TutorialChapter.other) return value.key;
     return value.chapter.name;
   }
@@ -319,7 +530,7 @@ class TutorialService extends ChangeNotifier {
       case TutorialChapter.dashboard:
         scaffoldKey?.currentState?.goHome();
       case TutorialChapter.grades:
-        if (value.key.startsWith('calculator')) {
+        if (value.key.startsWith('calculator') && value.key != 'calculator') {
           await actions.routingActions.showGradeCalculator();
         } else {
           await actions.routingActions.showGrades();

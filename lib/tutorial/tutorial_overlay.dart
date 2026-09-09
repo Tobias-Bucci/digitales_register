@@ -1,158 +1,146 @@
-import 'dart:math' as math;
-
 import 'package:dr/tutorial/tutorial_service.dart';
 import 'package:flutter/material.dart';
 
-class TutorialOverlay extends StatelessWidget {
-  const TutorialOverlay({super.key, required this.service});
+/// Reserves real space outside the Navigator, including all modal routes.
+/// No coach mark or navigation control can cover an application control.
+class TutorialHost extends StatelessWidget {
+  const TutorialHost({super.key, required this.child, required this.service});
+  final Widget child;
   final TutorialService service;
 
   @override
   Widget build(BuildContext context) => AnimatedBuilder(
         animation: service,
-        builder: (context, _) {
-          final screen = MediaQuery.sizeOf(context);
-          final raw = tutorialTargets.rectFor(service.step.target);
-          Rect? target;
-          if (raw != null && raw.bottom > 0 && raw.top < screen.height) {
-            final left = math.max(8.0, raw.left - 6);
-            final top = math.max(8.0, raw.top - 6);
-            final right = math.min(screen.width - 8, raw.right + 6);
-            final bottom = math.min(screen.height - 8, raw.bottom + 6);
-            if (right > left && bottom > top) {
-              target = Rect.fromLTRB(left, top, right, bottom);
-            }
-          }
-          final cardWidth = math.min(420.0, screen.width - 24);
-          final preferBelow =
-              target == null || target.center.dy < screen.height * .45;
-          final top = target == null
-              ? math.max(72.0, screen.height * .22)
-              : preferBelow
-                  ? math.min(target.bottom + 12, screen.height - 270)
-                  : math.max(16, target.top - 210);
-          return Stack(children: [
-            ..._barriers(screen, target),
-            if (target != null)
-              Positioned.fromRect(
-                rect: target,
-                child: IgnorePointer(
-                  child: DecoratedBox(
-                    decoration: BoxDecoration(
-                      borderRadius: BorderRadius.circular(14),
-                      border: Border.all(
-                          color: Theme.of(context).colorScheme.primary,
-                          width: 3),
-                      boxShadow: [
-                        BoxShadow(
-                            color: Theme.of(context)
-                                .colorScheme
-                                .primary
-                                .withValues(alpha: .35),
-                            blurRadius: 18)
-                      ],
-                    ),
+        builder: (context, _) => LayoutBuilder(builder: (context, constraints) {
+          final wide = constraints.maxWidth >= 950;
+          final panelSize =
+              wide ? 320.0 : (constraints.maxHeight * .36).clamp(120.0, 240.0);
+          final contentSize = Size(
+            constraints.maxWidth - (service.active && wide ? panelSize : 0),
+            constraints.maxHeight - (service.active && !wide ? panelSize : 0),
+          );
+          // Keep the Navigator at the same tree position across start/stop/resize.
+          return Flex(
+              direction: wide ? Axis.horizontal : Axis.vertical,
+              children: [
+                Expanded(
+                    child: MediaQuery(
+                  data: MediaQuery.of(context).copyWith(size: contentSize),
+                  child: child,
+                )),
+                if (service.active)
+                  SizedBox(
+                    width: wide ? panelSize : null,
+                    height: wide ? null : panelSize,
+                    child: _TutorialPanel(service: service),
                   ),
-                ),
-              ),
-            AnimatedPositioned(
-              duration: const Duration(milliseconds: 260),
-              curve: Curves.easeOutCubic,
-              top: top.toDouble(),
-              left: (screen.width - cardWidth) / 2,
-              width: cardWidth,
-              child: Card(
-                elevation: 12,
-                clipBehavior: Clip.antiAlias,
-                child: Padding(
-                  padding: const EdgeInsets.all(18),
-                  child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Row(children: [
-                          CircleAvatar(
-                              radius: 16, child: Text('${service.index + 1}')),
-                          const SizedBox(width: 10),
-                          Expanded(
-                              child: Text(service.stepTitle(),
-                                  style: Theme.of(context)
-                                      .textTheme
-                                      .titleMedium
-                                      ?.copyWith(fontWeight: FontWeight.w700))),
-                        ]),
-                        const SizedBox(height: 10),
-                        Text(service.stepBody()),
-                        if (service.step.requiresAction &&
-                            !service.canContinue) ...[
-                          const SizedBox(height: 10),
-                          Text(service.text('actionHint'),
-                              style: Theme.of(context)
-                                  .textTheme
-                                  .labelMedium
-                                  ?.copyWith(
-                                      color: Theme.of(context)
-                                          .colorScheme
-                                          .primary)),
-                        ],
-                      ]),
-                ),
-              ),
-            ),
-            Positioned(
-              left: 12,
-              right: 12,
-              bottom: 12,
-              child: Material(
-                color: Theme.of(context).colorScheme.surface,
-                elevation: 16,
-                borderRadius: BorderRadius.circular(18),
-                child: SafeArea(
-                  top: false,
-                  minimum: const EdgeInsets.all(8),
-                  child: Row(children: [
-                    TextButton.icon(
-                        onPressed: service.cancel,
-                        icon: const Icon(Icons.close),
-                        label: Text(service.text('cancel'))),
-                    const Spacer(),
-                    Text('${service.index + 1}/${service.length}',
-                        style: Theme.of(context).textTheme.labelMedium),
-                    const SizedBox(width: 12),
-                    FilledButton.icon(
-                      onPressed: service.canContinue ? service.next : null,
-                      label: Text(service.index + 1 == service.length
-                          ? service.text('finish')
-                          : service.text('next')),
-                      icon: Icon(service.index + 1 == service.length
-                          ? Icons.check
-                          : Icons.arrow_forward),
-                    ),
-                  ]),
-                ),
-              ),
-            ),
-          ]);
-        },
+              ]);
+        }),
       );
+}
 
-  List<Widget> _barriers(Size size, Rect? hole) {
-    const color = Color(0xB8000000);
-    Widget part(double left, double top, double width, double height) =>
-        Positioned(
-          left: left,
-          top: top,
-          width: math.max(0, width),
-          height: math.max(0, height),
-          child: const ColoredBox(color: color),
-        );
-    if (hole == null) {
-      return [const Positioned.fill(child: ColoredBox(color: color))];
-    }
-    return [
-      part(0, 0, size.width, hole.top),
-      part(0, hole.bottom, size.width, size.height - hole.bottom),
-      part(0, hole.top, hole.left, hole.height),
-      part(hole.right, hole.top, size.width - hole.right, hole.height),
-    ];
+class _TutorialPanel extends StatelessWidget {
+  const _TutorialPanel({required this.service});
+  final TutorialService service;
+  @override
+  Widget build(BuildContext context) => Material(
+        elevation: 12,
+        color: Theme.of(context).colorScheme.surface,
+        child: SafeArea(
+            top: false,
+            child: Padding(
+              padding: const EdgeInsets.all(12),
+              child: Column(children: [
+                Expanded(
+                    child: SingleChildScrollView(
+                        child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                        '${service.index + 1}/${service.length} · ${service.stepTitle()}',
+                        style: Theme.of(context).textTheme.titleMedium),
+                    const SizedBox(height: 8),
+                    Text(service.stepBody()),
+                    if (service.suspended) ...[
+                      const SizedBox(height: 8),
+                      Text(service.text('dialogHint')),
+                    ] else if (tutorialTargets.rectFor(service.step.target) ==
+                        null) ...[
+                      const SizedBox(height: 8),
+                      Text(service.text('unavailable')),
+                    ],
+                  ],
+                ))),
+                const SizedBox(height: 8),
+                Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      Flexible(
+                          child: TextButton(
+                              onPressed: service.cancel,
+                              child: Text(service.text('cancel')))),
+                      const SizedBox(width: 8),
+                      Flexible(
+                          child: FilledButton(
+                              onPressed:
+                                  service.canContinue ? service.next : null,
+                              child: Text(service.text(
+                                  service.index + 1 == service.length
+                                      ? 'finish'
+                                      : 'next')))),
+                    ]),
+              ]),
+            )),
+      );
+}
+
+class TutorialOverlay extends StatelessWidget {
+  const TutorialOverlay({super.key, required this.service});
+  final TutorialService service;
+  @override
+  Widget build(BuildContext context) => AnimatedBuilder(
+        animation: service,
+        builder: (context, _) => LayoutBuilder(builder: (context, constraints) {
+          if (!service.active) return const SizedBox.shrink();
+          final origin = tutorialTargets.boundsFor(context)?.topLeft;
+          if (origin == null) return const SizedBox.shrink();
+          final bounds = Offset.zero & constraints.biggest;
+          final raw =
+              tutorialTargets.rectFor(service.highlightTarget)?.shift(-origin);
+          final hole = raw?.inflate(5).intersect(bounds);
+          // Missing/hidden controls are explained without blocking exploration.
+          if (hole == null || hole.isEmpty) return const SizedBox.shrink();
+          return IgnorePointer(
+              child: CustomPaint(
+            size: constraints.biggest,
+            painter:
+                _SpotlightPainter(hole, Theme.of(context).colorScheme.primary),
+          ));
+        }),
+      );
+}
+
+class _SpotlightPainter extends CustomPainter {
+  _SpotlightPainter(this.hole, this.color);
+  final Rect hole;
+  final Color color;
+  @override
+  void paint(Canvas canvas, Size size) {
+    final cutout = RRect.fromRectAndRadius(hole, const Radius.circular(12));
+    final path = Path()
+      ..fillType = PathFillType.evenOdd
+      ..addRect(Offset.zero & size)
+      ..addRRect(cutout);
+    canvas.drawPath(path, Paint()..color = const Color(0x99000000));
+    canvas.drawRRect(
+        cutout,
+        Paint()
+          ..color = color
+          ..style = PaintingStyle.stroke
+          ..strokeWidth = 3);
   }
+
+  @override
+  bool shouldRepaint(_SpotlightPainter old) =>
+      old.hole != hole || old.color != color;
 }

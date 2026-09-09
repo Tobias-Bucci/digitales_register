@@ -228,32 +228,34 @@ class _GradesPageState extends State<GradesPage> {
                             ),
                           if (vm.showAllSubjectsAverage) ...[
                             TutorialTarget(
-                              id: 'grades-averages',
-                              child: _AverageRow(
-                                label: l10n.text('grades.average'),
-                                icon: Icons.settings,
-                                onIconPressed: widget.showGradesSettings,
-                                value: _buildAverageValue(
-                                  context,
-                                  vm.allSubjectsAverage,
-                                  averageStyle,
-                                  vm.colorGrades,
-                                ),
-                              ),
-                            ),
-                            _AverageRow(
-                              label: l10n.text('grades.certificateAverage'),
-                              icon: Icons.info_outline,
-                              onIconPressed: () =>
-                                  _showCertificateAverageInfo(context),
-                              value: _buildAverageValue(
-                                context,
-                                vm.certificateAverage,
-                                averageStyle,
-                                vm.colorGrades,
-                              ),
-                            ),
-                            const GradesForecastContainer(),
+                                id: 'grades-averages',
+                                child: Column(children: [
+                                  _AverageRow(
+                                    label: l10n.text('grades.average'),
+                                    icon: Icons.settings,
+                                    onIconPressed: widget.showGradesSettings,
+                                    value: _buildAverageValue(
+                                      context,
+                                      vm.allSubjectsAverage,
+                                      averageStyle,
+                                      vm.colorGrades,
+                                    ),
+                                  ),
+                                  _AverageRow(
+                                    label:
+                                        l10n.text('grades.certificateAverage'),
+                                    icon: Icons.info_outline,
+                                    onIconPressed: () =>
+                                        _showCertificateAverageInfo(context),
+                                    value: _buildAverageValue(
+                                      context,
+                                      vm.certificateAverage,
+                                      averageStyle,
+                                      vm.colorGrades,
+                                    ),
+                                  ),
+                                  const GradesForecastContainer(),
+                                ])),
                             const Divider(
                               height: 0,
                             ),

@@ -159,7 +159,9 @@ class AbsencesBody extends StatelessWidget {
                     ),
                   ...List.generate(
                     state.absences.length,
-                    (n) => AbsenceGroupContainer(group: n),
+                    (n) => TutorialTarget(
+                        id: 'absences-history',
+                        child: AbsenceGroupContainer(group: n)),
                   ),
                 ],
               )

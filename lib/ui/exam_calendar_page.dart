@@ -83,22 +83,25 @@ class ExamCalendarPage extends StatelessWidget {
                         style: Theme.of(context).textTheme.titleLarge),
                     const SizedBox(height: 8),
                     for (final assessment in upcoming)
-                      _AssessmentCard(
-                        assessment: assessment,
-                        now: now,
-                        completed: completedFor(assessment.id),
-                        customPhases: phasesFor(assessment.id),
-                        note: noteFor(assessment.id),
-                        attachments: attachmentsFor(assessment.id),
-                        onProgressChanged: (value) =>
-                            onProgressChanged(assessment.id, value),
-                        onPhasesChanged: (value) =>
-                            onPhasesChanged(assessment.id, value),
-                        onNoteChanged: (value) =>
-                            onNoteChanged(assessment.id, value),
-                        onAttachmentsChanged: (value) =>
-                            onAttachmentsChanged(assessment.id, value),
-                      ),
+                      TutorialTarget(
+                          id: 'exams-card',
+                          action: true,
+                          child: _AssessmentCard(
+                            assessment: assessment,
+                            now: now,
+                            completed: completedFor(assessment.id),
+                            customPhases: phasesFor(assessment.id),
+                            note: noteFor(assessment.id),
+                            attachments: attachmentsFor(assessment.id),
+                            onProgressChanged: (value) =>
+                                onProgressChanged(assessment.id, value),
+                            onPhasesChanged: (value) =>
+                                onPhasesChanged(assessment.id, value),
+                            onNoteChanged: (value) =>
+                                onNoteChanged(assessment.id, value),
+                            onAttachmentsChanged: (value) =>
+                                onAttachmentsChanged(assessment.id, value),
+                          )),
                   ],
                   if (past.isNotEmpty) ...[
                     const SizedBox(height: 16),
@@ -271,16 +274,18 @@ class _ExamDetailPageState extends State<_ExamDetailPage> {
         const SizedBox(height: 10),
         _CountdownChip(days: days),
         const SizedBox(height: 24),
-        Row(children: [
-          Expanded(
-              child: Text('Lernplan',
-                  style: Theme.of(context).textTheme.titleLarge)),
-          TextButton.icon(
-            onPressed: () => _editPhases(_phases),
-            icon: const Icon(Icons.edit_outlined),
-            label: const Text('Bearbeiten'),
-          ),
-        ]),
+        TutorialTarget(
+            id: 'exams-plan',
+            child: Row(children: [
+              Expanded(
+                  child: Text('Lernplan',
+                      style: Theme.of(context).textTheme.titleLarge)),
+              TextButton.icon(
+                onPressed: () => _editPhases(_phases),
+                icon: const Icon(Icons.edit_outlined),
+                label: const Text('Bearbeiten'),
+              ),
+            ])),
         Text(
             '${completed.where((id) => _phases.any((phase) => phase.id == id)).length} von ${_phases.length} Lernphasen erledigt'),
         const SizedBox(height: 8),
@@ -304,26 +309,30 @@ class _ExamDetailPageState extends State<_ExamDetailPage> {
               padding: const EdgeInsets.only(top: 8),
               child: Text(widget.assessment.material!)),
         const SizedBox(height: 8),
-        TextField(
-          controller: noteController,
-          minLines: 2,
-          maxLines: 5,
-          decoration: const InputDecoration(
-              border: OutlineInputBorder(),
-              labelText: 'Eigene Lernnotizen oder Stoff ergänzen'),
-          onChanged: widget.onNoteChanged,
-        ),
+        TutorialTarget(
+            id: 'exams-notes',
+            child: TextField(
+              controller: noteController,
+              minLines: 2,
+              maxLines: 5,
+              decoration: const InputDecoration(
+                  border: OutlineInputBorder(),
+                  labelText: 'Eigene Lernnotizen oder Stoff ergänzen'),
+              onChanged: widget.onNoteChanged,
+            )),
         const SizedBox(height: 24),
-        Row(children: [
-          Expanded(
-              child: Text('Lokale Dateien',
-                  style: Theme.of(context).textTheme.titleLarge)),
-          OutlinedButton.icon(
-            onPressed: _addAttachment,
-            icon: const Icon(Icons.attach_file_rounded),
-            label: const Text('Datei hinzufügen'),
-          ),
-        ]),
+        TutorialTarget(
+            id: 'exams-files',
+            child: Row(children: [
+              Expanded(
+                  child: Text('Lokale Dateien',
+                      style: Theme.of(context).textTheme.titleLarge)),
+              OutlinedButton.icon(
+                onPressed: _addAttachment,
+                icon: const Icon(Icons.attach_file_rounded),
+                label: const Text('Datei hinzufügen'),
+              ),
+            ])),
         const SizedBox(height: 4),
         const Text(
             'PDF, TXT, Markdown und andere Dateien bleiben nur auf diesem Gerät.'),
@@ -423,36 +432,39 @@ class _ExamWeekCalendarState extends State<_ExamWeekCalendar> {
     return Scaffold(
       appBar: AppBar(title: const Text('Prüfungskalender')),
       body: Column(children: [
-        Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
-          child: Row(children: [
-            IconButton(
-              tooltip: 'Vorherige Woche',
-              onPressed: () => setState(
-                () => _monday = _monday.subtract(const Duration(days: 7)),
-              ),
-              icon: const Icon(Icons.chevron_left_rounded),
-            ),
-            Expanded(
-              child: Text(
-                '${DateFormat('dd.MM.').format(_monday)} – ${DateFormat('dd.MM.yyyy').format(sunday)}',
-                textAlign: TextAlign.center,
-                style: Theme.of(context).textTheme.titleMedium,
-              ),
-            ),
-            TextButton(
-              onPressed: () => setState(() => _monday = _mondayOf(widget.now)),
-              child: const Text('Heute'),
-            ),
-            IconButton(
-              tooltip: 'Nächste Woche',
-              onPressed: () => setState(
-                () => _monday = _monday.add(const Duration(days: 7)),
-              ),
-              icon: const Icon(Icons.chevron_right_rounded),
-            ),
-          ]),
-        ),
+        TutorialTarget(
+            id: 'exams-week-navigation',
+            child: Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
+              child: Row(children: [
+                IconButton(
+                  tooltip: 'Vorherige Woche',
+                  onPressed: () => setState(
+                    () => _monday = _monday.subtract(const Duration(days: 7)),
+                  ),
+                  icon: const Icon(Icons.chevron_left_rounded),
+                ),
+                Expanded(
+                  child: Text(
+                    '${DateFormat('dd.MM.').format(_monday)} – ${DateFormat('dd.MM.yyyy').format(sunday)}',
+                    textAlign: TextAlign.center,
+                    style: Theme.of(context).textTheme.titleMedium,
+                  ),
+                ),
+                TextButton(
+                  onPressed: () =>
+                      setState(() => _monday = _mondayOf(widget.now)),
+                  child: const Text('Heute'),
+                ),
+                IconButton(
+                  tooltip: 'Nächste Woche',
+                  onPressed: () => setState(
+                    () => _monday = _monday.add(const Duration(days: 7)),
+                  ),
+                  icon: const Icon(Icons.chevron_right_rounded),
+                ),
+              ]),
+            )),
         Expanded(
           child: LayoutBuilder(
             builder: (context, constraints) {

@@ -69,12 +69,16 @@ void main() {
 
     expect(find.text('Dritte Schularbeit'), findsNothing);
 
+    await tester.ensureVisible(find.text('Fach1'));
+    await tester.pumpAndSettle();
     await tester.tap(find.text('Fach1'));
     await tester.pump();
     await settleFor(tester);
 
     expect(find.text('Dritte Schularbeit'), findsOneWidget);
 
+    await tester.ensureVisible(find.text('Noten nach Art sortieren'));
+    await tester.pumpAndSettle();
     await tester.tap(find.text('Noten nach Art sortieren'));
     await tester.pump();
     await settleFor(tester);
@@ -93,6 +97,8 @@ void main() {
     );
     await settleFor(tester);
 
+    await tester.ensureVisible(find.text('Fach1'));
+    await tester.pumpAndSettle();
     await tester.tap(find.text('Fach1'));
     await tester.pump();
     await settleFor(tester);
@@ -193,6 +199,8 @@ void main() {
     );
     expect(colorSwitch.value, isFalse);
 
+    await tester.ensureVisible(find.text('Fach2'));
+    await tester.pumpAndSettle();
     await tester.tap(find.text('Fach2'));
     await tester.pump();
     await settleFor(tester);

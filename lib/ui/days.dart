@@ -41,6 +41,7 @@ import 'package:dr/ui/last_fetched_overlay.dart';
 import 'package:dr/ui/no_internet.dart';
 import 'package:dr/ui/school_countdown_overview.dart';
 import 'package:dr/tutorial/tutorial_target.dart';
+import 'package:dr/tutorial/tutorial_practice.dart';
 import 'package:dr/utc_date_time.dart';
 import 'package:dr/util.dart';
 import 'package:flutter/material.dart';
@@ -744,11 +745,12 @@ class _DaysWidgetState extends State<DaysWidget> {
 Future<String?> showEnterReminderDialog(
   BuildContext context, {
   String initialMessage = "",
+  bool tutorial = false,
 }) async {
   final prefs = await SharedPreferences.getInstance();
   final showAssessmentHint =
       !(prefs.getBool(_localReminderAssessmentHintKey) ?? false);
-  if (showAssessmentHint) {
+  if (showAssessmentHint && !tutorial) {
     await prefs.setBool(_localReminderAssessmentHintKey, true);
   }
   if (!context.mounted) {
@@ -951,16 +953,14 @@ class DashboardHeader extends StatelessWidget {
             children: [
               if (schoolTimeline.holidays.isNotEmpty ||
                   schoolTimeline.gradeDeadlines.isNotEmpty) ...[
-                TutorialTarget(
-                  id: 'dashboard-holidays',
-                  child: SchoolCountdownOverview(
-                    timeline: schoolTimeline,
-                    onOpenCalendarAt: openCalendarAt,
-                    onEditGradeDeadline: editGradeDeadline,
-                  ),
+                SchoolCountdownOverview(
+                  timeline: schoolTimeline,
+                  onOpenCalendarAt: openCalendarAt,
+                  onEditGradeDeadline: editGradeDeadline,
                 ),
                 const SizedBox(height: 10),
               ],
+              const TutorialPractice(),
               Wrap(
                 spacing: 8,
                 runSpacing: 8,

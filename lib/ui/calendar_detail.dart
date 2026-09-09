@@ -28,6 +28,7 @@ import 'package:dr/utc_date_time.dart';
 import 'package:dr/util.dart';
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
+import 'package:dr/tutorial/tutorial_target.dart';
 import 'package:responsive_scaffold/size_transition.dart' as rsc;
 import 'package:scrollable_positioned_list/scrollable_positioned_list.dart';
 
@@ -239,17 +240,19 @@ class _CalendarDetailPageState extends State<CalendarDetailPage> {
             ),
           ],
         ),
-        body: PageView.builder(
-          itemBuilder: (BuildContext context, int index) {
-            final date = _dateForPageViewIndex(index);
-            return CalendarDetailItemContainer(
-              date: date,
-              isSidebar: widget.isSidebar,
-            );
-          },
-          controller: _controller,
-          onPageChanged: _handlePageChanged,
-        ),
+        body: TutorialTarget(
+            id: 'calendar-detail',
+            child: PageView.builder(
+              itemBuilder: (BuildContext context, int index) {
+                final date = _dateForPageViewIndex(index);
+                return CalendarDetailItemContainer(
+                  date: date,
+                  isSidebar: widget.isSidebar,
+                );
+              },
+              controller: _controller,
+              onPageChanged: _handlePageChanged,
+            )),
       ),
       (scaffold) => RightSidebar(
         show: widget.selectedDay != null && widget.show,

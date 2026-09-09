@@ -288,11 +288,13 @@ class _GradeCalculatorState extends State<GradeCalculator> {
       ),
       floatingActionButton: showGreeting
           ? null
-          : FloatingActionButton.extended(
-              onPressed: addGrade,
-              label: Text(context.t('gradeCalculator.addGrade')),
-              icon: const Icon(Icons.add),
-            ),
+          : TutorialTarget(
+              id: 'calculator-add',
+              child: FloatingActionButton.extended(
+                onPressed: addGrade,
+                label: Text(context.t('gradeCalculator.addGrade')),
+                icon: const Icon(Icons.add),
+              )),
     );
   }
 }

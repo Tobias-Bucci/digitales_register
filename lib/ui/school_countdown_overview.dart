@@ -33,11 +33,13 @@ class SchoolCountdownOverview extends StatelessWidget {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Expanded(
-              child: _HolidayCountdownCard(
-                countdown: holiday,
-                today: today,
-                onOpenCalendarAt: onOpenCalendarAt,
-              ),
+              child: TutorialTarget(
+                  id: 'dashboard-holidays',
+                  child: _HolidayCountdownCard(
+                    countdown: holiday,
+                    today: today,
+                    onOpenCalendarAt: onOpenCalendarAt,
+                  )),
             ),
             const SizedBox(width: 10),
             Expanded(
