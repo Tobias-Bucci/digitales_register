@@ -15,6 +15,8 @@
 // You should have received a copy of the GNU General Public License
 // along with digitales_register.  If not, see <http://www.gnu.org/licenses/>.
 
+import 'dart:async';
+
 import 'package:built_collection/built_collection.dart';
 import 'package:dr/app_state.dart';
 import 'package:dr/calendar_sync_service.dart';
@@ -47,6 +49,35 @@ void main() {
   });
 
   tearDown(resetTestState);
+
+  test('overlapping reconciles create each calendar event only once', () async {
+    final firstUpsert = Completer<void>();
+    final upserts = <CalendarSyncUpsertRequest>[];
+    CalendarSyncService.upsertEventOverride = (request) async {
+      upserts.add(request);
+      await firstUpsert.future;
+      return 123;
+    };
+    final state = AppState((b) {
+      b.settingsState.calendarSyncEnabled = true;
+      b.dashboardState.allDays = ListBuilder<Day>(<Day>[
+        buildDay(
+          date: UtcDateTime(2026, 4, 10),
+          homework: <Homework>[
+            buildHomework(id: 7, title: 'Reminder', type: HomeworkType.homework),
+          ],
+        ),
+      ]);
+    });
+
+    final first = CalendarSyncService.reconcile(state);
+    final second = CalendarSyncService.reconcile(state);
+    await Future<void>.delayed(const Duration(milliseconds: 50));
+    expect(upserts, hasLength(1));
+    firstUpsert.complete();
+    expect(await Future.wait(<Future<bool>>[first, second]), everyElement(isTrue));
+    expect(upserts, hasLength(1));
+  });
 
   test('reconcile imports current future dashboard and calendar items',
       () async {

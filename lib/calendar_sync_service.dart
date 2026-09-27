@@ -15,6 +15,7 @@
 // You should have received a copy of the GNU General Public License
 // along with digitales_register.  If not, see <http://www.gnu.org/licenses/>.
 
+import 'dart:async';
 import 'dart:convert';
 import 'dart:developer';
 
@@ -159,6 +160,20 @@ typedef CalendarSyncUpsertOverride = Future<int?> Function(
 typedef CalendarSyncDeleteOverride = Future<void> Function(int eventId);
 
 extension CalendarSyncService on Never {
+  static Future<void> _operationTail = Future<void>.value();
+
+  static Future<T> _serialize<T>(Future<T> Function() operation) async {
+    final previous = _operationTail;
+    final done = Completer<void>();
+    _operationTail = done.future;
+    await previous;
+    try {
+      return await operation();
+    } finally {
+      done.complete();
+    }
+  }
+
   static CalendarSyncPermissionOverride? requestPermissionOverride;
   static CalendarSyncDefaultCalendarOverride? getDefaultCalendarIdOverride;
   static CalendarSyncCalendarsOverride? getWritableCalendarsOverride;
@@ -196,7 +211,10 @@ extension CalendarSyncService on Never {
     return _getWritableCalendars();
   }
 
-  static Future<bool> reconcile(AppState state) async {
+  static Future<bool> reconcile(AppState state) =>
+      _serialize(() => _reconcile(state));
+
+  static Future<bool> _reconcile(AppState state) async {
     if (!isAndroidPlatform || !state.settingsState.calendarSyncEnabled) {
       return true;
     }
@@ -289,7 +307,10 @@ extension CalendarSyncService on Never {
     return success;
   }
 
-  static Future<bool> deleteTrackedEvents() async {
+  static Future<bool> deleteTrackedEvents() =>
+      _serialize(_deleteTrackedEvents);
+
+  static Future<bool> _deleteTrackedEvents() async {
     final records = await _readRecords();
     if (records.isEmpty) {
       return true;
@@ -695,6 +716,7 @@ extension CalendarSyncService on Never {
 
   @visibleForTesting
   static Future<void> resetForTest() async {
+    await _operationTail;
     requestPermissionOverride = null;
     getDefaultCalendarIdOverride = null;
     getWritableCalendarsOverride = null;
