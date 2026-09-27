@@ -248,24 +248,6 @@ abstract class GradeGroupSubmission
     ..fileAvailable = false;
 }
 
-abstract class Notification
-    implements Built<Notification, NotificationBuilder> {
-  factory Notification([void Function(NotificationBuilder)? updates]) =
-      _$Notification;
-  Notification._();
-  static Serializer<Notification> get serializer => _$notificationSerializer;
-
-  int get id;
-  String get title;
-
-  String? get subTitle;
-  UtcDateTime get timeSent;
-
-  String? get type;
-
-  int? get objectId;
-}
-
 abstract class Subject implements Built<Subject, SubjectBuilder> {
   factory Subject([void Function(SubjectBuilder)? updates]) = _$Subject;
   Subject._();

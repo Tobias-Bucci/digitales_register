@@ -5,6 +5,7 @@ import android.content.ContentUris
 import android.content.Context
 import android.content.Intent
 import android.content.pm.PackageManager
+import android.app.job.JobScheduler
 import android.os.Build
 import android.os.Bundle
 import android.provider.CalendarContract
@@ -25,27 +26,12 @@ class MainActivity: FlutterFragmentActivity() {
         enableEdgeToEdge()
         super.onCreate(savedInstanceState)
         pendingLaunchDestination = extractLaunchDestination(intent)
+        (getSystemService(Context.JOB_SCHEDULER_SERVICE) as JobScheduler).cancelAll()
+        NotificationManagerCompat.from(this).cancelAll()
     }
 
     override fun configureFlutterEngine(flutterEngine: FlutterEngine) {
         super.configureFlutterEngine(flutterEngine)
-        MethodChannel(
-            flutterEngine.dartExecutor.binaryMessenger,
-            NOTIFICATION_METHOD_CHANNEL,
-        ).setMethodCallHandler { call, result ->
-            when (call.method) {
-                "cancelNotificationSafely" -> {
-                    val id = call.argument<Int>("id")
-                    if (id == null) {
-                        result.error("invalid_args", "Missing notification id.", null)
-                        return@setMethodCallHandler
-                    }
-                    cancelNotificationSafely(id)
-                    result.success(null)
-                }
-                else -> result.notImplemented()
-            }
-        }
         MethodChannel(
             flutterEngine.dartExecutor.binaryMessenger,
             CALENDAR_SYNC_METHOD_CHANNEL,
@@ -90,16 +76,6 @@ class MainActivity: FlutterFragmentActivity() {
             "onLaunchDestination",
             mapOf("destination" to destination),
         )
-    }
-
-    private fun cancelNotificationSafely(id: Int) {
-        NotificationManagerCompat.from(this).cancel(id)
-        // The app only shows immediate notifications, so clearing the plugin's
-        // scheduled cache is safe and avoids Gson TypeToken crashes on Android.
-        getSharedPreferences(SCHEDULED_NOTIFICATIONS_PREFS, Context.MODE_PRIVATE)
-            .edit()
-            .remove(SCHEDULED_NOTIFICATIONS_PREFS)
-            .apply()
     }
 
     private fun requestCalendarPermission(result: MethodChannel.Result) {
@@ -282,9 +258,7 @@ class MainActivity: FlutterFragmentActivity() {
         pendingCalendarPermissionResult = null
     }
     private companion object {
-        const val NOTIFICATION_METHOD_CHANNEL = "dr/notification_background_service"
         const val CALENDAR_SYNC_METHOD_CHANNEL = "dr/calendar_sync"
-        const val SCHEDULED_NOTIFICATIONS_PREFS = "scheduled_notifications"
         const val CALENDAR_PERMISSION_REQUEST_CODE = 4821
     }
 

@@ -80,8 +80,6 @@ class SettingsPageContainer extends StatelessWidget {
                 actions.settingsActions.calendarColorBackground.call,
             onSetDashboardColorTestsInRed:
                 actions.settingsActions.dashboardColorTestsInRed.call,
-            onSetPushNotificationsEnabled:
-                actions.settingsActions.pushNotificationsEnabled.call,
             onSetSubstituteDetectionEnabled: (enabled) async {
               await actions.settingsActions.substituteDetectionEnabled(enabled);
               await actions.calendarActions.recalculateSubstitutes(
@@ -194,7 +192,6 @@ class SettingsViewModel {
   final bool dashboardColorBorders;
   final bool calendarColorBackground;
   final bool dashboardColorTestsInRed;
-  final bool pushNotificationsEnabled;
   final bool substituteDetectionEnabled;
   final bool calendarSyncEnabled;
   final int? calendarSyncCalendarId;
@@ -229,7 +226,6 @@ class SettingsViewModel {
         dashboardColorBorders = state.settingsState.dashboardColorBorders,
         calendarColorBackground = state.settingsState.calendarColorBackground,
         dashboardColorTestsInRed = state.settingsState.dashboardColorTestsInRed,
-        pushNotificationsEnabled = state.settingsState.pushNotificationsEnabled,
         substituteDetectionEnabled =
             state.settingsState.substituteDetectionEnabled,
         calendarSyncEnabled = state.settingsState.calendarSyncEnabled,
@@ -282,7 +278,6 @@ class SettingsViewModel {
             other.dashboardColorBorders == dashboardColorBorders &&
             other.calendarColorBackground == calendarColorBackground &&
             other.dashboardColorTestsInRed == dashboardColorTestsInRed &&
-            other.pushNotificationsEnabled == pushNotificationsEnabled &&
             other.substituteDetectionEnabled == substituteDetectionEnabled &&
             other.calendarSyncEnabled == calendarSyncEnabled &&
             other.calendarSyncCalendarId == calendarSyncCalendarId &&
@@ -329,7 +324,6 @@ class SettingsViewModel {
         dashboardColorBorders,
         calendarColorBackground,
         dashboardColorTestsInRed,
-        pushNotificationsEnabled,
         substituteDetectionEnabled,
         calendarSyncEnabled,
         calendarSyncCalendarId,

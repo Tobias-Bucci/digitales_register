@@ -1,4 +1,4 @@
-﻿import 'dart:convert';
+import 'dart:convert';
 import 'dart:io';
 
 import 'package:dr/wrapper.dart';
@@ -53,13 +53,13 @@ window.location = "https://vinzentinum.digitalesregister.it/v2/login";
   );
 
   test(
-    'send refreshes the session in the background when the server redirects to login',
+    'send refreshes the session when the server redirects to login',
     () async {
       final server = await HttpServer.bind(InternetAddress.loopbackIPv4, 0);
       addTearDown(server.close);
 
       var loginRequests = 0;
-      var unreadRequests = 0;
+      var messageRequests = 0;
 
       server.listen((request) async {
         if (request.uri.path == '/v2/api/auth/login' &&
@@ -72,10 +72,10 @@ window.location = "https://vinzentinum.digitalesregister.it/v2/login";
         } else if (request.uri.path == '/v2/' && request.method == 'GET') {
           request.response.headers.contentType = ContentType.html;
           request.response.write(_configPageSource);
-        } else if (request.uri.path == '/v2/api/notification/unread' &&
+        } else if (request.uri.path == '/v2/api/message/getMyMessages' &&
             request.method == 'POST') {
-          unreadRequests++;
-          if (unreadRequests <= 2) {
+          messageRequests++;
+          if (messageRequests <= 2) {
             request.response.headers.contentType = ContentType.html;
             request.response.write(_redirectSource);
           } else {
@@ -100,14 +100,53 @@ window.location = "https://vinzentinum.digitalesregister.it/v2/login";
         addProtocolItem: (_) {},
       );
 
-      final result = await wrapper.send('api/notification/unread');
+      final result = await wrapper.send('api/message/getMyMessages');
 
       expect(result, isA<List<dynamic>>());
       expect(result as List<dynamic>, isEmpty);
       expect(loginRequests, 3);
-      expect(unreadRequests, 3);
+      expect(messageRequests, 3);
     },
   );
+
+  test('requests stop while the app is in the background', () async {
+    final server = await HttpServer.bind(InternetAddress.loopbackIPv4, 0);
+    addTearDown(server.close);
+    var messageRequests = 0;
+    server.listen((request) async {
+      if (request.uri.path == '/v2/api/auth/login') {
+        request.response.headers.contentType = ContentType.json;
+        request.response.write(json.encode({'loggedIn': true}));
+      } else if (request.uri.path == '/v2/') {
+        request.response.headers.contentType = ContentType.html;
+        request.response.write(_configPageSource);
+      } else if (request.uri.path == '/v2/api/message/getMyMessages') {
+        messageRequests++;
+        request.response.headers.contentType = ContentType.json;
+        request.response.write(json.encode(<Object>[]));
+      }
+      await request.response.close();
+    });
+    final wrapper = Wrapper(allowInsecureConnections: true);
+    await wrapper.login(
+      'user',
+      'pass',
+      null,
+      'http://127.0.0.1:${server.port}',
+      logout: () {},
+      configLoaded: () {},
+      relogin: () {},
+      addProtocolItem: (_) {},
+    );
+
+    wrapper.pauseNetworkActivity();
+    expect(await wrapper.send('api/message/getMyMessages'), isNull);
+    expect(messageRequests, 0);
+    expect(Wrapper().isAppInForeground, isFalse);
+    wrapper.resumeNetworkActivity();
+    expect(await wrapper.send('api/message/getMyMessages'), isEmpty);
+    expect(messageRequests, 1);
+  });
 }
 
 const String _configPageSource = '''

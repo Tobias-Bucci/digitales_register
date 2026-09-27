@@ -35,7 +35,6 @@ import 'package:dr/biometric_app_lock.dart';
 import 'package:dr/container/change_email_container.dart';
 import 'package:dr/container/home_page.dart';
 import 'package:dr/container/login_page.dart';
-import 'package:dr/container/notifications_page_container.dart';
 import 'package:dr/container/pass_reset_container.dart';
 import 'package:dr/container/profile_container.dart';
 import 'package:dr/container/request_pass_reset_container.dart';
@@ -44,7 +43,6 @@ import 'package:dr/desktop.dart';
 import 'package:dr/i18n/app_language.dart';
 import 'package:dr/i18n/app_localizations.dart';
 import 'package:dr/middleware/middleware.dart';
-import 'package:dr/notification_background_service.dart';
 import 'package:dr/reducer/reducer.dart';
 import 'package:dr/settings_persistence_service.dart';
 import 'package:dr/theme_controller.dart';
@@ -56,6 +54,7 @@ import 'package:flutter_built_redux/flutter_built_redux.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:package_info_plus/package_info_plus.dart';
 import 'package:responsive_scaffold/responsive_scaffold.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import 'package:uni_links/uni_links.dart';
 
 GlobalKey<NavigatorState>? navigatorKey;
@@ -82,6 +81,7 @@ Future<void> main() async {
   secureStorage = getFlutterSecureStorage();
   await appClock.initialize();
   await _loadStartupUserPreferences();
+  await _removeLegacyNotificationData();
   final store = Store<AppState, AppStateBuilder, AppActions>(
     appReducerBuilder.build(),
     AppState((b) => b.settingsState.replace(_startupSettingsState)),
@@ -106,6 +106,19 @@ Future<void> main() async {
   );
 }
 
+Future<void> _removeLegacyNotificationData() async {
+  final prefs = await SharedPreferences.getInstance();
+  for (final key in const [
+    'pushNotificationsEnabled',
+    'backgroundNotificationReminderEntries',
+    'backgroundNotificationLogs',
+    'backgroundNotificationPollLease',
+    'backgroundNotificationPollLastCompleted',
+  ]) {
+    await prefs.remove(key);
+  }
+}
+
 Future<void> _initializeAfterFirstFrame({
   required Store<AppState, AppStateBuilder, AppActions> store,
   required Stopwatch startupStopwatch,
@@ -123,7 +136,6 @@ Future<void> _initializeAfterFirstFrame({
 
   unawaited(AnalyticsService.initLich());
   unawaited(_loadPackageInfo());
-  unawaited(_initializeNotificationBackgroundService());
   unawaited(_restoreUserPreferences(store));
 
   await AnalyticsService.logCustomEvent("app_first_frame", <String, Object>{
@@ -184,16 +196,6 @@ Future<void> _loadPackageInfo() async {
   } catch (_) {
     // Keep the default placeholder values when platform package info is unavailable.
   }
-}
-
-Future<void> _initializeNotificationBackgroundService() async {
-  final stopwatch = Stopwatch()..start();
-  await NotificationBackgroundService.initialize();
-  stopwatch.stop();
-  await AnalyticsService.logCustomEvent(
-    "notification_service_initialized",
-    <String, Object>{"elapsedMs": stopwatch.elapsedMilliseconds},
-  );
 }
 
 Future<void> setGlobalContrastColor(Color color) async {
@@ -289,12 +291,6 @@ class RegisterApp extends StatelessWidget {
                       settings: settings,
                       builder: (_) => ProfileContainer(),
                     );
-                  case "notifications":
-                    return MaterialPageRoute<void>(
-                      settings: settings,
-                      builder: (_) => NotificationPageContainer(),
-                      fullscreenDialog: true,
-                    );
                   case "gradesChart":
                     return MaterialPageRoute<void>(
                       settings: settings,
@@ -367,13 +363,13 @@ class LifecycleObserver with WidgetsBindingObserver {
         state == AppLifecycleState.paused ||
         state == AppLifecycleState.detached) {
       biometricAppLockController.lock();
-      unawaited(NotificationBackgroundService.handleAppPaused());
+      pauseNetworkRequests();
       onBackground();
     }
   }
 
   Future<void> _handleResumed() async {
-    await NotificationBackgroundService.handleAppResumed();
+    resumeNetworkRequests();
     await biometricAppLockController.authenticateIfNeeded();
     await AnalyticsService.logCustomEvent("app_opened");
     onForeground();

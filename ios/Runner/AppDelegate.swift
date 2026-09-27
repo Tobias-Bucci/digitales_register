@@ -1,6 +1,6 @@
 import UIKit
 import Flutter
-import workmanager_apple
+import UserNotifications
 
 @main
 @objc class AppDelegate: FlutterAppDelegate {
@@ -8,9 +8,8 @@ import workmanager_apple
     _ application: UIApplication,
     didFinishLaunchingWithOptions launchOptions: [UIApplication.LaunchOptionsKey: Any]?
   ) -> Bool {
-    WorkmanagerPlugin.setPluginRegistrantCallback { registry in
-      GeneratedPluginRegistrant.register(with: registry)
-    }
+    UNUserNotificationCenter.current().removeAllPendingNotificationRequests()
+    UNUserNotificationCenter.current().removeAllDeliveredNotifications()
     GeneratedPluginRegistrant.register(with: self)
     return super.application(application, didFinishLaunchingWithOptions: launchOptions)
   }

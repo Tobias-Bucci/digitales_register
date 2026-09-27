@@ -23,6 +23,22 @@ import 'package:dr/state_persistence_service.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 void main() {
+  test('saved settings from older versions ignore removed push preference', () {
+    final serialized = List<Object?>.from(
+      serializers.serialize(SettingsState())! as List,
+    )..addAll(['pushNotificationsEnabled', true]);
+
+    expect(serializers.deserialize(serialized), isA<SettingsState>());
+  });
+
+  test('saved app state ignores the removed notification inbox', () {
+    final serialized = List<Object?>.from(
+      serializers.serialize(AppState())! as List,
+    )..addAll(['notificationState', <Object?>[]]);
+
+    expect(serializers.deserialize(serialized), isA<AppState>());
+  });
+
   test('flush skips logged out states', () async {
     final service = AppStatePersistenceService();
     final writes = <MapEntry<String, String>>[];

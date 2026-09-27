@@ -27,7 +27,6 @@ import 'package:dr/i18n/app_language.dart';
 import 'package:dr/i18n/app_localizations.dart';
 import 'package:dr/main.dart';
 import 'package:dr/middleware/middleware.dart';
-import 'package:dr/notification_background_service.dart';
 import 'package:dr/platform_adapter.dart';
 import 'package:dr/reducer/reducer.dart';
 import 'package:dr/theme_controller.dart';
@@ -149,7 +148,10 @@ class TestSecureStorage extends FlutterSecureStorage {
   WebOptions get webOptions => throw UnimplementedError();
 }
 
-class MockWrapper extends Mock implements Wrapper {}
+class MockWrapper extends Mock implements Wrapper {
+  @override
+  bool get isAppInForeground => true;
+}
 
 class MockDio extends Mock implements Dio {}
 
@@ -180,7 +182,6 @@ Future<void> bootstrapTestEnvironment({
   scaffoldKey = GlobalKey<ResponsiveScaffoldState<Pages>>();
   scaffoldMessengerKey = GlobalKey<ScaffoldMessengerState>();
   mockNow = fixedNow;
-  await NotificationBackgroundService.resetForTest();
   await CalendarSyncService.resetForTest();
   isAndroidOverride = null;
   await _ensurePathProviderMocks();
@@ -221,7 +222,6 @@ Future<void> resetTestState() async {
   statePersistenceService.clear();
   passDio = null;
   resetMiddlewareStateForTest();
-  await NotificationBackgroundService.resetForTest();
   await CalendarSyncService.resetForTest();
   isAndroidOverride = null;
 }

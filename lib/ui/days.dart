@@ -26,7 +26,6 @@ import 'package:dr/app_clock.dart';
 import 'package:dr/app_state.dart';
 import 'package:dr/container/days_container.dart';
 import 'package:dr/container/homework_filter_container.dart';
-import 'package:dr/container/notification_icon_container.dart';
 import 'package:dr/container/sidebar_container.dart';
 import 'package:dr/data.dart';
 import 'package:dr/i18n/app_localizations.dart';
@@ -41,7 +40,7 @@ import 'package:dr/ui/last_fetched_overlay.dart';
 import 'package:dr/ui/no_internet.dart';
 import 'package:dr/ui/school_countdown_overview.dart';
 import 'package:dr/tutorial/tutorial_target.dart';
-import 'package:dr/tutorial/tutorial_practice.dart';
+import 'package:dr/tutorial/tutorial_service.dart';
 import 'package:dr/utc_date_time.dart';
 import 'package:dr/util.dart';
 import 'package:flutter/material.dart';
@@ -431,6 +430,24 @@ class _DaysWidgetState extends State<DaysWidget> {
 
   @override
   void didUpdateWidget(DaysWidget oldWidget) {
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted && tutorialService.observeDashboardDays(widget.vm.days)) {
+        setState(() {});
+        WidgetsBinding.instance.addPostFrameCallback((_) {
+          if (!mounted || !controller.hasClients) return;
+          for (final entry in _homeworkIndexes.entries) {
+            final day = widget.vm.days.where((value) =>
+                value.homework.any((item) => item.id == entry.value.id));
+            if (day.isNotEmpty &&
+                tutorialService.isCreatedReminder(day.first, entry.value)) {
+              unawaited(controller.scrollToIndex(entry.key,
+                  preferPosition: AutoScrollPosition.middle));
+              break;
+            }
+          }
+        });
+      }
+    });
     final availableFavoriteSubjects = _availableFavoriteSubjects();
     updateValues(
         _filteredDays(_resolvedFavoriteSubject(availableFavoriteSubjects)));
@@ -526,6 +543,7 @@ class _DaysWidgetState extends State<DaysWidget> {
 
   @override
   Widget build(BuildContext context) {
+    tutorialService.dashboardFuture = widget.vm.future;
     final l10n = context.l10n;
     final availableFavoriteSubjects = _availableFavoriteSubjects();
     final activeFavoriteSubject =
@@ -723,7 +741,6 @@ class _DaysWidgetState extends State<DaysWidget> {
                 ),
               ),
             ),
-          if (widget.vm.showNotifications) NotificationIconContainer(),
         ],
       ),
       drawerBuilder: (widgetSelected, goHome, currentSelected, tabletMode) {
@@ -960,66 +977,73 @@ class DashboardHeader extends StatelessWidget {
                 ),
                 const SizedBox(height: 10),
               ],
-              const TutorialPractice(),
-              Wrap(
-                spacing: 8,
-                runSpacing: 8,
-                crossAxisAlignment: WrapCrossAlignment.center,
-                children: [
-                  TutorialTarget(
-                    id: 'dashboard-filter',
-                    action: true,
-                    child: HomeworkFilterContainer(
-                      showEmptyDays: showEmptyDays,
-                      onShowEmptyDaysChanged: onShowEmptyDaysChanged,
-                    ),
+              LayoutBuilder(builder: (context, constraints) {
+                final filter = TutorialTarget(
+                  id: 'dashboard-filter',
+                  action: true,
+                  child: HomeworkFilterContainer(
+                    showEmptyDays: showEmptyDays,
+                    onShowEmptyDaysChanged: onShowEmptyDaysChanged,
                   ),
-                  if (schoolTimeline.holidays.isEmpty &&
-                      schoolTimeline.gradeDeadlines.isEmpty) ...[
-                    Tooltip(
-                      message: l10n.text('schoolCountdown.missingData'),
-                      child: Icon(
-                        Icons.event_busy_outlined,
-                        color: scheme.onSurfaceVariant,
+                );
+                final past = TutorialTarget(
+                  id: 'dashboard-past',
+                  action: true,
+                  child: AnimatedSwitcher(
+                    duration: const Duration(milliseconds: 220),
+                    transitionBuilder: (child, animation) {
+                      return FadeTransition(
+                        opacity: animation,
+                        child: ScaleTransition(scale: animation, child: child),
+                      );
+                    },
+                    child: FilledButton.tonalIcon(
+                      key: ValueKey(future),
+                      onPressed: onSwitchFuture,
+                      icon: Icon(
+                        future
+                            ? Icons.history_toggle_off
+                            : Icons.upcoming_rounded,
                       ),
-                    ),
-                  ],
-                  TutorialTarget(
-                    id: 'dashboard-past',
-                    action: true,
-                    child: AnimatedSwitcher(
-                      duration: const Duration(milliseconds: 220),
-                      transitionBuilder: (child, animation) {
-                        return FadeTransition(
-                          opacity: animation,
-                          child:
-                              ScaleTransition(scale: animation, child: child),
-                        );
-                      },
-                      child: FilledButton.tonalIcon(
-                        key: ValueKey(future),
-                        onPressed: onSwitchFuture,
-                        icon: Icon(
-                          future
-                              ? Icons.history_toggle_off
-                              : Icons.upcoming_rounded,
-                        ),
-                        label: Text(future
-                            ? l10n.text('dashboard.past')
-                            : l10n.text('dashboard.future')),
-                        style: FilledButton.styleFrom(
-                          shape: const StadiumBorder(),
-                          visualDensity: VisualDensity.compact,
-                          padding: const EdgeInsets.symmetric(
-                            horizontal: 14,
-                            vertical: 12,
-                          ),
+                      label: Text(future
+                          ? l10n.text('dashboard.past')
+                          : l10n.text('dashboard.future')),
+                      style: FilledButton.styleFrom(
+                        shape: const StadiumBorder(),
+                        visualDensity: VisualDensity.compact,
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 14,
+                          vertical: 12,
                         ),
                       ),
                     ),
                   ),
-                ],
-              ),
+                );
+                return Row(children: [
+                  filter,
+                  if (constraints.maxWidth >= 420 &&
+                      schoolTimeline.holidays.isEmpty &&
+                      schoolTimeline.gradeDeadlines.isEmpty)
+                    Padding(
+                      padding: const EdgeInsets.only(left: 8),
+                      child: Tooltip(
+                        message: l10n.text('schoolCountdown.missingData'),
+                        child: Icon(Icons.event_busy_outlined,
+                            color: scheme.onSurfaceVariant),
+                      ),
+                    ),
+                  Expanded(
+                    child: Align(
+                      alignment: Alignment.centerRight,
+                      child: FittedBox(
+                        fit: BoxFit.scaleDown,
+                        alignment: Alignment.centerRight,
+                        child: past,
+                      ),
+                    ),
+                  ),
+                ]);
+              }),
               if (favoriteSubjects.isNotEmpty) ...[
                 const SizedBox(height: 8),
                 FavoriteSubjectFilter(
@@ -1174,9 +1198,16 @@ class DayWidget extends StatelessWidget {
                     onPressed: vm.noInternet
                         ? null
                         : () async {
-                            final message =
-                                await showEnterReminderDialog(context);
+                            final message = await showEnterReminderDialog(
+                              context,
+                              initialMessage: tutorialService.active &&
+                                      tutorialService.step.key ==
+                                          'assessmentShortcuts'
+                                  ? '/cw '
+                                  : '',
+                            );
                             if (message != null) {
+                              tutorialService.reminderSubmitted(day, message);
                               addReminderCallback(day, message);
                             }
                           },
@@ -1188,6 +1219,7 @@ class DayWidget extends StatelessWidget {
         for (final hw in day.homework)
           ItemWidget(
             item: hw,
+            tutorialCreatedReminder: tutorialService.isCreatedReminder(day, hw),
             toggleDone: () => toggleDoneCallback(hw, !hw.checked),
             editReminder: () async {
               final message = await showEnterReminderDialog(
@@ -1217,6 +1249,7 @@ class DayWidget extends StatelessWidget {
 
 class ItemWidget extends StatelessWidget {
   final Homework item;
+  final bool tutorialCreatedReminder;
   final BuiltList<String> allSubjects;
   final Future<void> Function()? editReminder;
   final VoidCallback? removeThis;
@@ -1238,6 +1271,7 @@ class ItemWidget extends StatelessWidget {
   const ItemWidget({
     super.key,
     required this.item,
+    this.tutorialCreatedReminder = false,
     required this.allSubjects,
     this.editReminder,
     this.removeThis,
@@ -1370,10 +1404,12 @@ class ItemWidget extends StatelessWidget {
           }
           await delete();
           removeThis!();
+          if (tutorialCreatedReminder) tutorialService.reminderDeleted(item.id);
         }
       } else {
         await delete();
         removeThis!();
+        if (tutorialCreatedReminder) tutorialService.reminderDeleted(item.id);
       }
     }
 
@@ -1467,16 +1503,21 @@ class ItemWidget extends StatelessWidget {
                                           : null,
                                     ),
                                   ),
-                            leading:
-                                !isHistory && !isDeletedView && item.deleteable
-                                    ? IconButton(
-                                        icon: const Icon(Icons.close),
-                                        onPressed: noInternet
-                                            ? null
-                                            : () => handleDelete(delete),
-                                        padding: EdgeInsets.zero,
-                                      )
-                                    : null,
+                            leading: !isHistory &&
+                                    !isDeletedView &&
+                                    item.deleteable
+                                ? TutorialTarget(
+                                    id: tutorialCreatedReminder
+                                        ? 'dashboard-created-reminder'
+                                        : 'dashboard-item-delete-${item.id}',
+                                    child: IconButton(
+                                      icon: const Icon(Icons.close),
+                                      onPressed: noInternet
+                                          ? null
+                                          : () => handleDelete(delete),
+                                      padding: EdgeInsets.zero,
+                                    ))
+                                : null,
                           ),
                         ],
                       ),

@@ -1,12 +1,15 @@
+import 'package:dr/data.dart';
 import 'package:dr/i18n/app_localizations.dart';
 import 'package:dr/tutorial/tutorial_overlay.dart';
-import 'package:dr/tutorial/tutorial_practice.dart';
 import 'package:dr/tutorial/tutorial_service.dart';
 import 'package:dr/tutorial/tutorial_target.dart';
+import 'package:dr/utc_date_time.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+
+import 'support/fixtures.dart';
 
 class _Tour extends TutorialService {
   bool running = true;
@@ -141,39 +144,42 @@ void main() {
   });
 
   for (final assessment in [false, true]) {
-    testWidgets(
-        'practice saves and deletes ${assessment ? 'classwork' : 'reminder'}',
-        (tester) async {
+    test(
+        'tour waits for saved ${assessment ? 'classwork' : 'reminder'} and its deletion',
+        () {
       final tour = _Tour()
         ..current = TutorialStep(TutorialChapter.dashboard,
             assessment ? 'assessmentShortcuts' : 'reminders',
-            target: 'tutorial-create', requiresAction: true);
-      await tester.pumpWidget(app(
-          tour, SingleChildScrollView(child: TutorialPractice(service: tour))));
-      await tester.pumpAndSettle();
+            target: 'dashboard-reminder', requiresAction: true);
+      final text = assessment ? '/cw Mathematics' : 'Bring books';
+      final existing =
+          buildHomework(id: 1, type: HomeworkType.homework, subtitle: text);
+      final day = buildDay(date: fixtureNow, homework: [existing]);
       expect(tour.canContinue, isFalse);
-      await tester.tap(find.byIcon(Icons.add));
-      await tester.pumpAndSettle();
+      tour.reminderSubmitted(day, text);
+      expect(tour.observeDashboardDays([day]), isFalse);
       expect(tour.canContinue, isFalse);
-      expect(find.byType(TextField), findsOneWidget);
-      expect(tester.widget<TextField>(find.byType(TextField)).controller!.text,
-          assessment ? '/cw example' : 'example');
-      await tester.tap(find.text('Save'));
-      await tester.pumpAndSettle();
+      final saved = buildHomework(
+          id: 2, type: HomeworkType.homework, subtitle: text, deleteable: true);
+      final wrongDay =
+          buildDay(date: UtcDateTime(2026, 3, 29), homework: [saved]);
+      expect(tour.observeDashboardDays([wrongDay]), isFalse);
+      expect(
+          tour.observeDashboardDays([
+            buildDay(date: fixtureNow, homework: [existing, saved])
+          ]),
+          isTrue);
       expect(tour.canContinue, isTrue);
+      expect(tour.isCreatedReminder(day, saved), isTrue);
       tour.completed = false;
       tour.current = TutorialStep(TutorialChapter.dashboard,
           assessment ? 'deleteAssessment' : 'deleteReminder',
-          target: 'tutorial-delete', requiresAction: true);
-      tour.refresh();
-      await tester.pumpAndSettle();
-      final rect = tutorialTargets.rectFor('tutorial-delete');
-      expect(rect, isNotNull);
-      await tester.tap(find.byIcon(Icons.close));
-      await tester.pumpAndSettle();
+          target: 'dashboard-created-reminder', requiresAction: true);
+      tour.reminderDeleted(existing.id);
+      expect(tour.canContinue, isFalse);
+      tour.reminderDeleted(saved.id);
       expect(tour.canContinue, isTrue);
-      expect(find.byIcon(Icons.close), findsNothing);
-      expect(tester.takeException(), isNull);
+      expect(tour.isCreatedReminder(day, saved), isFalse);
     });
   }
 }

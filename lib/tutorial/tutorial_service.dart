@@ -1,15 +1,17 @@
 import 'dart:async';
-import 'package:dr/app_language_controller.dart';
 
+import 'package:dr/app_language_controller.dart';
 import 'package:dr/container/exam_calendar_container.dart';
+import 'package:dr/data.dart';
 import 'package:dr/i18n/app_language.dart';
 import 'package:dr/i18n/app_localizations.dart';
 import 'package:dr/main.dart';
 import 'package:dr/middleware/middleware.dart';
+import 'package:dr/tutorial/tutorial_overlay.dart';
 import 'package:dr/ui/class_register_page.dart';
 import 'package:dr/ui/course_materials_page.dart';
 import 'package:dr/ui/homework_summary_page.dart';
-import 'package:dr/tutorial/tutorial_overlay.dart';
+import 'package:dr/utc_date_time.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/rendering.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -145,13 +147,13 @@ const _steps = <TutorialStep>[
   TutorialStep(TutorialChapter.dashboard, 'past',
       target: 'dashboard-past', requiresAction: true),
   TutorialStep(TutorialChapter.dashboard, 'reminders',
-      target: 'tutorial-create', requiresAction: true),
+      target: 'dashboard-reminder', requiresAction: true),
   TutorialStep(TutorialChapter.dashboard, 'deleteReminder',
-      target: 'tutorial-delete', requiresAction: true),
+      target: 'dashboard-created-reminder', requiresAction: true),
   TutorialStep(TutorialChapter.dashboard, 'assessmentShortcuts',
-      target: 'tutorial-create', requiresAction: true),
+      target: 'dashboard-reminder', requiresAction: true),
   TutorialStep(TutorialChapter.dashboard, 'deleteAssessment',
-      target: 'tutorial-delete', requiresAction: true),
+      target: 'dashboard-created-reminder', requiresAction: true),
   TutorialStep(TutorialChapter.grades, 'semester', target: 'grades-semester'),
   TutorialStep(TutorialChapter.grades, 'gradeHistory',
       target: 'grades-history', requiresAction: true),
@@ -229,6 +231,14 @@ class TutorialService extends ChangeNotifier {
   bool _advancing = false;
   Rect? _lastRect;
   int _missingTicks = 0;
+  UtcDateTime? _pendingReminderDay;
+  String? _pendingReminderText;
+  Set<int> _previousReminderIds = {};
+  int? _createdReminderId;
+  UtcDateTime? _createdReminderDay;
+  bool _dashboardFuture = true;
+  bool get dashboardFuture => _dashboardFuture;
+  set dashboardFuture(bool value) => _dashboardFuture = value;
   String? _targetFor(bool covered) {
     if (step.openedTarget != null &&
         tutorialTargets.rectFor(step.openedTarget) != null) {
@@ -267,7 +277,12 @@ class TutorialService extends ChangeNotifier {
     final rect = tutorialTargets.rectFor(_targetFor(covered));
     if (covered &&
         step.requiresAction &&
-        !step.target!.startsWith('tutorial-')) {
+        ![
+          'reminders',
+          'deleteReminder',
+          'assessmentShortcuts',
+          'deleteAssessment'
+        ].contains(step.key)) {
       _actionComplete = true;
     }
     if (covered &&
@@ -284,7 +299,15 @@ class TutorialService extends ChangeNotifier {
       notifyListeners();
       if (opened) unawaited(tutorialTargets.reveal(step.openedTarget));
     }
-    if (!covered && rect == null && ++_missingTicks == 30) {
+    if (!covered &&
+        rect == null &&
+        ++_missingTicks == 30 &&
+        ![
+          'reminders',
+          'deleteReminder',
+          'assessmentShortcuts',
+          'deleteAssessment'
+        ].contains(step.key)) {
       _actionComplete = true;
       notifyListeners();
     }
@@ -298,12 +321,50 @@ class TutorialService extends ChangeNotifier {
   bool get canContinue => !step.requiresAction || _actionComplete;
   String text(String suffix) => _l10n?.text('tutorial.$suffix') ?? suffix;
   String stepTitle() => text('step.${step.key}.title');
-  String stepBody() => switch (step.key) {
-        'reminders' => text('practiceReminder'),
-        'assessmentShortcuts' => text('practiceAssessment'),
-        'deleteReminder' || 'deleteAssessment' => text('deleteExampleBody'),
-        _ => text('step.${step.key}.body'),
-      };
+  String stepBody() => text('step.${step.key}.body');
+
+  void reminderSubmitted(Day day, String message) {
+    if (!active || !['reminders', 'assessmentShortcuts'].contains(step.key))
+      return;
+    _pendingReminderDay = day.date;
+    _pendingReminderText = message;
+    _previousReminderIds = day.homework.map((item) => item.id).toSet();
+    _createdReminderId = null;
+    _createdReminderDay = null;
+  }
+
+  bool observeDashboardDays(Iterable<Day> days) {
+    final date = _pendingReminderDay;
+    final message = _pendingReminderText;
+    if (!active || date == null || message == null) return false;
+    for (final day in days.where((item) => item.date == date)) {
+      for (final item in day.homework) {
+        if (item.type == HomeworkType.homework &&
+            !_previousReminderIds.contains(item.id) &&
+            (item.subtitle == message || item.title == message)) {
+          _createdReminderId = item.id;
+          _createdReminderDay = date;
+          _pendingReminderDay = null;
+          _pendingReminderText = null;
+          completeRequiredAction('dashboard-reminder');
+          return true;
+        }
+      }
+    }
+    return false;
+  }
+
+  bool isCreatedReminder(Day day, Homework item) =>
+      active &&
+      _createdReminderId == item.id &&
+      _createdReminderDay == day.date;
+
+  void reminderDeleted(int id) {
+    if (_createdReminderId != id) return;
+    _createdReminderId = null;
+    _createdReminderDay = null;
+    completeRequiredAction('dashboard-created-reminder');
+  }
 
   Future<bool> isChapterCompleted(TutorialChapter chapter) async =>
       (await SharedPreferences.getInstance())
@@ -423,6 +484,10 @@ class TutorialService extends ChangeNotifier {
     _index = 0;
     if (_fullTour) await prefs.remove(_progressKey);
     _actionComplete = false;
+    _pendingReminderDay = null;
+    _pendingReminderText = null;
+    _createdReminderId = null;
+    _createdReminderDay = null;
     await _showPage(step);
     _entry = OverlayEntry(builder: (_) => TutorialOverlay(service: this));
     final overlay = navigatorKey?.currentState?.overlay;
@@ -470,6 +535,9 @@ class TutorialService extends ChangeNotifier {
       final previous = step;
       _index++;
       _actionComplete = false;
+      if (previous.key == 'past' && !_dashboardFuture) {
+        await actions.dashboardActions.switchFuture();
+      }
       if (step.chapter != previous.chapter ||
           _pageGroup(step) != _pageGroup(previous)) {
         if (!(previous.key == 'calculator' &&
@@ -513,6 +581,10 @@ class TutorialService extends ChangeNotifier {
     _active = const [];
     _index = 0;
     _fullTour = false;
+    _pendingReminderDay = null;
+    _pendingReminderText = null;
+    _createdReminderId = null;
+    _createdReminderDay = null;
     notifyListeners();
   }
 

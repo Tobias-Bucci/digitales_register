@@ -47,7 +47,6 @@ Future<void> _logout(
   ActionHandler next,
   Action<LogoutPayload> action,
 ) async {
-  await NotificationBackgroundService.handleAppPaused();
   if (action.payload.hard &&
       api.state.loginState.loggedIn &&
       api.state.loginState.username != null) {
@@ -296,9 +295,10 @@ Future<void> _requestPassReset(
   Action<RequestPassResetPayload> action,
 ) async {
   await next(action);
+  if (!wrapper.isAppInForeground) return;
   // the api url DOES NOT contain /v2/ in the path. This is intentional.
   try {
-    final dynamic result = (await (passDio ?? dio.Dio()).post<dynamic>(
+    final dynamic result = (await (passDio ?? wrapper.dio).post<dynamic>(
       "${api.state.url}/api/auth/resetPassword",
       data: {"email": action.payload.email, "username": action.payload.user},
     ))
@@ -313,6 +313,7 @@ Future<void> _requestPassReset(
       );
     }
   } catch (e) {
+    if (!wrapper.isAppInForeground) return;
     if (await cannotConnectTo(api.state.url!)) {
       final noConnectionMessage = await _loginText(
         'login.noConnectionWithUrl',
@@ -330,8 +331,9 @@ Future<void> _resetPass(
   ActionHandler next,
   Action<String> action,
 ) async {
+  if (!wrapper.isAppInForeground) return;
   // the api url DOES NOT contain /v2/ in the path. This is intentional.
-  final dynamic result = (await (passDio ?? dio.Dio()).post<dynamic>(
+  final dynamic result = (await (passDio ?? wrapper.dio).post<dynamic>(
     "${api.state.url}/api/auth/setNewPassword",
     data: {
       "username": "",
@@ -469,7 +471,6 @@ Future<void> _removeCurrentAccount(
     await secureStorage.delete(key: 'login');
   }
 
-  await NotificationBackgroundService.handleAppPaused();
   appClock.setDemoMode(false);
   statePersistenceService.clear();
   _clearRuntimeCaches();

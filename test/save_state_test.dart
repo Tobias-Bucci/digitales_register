@@ -6,7 +6,6 @@ import 'package:dr/actions/app_actions.dart';
 import 'package:dr/actions/login_actions.dart';
 import 'package:dr/app_state.dart';
 import 'package:dr/middleware/middleware.dart';
-import 'package:dr/notification_background_service.dart';
 import 'package:dr/reducer/reducer.dart';
 import 'package:dr/serializers.dart';
 import 'package:dr/settings_persistence_service.dart';
@@ -25,12 +24,6 @@ void main() {
     mockWrapper = MockWrapper();
     when(() => mockWrapper.loginAddress).thenReturn(testLoginAddress);
     await bootstrapTestEnvironment(wrapperOverride: mockWrapper);
-    NotificationBackgroundService.initializeLocalNotificationsOverride =
-        () async {};
-    NotificationBackgroundService.syncBackgroundTaskOverride =
-        ({required enabled}) async {};
-    NotificationBackgroundService.requestNotificationPermissionOverride =
-        () async => true;
     storage = secureStorage as TestSecureStorage;
   });
 

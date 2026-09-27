@@ -33,7 +33,6 @@ import 'package:dr/actions/dashboard_actions.dart';
 import 'package:dr/actions/grades_actions.dart';
 import 'package:dr/actions/login_actions.dart';
 import 'package:dr/actions/messages_actions.dart';
-import 'package:dr/actions/notifications_actions.dart';
 import 'package:dr/actions/profile_actions.dart';
 import 'package:dr/actions/routing_actions.dart';
 import 'package:dr/actions/save_pass_actions.dart';
@@ -56,7 +55,6 @@ import 'package:dr/data.dart';
 import 'package:dr/i18n/app_language.dart';
 import 'package:dr/i18n/app_localizations.dart';
 import 'package:dr/main.dart';
-import 'package:dr/notification_background_service.dart';
 import 'package:dr/page_payload_cache.dart';
 import 'package:dr/platform_adapter.dart';
 import 'package:dr/serializers.dart';
@@ -70,7 +68,7 @@ import 'package:dr/util.dart';
 import 'package:dr/wrapper.dart';
 import 'package:file_picker/file_picker.dart';
 import 'package:flutter/gestures.dart';
-import 'package:flutter/material.dart' hide Action, Notification;
+import 'package:flutter/material.dart' hide Action;
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:image/image.dart' as image;
 import 'package:intl/intl.dart';
@@ -88,7 +86,6 @@ part 'dashboard.dart';
 part 'grades.dart';
 part 'login.dart';
 part 'messages.dart';
-part 'notifications.dart';
 part 'pass.dart';
 part 'profile.dart';
 part 'routing.dart';
@@ -104,7 +101,6 @@ final AndroidWidgetSnapshotService androidWidgetSnapshotService =
 Duration noInternetRetryInterval = const Duration(seconds: 5);
 
 const Duration _dashboardCacheTtl = Duration(seconds: 45);
-const Duration _notificationsCacheTtl = Duration(seconds: 30);
 const Duration _profileCacheTtl = Duration(minutes: 5);
 const Duration _calendarCacheTtl = Duration(minutes: 5);
 const Duration _gradesCacheTtl = Duration(minutes: 1);
@@ -122,7 +118,6 @@ String _dashboardCacheKey(bool future) => 'dashboard:$future';
 String _calendarCacheKey(UtcDateTime monday) =>
     'calendar:${monday.stripTime().toIso8601String()}';
 
-const String _notificationsCacheKey = 'notifications';
 const String _profileCacheKey = 'profile';
 const String _messagesCacheKey = 'messages';
 const String _absencesCacheKey = 'absences';
@@ -656,7 +651,6 @@ List<Middleware<AppState, AppStateBuilder, AppActions>> middleware({
             ..combine(_dashboardMiddleware)
             ..combine(_gradesMiddleware)
             ..combine(_loginMiddleware)
-            ..combine(_notificationsMiddleware)
             ..combine(_passMiddleware)
             ..combine(routingMiddleware)
             ..combine(_certificateMiddleware)
@@ -775,6 +769,18 @@ void _cancelNoInternetRetry() {
   _noInternetRetryTimer = null;
 }
 
+void pauseNetworkRequests() {
+  wrapper.pauseNetworkActivity();
+  _cancelNoInternetRetry();
+}
+
+void resumeNetworkRequests() {
+  wrapper.resumeNetworkActivity();
+  if (wrapper.noInternet) {
+    _scheduleNoInternetRetry(actions.refreshNoInternet.call);
+  }
+}
+
 @visibleForTesting
 void resetNoInternetRetryForTest() {
   _cancelNoInternetRetry();
@@ -793,6 +799,7 @@ void resetMiddlewareStateForTest() {
 }
 
 void _scheduleNoInternetRetry(Future<void> Function() refreshNoInternet) {
+  if (!wrapper.isAppInForeground) return;
   if (_noInternetRetryTimer != null) {
     return;
   }
@@ -805,7 +812,7 @@ void _scheduleNoInternetRetry(Future<void> Function() refreshNoInternet) {
 Future<void> _runNoInternetRetry(
   Future<void> Function() refreshNoInternet,
 ) async {
-  if (_noInternetRetryInFlight) {
+  if (!wrapper.isAppInForeground || _noInternetRetryInFlight) {
     return;
   }
   _noInternetRetryInFlight = true;
@@ -813,7 +820,7 @@ Future<void> _runNoInternetRetry(
     await refreshNoInternet();
   } finally {
     _noInternetRetryInFlight = false;
-    if (wrapper.noInternet) {
+    if (wrapper.isAppInForeground && wrapper.noInternet) {
       _scheduleNoInternetRetry(refreshNoInternet);
     }
   }
@@ -849,7 +856,6 @@ Future<void> _load(
   if (wrapper is! Mock) {
     wrapper = Wrapper();
   }
-  await NotificationBackgroundService.handleAppPaused();
   _cancelNoInternetRetry();
   _noInternetRetryInFlight = false;
   _clearRuntimeCaches();
@@ -907,7 +913,9 @@ Future<void> _load(
   // The first-run dialogs must be pushed after the login or dashboard route is
   // visible. On Windows, pushing them while the opaque splash is still the
   // only route can leave the dialog future pending without a visible dialog.
-  await WidgetsBinding.instance.endOfFrame;
+  if (navigatorKey?.currentState != null) {
+    await WidgetsBinding.instance.endOfFrame;
+  }
   await _checkShowUnmaintainedAlert();
   await _checkShowPrivacyConsentAlert();
 }
@@ -919,11 +927,7 @@ Future<void> _refresh(
 ) async {
   await next(action);
   _markRuntimeCacheStale(_dashboardCacheKey(api.state.dashboardState.future));
-  _markRuntimeCacheStale(_notificationsCacheKey);
-  await Future.wait([
-    api.actions.dashboardActions.load(api.state.dashboardState.future),
-    api.actions.notificationsActions.load(),
-  ]);
+  await api.actions.dashboardActions.load(api.state.dashboardState.future);
 }
 
 Future<void> _loggedIn(
@@ -1003,23 +1007,12 @@ Future<void> _loggedIn(
     await next(action);
   }
 
-  final notificationsEnabled = await NotificationBackgroundService.setEnabled(
-    enabled: api.state.settingsState.pushNotificationsEnabled,
-    triggerImmediatePoll: false,
-  );
-  if (!notificationsEnabled &&
-      api.state.settingsState.pushNotificationsEnabled) {
-    showSnackBar(tr('notifications.permissionDeniedDisabled'));
-    await api.actions.settingsActions.pushNotificationsEnabled(false);
-  }
-
   for (final callback in api.state.loginState.callAfterLogin) {
     callback();
   }
   if (!action.payload.offlineOnly) {
     await Future.wait([
       api.actions.dashboardActions.load(api.state.dashboardState.future),
-      api.actions.notificationsActions.load(),
       api.actions.profileActions.load(),
     ]);
     unawaited(_ensureSubstituteTeacherHistoryLoaded(api));
@@ -1108,7 +1101,7 @@ Future<void> _writeToStorage(String key, String txt) async {
 
 Future<String?> _readFromStorage(String key) async {
   try {
-    return secureStorage.read(key: escapeKey(key));
+    return await secureStorage.read(key: escapeKey(key));
   } catch (e) {
     try {
       await secureStorage.deleteAll();

@@ -61,7 +61,6 @@ class SettingsPageWidget extends StatefulWidget {
   final OnSettingChanged<bool> onSetDashboardColorBorders;
   final OnSettingChanged<bool> onSetCalenderColorBackground;
   final OnSettingChanged<bool> onSetDashboardColorTestsInRed;
-  final OnSettingChanged<bool> onSetPushNotificationsEnabled;
   final OnSettingChanged<bool> onSetSubstituteDetectionEnabled;
   final OnSettingChanged<Map<String, List<String>>>
       onSetSubstitutePrimaryTeachers;
@@ -108,7 +107,6 @@ class SettingsPageWidget extends StatefulWidget {
     required this.onSetCalenderColorBackground,
     required this.onSetSubjectTheme,
     required this.onSetDashboardColorTestsInRed,
-    required this.onSetPushNotificationsEnabled,
     required this.onSetSubstituteDetectionEnabled,
     required this.onSetSubstitutePrimaryTeachers,
     required this.onSetSubstituteKnownTeachers,
@@ -826,12 +824,6 @@ class _SettingsPageWidgetState extends State<SettingsPageWidget> {
     return _SettingsSectionCard(
       title: l10n.text('settings.section.dashboard'),
       children: [
-        SwitchListTile.adaptive(
-          title: Text(l10n.text('settings.pushNotifications.title')),
-          subtitle: Text(l10n.text('settings.pushNotifications.subtitle')),
-          onChanged: widget.onSetPushNotificationsEnabled,
-          value: widget.vm.pushNotificationsEnabled,
-        ),
         SwitchListTile.adaptive(
           title: Text(l10n.text('settings.dashboard.markChanged')),
           onChanged: widget.onSetDashboardMarkNewOrChangedEntries,

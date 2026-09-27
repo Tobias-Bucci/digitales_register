@@ -12,7 +12,8 @@ void main() {
 
   tearDown(resetTestState);
 
-  testWidgets('shows the welcome screen before any grade is entered', (tester) async {
+  testWidgets('shows the welcome screen before any grade is entered',
+      (tester) async {
     final store = createStore();
 
     await pumpApp(
@@ -24,6 +25,33 @@ void main() {
     expect(find.textContaining('Um zu beginnen'), findsOneWidget);
     expect(find.text('Note hinzufügen'), findsOneWidget);
     expect(find.text('Noten importieren'), findsOneWidget);
+  });
+
+  testWidgets('greeting scrolls when the tutorial leaves little height',
+      (tester) async {
+    tester.view.physicalSize = const Size(384, 382);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.resetPhysicalSize);
+    addTearDown(tester.view.resetDevicePixelRatio);
+    final store = createStore();
+
+    await pumpApp(tester, store: store, home: const GradeCalculator());
+    expect(tester.takeException(), isNull);
+
+    final scrollable = find.descendant(
+      of: find.byType(Greeting),
+      matching: find.byType(Scrollable),
+    );
+    expect(scrollable, findsOneWidget);
+    await tester.scrollUntilVisible(
+      find.descendant(
+        of: find.byType(Greeting),
+        matching: find.byIcon(Icons.track_changes),
+      ),
+      80,
+      scrollable: scrollable,
+    );
+    expect(tester.takeException(), isNull);
   });
 
   testWidgets('adding a grade updates the average and shows the grade list',

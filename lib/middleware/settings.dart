@@ -32,8 +32,6 @@ final _settingsMiddleware = MiddlewareBuilder<AppState, AppStateBuilder,
   ..add(DashboardActionsNames.deleteHomework, _reconcileCalendarSync)
   ..add(DashboardActionsNames.toggleDone, _reconcileCalendarSync)
   ..add(SettingsActionsNames.setLanguage, _setLanguage)
-  ..add(SettingsActionsNames.pushNotificationsEnabled,
-      _setPushNotificationsEnabled)
   ..add(
       SettingsActionsNames.substituteDetectionEnabled, _recalculateSubstitutes)
   ..add(SettingsActionsNames.substitutePrimaryTeachers, _recalculateSubstitutes)
@@ -150,24 +148,6 @@ String? generateAutomaticSubjectNick(String subject) {
 
   return '${words.first.substring(0, 1).toUpperCase()}'
       '${words.last.substring(0, 1).toUpperCase()}';
-}
-
-Future<void> _setPushNotificationsEnabled(
-    MiddlewareApi<AppState, AppStateBuilder, AppActions> api,
-    ActionHandler next,
-    Action<bool> action) async {
-  await next(action);
-  final enabled = await NotificationBackgroundService.setEnabled(
-    enabled: action.payload,
-  );
-  if (action.payload && !enabled) {
-    showSnackBar(
-      tr('notifications.permissionDeniedDisabled'),
-    );
-    if (api.state.settingsState.pushNotificationsEnabled) {
-      await api.actions.settingsActions.pushNotificationsEnabled(false);
-    }
-  }
 }
 
 Future<void> _recalculateSubstitutes(

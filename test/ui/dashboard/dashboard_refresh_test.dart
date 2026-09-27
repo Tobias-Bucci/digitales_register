@@ -2,6 +2,7 @@ import 'package:built_collection/built_collection.dart';
 import 'package:dr/app_state.dart';
 import 'package:dr/container/days_container.dart';
 import 'package:dr/data.dart';
+import 'package:dr/school_timeline.dart';
 import 'package:dr/ui/days.dart';
 import 'package:dr/utc_date_time.dart';
 import 'package:flutter/material.dart';
@@ -19,6 +20,45 @@ void main() {
     resetTestState();
   });
 
+  testWidgets('filter and past button share one compact row on a phone',
+      (tester) async {
+    tester.view.physicalSize = const Size(320, 640);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.resetPhysicalSize);
+    addTearDown(tester.view.resetDevicePixelRatio);
+    final store = createStore();
+
+    await pumpApp(
+      tester,
+      store: store,
+      home: Scaffold(
+        body: SingleChildScrollView(
+            child: DashboardHeader(
+          future: true,
+          onSwitchFuture: () {},
+          favoriteSubjects: const [],
+          selectedFavoriteSubject: null,
+          onFavoriteSubjectChanged: (_) {},
+          showEmptyDays: true,
+          onShowEmptyDaysChanged: (_) {},
+          subjectThemes: BuiltMap<String, SubjectTheme>(),
+          schoolTimeline: const SchoolTimeline(
+            holidays: [],
+            gradeDeadlines: [],
+          ),
+          openCalendarAt: (_) async {},
+          editGradeDeadline: (_) async {},
+        )),
+      ),
+    );
+
+    final filter = tester.getCenter(find.text('Filter'));
+    final past = tester.getCenter(find.text('Vergangenheit'));
+    expect((filter.dy - past.dy).abs(), lessThan(2));
+    expect(tester.getSize(find.byType(DashboardHeader)).height, lessThan(100));
+    expect(tester.takeException(), isNull);
+  });
+
   testWidgets('pull to refresh reloads dashboard entries', (tester) async {
     var refreshCalls = 0;
     final store = createStore();
@@ -32,7 +72,6 @@ void main() {
         ..colorBorders = false
         ..colorTestsInRed = false
         ..subjectThemes = MapBuilder<String, SubjectTheme>()
-        ..showNotifications = false
         ..days = ListBuilder<Day>(<Day>[
           buildDay(
             date: UtcDateTime(2050),

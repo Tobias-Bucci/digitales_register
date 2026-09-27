@@ -23,9 +23,9 @@ import 'package:dr/analytics_service.dart';
 import 'package:dr/app_state.dart';
 import 'package:dr/data.dart';
 import 'package:dr/i18n/app_localizations.dart';
+import 'package:dr/tutorial/tutorial_target.dart';
 import 'package:dr/ui/dialog.dart';
 import 'package:dr/ui/target_grade_calculator.dart';
-import 'package:dr/tutorial/tutorial_target.dart';
 import 'package:dr/util.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_built_redux/flutter_built_redux.dart';
@@ -434,75 +434,77 @@ class Greeting extends StatelessWidget {
   });
   @override
   Widget build(BuildContext context) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.stretch,
-      children: [
-        Padding(
-          padding: const EdgeInsets.all(32),
-          child: Text(
-            context.t('gradeCalculator.greeting'),
-            style: Theme.of(context).textTheme.titleLarge,
-            textAlign: TextAlign.center,
+    return SingleChildScrollView(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          Padding(
+            padding: const EdgeInsets.all(32),
+            child: Text(
+              context.t('gradeCalculator.greeting'),
+              style: Theme.of(context).textTheme.titleLarge,
+              textAlign: TextAlign.center,
+            ),
           ),
-        ),
-        Center(
-          child: Padding(
-            padding: const EdgeInsets.all(16),
-            child: TutorialTarget(
-              id: 'calculator-import',
-              child: ElevatedButton(
-                onPressed: import,
-                child: Row(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    const Icon(Icons.save_alt),
-                    const SizedBox(width: 8),
-                    Text(context.t('gradeCalculator.importGrades')),
-                  ],
+          Center(
+            child: Padding(
+              padding: const EdgeInsets.all(16),
+              child: TutorialTarget(
+                id: 'calculator-import',
+                child: ElevatedButton(
+                  onPressed: import,
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      const Icon(Icons.save_alt),
+                      const SizedBox(width: 8),
+                      Text(context.t('gradeCalculator.importGrades')),
+                    ],
+                  ),
                 ),
               ),
             ),
           ),
-        ),
-        Center(
-          child: Padding(
-            padding: const EdgeInsets.all(16),
-            child: TutorialTarget(
-              id: 'calculator-add',
-              child: ElevatedButton(
-                onPressed: add,
-                child: Row(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    const Icon(Icons.add),
-                    const SizedBox(width: 8),
-                    Text(context.t('gradeCalculator.addGrade')),
-                  ],
+          Center(
+            child: Padding(
+              padding: const EdgeInsets.all(16),
+              child: TutorialTarget(
+                id: 'calculator-add',
+                child: ElevatedButton(
+                  onPressed: add,
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      const Icon(Icons.add),
+                      const SizedBox(width: 8),
+                      Text(context.t('gradeCalculator.addGrade')),
+                    ],
+                  ),
                 ),
               ),
             ),
           ),
-        ),
-        Center(
-          child: Padding(
-            padding: const EdgeInsets.all(16),
-            child: TutorialTarget(
-              id: 'calculator-target',
-              child: ElevatedButton(
-                onPressed: showTargetCalculator,
-                child: Row(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    const Icon(Icons.track_changes),
-                    const SizedBox(width: 8),
-                    Text(context.t('targetCalculator.open')),
-                  ],
+          Center(
+            child: Padding(
+              padding: const EdgeInsets.all(16),
+              child: TutorialTarget(
+                id: 'calculator-target',
+                child: ElevatedButton(
+                  onPressed: showTargetCalculator,
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      const Icon(Icons.track_changes),
+                      const SizedBox(width: 8),
+                      Text(context.t('targetCalculator.open')),
+                    ],
+                  ),
                 ),
               ),
             ),
           ),
-        ),
-      ],
+        ],
+      ),
     );
   }
 }
@@ -563,11 +565,16 @@ class _ImportGradesState extends State<_ImportGrades> {
       body: Column(
         children: [
           DropdownButton<Subject>(
+            isExpanded: true,
             items: [
               for (final subject in widget.subjects)
                 DropdownMenuItem(
                   value: subject,
-                  child: Text(context.l10n.translateSubjectName(subject.name)),
+                  child: Text(
+                    context.l10n.translateSubjectName(subject.name),
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                  ),
                 ),
             ],
             value: selectedSubject,

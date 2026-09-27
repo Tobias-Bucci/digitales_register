@@ -62,8 +62,6 @@ final settingsReducerBuilder = NestedReducerBuilder<AppState, AppStateBuilder,
   ..add(SettingsActionsNames.drawerExpandedChange, _drawerFullyExpanded)
   ..add(SettingsActionsNames.dashboardColorBorders, _dashboardColorBorders)
   ..add(SettingsActionsNames.calendarColorBackground, _calendarColorBackground)
-  ..add(
-      SettingsActionsNames.pushNotificationsEnabled, _pushNotificationsEnabled)
   ..add(SettingsActionsNames.substituteDetectionEnabled,
       _substituteDetectionEnabled)
   ..add(SettingsActionsNames.substitutePrimaryTeachers,
@@ -226,11 +224,6 @@ void _dashboardColorBorders(
 void _calendarColorBackground(
     SettingsState state, Action<bool> action, SettingsStateBuilder builder) {
   builder.calendarColorBackground = action.payload;
-}
-
-void _pushNotificationsEnabled(
-    SettingsState state, Action<bool> action, SettingsStateBuilder builder) {
-  builder.pushNotificationsEnabled = action.payload;
 }
 
 void _substituteDetectionEnabled(

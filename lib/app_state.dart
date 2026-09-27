@@ -54,7 +54,6 @@ abstract class AppState implements Built<AppState, AppStateBuilder> {
   DashboardState get dashboardState;
   @BuiltValueField(serialize: false)
   LoginState get loginState;
-  NotificationState get notificationState;
   GradesState get gradesState;
 
   AbsencesState get absencesState;
@@ -131,7 +130,6 @@ abstract class AppState implements Built<AppState, AppStateBuilder> {
     builder
       ..dashboardState = DashboardStateBuilder()
       ..loginState = LoginStateBuilder()
-      ..notificationState = NotificationStateBuilder()
       ..gradesState = GradesStateBuilder()
       ..calendarState = CalendarStateBuilder()
       ..settingsState = SettingsStateBuilder()
@@ -228,22 +226,6 @@ abstract class ResetPassState
   static void _initializeBuilder(ResetPassStateBuilder builder) {
     builder.failure = false;
   }
-}
-
-abstract class NotificationState
-    implements Built<NotificationState, NotificationStateBuilder> {
-  BuiltList<Notification>? get notifications;
-  UtcDateTime? get lastFetched;
-
-  bool get loading => notifications == null;
-  bool get hasNotifications => !loading && notifications!.isNotEmpty;
-  static Serializer<NotificationState> get serializer =>
-      _$notificationStateSerializer;
-
-  factory NotificationState([Function(NotificationStateBuilder b)? updates]) =
-      _$NotificationState;
-  // ignore: prefer_const_constructors_in_immutables
-  NotificationState._();
 }
 
 abstract class Config implements Built<Config, ConfigBuilder> {
@@ -351,7 +333,6 @@ abstract class SettingsState
   bool get dashboardColorBorders;
   // whether to color the background of widgets in the calendar in the color specified by subjectThemes
   bool get calendarColorBackground;
-  bool get pushNotificationsEnabled;
   bool get substituteDetectionEnabled;
   bool get calendarSyncEnabled;
   int? get calendarSyncCalendarId;
@@ -411,7 +392,6 @@ abstract class SettingsState
       ..favoriteSubjects = ListBuilder()
       ..dashboardColorBorders = false
       ..calendarColorBackground = false
-      ..pushNotificationsEnabled = true
       ..substituteDetectionEnabled = true
       ..calendarSyncEnabled = false
       ..calendarSyncCalendarId = null

@@ -78,6 +78,7 @@ class AppRequestException implements Exception {
 }
 
 class Wrapper {
+  static bool _networkActivityEnabled = true;
   final cookieJar = DefaultCookieJar();
   late final Dio dio;
   final bool allowInsecureConnections;
@@ -85,6 +86,26 @@ class Wrapper {
   String get baseAddress => "$url/v2/";
   String? user, pass, _url;
   bool demoMode = false;
+  bool _appInForeground = _networkActivityEnabled;
+  final Set<CancelToken> _activeRequestTokens = <CancelToken>{};
+  bool get isAppInForeground => _appInForeground;
+
+  void pauseNetworkActivity() {
+    _networkActivityEnabled = false;
+    _appInForeground = false;
+    _sessionRefreshTimer?.cancel();
+    _sessionRefreshTimer = null;
+    for (final token in _activeRequestTokens.toList()) {
+      token.cancel('App moved to the background');
+    }
+    _activeRequestTokens.clear();
+  }
+
+  void resumeNetworkActivity() {
+    _networkActivityEnabled = true;
+    _appInForeground = true;
+    _scheduleSessionRefresh();
+  }
 
   Wrapper({this.allowInsecureConnections = false}) {
     dio = Dio(
@@ -95,6 +116,26 @@ class Wrapper {
       ),
     );
     dio.interceptors.add(CookieManager(cookieJar));
+    dio.interceptors.add(InterceptorsWrapper(onRequest: (options, handler) {
+      if (!_appInForeground) {
+        handler.reject(DioException(
+          requestOptions: options,
+          type: DioExceptionType.cancel,
+          error: 'App is in the background',
+        ));
+      } else {
+        final token = options.cancelToken ?? CancelToken();
+        options.cancelToken = token;
+        _activeRequestTokens.add(token);
+        handler.next(options);
+      }
+    }, onResponse: (response, handler) {
+      _activeRequestTokens.remove(response.requestOptions.cancelToken);
+      handler.next(response);
+    }, onError: (error, handler) {
+      _activeRequestTokens.remove(error.requestOptions.cancelToken);
+      handler.next(error);
+    }));
     (dio.httpClientAdapter as IOHttpClientAdapter).createHttpClient = () {
       final client = HttpClient();
       client.userAgent =
@@ -122,6 +163,7 @@ class Wrapper {
 
   bool noInternet = false;
   Future<bool> refreshNoInternet() async {
+    if (!_appInForeground) return noInternet;
     final address = url != null ? baseAddress : "https://digitalesregister.it";
     return noInternet = await cannotConnectTo(address);
   }
@@ -350,6 +392,9 @@ class Wrapper {
     final stopwatch = Stopwatch()..start();
     var didRetry = false;
     while (true) {
+      if (!_appInForeground) {
+        throw const AppRequestException(message: 'App is in the background');
+      }
       try {
         final result = await request();
         stopwatch.stop();
@@ -635,6 +680,7 @@ class Wrapper {
     bool forceRelogin = false,
     int unexpectedLogoutRetryCount = 0,
   }) async {
+    if (!_appInForeground) return null;
     if (demoMode) {
       return await getDemoResponse(url, args);
     }
@@ -647,6 +693,7 @@ class Wrapper {
       log("returning null for request to $url, user is not logged in");
       return null;
     }
+    if (!_appInForeground) return null;
 
     dynamic responseData;
     try {
@@ -723,6 +770,7 @@ class Wrapper {
     bool forceRelogin = false,
     int unexpectedLogoutRetryCount = 0,
   }) async {
+    if (!_appInForeground) return null;
     if (demoMode) {
       return await getDemoBytesResponse(
         url,
@@ -740,6 +788,7 @@ class Wrapper {
       log("returning null for binary request to $url, user is not logged in");
       return null;
     }
+    if (!_appInForeground) return null;
 
     dynamic responseData;
     try {
@@ -798,6 +847,7 @@ class Wrapper {
   }
 
   Future<void> _handleError(Exception e) async {
+    if (!_appInForeground) return;
     log("Error while sending request", error: e);
     final requestError = _mapRequestError(e);
     if (requestError.isConnectionIssue || await refreshNoInternet()) {
@@ -812,7 +862,7 @@ class Wrapper {
 
   void _scheduleSessionRefresh() {
     _sessionRefreshTimer?.cancel();
-    if (demoMode || _serverLogoutTime == null) {
+    if (!_appInForeground || demoMode || _serverLogoutTime == null) {
       return;
     }
     var delay = _serverLogoutTime!
@@ -828,6 +878,7 @@ class Wrapper {
   }
 
   Future<void> _refreshSession() async {
+    if (!_appInForeground) return;
     if (!await _loggedIn) return;
     if (demoMode) return;
     if (_serverLogoutTime == null) return;
@@ -868,7 +919,7 @@ class Wrapper {
   void logout({required bool hard, bool logoutForcedByServer = false}) {
     _sessionRefreshTimer?.cancel();
     _sessionRefreshTimer = null;
-    if (!logoutForcedByServer && _url != null) {
+    if (_appInForeground && !logoutForcedByServer && _url != null) {
       unawaited(dio.get<dynamic>("${baseAddress}logout"));
     }
     if (hard) {
