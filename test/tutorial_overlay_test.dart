@@ -15,6 +15,7 @@ import 'support/fixtures.dart';
 class _Tour extends TutorialService {
   bool running = true;
   bool completed = false;
+  int advances = 0;
   TutorialStep current =
       const TutorialStep(TutorialChapter.dashboard, 'test', target: 'test');
   @override
@@ -35,6 +36,11 @@ class _Tour extends TutorialService {
   void completeRequiredAction(String target) {
     if (target == step.target) completed = true;
     refresh();
+  }
+
+  @override
+  Future<void> next() async {
+    advances++;
   }
 
   void refresh() => notifyListeners();
@@ -212,6 +218,7 @@ void main() {
           ]),
           isTrue);
       expect(tour.canContinue, isTrue);
+      expect(tour.advances, 1);
       expect(tour.isCreatedReminder(day, saved), isTrue);
       tour.completed = false;
       tour.current = TutorialStep(TutorialChapter.dashboard,
@@ -221,6 +228,7 @@ void main() {
       expect(tour.canContinue, isFalse);
       tour.reminderDeleted(saved.id);
       expect(tour.canContinue, isTrue);
+      expect(tour.advances, 2);
       expect(tour.isCreatedReminder(day, saved), isFalse);
     });
   }

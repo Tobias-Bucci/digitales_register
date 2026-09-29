@@ -347,6 +347,7 @@ class TutorialService extends ChangeNotifier {
           _pendingReminderDay = null;
           _pendingReminderText = null;
           completeRequiredAction('dashboard-reminder');
+          unawaited(next());
           return true;
         }
       }
@@ -364,6 +365,7 @@ class TutorialService extends ChangeNotifier {
     _createdReminderId = null;
     _createdReminderDay = null;
     completeRequiredAction('dashboard-created-reminder');
+    unawaited(next());
   }
 
   Future<bool> isChapterCompleted(TutorialChapter chapter) async =>
