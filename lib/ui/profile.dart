@@ -118,7 +118,8 @@ class _ProfileState extends State<Profile> {
       return l10n.text('profile.biometricChecking');
     }
     return switch (_biometricAvailability!) {
-      CanAuthenticateResponse.success => l10n.text('profile.biometricAvailable'),
+      CanAuthenticateResponse.success =>
+        l10n.text('profile.biometricAvailable'),
       CanAuthenticateResponse.errorHwUnavailable =>
         l10n.text('profile.biometricHwUnavailable'),
       CanAuthenticateResponse.errorNoBiometricEnrolled =>
@@ -213,6 +214,7 @@ class _ProfileState extends State<Profile> {
   @override
   Widget build(BuildContext context) {
     final profileState = widget.profileState;
+    final name = profileState.name;
     final imageUrl = buildProfilePictureUrl(
       baseUrl: widget.baseUrl,
       picture: profileState.picture,
@@ -222,7 +224,7 @@ class _ProfileState extends State<Profile> {
       appBar: AppBar(
         title: Text(context.t('profile.title')),
       ),
-      body: profileState.name == null
+      body: name == null
           ? Center(
               child: widget.noInternet
                   ? const NoInternet()
@@ -234,10 +236,10 @@ class _ProfileState extends State<Profile> {
                 Padding(
                   padding: const EdgeInsets.symmetric(vertical: 16),
                   child: UserProfile(
-                    name: profileState.name!,
-                    username: profileState.username!,
+                    name: name,
+                    username: profileState.username ?? '',
                     role: context.l10n.translateProfileRole(
-                      profileState.roleName!,
+                      profileState.roleName ?? '',
                     ),
                     imageUrl: imageUrl,
                     onUploadProfilePicture: _handleProfilePictureUpload,
@@ -304,14 +306,14 @@ class _ProfileState extends State<Profile> {
                 ),
                 SwitchListTile.adaptive(
                   title: Text(context.t('profile.notificationEmails')),
-                  value: profileState.sendNotificationEmails!,
+                  value: profileState.sendNotificationEmails ?? false,
                   onChanged: widget.noInternet
                       ? null
                       : widget.setSendNotificationEmails,
                 ),
                 ListTile(
                   title: Text(context.t('profile.changeEmail')),
-                  subtitle: Text(profileState.email!),
+                  subtitle: Text(profileState.email ?? ''),
                   trailing: const Icon(Icons.chevron_right),
                   onTap: widget.changeEmail,
                   enabled: !widget.noInternet,

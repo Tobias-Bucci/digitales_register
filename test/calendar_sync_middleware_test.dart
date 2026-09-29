@@ -88,7 +88,9 @@ void main() {
       store: store,
       home: const Scaffold(),
     );
-    await store.actions.settingsActions.calendarSyncEnabled(true);
+    await tester.runAsync(
+      () => store.actions.settingsActions.calendarSyncEnabled(true),
+    );
 
     expect(store.state.settingsState.calendarSyncEnabled, isTrue);
     expect(upsertedTitles, <String>['Erinnerung']);
@@ -157,24 +159,27 @@ void main() {
       home: const Scaffold(),
     );
 
-    await CalendarSyncService.reconcile(store.state);
-    await store.actions.dashboardActions.toggleDone(
-      ToggleDonePayload(
-        (b) => b
-          ..homeworkId = 4
-          ..type = HomeworkType.homework.name
-          ..done = true,
-      ),
-    );
-    await tester.pump();
-    await store.actions.dashboardActions.toggleDone(
-      ToggleDonePayload(
-        (b) => b
-          ..homeworkId = 4
-          ..type = HomeworkType.homework.name
-          ..done = false,
-      ),
-    );
+    await tester.runAsync(() async {
+      await CalendarSyncService.reconcile(store.state);
+      await store.actions.dashboardActions.toggleDone(
+        ToggleDonePayload(
+          (b) => b
+            ..homeworkId = 4
+            ..type = HomeworkType.homework.name
+            ..done = true,
+        ),
+      );
+      await CalendarSyncService.reconcile(store.state);
+      await store.actions.dashboardActions.toggleDone(
+        ToggleDonePayload(
+          (b) => b
+            ..homeworkId = 4
+            ..type = HomeworkType.homework.name
+            ..done = false,
+        ),
+      );
+      await CalendarSyncService.reconcile(store.state);
+    });
     await tester.pump();
 
     expect(deletedIds, <int>[100]);
@@ -219,8 +224,10 @@ void main() {
       home: const Scaffold(),
     );
 
-    await CalendarSyncService.reconcile(store.state);
-    await store.actions.settingsActions.setLanguage(AppLanguage.en.code);
+    await tester.runAsync(() async {
+      await CalendarSyncService.reconcile(store.state);
+      await store.actions.settingsActions.setLanguage(AppLanguage.en.code);
+    });
     await tester.pump();
 
     expect(
@@ -263,8 +270,10 @@ void main() {
       home: const Scaffold(),
     );
 
-    await CalendarSyncService.reconcile(store.state);
-    await store.actions.settingsActions.calendarSyncCalendarId(77);
+    await tester.runAsync(() async {
+      await CalendarSyncService.reconcile(store.state);
+      await store.actions.settingsActions.calendarSyncCalendarId(77);
+    });
     await tester.pump();
 
     expect(upserts, hasLength(2));
