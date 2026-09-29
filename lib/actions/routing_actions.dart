@@ -31,6 +31,7 @@ abstract class RoutingActions extends ReduxActions {
   abstract final ActionDispatcher<String> showRequestPassReset;
   abstract final ActionDispatcher<ShowPassResetPayload> showPassReset;
   abstract final VoidActionDispatcher showAbsences;
+  abstract final VoidActionDispatcher showNotifications;
   abstract final VoidActionDispatcher showSettings;
   abstract final VoidActionDispatcher showGrades;
   abstract final VoidActionDispatcher showGradesChart;

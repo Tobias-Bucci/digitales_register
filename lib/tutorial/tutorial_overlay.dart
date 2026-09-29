@@ -13,11 +13,15 @@ class TutorialHost extends StatelessWidget {
         animation: service,
         builder: (context, _) => LayoutBuilder(builder: (context, constraints) {
           final wide = constraints.maxWidth >= 950;
+          // The keyboard and the tutorial panel otherwise compete for the
+          // same space, leaving reminder dialogs squeezed above the keyboard.
+          final showPanel =
+              service.active && MediaQuery.viewInsetsOf(context).bottom == 0;
           final panelSize =
               wide ? 320.0 : (constraints.maxHeight * .36).clamp(120.0, 240.0);
           final contentSize = Size(
-            constraints.maxWidth - (service.active && wide ? panelSize : 0),
-            constraints.maxHeight - (service.active && !wide ? panelSize : 0),
+            constraints.maxWidth - (showPanel && wide ? panelSize : 0),
+            constraints.maxHeight - (showPanel && !wide ? panelSize : 0),
           );
           // Keep the Navigator at the same tree position across start/stop/resize.
           return Flex(
@@ -28,7 +32,7 @@ class TutorialHost extends StatelessWidget {
                   data: MediaQuery.of(context).copyWith(size: contentSize),
                   child: child,
                 )),
-                if (service.active)
+                if (showPanel)
                   SizedBox(
                     width: wide ? panelSize : null,
                     height: wide ? null : panelSize,

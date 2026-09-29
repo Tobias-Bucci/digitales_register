@@ -23,6 +23,7 @@ import 'package:dr/actions/dashboard_actions.dart';
 import 'package:dr/actions/grades_actions.dart';
 import 'package:dr/actions/login_actions.dart';
 import 'package:dr/actions/messages_actions.dart';
+import 'package:dr/actions/notifications_actions.dart';
 import 'package:dr/actions/profile_actions.dart';
 import 'package:dr/actions/routing_actions.dart';
 import 'package:dr/actions/save_pass_actions.dart';
@@ -51,6 +52,7 @@ abstract class AppActions extends ReduxActions {
   abstract final DashboardActions dashboardActions;
   abstract final GradesActions gradesActions;
   abstract final LoginActions loginActions;
+  abstract final NotificationsActions notificationsActions;
   abstract final RoutingActions routingActions;
   abstract final SavePassActions savePassActions;
   abstract final SettingsActions settingsActions;

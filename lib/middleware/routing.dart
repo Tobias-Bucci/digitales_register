@@ -42,6 +42,7 @@ final routingMiddleware =
       ..add(RoutingActionsNames.showPassReset, _showPassReset)
       ..add(RoutingActionsNames.showChangeEmail, _showChangeEmail)
       ..add(RoutingActionsNames.showProfile, _showProfile)
+      ..add(RoutingActionsNames.showNotifications, _showNotifications)
       ..add(RoutingActionsNames.showSettings, _showSettings)
       ..add(RoutingActionsNames.showDebug, _showDebug)
       ..add(RoutingActionsNames.showEditCalendarSubjectNicks,
@@ -108,6 +109,14 @@ Future<void> _showProfile(
     Action<void> action) async {
   unawaited(navigatorKey!.currentState!.pushNamed("/profile"));
   await api.actions.profileActions.load();
+  await next(action);
+}
+
+Future<void> _showNotifications(
+    MiddlewareApi<AppState, AppStateBuilder, AppActions> api,
+    ActionHandler next,
+    Action<void> action) async {
+  unawaited(navigatorKey!.currentState!.pushNamed("/notifications"));
   await next(action);
 }
 

@@ -181,6 +181,7 @@ class _PersistedStateIdentity {
     required this.settingsOnly,
     required this.settingsState,
     this.dashboardState,
+    this.notificationState,
     this.gradesState,
     this.absencesState,
     this.profileState,
@@ -198,6 +199,7 @@ class _PersistedStateIdentity {
       settingsOnly: settingsOnly,
       settingsState: state.settingsState,
       dashboardState: settingsOnly ? null : state.dashboardState,
+      notificationState: settingsOnly ? null : state.notificationState,
       gradesState: settingsOnly ? null : state.gradesState,
       absencesState: settingsOnly ? null : state.absencesState,
       profileState: settingsOnly ? null : state.profileState,
@@ -210,6 +212,7 @@ class _PersistedStateIdentity {
   final bool settingsOnly;
   final SettingsState settingsState;
   final DashboardState? dashboardState;
+  final NotificationState? notificationState;
   final GradesState? gradesState;
   final AbsencesState? absencesState;
   final ProfileState? profileState;
@@ -221,6 +224,7 @@ class _PersistedStateIdentity {
     return settingsOnly == other.settingsOnly &&
         identical(settingsState, other.settingsState) &&
         identical(dashboardState, other.dashboardState) &&
+        identical(notificationState, other.notificationState) &&
         identical(gradesState, other.gradesState) &&
         identical(absencesState, other.absencesState) &&
         identical(profileState, other.profileState) &&
@@ -238,6 +242,7 @@ class _PersistedStateIdentity {
         AppState(
           (b) => b
             ..dashboardState.replace(dashboardState!)
+            ..notificationState.replace(notificationState!)
             ..gradesState.replace(gradesState!)
             ..absencesState.replace(absencesState!)
             ..settingsState.replace(settingsState)

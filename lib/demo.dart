@@ -173,6 +173,10 @@ class _DemoStore {
         return _updateProfile(args);
       case 'api/profile/updateCodiceFiscale':
         return _updateCodiceFiscale(args);
+      case 'api/notification/unread':
+        return _buildUnreadNotifications();
+      case 'api/notification/markAsRead':
+        return _markNotificationAsRead(args);
       case 'api/message/getMyMessages':
         return _buildMessages();
       case 'api/message/markAsRead':
@@ -267,6 +271,16 @@ class _DemoStore {
           'submissions': <Map<String, dynamic>>[],
         },
       ],
+      'generalNotifications': <Map<String, dynamic>>[
+        <String, dynamic>{
+          'id': 4001,
+          'kind': 'localMode',
+          'type': 'generic',
+          'objectId': null,
+          'timeSent': _isoDateTime(_today()),
+          'read': false,
+        },
+      ],
     };
   }
 
@@ -313,6 +327,9 @@ class _DemoStore {
 
   List<Map<String, dynamic>> get _messages =>
       (_state['messages'] as List).cast<Map<String, dynamic>>();
+
+  List<Map<String, dynamic>> get _generalNotifications =>
+      (_state['generalNotifications'] as List).cast<Map<String, dynamic>>();
 
   DemoAssessmentSettings get assessmentSettings {
     final raw = _state['assessmentSettings'] as Map<String, dynamic>? ??
@@ -740,6 +757,71 @@ class _DemoStore {
       'error': null,
       'message': 'Steuernummer gespeichert',
     };
+  }
+
+  List<Map<String, Object?>> _buildUnreadNotifications() {
+    final notifications = <Map<String, Object?>>[];
+    for (final notification in _generalNotifications) {
+      if (notification['read'] == true) {
+        continue;
+      }
+      notifications.add(
+        <String, Object?>{
+          'id': notification['id'] as int,
+          'title': switch (notification['kind']) {
+            'localMode' => _text('notificationLocalModeTitle'),
+            _ => _text('messageFallbackSubject'),
+          },
+          'type': notification['type'] as String,
+          'objectId': notification['objectId'] as int?,
+          'subTitle': switch (notification['kind']) {
+            'localMode' => _text('notificationLocalModeSubtitle'),
+            _ => '',
+          },
+          'timeSent': notification['timeSent'] as String,
+        },
+      );
+    }
+    for (final message in _messages) {
+      if (message['timeRead'] != null) {
+        continue;
+      }
+      notifications.add(
+        <String, Object?>{
+          'id': 5000 + (message['id'] as int),
+          'title': _messageSubject(message),
+          'type': 'message',
+          'objectId': message['id'] as int,
+          'subTitle': _messageSender(message),
+          'timeSent': message['timeSent'] as String,
+        },
+      );
+    }
+    notifications.sort(
+      (a, b) =>
+          (b['timeSent'] as String?)!.compareTo((a['timeSent'] as String?)!),
+    );
+    return notifications;
+  }
+
+  Map<String, Object?> _markNotificationAsRead(Map<String, Object?> args) {
+    final id = args['id'] as int?;
+    if (id == null) {
+      for (final notification in _generalNotifications) {
+        notification['read'] = true;
+      }
+      for (final message in _messages) {
+        message['timeRead'] ??= _isoDateTime(_today());
+      }
+    } else {
+      for (final notification in _generalNotifications) {
+        if (notification['id'] == id) {
+          notification['read'] = true;
+        }
+      }
+    }
+    _persistSync();
+    return <String, Object?>{'success': true};
   }
 
   List<Map<String, Object?>> _buildMessages() {
@@ -2360,6 +2442,18 @@ const Map<String, Map<String, String>> _demoTranslations =
     'en': 'This is a locally generated demo message.',
     'it': 'Questo è un messaggio demo generato localmente.',
     'lld': 'Chësc é n mesaj demo generé localmënter.',
+  },
+  'notificationLocalModeTitle': {
+    'de': 'Demo-Hinweis',
+    'en': 'Demo note',
+    'it': 'Nota demo',
+    'lld': 'Nota demo',
+  },
+  'notificationLocalModeSubtitle': {
+    'de': 'Dieses Konto funktioniert vollständig lokal.',
+    'en': 'This account works fully offline and locally.',
+    'it': 'Questo account funziona interamente in locale.',
+    'lld': 'Chësc account laora daldöt local.',
   },
   'certificateHeading': {
     'de': 'Demo-Zeugnis',

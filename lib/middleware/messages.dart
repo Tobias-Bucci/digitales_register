@@ -118,6 +118,7 @@ Future<void> _markAsRead(
 ) async {
   await next(action);
   _markRuntimeCacheStale(_messagesCacheKey);
+  _markRuntimeCacheStale(_notificationsCacheKey);
   await wrapper.send(
     "api/message/markAsRead",
     args: {"messageId": action.payload},

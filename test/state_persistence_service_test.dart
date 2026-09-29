@@ -31,10 +31,21 @@ void main() {
     expect(serializers.deserialize(serialized), isA<SettingsState>());
   });
 
-  test('saved app state ignores the removed notification inbox', () {
+  test('saved app state includes the notification inbox', () {
+    final state = AppState();
+    final serialized = serializers.serialize(state);
+
+    expect((serializers.deserialize(serialized) as AppState).notificationState,
+        state.notificationState);
+  });
+
+  test('saved app state without an inbox loads after the upgrade', () {
     final serialized = List<Object?>.from(
       serializers.serialize(AppState())! as List,
-    )..addAll(['notificationState', <Object?>[]]);
+    );
+    final index = serialized.indexOf('notificationState');
+    expect(index, greaterThanOrEqualTo(0));
+    serialized.removeRange(index, index + 2);
 
     expect(serializers.deserialize(serialized), isA<AppState>());
   });

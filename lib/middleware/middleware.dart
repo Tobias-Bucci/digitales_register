@@ -33,6 +33,7 @@ import 'package:dr/actions/dashboard_actions.dart';
 import 'package:dr/actions/grades_actions.dart';
 import 'package:dr/actions/login_actions.dart';
 import 'package:dr/actions/messages_actions.dart';
+import 'package:dr/actions/notifications_actions.dart';
 import 'package:dr/actions/profile_actions.dart';
 import 'package:dr/actions/routing_actions.dart';
 import 'package:dr/actions/save_pass_actions.dart';
@@ -68,7 +69,7 @@ import 'package:dr/util.dart';
 import 'package:dr/wrapper.dart';
 import 'package:file_picker/file_picker.dart';
 import 'package:flutter/gestures.dart';
-import 'package:flutter/material.dart' hide Action;
+import 'package:flutter/material.dart' hide Action, Notification;
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:image/image.dart' as image;
 import 'package:intl/intl.dart';
@@ -86,6 +87,7 @@ part 'dashboard.dart';
 part 'grades.dart';
 part 'login.dart';
 part 'messages.dart';
+part 'notifications.dart';
 part 'pass.dart';
 part 'profile.dart';
 part 'routing.dart';
@@ -101,6 +103,7 @@ final AndroidWidgetSnapshotService androidWidgetSnapshotService =
 Duration noInternetRetryInterval = const Duration(seconds: 5);
 
 const Duration _dashboardCacheTtl = Duration(seconds: 45);
+const Duration _notificationsCacheTtl = Duration(seconds: 30);
 const Duration _profileCacheTtl = Duration(minutes: 5);
 const Duration _calendarCacheTtl = Duration(minutes: 5);
 const Duration _gradesCacheTtl = Duration(minutes: 1);
@@ -118,6 +121,7 @@ String _dashboardCacheKey(bool future) => 'dashboard:$future';
 String _calendarCacheKey(UtcDateTime monday) =>
     'calendar:${monday.stripTime().toIso8601String()}';
 
+const String _notificationsCacheKey = 'notifications';
 const String _profileCacheKey = 'profile';
 const String _messagesCacheKey = 'messages';
 const String _absencesCacheKey = 'absences';
@@ -651,6 +655,7 @@ List<Middleware<AppState, AppStateBuilder, AppActions>> middleware({
             ..combine(_dashboardMiddleware)
             ..combine(_gradesMiddleware)
             ..combine(_loginMiddleware)
+            ..combine(_notificationsMiddleware)
             ..combine(_passMiddleware)
             ..combine(routingMiddleware)
             ..combine(_certificateMiddleware)
@@ -927,7 +932,11 @@ Future<void> _refresh(
 ) async {
   await next(action);
   _markRuntimeCacheStale(_dashboardCacheKey(api.state.dashboardState.future));
-  await api.actions.dashboardActions.load(api.state.dashboardState.future);
+  _markRuntimeCacheStale(_notificationsCacheKey);
+  await Future.wait([
+    api.actions.dashboardActions.load(api.state.dashboardState.future),
+    api.actions.notificationsActions.load(),
+  ]);
 }
 
 Future<void> _loggedIn(
@@ -1013,6 +1022,7 @@ Future<void> _loggedIn(
   if (!action.payload.offlineOnly) {
     await Future.wait([
       api.actions.dashboardActions.load(api.state.dashboardState.future),
+      api.actions.notificationsActions.load(),
       api.actions.profileActions.load(),
     ]);
     unawaited(_ensureSubstituteTeacherHistoryLoaded(api));

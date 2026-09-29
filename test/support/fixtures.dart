@@ -19,7 +19,7 @@ import 'package:built_collection/built_collection.dart';
 import 'package:dr/app_state.dart';
 import 'package:dr/data.dart';
 import 'package:dr/utc_date_time.dart';
-import 'package:flutter/material.dart';
+import 'package:flutter/material.dart' hide Notification;
 
 final UtcDateTime fixtureNow = UtcDateTime(2026, 3, 28, 12);
 
@@ -78,6 +78,25 @@ Day buildDay({
       ..homework = ListBuilder<Homework>(homework)
       ..deletedHomework = ListBuilder<Homework>(deletedHomework)
       ..lastRequested = lastRequested ?? fixtureNow,
+  );
+}
+
+Notification buildNotification({
+  int id = 1,
+  String title = 'Benachrichtigung',
+  String? subTitle,
+  String? type,
+  int? objectId,
+  UtcDateTime? timeSent,
+}) {
+  return Notification(
+    (b) => b
+      ..id = id
+      ..title = title
+      ..subTitle = subTitle
+      ..type = type
+      ..objectId = objectId
+      ..timeSent = timeSent ?? fixtureNow,
   );
 }
 

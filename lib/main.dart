@@ -35,6 +35,7 @@ import 'package:dr/biometric_app_lock.dart';
 import 'package:dr/container/change_email_container.dart';
 import 'package:dr/container/home_page.dart';
 import 'package:dr/container/login_page.dart';
+import 'package:dr/container/notifications_page_container.dart';
 import 'package:dr/container/pass_reset_container.dart';
 import 'package:dr/container/profile_container.dart';
 import 'package:dr/container/request_pass_reset_container.dart';
@@ -290,6 +291,12 @@ class RegisterApp extends StatelessWidget {
                     return MaterialPageRoute<void>(
                       settings: settings,
                       builder: (_) => ProfileContainer(),
+                    );
+                  case "notifications":
+                    return MaterialPageRoute<void>(
+                      settings: settings,
+                      builder: (_) => NotificationPageContainer(),
+                      fullscreenDialog: true,
                     );
                   case "gradesChart":
                     return MaterialPageRoute<void>(

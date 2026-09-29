@@ -69,6 +69,7 @@ void main() {
         ..noInternet = false
         ..loading = false
         ..showAddReminder = true
+        ..showNotifications = false
         ..colorBorders = false
         ..colorTestsInRed = false
         ..subjectThemes = MapBuilder<String, SubjectTheme>()

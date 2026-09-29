@@ -27,6 +27,7 @@ import 'package:dr/reducer/grades.dart';
 import 'package:dr/reducer/login.dart';
 import 'package:dr/reducer/messages.dart';
 import 'package:dr/reducer/network_protocol.dart';
+import 'package:dr/reducer/notifications.dart';
 import 'package:dr/reducer/profile_reducer.dart';
 import 'package:dr/reducer/settings.dart';
 import 'package:dr/util.dart';
@@ -43,6 +44,7 @@ final appReducerBuilder = ReducerBuilder<AppState, AppStateBuilder>()
   ..combineNested(gradesReducerBuilder)
   ..combineNested(loginReducerBuilder)
   ..combineNested(networkProtocolReducerBuilder)
+  ..combineNested(notificationsReducerBuilder)
   ..combineNested(settingsReducerBuilder)
   ..combineNested(certificateReducerBuilder)
   ..combineNested(profileReducerBuilder)

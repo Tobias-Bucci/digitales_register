@@ -121,6 +121,7 @@ abstract class DaysViewModel
   bool get colorTestsInRed;
   BuiltMap<String, SubjectTheme> get subjectThemes;
 
+  bool get showNotifications;
   BuiltList<Day> get days;
   BuiltList<Day> get schoolTimelineDays;
   BuiltList<CalendarDay> get schoolTimelineCalendarDays;
@@ -145,6 +146,8 @@ abstract class DaysViewModel
         ..askWhenDelete = state.settingsState.askWhenDelete
         ..showAddReminder =
             !state.dashboardState.blacklist!.contains(HomeworkType.homework)
+        ..showNotifications =
+            (state.notificationState.notifications?.length ?? 0) > 0
         ..favoriteSubjects = state.settingsState.favoriteSubjects.toBuilder()
         ..allSubjects = state.extractAllSubjects().toBuiltList().toBuilder()
         ..colorBorders = state.settingsState.dashboardColorBorders

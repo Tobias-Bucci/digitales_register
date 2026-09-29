@@ -3,6 +3,7 @@ import 'package:dr/i18n/app_localizations.dart';
 import 'package:dr/tutorial/tutorial_overlay.dart';
 import 'package:dr/tutorial/tutorial_service.dart';
 import 'package:dr/tutorial/tutorial_target.dart';
+import 'package:dr/ui/days.dart';
 import 'package:dr/utc_date_time.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
@@ -113,6 +114,47 @@ void main() {
       await tester.pumpAndSettle();
       expect(find.text('Dialog'), findsNothing);
       expect(tester.takeException(), isNull);
+    });
+  }
+
+  for (final initialMessage in ['', '/cw ']) {
+    testWidgets(
+        '${initialMessage.isEmpty ? 'reminder' : 'classwork'} dialog gets the full space above the keyboard',
+        (tester) async {
+      tester.view.physicalSize = const Size(360, 800);
+      tester.view.devicePixelRatio = 1;
+      addTearDown(tester.view.resetPhysicalSize);
+      addTearDown(tester.view.resetDevicePixelRatio);
+      addTearDown(tester.view.resetViewInsets);
+      final tour = _Tour();
+      await tester.pumpWidget(app(
+        tour,
+        Center(
+          child: Builder(
+            builder: (context) => ElevatedButton(
+              onPressed: () => showEnterReminderDialog(
+                context,
+                initialMessage: initialMessage,
+              ),
+              child: const Text('Add reminder'),
+            ),
+          ),
+        ),
+      ));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('Add reminder'));
+      await tester.pumpAndSettle();
+
+      tester.view.viewInsets = const FakeViewPadding(bottom: 300);
+      await tester.pumpAndSettle();
+      expect(find.text('next'), findsNothing);
+      expect(tester.getRect(find.byType(TextField)).bottom,
+          lessThanOrEqualTo(500));
+      expect(tester.takeException(), isNull);
+
+      tester.view.resetViewInsets();
+      await tester.pumpAndSettle();
+      expect(find.text('next'), findsOneWidget);
     });
   }
 
