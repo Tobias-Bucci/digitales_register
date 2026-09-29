@@ -18,10 +18,11 @@
 
 import 'package:dr/container/certificate_container.dart';
 import 'package:dr/i18n/app_localizations.dart';
+import 'package:dr/tutorial/tutorial_target.dart';
+import 'package:dr/ui/certificate_image_factory.dart';
 import 'package:dr/ui/last_fetched_overlay.dart';
 import 'package:dr/ui/no_internet.dart';
 import 'package:flutter/material.dart';
-import 'package:dr/tutorial/tutorial_target.dart';
 import 'package:flutter_widget_from_html_core/flutter_widget_from_html_core.dart';
 import 'package:responsive_scaffold/responsive_scaffold.dart';
 
@@ -31,6 +32,13 @@ class Certificate extends StatelessWidget {
   const Certificate({super.key, required this.vm});
   @override
   Widget build(BuildContext context) {
+    final parsedBaseUrl = Uri.tryParse(vm.baseUrl ?? '');
+    final baseUrl = parsedBaseUrl != null &&
+            (parsedBaseUrl.scheme == 'http' ||
+                parsedBaseUrl.scheme == 'https') &&
+            parsedBaseUrl.host.isNotEmpty
+        ? parsedBaseUrl
+        : null;
     return Scaffold(
       appBar: ResponsiveAppBar(
           title: TutorialTarget(
@@ -48,7 +56,11 @@ class Certificate extends StatelessWidget {
               child: SingleChildScrollView(
                 child: Padding(
                   padding: const EdgeInsets.all(8),
-                  child: HtmlWidget(vm.html!),
+                  child: HtmlWidget(
+                    vm.html!,
+                    baseUrl: baseUrl,
+                    factoryBuilder: () => CertificateImageFactory(baseUrl),
+                  ),
                 ),
               ),
             ),

@@ -29,6 +29,7 @@ class CertificateContainer extends StatelessWidget {
       connect: (state) {
         return CertificateViewModel(
           html: state.certificateState.html,
+          baseUrl: state.url,
           noInternet: state.noInternet,
           lastFetched: state.certificateState.lastFetched,
         );
@@ -42,11 +43,13 @@ class CertificateContainer extends StatelessWidget {
 
 class CertificateViewModel {
   final String? html;
+  final String? baseUrl;
   final UtcDateTime? lastFetched;
   final bool noInternet;
 
   const CertificateViewModel({
     required this.html,
+    required this.baseUrl,
     required this.noInternet,
     required this.lastFetched,
   });
@@ -56,10 +59,11 @@ class CertificateViewModel {
     return identical(this, other) ||
         other is CertificateViewModel &&
             other.html == html &&
+            other.baseUrl == baseUrl &&
             other.lastFetched == lastFetched &&
             other.noInternet == noInternet;
   }
 
   @override
-  int get hashCode => Object.hash(html, lastFetched, noInternet);
+  int get hashCode => Object.hash(html, baseUrl, lastFetched, noInternet);
 }
