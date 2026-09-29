@@ -6,6 +6,49 @@ import 'package:flutter_test/flutter_test.dart';
 
 void main() {
   test(
+    'login fails gracefully when the config request returns a full login page',
+    () async {
+      final server = await HttpServer.bind(InternetAddress.loopbackIPv4, 0);
+      addTearDown(server.close);
+
+      server.listen((request) async {
+        if (request.uri.path == '/v2/api/auth/login' &&
+            request.method == 'POST') {
+          request.response.headers.contentType = ContentType.json;
+          request.response.write(json.encode({'loggedIn': true}));
+        } else if (request.uri.path == '/v2/' && request.method == 'GET') {
+          request.response.headers.contentType = ContentType.html;
+          request.response.write('''
+<!DOCTYPE html>
+<html lang="de"><head><title>Login</title></head>
+<body><form action="/v2/login"></form></body></html>
+''');
+        } else {
+          request.response.statusCode = HttpStatus.notFound;
+        }
+        await request.response.close();
+      });
+
+      final wrapper = Wrapper(allowInsecureConnections: true);
+      final result = await wrapper.login(
+        'user',
+        'pass',
+        null,
+        'http://127.0.0.1:${server.port}',
+        logout: () {},
+        configLoaded: () {},
+        relogin: () {},
+        addProtocolItem: (_) {},
+      );
+
+      expect(result, isNull);
+      expect(await wrapper.loggedIn, isFalse);
+      expect(wrapper.error,
+          contains('Die Sitzung wurde direkt nach dem Login beendet.'));
+    },
+  );
+
+  test(
     'login fails gracefully when the config page redirects back to login',
     () async {
       final server = await HttpServer.bind(InternetAddress.loopbackIPv4, 0);

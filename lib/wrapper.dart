@@ -477,18 +477,23 @@ class Wrapper {
   }
 
   Future<void> _loadConfig() async {
-    final source = (await _runRequest(
+    final response = await _runRequest(
       "load_config",
       () => dio.get<String>(baseAddress),
       allowSingleRetry: true,
-    ))
-        .data;
+    );
+    final source = response.data;
     if (source == null) {
       throw const AppRequestException(
         message: "Die Konfigurationsseite konnte nicht geladen werden.",
       );
     }
-    if (_isLoginRedirectPage(source)) {
+    if (_isLoginPage(source)) {
+      logPerformanceEvent("config_login_page", <String, Object?>{
+        "statusCode": response.statusCode,
+        "contentType": response.headers.value(Headers.contentTypeHeader),
+        "path": response.realUri.path,
+      });
       throw UnexpectedLogoutException();
     }
     config = parseConfig(source);
@@ -496,7 +501,7 @@ class Wrapper {
 
   static Config parseConfig(String source) {
     return tryParse(source, (source) {
-      if (_isLoginRedirectPage(source)) {
+      if (_isLoginPage(source)) {
         throw const FormatException(
           "Received login redirect page instead of the expected config page.",
         );
@@ -524,6 +529,13 @@ class Wrapper {
     return RegExp(
       r'^[\s\n]*<script type="text/javascript">\n?\s*window\.location = "https://.+\.digitalesregister.it/v2/login";\n?\s*</script>[\s\n]*$',
     ).hasMatch(source);
+  }
+
+  static bool _isLoginPage(String source) {
+    return _isLoginRedirectPage(source) ||
+        (RegExp(r'<html\b', caseSensitive: false).hasMatch(source) &&
+            RegExp(r'<title\b[^>]*>\s*Login\s*</title>', caseSensitive: false)
+                .hasMatch(source));
   }
 
   static String _readAssignmentValue(String source, String key) {
@@ -732,7 +744,7 @@ class Wrapper {
     //window.location = "https://vinzentinum.digitalesregister.it/v2/login";
     //</script>
 
-    if (responseData is String && _isLoginRedirectPage(responseData)) {
+    if (responseData is String && _isLoginPage(responseData)) {
       // This is a very frequently reported bug, but I don't have an idea as to why this is happening.
       // Possible causes might be that the user's time is off, or the user might be trying to log in from a different device at the same time.
 
@@ -883,14 +895,25 @@ class Wrapper {
     if (demoMode) return;
     if (_serverLogoutTime == null) return;
 
-    final result = getMap(
-      await send(
-        "api/auth/extendSession",
-        args: <String, Object?>{
-          "lastAction": lastInteraction.millisecondsSinceEpoch ~/ 1000,
-        },
-      ),
-    );
+    Map? result;
+    try {
+      result = getMap(
+        await send(
+          "api/auth/extendSession",
+          args: <String, Object?>{
+            "lastAction": lastInteraction.millisecondsSinceEpoch ~/ 1000,
+          },
+        ),
+      );
+    } catch (error, trace) {
+      log("Session refresh failed: ${error.runtimeType}", stackTrace: trace);
+      logPerformanceEvent("session_refresh_failed", <String, Object?>{
+        "reason": error.runtimeType.toString(),
+        "forcedLogout": true,
+      });
+      logout(hard: safeMode, logoutForcedByServer: true);
+      return;
+    }
     if (result == null) {
       logPerformanceEvent(
         "session_refresh_failed",
