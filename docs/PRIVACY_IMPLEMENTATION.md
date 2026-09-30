@@ -1,6 +1,19 @@
+# Version 4 privacy update — 2026-09-30
+
+The authoritative current notice version is **4**. The original version-3 audit below is preserved as historical context; its all-or-nothing consent description and statement that no new product Analytics exists are superseded by this update.
+
+There is still one `PrivacyController` and one atomic `privacyDecision` record. It now contains separate diagnostic, usage and academic choices plus local-only coarse age eligibility. Old decisions are not carried forward. Unknown/under14 eligibility cannot authorize optional telemetry. Information/customization views do not themselves create consent. Diagnostics and usage gates are independent; academic summaries require usage plus academic consent and a safe identity.
+
+Usage revocation closes the app gate synchronously, clears User-ID and every custom Analytics property, disables collection/storage consent and resets local Analytics data. Uploaded history is not automatically deleted. Native bootstrap/default-off behavior and sanitized Crashlytics handlers remain. Apple targets explicitly deny Analytics storage by default and select the Analytics Core dependency without advertising-ID support.
+
+See [the complete implementation report](ANALYTICS_IMPLEMENTATION.md), [manual Firebase configuration](FIREBASE_ANALYTICS_CONSOLE_CONFIGURATION.md), [BigQuery examples](ANALYTICS_BIGQUERY_EXAMPLES.md) and [school ID reservations](analytics_school_mapping.csv). Final verification results are recorded in the new report.
+
+---
+
+## Historical version-3 audit
 # Privacy and diagnostics implementation audit
 
-Implemented 2026-09-30. Current notice version: **3**. This document records implementation and verification, not a claim that Firebase Console or physical-device checks have been completed.
+Implemented 2026-09-30. Baseline notice version: **3** (historical; superseded by version 4). This document records implementation and verification, not a claim that Firebase Console or physical-device checks have been completed.
 
 ## A. Summary
 

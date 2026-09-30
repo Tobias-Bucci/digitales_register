@@ -67,7 +67,7 @@ void main() {
           timestamp: DateTime.utc(2026),
           reportsPurged: true);
       final result = PrivacyDecision.deserialize(decision.serialize());
-      expect(result.state, state);
+      expect(result.state, decision.state);
       expect(result.version, currentPrivacyNoticeVersion);
       expect(result.timestamp, decision.timestamp);
       expect(result.completed, true);
@@ -92,7 +92,11 @@ void main() {
   });
   test('allow deletes BEFORE persist and enable; revoke stops gate first',
       () async {
-    await controller.choose(TelemetryConsentState.allAllowed);
+    await controller.chooseGranular(
+        diagnostics: ConsentChoice.granted,
+        usage: ConsentChoice.granted,
+        academic: ConsentChoice.granted,
+        age: AnalyticsAgeEligibility.atLeast14);
     expect(calls, [
       'gate:false',
       'analytics:false',
@@ -109,7 +113,11 @@ void main() {
     expect(calls,
         ['gate:false', 'analytics:false', 'crash:false', 'delete', 'persist']);
     calls.clear();
-    await controller.choose(TelemetryConsentState.allAllowed);
+    await controller.chooseGranular(
+        diagnostics: ConsentChoice.granted,
+        usage: ConsentChoice.granted,
+        academic: ConsentChoice.granted,
+        age: AnalyticsAgeEligibility.atLeast14);
     expect(calls.indexOf('delete'), lessThan(calls.indexOf('crash:true')));
   });
   test('existing installation needs update; old notice never enables',
@@ -123,12 +131,20 @@ void main() {
     expect(controller.existingInstallation, true);
     expect(controller.decision.isCurrent, false);
     expect(calls.contains('crash:true'), false);
-    await controller.choose(TelemetryConsentState.allAllowed);
+    await controller.chooseGranular(
+        diagnostics: ConsentChoice.granted,
+        usage: ConsentChoice.granted,
+        academic: ConsentChoice.granted,
+        age: AnalyticsAgeEligibility.atLeast14);
     expect(controller.decision.version, currentPrivacyNoticeVersion);
   });
   test('restart retains valid allowed reports and required-only decision',
       () async {
-    await controller.choose(TelemetryConsentState.allAllowed);
+    await controller.chooseGranular(
+        diagnostics: ConsentChoice.granted,
+        usage: ConsentChoice.granted,
+        academic: ConsentChoice.granted,
+        age: AnalyticsAgeEligibility.atLeast14);
     calls.clear();
     await controller.initialize();
     expect(calls.contains('delete'), false);
@@ -141,7 +157,11 @@ void main() {
   });
   test('failed purge cannot enable, including on restart', () async {
     sdk.failDelete = true;
-    await controller.choose(TelemetryConsentState.allAllowed);
+    await controller.chooseGranular(
+        diagnostics: ConsentChoice.granted,
+        usage: ConsentChoice.granted,
+        academic: ConsentChoice.granted,
+        age: AnalyticsAgeEligibility.atLeast14);
     expect(store.value.state, TelemetryConsentState.allAllowed);
     expect(controller.sdkReady, false);
     expect(calls.contains('crash:true'), false);
@@ -163,12 +183,21 @@ void main() {
       () async {
     store.fail = true;
     await expectLater(
-        controller.choose(TelemetryConsentState.allAllowed), throwsStateError);
+        controller.chooseGranular(
+            diagnostics: ConsentChoice.granted,
+            usage: ConsentChoice.granted,
+            academic: ConsentChoice.granted,
+            age: AnalyticsAgeEligibility.atLeast14),
+        throwsStateError);
     expect(calls.contains('crash:true'), false);
     store.fail = false;
     calls.clear();
     final first = controller.choose(TelemetryConsentState.requiredOnly);
-    final second = controller.choose(TelemetryConsentState.allAllowed);
+    final second = controller.chooseGranular(
+        diagnostics: ConsentChoice.granted,
+        usage: ConsentChoice.granted,
+        academic: ConsentChoice.granted,
+        age: AnalyticsAgeEligibility.atLeast14);
     await Future.wait([first, second]);
     expect(controller.decision.state, TelemetryConsentState.requiredOnly);
     expect(calls.where((e) => e == 'persist'), hasLength(1));

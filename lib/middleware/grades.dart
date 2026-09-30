@@ -56,26 +56,55 @@ Future<void> _loadGrades(
       .where((semester) => !_hasFreshBasicGrades(api.state, semester))
       .toList();
   if (staleSemesters.isEmpty) {
+    unawaited(AnalyticsService.product
+        .event('cache_result', {'feature': 'grades', 'result': 'hit'}));
+    await submitAcademicSummary(api.state);
     return;
   }
 
   await next(action);
   _doForSemester(staleSemesters, (s) async {
+    final product = AnalyticsService.product;
+    final localOwner = jsonEncode([wrapper.url, api.state.loginState.username]);
+    final epoch = product.sessionEpoch;
+    final stopwatch = Stopwatch()..start();
     final dynamic data = await wrapper.send(
       _subjects,
       args: {"studentId": api.state.config!.userId},
     );
     if (data == null) {
+      if (product.isSession(epoch)) {
+        unawaited(product.event('refresh_result', {
+          'feature': 'grades',
+          'result': 'failed',
+          'data_source': 'unknown',
+          'duration_bucket': AnalyticsSchema.duration(stopwatch.elapsed)
+        }));
+      }
       await api.actions.gradesActions.loadFailed();
       return;
     }
-    await api.actions.gradesActions.loaded(
-      SubjectsLoadedPayload(
-        (b) => b
-          ..data = data
-          ..semester = s.toBuilder(),
-      ),
-    );
+    product.gradeOwnership.mark(s.n.toString(), localOwner);
+    try {
+      await api.actions.gradesActions.loaded(
+        SubjectsLoadedPayload(
+          (b) => b
+            ..data = data
+            ..semester = s.toBuilder(),
+        ),
+      );
+    } catch (_) {
+      product.gradeOwnership.invalidate(s.n.toString());
+      rethrow;
+    }
+    if (product.isSession(epoch)) {
+      unawaited(product.event('refresh_result', {
+        'feature': 'grades',
+        'result': 'success',
+        'data_source': wrapper.demoMode ? 'local' : 'remote',
+        'duration_bucket': AnalyticsSchema.duration(stopwatch.elapsed)
+      }));
+    }
   });
 }
 

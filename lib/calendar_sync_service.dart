@@ -18,6 +18,9 @@
 import 'dart:async';
 import 'dart:convert';
 import 'dart:developer';
+
+import 'package:dr/analytics_schema.dart';
+import 'package:dr/analytics_service.dart';
 import 'package:dr/app_state.dart';
 import 'package:dr/data.dart';
 import 'package:dr/diagnostics_service.dart';
@@ -167,6 +170,24 @@ extension CalendarSyncService on Never {
     final done = Completer<void>();
     _operationTail = done.future;
     await previous;
+    final product = AnalyticsService.product;
+    final epoch = product.sessionEpoch;
+    final stopwatch = Stopwatch()..start();
+    void reportResult(String result) {
+      if (!product.isSession(epoch)) return;
+      unawaited(product.event('calendar_sync_result', {
+        'result': result,
+        'duration_bucket': AnalyticsSchema.duration(stopwatch.elapsed)
+      }));
+      unawaited(product.event('sync_completed', {
+        'sync_type': 'calendar',
+        'result': result,
+        'duration_bucket': AnalyticsSchema.duration(stopwatch.elapsed)
+      }));
+    }
+
+    unawaited(AnalyticsService.product
+        .event('sync_started', {'sync_type': 'calendar'}));
     try {
       diagnostics.values({
         'background_task': 'sync',
@@ -179,9 +200,11 @@ extension CalendarSyncService on Never {
         diagnostics.update(
             'last_sync_result', result == false ? 'partial' : 'success');
         diagnostics.safeLog('sync_completed');
+        reportResult(result == false ? 'partial' : 'success');
         return result;
       } catch (e, stack) {
         diagnostics.update('last_sync_result', 'failed');
+        reportResult('failed');
         diagnostics.report(e, stack, DiagnosticError.background);
         rethrow;
       }
@@ -589,8 +612,16 @@ extension CalendarSyncService on Never {
       return requestPermissionOverride!();
     }
 
+    final product = AnalyticsService.product;
+    final epoch = product.sessionEpoch;
     final granted = await _calendarSyncMethodChannel
         .invokeMethod<bool>('requestCalendarPermission');
+    if (product.isSession(epoch)) {
+      unawaited(product.event('permission_result', {
+        'permission_type': 'calendar',
+        'result': granted == true ? 'granted' : 'denied'
+      }));
+    }
     return granted ?? false;
   }
 

@@ -1,4 +1,5 @@
 import 'package:dr/actions/app_actions.dart';
+import 'package:dr/analytics_service.dart';
 import 'package:dr/app_clock.dart';
 import 'package:dr/app_state.dart';
 import 'package:dr/grade_history.dart';
@@ -24,6 +25,10 @@ class GradesHistoryContainer extends StatelessWidget {
   }
 
   static void _showHistory(BuildContext context, AppState state) {
+    AnalyticsService.product
+        .event('tab_changed', {'feature': 'grades', 'tab_id': 'history'});
+    AnalyticsService.product.event(
+        'feature_action', {'feature': 'grades', 'action': 'change_view'});
     final comparison = compareGradeSemesters(
       subjects: state.gradesState.subjects,
       currentSemester: Semester.second,

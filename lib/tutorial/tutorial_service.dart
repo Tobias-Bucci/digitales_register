@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'package:dr/analytics_service.dart';
 
 import 'package:dr/app_language_controller.dart';
 import 'package:dr/container/exam_calendar_container.dart';
@@ -56,7 +57,9 @@ class TutorialTargetRegistry {
       context.visitAncestorElements((element) {
         final widget = element.widget;
         if ((widget is Offstage && widget.offstage) ||
-            (widget is Opacity && widget.opacity == 0)) hidden = true;
+            (widget is Opacity && widget.opacity == 0)) {
+          hidden = true;
+        }
         return !hidden;
       });
       if (hidden) continue;
@@ -64,12 +67,15 @@ class TutorialTargetRegistry {
       if (box is! RenderBox ||
           !box.attached ||
           !box.hasSize ||
-          box.size.isEmpty) continue;
+          box.size.isEmpty) {
+        continue;
+      }
       fallback ??= context;
       final rect = _visibleBounds(box);
       if (rect == null) continue;
-      if (rect.overlaps(Offset.zero & MediaQuery.sizeOf(context)))
+      if (rect.overlaps(Offset.zero & MediaQuery.sizeOf(context))) {
         return context;
+      }
     }
     return fallback;
   }
@@ -324,8 +330,9 @@ class TutorialService extends ChangeNotifier {
   String stepBody() => text('step.${step.key}.body');
 
   void reminderSubmitted(Day day, String message) {
-    if (!active || !['reminders', 'assessmentShortcuts'].contains(step.key))
+    if (!active || !['reminders', 'assessmentShortcuts'].contains(step.key)) {
       return;
+    }
     _pendingReminderDay = day.date;
     _pendingReminderText = message;
     _previousReminderIds = day.homework.map((item) => item.id).toSet();
@@ -473,6 +480,8 @@ class TutorialService extends ChangeNotifier {
 
   Future<void> _start(BuildContext context, List<TutorialStep> steps,
       {AppLanguage? language}) async {
+    unawaited(AnalyticsService.product
+        .event('onboarding_step', {'step_id': 'welcome', 'action': 'shown'}));
     await cancel(saveProgress: false);
     final prefs = await SharedPreferences.getInstance();
     final selected = language ?? appLanguageController.language;
@@ -562,6 +571,8 @@ class TutorialService extends ChangeNotifier {
   }
 
   Future<void> _finish() async {
+    unawaited(AnalyticsService.product.event(
+        'onboarding_step', {'step_id': 'complete', 'action': 'completed'}));
     final prefs = await SharedPreferences.getInstance();
     for (final chapter in _active.map((e) => e.chapter).toSet()) {
       await prefs.setBool('$_completedPrefix${chapter.name}', true);
@@ -571,6 +582,10 @@ class TutorialService extends ChangeNotifier {
   }
 
   Future<void> cancel({bool saveProgress = true}) async {
+    if (saveProgress && active) {
+      unawaited(AnalyticsService.product.event(
+          'onboarding_step', {'step_id': 'complete', 'action': 'skipped'}));
+    }
     _tracking?.cancel();
     _tracking = null;
     if (saveProgress && active && _fullTour) {
@@ -591,8 +606,9 @@ class TutorialService extends ChangeNotifier {
   }
 
   String _pageGroup(TutorialStep value) {
-    if (value.key.startsWith('calculator') && value.key != 'calculator')
+    if (value.key.startsWith('calculator') && value.key != 'calculator') {
       return 'calculator';
+    }
     if (value.chapter == TutorialChapter.other) return value.key;
     return value.chapter.name;
   }

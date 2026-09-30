@@ -1,4 +1,4 @@
-﻿// Copyright (C) 2021 Michael Debertol
+// Copyright (C) 2021 Michael Debertol
 // Copyright (C) 2026 Tobias Bucci
 //
 // This file is part of digitales_register.
@@ -17,6 +17,7 @@
 // along with digitales_register.  If not, see <http://www.gnu.org/licenses/>.
 
 import 'package:deleteable_tile/deleteable_tile.dart';
+import 'package:dr/analytics_service.dart';
 import 'package:dr/data.dart';
 import 'package:dr/i18n/app_localizations.dart';
 import 'package:dr/main.dart';
@@ -183,7 +184,11 @@ class NotificationWidget extends StatelessWidget {
                     Icons.exit_to_app,
                   ),
                   tooltip: context.l10n.text('notifications.openMessages'),
-                  onPressed: () => goToMessage(notification.objectId!),
+                  onPressed: () {
+                    AnalyticsService.product.event('notification_opened',
+                        {'notification_type': 'general'});
+                    goToMessage(notification.objectId!);
+                  },
                 )
             ],
           ),

@@ -1,3 +1,4 @@
+import 'package:dr/analytics_service.dart';
 import 'package:dr/i18n/app_localizations.dart';
 import 'package:flutter/material.dart';
 import 'package:url_launcher/url_launcher.dart';
@@ -13,7 +14,14 @@ class PrivacyDataDetailsPage extends StatelessWidget {
     'context': Icons.info_outline,
     'logs': Icons.list_alt,
     'excluded': Icons.shield_outlined,
+    'analyticsExcluded': Icons.shield_outlined,
     'analytics': Icons.analytics_outlined,
+    'identity': Icons.key_outlined,
+    'school': Icons.school_outlined,
+    'academic': Icons.analytics_outlined,
+    'analyticsAutomatic': Icons.devices_outlined,
+    'age': Icons.person_outline,
+    'revocation': Icons.stop_circle_outlined,
     'control': Icons.settings_outlined,
     'limits': Icons.cloud_outlined,
   };
@@ -61,9 +69,14 @@ class PrivacyDataDetailsPage extends StatelessWidget {
               ListTile(
                   leading: const Icon(Icons.open_in_new),
                   title: Text(l10n.text('privacyDetails.firebase')),
-                  onTap: () => launchUrl(
-                      Uri.parse('https://firebase.google.com/support/privacy'),
-                      mode: LaunchMode.externalApplication)),
+                  onTap: () {
+                    AnalyticsService.product.event('external_action',
+                        {'action_type': 'open_privacy_policy'});
+                    launchUrl(
+                        Uri.parse(
+                            'https://firebase.google.com/support/privacy'),
+                        mode: LaunchMode.externalApplication);
+                  }),
             ],
           ),
         ),

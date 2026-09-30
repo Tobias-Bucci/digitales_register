@@ -975,15 +975,29 @@ class _SettingsPageWidgetState extends State<SettingsPageWidget> {
   Widget _buildPrivacySection(AppLocalizations l10n) => _SettingsSectionCard(
         title: l10n.text('privacySettings.title'),
         children: [
+          for (final category in ['diagnostics', 'usage', 'academic'])
+            ListTile(
+                title: Text(l10n.text('privacyCategory.$category.title')),
+                subtitle: Text(
+                    '${l10n.text('privacyCategory.$category.body')}\n${l10n.text((category == 'diagnostics' ? AnalyticsService.privacy.decision.diagnosticsAllowed : category == 'usage' ? AnalyticsService.privacy.decision.analyticsAllowed : AnalyticsService.privacy.decision.academicStatsAllowed) ? 'privacySettings.enabled' : 'privacySettings.disabled')}'),
+                trailing: const Icon(Icons.tune),
+                onTap: () async {
+                  await AnalyticsService.showPrivacyOptionsForm(context);
+                  if (mounted) setState(() {});
+                }),
           ListTile(
-              leading: const Icon(Icons.privacy_tip_outlined),
-              title: Text(l10n.text('privacySettings.status')),
-              subtitle: Text(l10n.text(!AnalyticsService.hasCurrentConsent
-                  ? 'privacySettings.pending'
-                  : AnalyticsService.privacy.decision.state ==
-                          TelemetryConsentState.allAllowed
-                      ? 'privacySettings.allowed'
-                      : 'privacyConsent.necessaryOnly'))),
+              title: Text(l10n.text('privacyAge.title')),
+              subtitle: Text(l10n.text(
+                  'privacyAge.${AnalyticsService.privacy.decision.ageEligibility.name}')),
+              onTap: () async {
+                await AnalyticsService.showPrivacyOptionsForm(context);
+                if (mounted) setState(() {});
+              }),
+          if (AnalyticsService.privacy.decision.ageEligibility ==
+              AnalyticsAgeEligibility.under14)
+            Padding(
+                padding: const EdgeInsets.all(16),
+                child: Text(l10n.text('privacyAge.under14Explanation'))),
           ListTile(
               title: Text(l10n.text('privacySettings.change')),
               trailing: const Icon(Icons.chevron_right),

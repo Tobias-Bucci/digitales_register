@@ -90,6 +90,10 @@ Future<void> main() async {
     actions,
     middleware: middleware(),
   );
+  AnalyticsService.refreshContext = () async {
+    await refreshProductAnalyticsContext(store.state);
+    await submitAcademicSummary(store.state);
+  };
   await AndroidWidgetPlatformBridge().registerLaunchHandler(
     (destination) => handleAndroidWidgetLaunchDestination(
       store.actions,

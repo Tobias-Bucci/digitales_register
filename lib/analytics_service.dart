@@ -17,9 +17,11 @@
 
 import 'dart:async';
 import 'dart:io';
+
 import 'package:dr/diagnostics_service.dart';
 import 'package:dr/i18n/app_localizations.dart';
 import 'package:dr/privacy_consent.dart';
+import 'package:dr/product_analytics.dart';
 import 'package:dr/ui/privacy_data_details_page.dart';
 import 'package:firebase_analytics/firebase_analytics.dart';
 import 'package:firebase_core/firebase_core.dart';
@@ -57,7 +59,9 @@ class _FirebaseCollection extends TelemetryCollection {
   Future<void> analyticsCollection(bool enabled) async {
     if (!supported) return;
     await _ensure();
+    // Stop native automatic collection promptly; the Dart gate is already shut.
     await FirebaseAnalytics.instance.setAnalyticsCollectionEnabled(enabled);
+    if (!enabled) await AnalyticsService.product.clearTelemetry(reset: false);
     await FirebaseAnalytics.instance.setConsent(
         analyticsStorageConsentGranted: enabled,
         adStorageConsentGranted: false,
@@ -71,19 +75,36 @@ class _FirebaseCollection extends TelemetryCollection {
     await _ensure();
     await FirebaseCrashlytics.instance.deleteUnsentReports();
   }
+
+  @override
+  Future<void> resetAnalytics() async {
+    if (!supported) return;
+    await _ensure();
+    await FirebaseAnalytics.instance.resetAnalyticsData();
+  }
 }
 
 // Existing callers use this facade; PrivacyController is the sole consent state.
 // ignore: avoid_classes_with_only_static_members
 class AnalyticsService {
-  static final privacy = PrivacyController(
+  static final PrivacyController privacy = PrivacyController(
       store: PreferencesPrivacyStore(),
       collection: _FirebaseCollection(),
-      gate: diagnostics.gate);
+      gate: diagnostics.gate,
+      analyticsGate: (enabled) => product.gate(enabled),
+      onApplied: (_) async {
+        await product.applyPrivacyState();
+        await refreshContext?.call();
+      });
+  static Future<void> Function()? refreshContext;
+  static final ProductAnalytics product = ProductAnalytics(
+      sink: _FirebaseAnalyticsSink(),
+      store: SecureAnalyticsStore(),
+      decision: () => privacy.decision);
   static Future<void>? _initialization;
   static Future<void>? _dialog;
   static bool get statisticsEnabled =>
-      privacy.decision.allowsTelemetry && privacy.sdkReady;
+      privacy.decision.analyticsAllowed && privacy.sdkReady;
   static bool get hasCurrentConsent => privacy.decision.isCurrent;
   static Future<void> initLich() => _initialization ??= _initialize();
   static Future<void> _initialize() async {
@@ -121,6 +142,10 @@ class AnalyticsService {
           /* Installer metadata does not block version persistence. */
         }
       }
+      if (launch.upgrade) {
+        unawaited(product.event('app_update_observed',
+            {'previous_version': launch.previous, 'current_version': current}));
+      }
       await prefs.setString('lastObservedAppVersion', current);
     } catch (_) {}
   }
@@ -129,40 +154,37 @@ class AnalyticsService {
       privacy.choose(choice == PrivacyConsentChoice.all
           ? TelemetryConsentState.allAllowed
           : TelemetryConsentState.requiredOnly);
-  static const _events = {
-    'app_first_frame',
-    'theme_loaded',
-    'app_opened',
-    'calendar_viewed',
-    'grade_calculator_added_grade',
-    'grade_calculator_imported_grades',
-    'login_attempt'
-  };
+  // Compatibility adapter for old call sites; raw timing/count inputs are ignored.
   static Future<void> logCustomEvent(String name,
-      [Map<String, Object>? parameters]) async {
-    await initLich();
-    if (!statisticsEnabled ||
-        !_events.contains(name) ||
-        Firebase.apps.isEmpty) {
-      return;
+      [Map<String, Object>? parameters]) {
+    if (name == 'calendar_viewed') return product.screenView('timetable');
+    if (name == 'grade_calculator_added_grade') {
+      return product.event(
+          'feature_action', {'feature': 'grade_calculator', 'action': 'add'});
     }
-    final safe = <String, Object>{};
-    for (final key in ['elapsedMs', 'count']) {
-      final value = parameters?[key];
-      if (value is int && value >= 0 && value <= 1000000) safe[key] = value;
+    if (name == 'grade_calculator_imported_grades') {
+      return product.event('feature_action',
+          {'feature': 'grade_calculator', 'action': 'import'});
     }
-    try {
-      await FirebaseAnalytics.instance.logEvent(name: name, parameters: safe);
-    } catch (_) {}
+    // login_attempt is emitted at the actual login boundary, not the button.
+    return Future.value();
   }
 
-  static Future<void> logScreenView(String screenName) async {
-    await initLich();
-    if (!statisticsEnabled || Firebase.apps.isEmpty) return;
-    try {
-      await FirebaseAnalytics.instance
-          .logScreenView(screenName: DiagnosticSanitizer.screen(screenName));
-    } catch (_) {}
+  static Future<void> logScreenView(String name) {
+    final raw = DiagnosticSanitizer.screen(name);
+    const names = {
+      'calendar': 'timetable',
+      'examCalendar': 'exam_calendar',
+      'privacy_consent': 'privacy',
+      'privacy_details': 'privacy',
+      'profile': 'register',
+      'certificate': 'register',
+      'classRegister': 'register',
+      'courseMaterials': 'register',
+      'homeworkSummary': 'homework'
+    };
+    final screen = names[raw] ?? raw;
+    return product.screenView(screen);
   }
 
   static Future<void> showPrivacyOptionsForm(BuildContext context) =>
@@ -196,14 +218,43 @@ class _PrivacyConsentDialog extends StatefulWidget {
 class _PrivacyConsentDialogState extends State<_PrivacyConsentDialog> {
   bool _saving = false;
   bool _failed = false;
-  Future<void> _choose(PrivacyConsentChoice choice) async {
+  late bool _custom = widget.management;
+  bool _askingAge = false;
+  bool _allowAfterAge = false;
+  late AnalyticsAgeEligibility _age =
+      AnalyticsService.privacy.decision.ageEligibility;
+  late bool _diagnostics = AnalyticsService.privacy.decision.diagnosticsAllowed;
+  late bool _usage = AnalyticsService.privacy.decision.analyticsAllowed;
+  late bool _academic = AnalyticsService.privacy.decision.academicStatsAllowed;
+
+  Future<void> _save({bool requiredOnly = false}) async {
     if (_saving) return;
+    if (!requiredOnly &&
+        (_diagnostics || _usage || _academic) &&
+        _age == AnalyticsAgeEligibility.unknown) {
+      setState(() {
+        _askingAge = true;
+      });
+      return;
+    }
     setState(() {
       _saving = true;
       _failed = false;
     });
     try {
-      await AnalyticsService.applyConsentChoice(choice);
+      await AnalyticsService.privacy.chooseGranular(
+          diagnostics: !requiredOnly && _diagnostics
+              ? ConsentChoice.granted
+              : ConsentChoice.denied,
+          usage: !requiredOnly && _usage
+              ? ConsentChoice.granted
+              : ConsentChoice.denied,
+          academic: !requiredOnly && _academic
+              ? ConsentChoice.granted
+              : ConsentChoice.denied,
+          age: _age);
+      unawaited(AnalyticsService.product
+          .event('privacy_settings_changed', {'action': 'saved'}));
       if (mounted) Navigator.of(context).pop();
     } catch (_) {
       if (mounted) {
@@ -215,91 +266,192 @@ class _PrivacyConsentDialogState extends State<_PrivacyConsentDialog> {
     }
   }
 
+  Future<void> _allowAll() async {
+    if (_age != AnalyticsAgeEligibility.atLeast14) {
+      setState(() {
+        _askingAge = true;
+        _allowAfterAge = true;
+      });
+      return;
+    }
+    _diagnostics = _usage = _academic = true;
+    await _save();
+  }
+
+  Future<void> _answerAge(bool eligible) async {
+    if (_saving) return;
+    setState(() {
+      _age = eligible
+          ? AnalyticsAgeEligibility.atLeast14
+          : AnalyticsAgeEligibility.under14;
+      _askingAge = false;
+      _custom = true;
+      // Reopening eligibility never silently grants optional choices.
+      _diagnostics = _usage = _academic = false;
+      _saving = true;
+    });
+    try {
+      await AnalyticsService.privacy.resolveAgeEligibility(_age);
+    } catch (_) {
+      if (mounted) {
+        setState(() {
+          _saving = false;
+          _failed = true;
+        });
+      }
+      return;
+    }
+    if (!mounted) return;
+    setState(() {
+      _saving = false;
+    });
+    if (eligible && _allowAfterAge) await _allowAll();
+    _allowAfterAge = false;
+  }
+
   @override
   Widget build(BuildContext context) {
     final l10n = context.l10n;
-    final theme = Theme.of(context);
-    final size = MediaQuery.sizeOf(context);
+    final eligible = _age == AnalyticsAgeEligibility.atLeast14;
+    final update = AnalyticsService.privacy.existingInstallation &&
+        !AnalyticsService.hasCurrentConsent;
     return PopScope(
-        canPop: false,
+        canPop: widget.management && !_saving,
         child: AlertDialog(
           insetPadding:
               const EdgeInsets.symmetric(horizontal: 20, vertical: 24),
-          titlePadding: const EdgeInsets.fromLTRB(24, 24, 24, 8),
-          contentPadding: const EdgeInsets.fromLTRB(24, 8, 24, 12),
-          actionsPadding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
-          title: Text(l10n.text(AnalyticsService.privacy.existingInstallation &&
-                  !AnalyticsService.hasCurrentConsent
-              ? 'privacyConsent.updateTitle'
-              : 'privacyConsent.title')),
+          title: Text(l10n.text(_askingAge
+              ? 'privacyAge.question'
+              : update
+                  ? 'privacyConsent.updateTitle'
+                  : 'privacyConsent.title')),
           content: ConstrainedBox(
-            constraints: BoxConstraints(
-              maxWidth: 560,
-              maxHeight: size.height * 0.62,
-            ),
-            child: SingleChildScrollView(
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                crossAxisAlignment: CrossAxisAlignment.stretch,
-                children: [
-                  Text(
-                    l10n.text(AnalyticsService.privacy.existingInstallation &&
-                            !AnalyticsService.hasCurrentConsent
-                        ? 'privacyConsent.updateBody'
-                        : 'privacyConsent.body'),
-                    style: theme.textTheme.bodyLarge?.copyWith(height: 1.35),
-                  ),
-                  const SizedBox(height: 16),
-                  _ConsentInfoTile(
-                    icon: Icons.lock_outline,
-                    title: l10n.text('privacyConsent.necessary.title'),
-                    body: l10n.text('privacyConsent.necessary.body'),
-                    details: l10n.text('privacyConsent.necessary.details'),
-                    alwaysActive: true,
-                  ),
-                  const SizedBox(height: 10),
-                  _ConsentInfoTile(
-                    icon: Icons.analytics_outlined,
-                    title: l10n.text('privacyConsent.statistics.title'),
-                    body: l10n.text('privacyConsent.statistics.body'),
-                    details: l10n.text('privacyConsent.statistics.details'),
-                    alwaysActive: false,
-                  ),
-                  const SizedBox(height: 12),
-                  Text(
-                    l10n.text('privacyConsent.note'),
-                    style: Theme.of(context).textTheme.bodySmall,
-                  ),
-                ],
-              ),
-            ),
-          ),
+              constraints: BoxConstraints(
+                  maxWidth: 560,
+                  maxHeight: MediaQuery.sizeOf(context).height * .6),
+              child: SingleChildScrollView(
+                  child: Column(
+                      mainAxisSize: MainAxisSize.min,
+                      crossAxisAlignment: CrossAxisAlignment.stretch,
+                      children: [
+                    if (!_askingAge) ...[
+                      Text(l10n.text('privacyConsent.body')),
+                      const SizedBox(height: 12),
+                      for (final category in [
+                        'diagnostics',
+                        'usage',
+                        'academic'
+                      ]) ...[
+                        if (_custom)
+                          SwitchListTile(
+                            contentPadding: EdgeInsets.zero,
+                            title: Text(
+                                l10n.text('privacyCategory.$category.title')),
+                            subtitle: Text(
+                                l10n.text('privacyCategory.$category.body')),
+                            value: category == 'diagnostics'
+                                ? _diagnostics
+                                : category == 'usage'
+                                    ? _usage
+                                    : _academic,
+                            onChanged: _saving ||
+                                    !eligible ||
+                                    (category == 'academic' && !_usage)
+                                ? null
+                                : (value) => setState(() {
+                                      if (category == 'diagnostics') {
+                                        _diagnostics = value;
+                                      }
+                                      if (category == 'usage') {
+                                        _usage = value;
+                                        if (!value) _academic = false;
+                                      }
+                                      if (category == 'academic') {
+                                        _academic = value;
+                                      }
+                                    }),
+                          )
+                        else
+                          _ConsentInfoTile(
+                              icon: category == 'diagnostics'
+                                  ? Icons.bug_report_outlined
+                                  : Icons.analytics_outlined,
+                              title:
+                                  l10n.text('privacyCategory.$category.title'),
+                              body: l10n.text('privacyCategory.$category.body'),
+                              details: '',
+                              alwaysActive: false),
+                        const SizedBox(height: 8),
+                      ],
+                      if (_custom)
+                        ListTile(
+                            contentPadding: EdgeInsets.zero,
+                            title: Text(l10n.text('privacyAge.title')),
+                            subtitle:
+                                Text(l10n.text('privacyAge.${_age.name}')),
+                            onTap: _saving
+                                ? null
+                                : () => setState(() {
+                                      _askingAge = true;
+                                      _allowAfterAge = false;
+                                    })),
+                      if (_age == AnalyticsAgeEligibility.under14)
+                        Text(l10n.text('privacyAge.under14Explanation')),
+                      if (_age == AnalyticsAgeEligibility.unknown && _custom)
+                        Text(l10n.text('privacyAge.resolve')),
+                    ],
+                    if (_failed) Text(l10n.text('privacyConsent.saveError')),
+                    if (_saving)
+                      const Center(child: CircularProgressIndicator()),
+                  ]))),
           actions: [
-            if (_saving)
-              const Padding(
-                  padding: EdgeInsets.all(8),
-                  child: CircularProgressIndicator()),
-            if (_failed) Text(l10n.text('privacyConsent.saveError')),
-            TextButton(
-                onPressed: _saving
-                    ? null
-                    : () => Navigator.of(context).push(MaterialPageRoute<void>(
-                        settings: const RouteSettings(name: '/privacy_details'),
-                        builder: (_) => const PrivacyDataDetailsPage())),
-                child: Text(l10n.text('privacyConsent.more'))),
-            TextButton(
-              onPressed: _saving
-                  ? null
-                  : () => _choose(PrivacyConsentChoice.necessaryOnly),
-              child: Text(l10n.text('privacyConsent.necessaryOnly')),
-            ),
-            FilledButton(
-              onPressed:
-                  _saving ? null : () => _choose(PrivacyConsentChoice.all),
-              child: Text(l10n.text(widget.management
-                  ? 'privacySettings.allow'
-                  : 'privacyConsent.acceptAll')),
-            ),
+            if (_askingAge) ...[
+              TextButton(
+                  onPressed: _saving ? null : () => _answerAge(false),
+                  child: Text(l10n.text('privacyAge.no'))),
+              FilledButton(
+                  onPressed: _saving ? null : () => _answerAge(true),
+                  child: Text(l10n.text('privacyAge.yes'))),
+            ] else ...[
+              TextButton(
+                  onPressed: _saving
+                      ? null
+                      : () => Navigator.of(context).push(
+                          MaterialPageRoute<void>(
+                              settings:
+                                  const RouteSettings(name: '/privacy_details'),
+                              builder: (_) => const PrivacyDataDetailsPage())),
+                  child: Text(l10n.text('privacyConsent.more'))),
+              if (_custom)
+                TextButton(
+                    onPressed: _saving ? null : _allowAll,
+                    child: Text(l10n.text('privacyConsent.acceptAll'))),
+              if (!_custom)
+                TextButton(
+                    onPressed: _saving
+                        ? null
+                        : () => setState(() {
+                              _custom = true;
+                            }),
+                    child: Text(l10n.text('privacyConsent.customize'))),
+              TextButton(
+                  onPressed: _saving ? null : () => _save(requiredOnly: true),
+                  child: Text(l10n.text('privacyConsent.necessaryOnly'))),
+              FilledButton(
+                  onPressed: _saving
+                      ? null
+                      : _custom
+                          ? () => _save()
+                          : _allowAll,
+                  child: Text(l10n.text(_custom
+                      ? 'privacyConsent.save'
+                      : 'privacyConsent.acceptAll'))),
+              if (widget.management)
+                TextButton(
+                    onPressed:
+                        _saving ? null : () => Navigator.of(context).pop(),
+                    child: Text(l10n.text('privacyConsent.cancel'))),
+            ]
           ],
         ));
   }
@@ -395,5 +547,43 @@ class _ConsentInfoTile extends StatelessWidget {
         ),
       ),
     );
+  }
+}
+
+class _FirebaseAnalyticsSink implements AnalyticsSink {
+  bool get available =>
+      _FirebaseCollection().supported && Firebase.apps.isNotEmpty;
+  @override
+  Future<void> event(String name, Map<String, Object> parameters) async {
+    if (available) {
+      await FirebaseAnalytics.instance
+          .logEvent(name: name, parameters: parameters);
+    }
+  }
+
+  @override
+  Future<void> screen(String name) async {
+    if (available) {
+      await FirebaseAnalytics.instance
+          .logScreenView(screenName: name, screenClass: 'register_screen');
+    }
+  }
+
+  @override
+  Future<void> userId(String? id) async {
+    if (available) await FirebaseAnalytics.instance.setUserId(id: id);
+  }
+
+  @override
+  Future<void> property(String name, String? value) async {
+    if (available) {
+      await FirebaseAnalytics.instance
+          .setUserProperty(name: name, value: value);
+    }
+  }
+
+  @override
+  Future<void> reset() async {
+    if (available) await FirebaseAnalytics.instance.resetAnalyticsData();
   }
 }

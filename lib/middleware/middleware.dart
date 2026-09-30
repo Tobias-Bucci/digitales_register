@@ -21,6 +21,7 @@ import 'dart:convert';
 import 'dart:developer';
 import 'dart:io';
 import 'dart:typed_data';
+
 import 'package:built_collection/built_collection.dart';
 import 'package:built_redux/built_redux.dart';
 import 'package:dio/dio.dart' as dio;
@@ -37,10 +38,13 @@ import 'package:dr/actions/profile_actions.dart';
 import 'package:dr/actions/routing_actions.dart';
 import 'package:dr/actions/save_pass_actions.dart';
 import 'package:dr/actions/settings_actions.dart';
+import 'package:dr/analytics_schema.dart';
+import 'package:dr/analytics_school_ids.dart';
 import 'package:dr/analytics_service.dart';
 import 'package:dr/android_widget_service.dart';
 import 'package:dr/app_clock.dart';
 import 'package:dr/app_language_controller.dart';
+import 'package:dr/app_selectors.dart';
 import 'package:dr/app_state.dart';
 import 'package:dr/calendar_sync_service.dart';
 import 'package:dr/class_register_cache.dart';
@@ -61,6 +65,7 @@ import 'package:dr/platform_adapter.dart';
 import 'package:dr/serializers.dart';
 import 'package:dr/settings_persistence_service.dart';
 import 'package:dr/state_persistence_service.dart';
+import 'package:dr/theme_controller.dart';
 import 'package:dr/tutorial/tutorial_service.dart';
 import 'package:dr/ui/debug_page.dart';
 import 'package:dr/ui/dialog.dart';
@@ -68,6 +73,7 @@ import 'package:dr/utc_date_time.dart';
 import 'package:dr/util.dart';
 import 'package:dr/wrapper.dart';
 import 'package:file_picker/file_picker.dart';
+import 'package:flutter/foundation.dart' show kDebugMode;
 import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart' hide Action, Notification;
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
@@ -143,7 +149,24 @@ bool _isFresh(UtcDateTime? timestamp, Duration ttl) {
 }
 
 bool _isRuntimeCacheFresh(String key, Duration ttl) {
-  return _isFresh(_runtimeCacheTimes[key], ttl);
+  final fresh = _isFresh(_runtimeCacheTimes[key], ttl);
+  const features = {
+    'dashboard': 'homework',
+    'calendar': 'timetable',
+    'notifications': 'notifications',
+    'messages': 'messages',
+    'absences': 'absences',
+    'profile': 'register',
+    'certificate': 'register'
+  };
+  final feature = features[key.split(':').first];
+  if (fresh && feature != null) {
+    unawaited(AnalyticsService.product
+        .event('cache_result', {'feature': feature, 'result': 'hit'}));
+    unawaited(AnalyticsService.product.event(
+        'data_source_used', {'feature': feature, 'data_source': 'cache'}));
+  }
+  return fresh;
 }
 
 void _markRuntimeCacheFresh(String key) {
@@ -179,11 +202,48 @@ Future<void> _runCoalescedLoad(String key, Future<void> Function() load) async {
   }
 
   final future = Future<void>(() async {
+    final product = AnalyticsService.product;
+    final epoch = product.sessionEpoch;
+    final stopwatch = Stopwatch()..start();
+    final previousCacheTime = _runtimeCacheTimes[key];
+    final prefix = key.split(':').first;
+    const features = {
+      'dashboard': 'homework',
+      'calendar': 'timetable',
+      'notifications': 'notifications',
+      'messages': 'messages',
+      'absences': 'absences',
+      'profile': 'register',
+      'certificate': 'register'
+    };
+    final feature = features[prefix];
+    if (feature != null) {
+      unawaited(product
+          .event('cache_result', {'feature': feature, 'result': 'miss'}));
+    }
     diagnostics.update('cache_hit', false);
     diagnostics.safeLog('cache_miss');
     try {
       await load();
+      if (feature != null && product.isSession(epoch)) {
+        unawaited(product.event('refresh_result', {
+          'feature': feature,
+          'result': _runtimeCacheTimes[key] != previousCacheTime
+              ? 'success'
+              : 'failed',
+          'data_source': wrapper.demoMode ? 'local' : 'remote',
+          'duration_bucket': AnalyticsSchema.duration(stopwatch.elapsed)
+        }));
+      }
     } catch (e, stack) {
+      if (feature != null && product.isSession(epoch)) {
+        unawaited(product.event('refresh_result', {
+          'feature': feature,
+          'result': 'failed',
+          'data_source': 'unknown',
+          'duration_bucket': AnalyticsSchema.duration(stopwatch.elapsed)
+        }));
+      }
       diagnostics.report(
           e,
           stack,
@@ -659,6 +719,7 @@ List<Middleware<AppState, AppStateBuilder, AppActions>> middleware({
 }) =>
     [
       if (includeErrorMiddleware) _errorMiddleware,
+      _productAnalyticsMiddleware,
       _diagnosticsMiddleware,
       _saveStateMiddleware,
       (MiddlewareBuilder<AppState, AppStateBuilder, AppActions>()
@@ -692,6 +753,10 @@ NextActionHandler _errorMiddleware(
 ) =>
     (ActionHandler next) => (Action action) async {
           Future<void> handleError(dynamic e, StackTrace? trace) async {
+            unawaited(AnalyticsService.product.event('error_presented', {
+              'feature': 'unknown',
+              'error_category': e is ParseException ? 'parsing' : 'unknown'
+            }));
             diagnostics.report(
                 e as Object, trace ?? StackTrace.empty, DiagnosticError.caught);
             log("Error caught by error middleware",
@@ -1588,5 +1653,306 @@ NextActionHandler _diagnosticsMiddleware(
             } catch (_) {
               /* Optional context must never break action dispatch. */
             }
+          }
+        };
+
+Future<void> refreshProductAnalyticsContext(AppState state) async {
+  final product = AnalyticsService.product;
+  if (!product.enabled) return;
+  if (state.loginState.loggedIn && state.loginState.username != null) {
+    if (state.url != wrapper.url || state.isDemo != wrapper.demoMode) return;
+    // This local key is used only by encrypted identity storage, never Firebase.
+    await product.identifyUser(
+        jsonEncode([state.url, state.loginState.username]),
+        demo: state.isDemo,
+        schoolId: analyticsSchoolIdForUrl(state.url));
+  }
+  final year = schoolYearForDate(now);
+  await product.updateUserProperties({
+    'app_language': state.settingsState.languageCode == 'lld'
+        ? 'ld'
+        : state.settingsState.languageCode,
+    'theme': themeController.themePreference.name,
+    'build_flavor':
+        const String.fromEnvironment('BUILD_FLAVOR', defaultValue: 'unknown'),
+    'release_channel': kDebugMode
+        ? 'debug'
+        : const String.fromEnvironment('RELEASE_CHANNEL',
+            defaultValue: 'unknown'),
+    if (state.loginState.loggedIn) 'academic_year': '${year}_${year + 1}',
+    if (state.loginState.loggedIn &&
+        state.profileState.sendNotificationEmails != null)
+      'notifications_enabled':
+          state.profileState.sendNotificationEmails.toString(),
+  });
+}
+
+Future<void> submitAcademicSummary(AppState state) async {
+  final product = AnalyticsService.product;
+  if (!product.identityReady ||
+      state.isDemo ||
+      !AnalyticsService.privacy.decision.academicStatsAllowed) {
+    return;
+  }
+  final periods = _semestersFor(state.gradesState.semester)
+      .map((semester) => semester.n.toString());
+  if (!product.gradeOwnership
+      .matches(jsonEncode([state.url, state.loginState.username]), periods)) {
+    return;
+  }
+  final average = overallGradeAverage(state);
+  if (average == null || !average.isFinite || average < 0 || average > 10) {
+    return;
+  }
+  final year = schoolYearForDate(now);
+  var grades = 0;
+  var subjects = 0;
+  for (final subject in state.gradesState.subjects) {
+    if (state.settingsState.ignoreForGradesAverage
+        .any((name) => name.toLowerCase() == subject.name.toLowerCase())) {
+      continue;
+    }
+    final entries = subject.basicGrades(state.gradesState.semester);
+    if (entries == null) {
+      return; // Never contribute an incomplete semester snapshot.
+    }
+    var contributes = false;
+    for (final grade in entries) {
+      if (!grade.cancelled &&
+          grade.grade != null &&
+          grade.weightPercentage < 0) {
+        return;
+      }
+      if (grade.cancelled ||
+          grade.grade == null ||
+          grade.weightPercentage <= 0) {
+        continue;
+      }
+      if (schoolYearForDate(grade.date) != year ||
+          grade.grade! < 0 ||
+          grade.grade! > 1000) {
+        return;
+      }
+      grades++;
+      contributes = true;
+    }
+    if (contributes) subjects++;
+  }
+  if (grades == 0 || subjects == 0) return;
+  await product.logAcademicSummary({
+    'academic_year': '${year}_${year + 1}',
+    'semester': state.gradesState.semester.n?.toString() ?? 'year',
+    'grade_average_tenths': (average * 10).round(),
+    'grade_count_bucket': AnalyticsSchema.gradeCount(grades),
+    'subject_count_bucket': AnalyticsSchema.subjectCount(subjects),
+    // No reliable scale metadata exists; grading_scale is deliberately omitted.
+    'snapshot_schema_version': 1,
+  });
+}
+
+NextActionHandler _productAnalyticsMiddleware(
+        MiddlewareApi<AppState, AppStateBuilder, AppActions> api) =>
+    (ActionHandler next) => (Action action) async {
+          final product = AnalyticsService.product;
+          final name = action.name;
+          if (!product.enabled) {
+            if ({
+              'LoginActions-logout',
+              'LoginActions-selectAccount',
+              'LoginActions-addAccount',
+              'LoginActions-removeCurrentAccount'
+            }.contains(name)) {
+              unawaited(product.clearIdentity());
+            }
+            await next(action);
+            return;
+          }
+          final before = api.state;
+          final stopwatch = Stopwatch()..start();
+          const routes = <String, String>{
+            'RoutingActions-showLogin': 'login',
+            'RoutingActions-showProfile': 'register',
+            'RoutingActions-showGrades': 'grades',
+            'RoutingActions-showCalendar': 'timetable',
+            'RoutingActions-showAbsences': 'absences',
+            'RoutingActions-showNotifications': 'notifications',
+            'RoutingActions-showSettings': 'settings',
+            'RoutingActions-showMessages': 'messages',
+            'RoutingActions-showCertificate': 'register',
+            'RoutingActions-showGradesChart': 'grades',
+            'RoutingActions-showGradeCalculator': 'grade_calculator',
+          };
+          const loads = <String, String>{
+            'GradesActions-load': 'grades',
+            'CalendarActions-load': 'timetable',
+            'DashboardActions-load': 'homework',
+            'AbsencesActions-load': 'absences',
+            'NotificationsActions-load': 'notifications',
+            'MessagesActions-load': 'messages',
+          };
+          final feature = loads[name];
+          if (name == 'LoginActions-logout' ||
+              name == 'LoginActions-selectAccount' ||
+              name == 'LoginActions-addAccount' ||
+              name == 'LoginActions-removeCurrentAccount') {
+            final eventName = name == 'LoginActions-selectAccount'
+                ? 'account_switch'
+                : 'logout';
+            final parameters = name == 'LoginActions-selectAccount'
+                ? <String, Object>{}
+                : {
+                    'reason': name == 'LoginActions-logout'
+                        ? 'user_action'
+                        : 'account_switch'
+                  };
+            await product.clearIdentity();
+            await product.event(eventName, parameters);
+          }
+          if (name == 'LoginActions-login') {
+            await product.clearIdentity();
+            final payload = action.payload as LoginPayload;
+            unawaited(product.event('login_attempt', {
+              'login_provider':
+                  isDemoUser(url: payload.url, username: payload.user)
+                      ? 'demo'
+                      : 'school_api'
+            }));
+          }
+          final epoch = product.sessionEpoch;
+          if (routes.containsKey(name)) {
+            unawaited(product.screenView(routes[name]!));
+            unawaited(product.event('feature_opened',
+                {'feature': routes[name]!, 'source': 'navigation'}));
+          }
+          if (feature != null) {
+            unawaited(product.event('refresh_requested',
+                {'feature': feature, 'source': 'automatic'}));
+          }
+          try {
+            await next(action);
+            if (!product.isSession(epoch)) return;
+            if (name == 'LoginActions-loggedIn' ||
+                name == 'AppActions-setUrl') {
+              await refreshProductAnalyticsContext(api.state);
+              if (name == 'LoginActions-loggedIn' &&
+                  !(action.payload as LoggedInPayload).offlineOnly) {
+                unawaited(product.event('login_result', {
+                  'result': 'success',
+                  'login_provider': api.state.isDemo ? 'demo' : 'school_api'
+                }));
+              }
+            }
+            if (name == 'LoginActions-loginFailed') {
+              unawaited(product.event('login_result',
+                  {'result': 'unknown', 'login_provider': 'school_api'}));
+            }
+            if (name == 'GradesActions-setSemester') {
+              unawaited(product.event('semester_changed', {
+                'semester':
+                    api.state.gradesState.semester.n?.toString() ?? 'year'
+              }));
+            }
+            if (name == 'SettingsActions-setLanguage') {
+              await refreshProductAnalyticsContext(api.state);
+              unawaited(product.event('language_changed', {
+                'language': api.state.settingsState.languageCode == 'lld'
+                    ? 'ld'
+                    : api.state.settingsState.languageCode
+              }));
+            }
+            if (name == 'SettingsActions-gradesTypeSorted') {
+              unawaited(product.event('sort_changed', {
+                'feature': 'grades',
+                'sort_id': api.state.settingsState.typeSorted
+                    ? 'type_sorted'
+                    : 'date_sorted'
+              }));
+            }
+            if (name == 'DashboardActions-switchFuture') {
+              unawaited(product.event('filter_changed', {
+                'feature': 'homework',
+                'filter_id': api.state.dashboardState.future ? 'future' : 'past'
+              }));
+            }
+            if (name == 'SettingsActions-calendarSyncEnabled') {
+              unawaited(product.event('calendar_sync_changed', {
+                'enabled': api.state.settingsState.calendarSyncEnabled ? 1 : 0
+              }));
+            }
+            if (name == 'ProfileActions-loaded' ||
+                name == 'ProfileActions-sendNotificationEmails') {
+              await refreshProductAnalyticsContext(api.state);
+            }
+            if (name == 'ProfileActions-sendNotificationEmails') {
+              unawaited(product.event('notification_settings_changed', {
+                'enabled': api.state.profileState.sendNotificationEmails == true
+                    ? 1
+                    : 0
+              }));
+            }
+            if (name == 'CalendarActions-setCurrentMonday') {
+              unawaited(product.event('feature_action',
+                  {'feature': 'timetable', 'action': 'change_day'}));
+            }
+            if (name == 'RoutingActions-showGradesChart') {
+              unawaited(product.event(
+                  'tab_changed', {'feature': 'grades', 'tab_id': 'chart'}));
+              unawaited(product.event('feature_action',
+                  {'feature': 'grades', 'action': 'change_view'}));
+            }
+            if (name == 'AppActions-noInternet') {
+              unawaited(product.event('error_presented',
+                  {'feature': 'unknown', 'error_category': 'offline'}));
+            }
+            if (name == 'NotificationsActions-delete' ||
+                name == 'NotificationsActions-deleteAll') {
+              unawaited(product.event('feature_action',
+                  {'feature': 'notifications', 'action': 'mark_read'}));
+            }
+            if (name == 'DashboardActions-toggleDone') {
+              unawaited(product.event('feature_action',
+                  {'feature': 'homework', 'action': 'toggle_done'}));
+            }
+            if (before.isDemo != api.state.isDemo) {
+              unawaited(product.event(
+                  'demo_mode_changed', {'enabled': api.state.isDemo ? 1 : 0}));
+            }
+            if (name == 'GradesActions-loaded' ||
+                name == 'GradesActions-setSemester' ||
+                name == 'SettingsActions-ignoreSubjectsForAverage') {
+              await submitAcademicSummary(api.state);
+            }
+            if (feature != null) {
+              // Dispatcher completion is not always remote completion in this legacy app.
+              // Only cache/offline outcomes are asserted here; loaded actions cover remote success.
+              if (before.noInternet) {
+                unawaited(product.event('offline_usage',
+                    {'feature': feature, 'action': 'opened_cached_data'}));
+              }
+            }
+            const loaded = {
+              'GradesActions-loaded': 'grades',
+              'CalendarActions-loaded': 'timetable',
+              'DashboardActions-loaded': 'homework',
+              'AbsencesActions-loaded': 'absences',
+              'NotificationsActions-loaded': 'notifications',
+              'MessagesActions-loaded': 'messages'
+            };
+            if (loaded.containsKey(name)) {
+              unawaited(product.event('data_source_used', {
+                'feature': loaded[name]!,
+                'data_source': api.state.isDemo ? 'local' : 'remote'
+              }));
+            }
+          } catch (_) {
+            if (feature != null) {
+              unawaited(product.event('refresh_result', {
+                'feature': feature,
+                'result': 'failed',
+                'data_source': 'unknown',
+                'duration_bucket': AnalyticsSchema.duration(stopwatch.elapsed)
+              }));
+            }
+            rethrow;
           }
         };

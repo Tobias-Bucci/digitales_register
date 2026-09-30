@@ -218,21 +218,8 @@ class _AllSubjectsAverageSelector {
       return _lastResult!;
     }
 
-    var sum = 0;
-    var count = 0;
-    for (final subject in state.gradesState.subjects) {
-      final average = subject.average(state.gradesState.semester);
-      if (average != null &&
-          !state.settingsState.ignoreForGradesAverage.any(
-            (element) => element.toLowerCase() == subject.name.toLowerCase(),
-          )) {
-        sum += average;
-        count++;
-      }
-    }
-
-    final result =
-        count == 0 ? "/" : gradeAverageFormat.format(sum / count / 100);
+    final average = overallGradeAverage(state);
+    final result = average == null ? "/" : gradeAverageFormat.format(average);
     _subjects = state.gradesState.subjects;
     _ignoredSubjects = state.settingsState.ignoreForGradesAverage;
     _semester = state.gradesState.semester;
@@ -387,4 +374,21 @@ class _AbsenceStatsSelector {
     }
     return (absence.minutesCameTooLate + absence.minutesLeftTooEarly) / 50;
   }
+}
+
+/// Canonical overall average: equal weighting of non-ignored subject averages.
+/// Subject.average retains the existing grade weights and cancellation rules.
+double? overallGradeAverage(AppState state) {
+  var sum = 0;
+  var count = 0;
+  for (final subject in state.gradesState.subjects) {
+    final average = subject.average(state.gradesState.semester);
+    if (average != null &&
+        !state.settingsState.ignoreForGradesAverage
+            .any((name) => name.toLowerCase() == subject.name.toLowerCase())) {
+      sum += average;
+      count++;
+    }
+  }
+  return count == 0 ? null : sum / count / 100;
 }

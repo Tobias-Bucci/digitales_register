@@ -55,7 +55,7 @@ void main() {
     await tester.tap(find.text('open'));
     await tester.pumpAndSettle();
     expect(find.text('Nur erforderliche Daten'), findsWidgets);
-    expect(find.text('Zustimmen'), findsOneWidget);
+    expect(find.text('Alle optionalen Daten erlauben'), findsOneWidget);
     expect(AnalyticsService.hasCurrentConsent, false);
     await tester.tap(find.text('Mehr erfahren'));
     await tester.pumpAndSettle();
@@ -63,7 +63,7 @@ void main() {
     expect(AnalyticsService.hasCurrentConsent, false);
     await tester.tap(find.byType(BackButton));
     await tester.pumpAndSettle();
-    expect(find.text('Zustimmen'), findsOneWidget);
+    expect(find.text('Alle optionalen Daten erlauben'), findsOneWidget);
     await tester
         .tap(find.widgetWithText(TextButton, 'Nur erforderliche Daten'));
     await tester.pumpAndSettle();
@@ -71,13 +71,14 @@ void main() {
     expect(AnalyticsService.statisticsEnabled, false);
     await tester.tap(find.text('open'));
     await tester.pumpAndSettle();
-    expect(find.text('Zustimmen'), findsNothing);
+    expect(find.text('Alle optionalen Daten erlauben'), findsNothing);
     await tester.tap(find.text('manage'));
     await tester.pumpAndSettle();
-    expect(find.text('Optionale Diagnose- und Nutzungsdaten erlauben'),
-        findsOneWidget);
-    await tester
-        .tap(find.text('Optionale Diagnose- und Nutzungsdaten erlauben'));
+    expect(find.text('Alle optionalen Daten erlauben'), findsOneWidget);
+    await tester.tap(find.text('Alle optionalen Daten erlauben'));
+    await tester.pumpAndSettle();
+    expect(AnalyticsService.privacy.decision.allowsTelemetry, false);
+    await tester.tap(find.text('Ja'));
     await tester.pumpAndSettle();
     expect(AnalyticsService.privacy.decision.allowsTelemetry, true);
     expect(tester.takeException(), isNull);

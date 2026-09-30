@@ -1,3 +1,5 @@
+import 'dart:async';
+import 'package:dr/analytics_service.dart';
 // Copyright (C) 2026 Tobias Bucci
 //
 // This file is part of digitales_register.
@@ -171,6 +173,10 @@ class AppThemeController extends ChangeNotifier with WidgetsBindingObserver {
 
   Future<void> setThemePreference(AppThemePreference preference) async {
     _themePreference = preference;
+    unawaited(AnalyticsService.product
+        .updateUserProperties({'theme': preference.name}));
+    unawaited(AnalyticsService.product
+        .event('theme_changed', {'theme': preference.name}));
     diagnostics.update('theme', _themePreference.name);
     notifyListeners();
 
