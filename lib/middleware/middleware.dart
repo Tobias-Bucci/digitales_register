@@ -21,7 +21,6 @@ import 'dart:convert';
 import 'dart:developer';
 import 'dart:io';
 import 'dart:typed_data';
-
 import 'package:built_collection/built_collection.dart';
 import 'package:built_redux/built_redux.dart';
 import 'package:dio/dio.dart' as dio;
@@ -53,6 +52,7 @@ import 'package:dr/container/messages_container.dart';
 import 'package:dr/container/settings_page.dart';
 import 'package:dr/course_materials.dart';
 import 'package:dr/data.dart';
+import 'package:dr/diagnostics_service.dart';
 import 'package:dr/i18n/app_language.dart';
 import 'package:dr/i18n/app_localizations.dart';
 import 'package:dr/main.dart';
@@ -129,10 +129,17 @@ const String _certificateCacheKey = 'certificate';
 
 bool _isFresh(UtcDateTime? timestamp, Duration ttl) {
   if (timestamp == null) {
+    diagnostics.update('cache_hit', false);
     return false;
   }
   final age = realNow.difference(timestamp);
-  return !age.isNegative && age < ttl;
+  final fresh = !age.isNegative && age < ttl;
+  diagnostics.update('cache_hit', fresh);
+  if (fresh) {
+    diagnostics.update('data_source', 'cache');
+    diagnostics.safeLog('cache_hit');
+  }
+  return fresh;
 }
 
 bool _isRuntimeCacheFresh(String key, Duration ttl) {
@@ -172,7 +179,21 @@ Future<void> _runCoalescedLoad(String key, Future<void> Function() load) async {
   }
 
   final future = Future<void>(() async {
-    await load();
+    diagnostics.update('cache_hit', false);
+    diagnostics.safeLog('cache_miss');
+    try {
+      await load();
+    } catch (e, stack) {
+      diagnostics.report(
+          e,
+          stack,
+          e is ParseException || e is FormatException
+              ? DiagnosticError.parser
+              : key == _notificationsCacheKey
+                  ? DiagnosticError.notification
+                  : DiagnosticError.caught);
+      rethrow;
+    }
   });
   _inFlightLoads[key] = future;
   try {
@@ -638,6 +659,7 @@ List<Middleware<AppState, AppStateBuilder, AppActions>> middleware({
 }) =>
     [
       if (includeErrorMiddleware) _errorMiddleware,
+      _diagnosticsMiddleware,
       _saveStateMiddleware,
       (MiddlewareBuilder<AppState, AppStateBuilder, AppActions>()
             ..add(LoginActionsNames.updateLogout, _tap)
@@ -670,11 +692,13 @@ NextActionHandler _errorMiddleware(
 ) =>
     (ActionHandler next) => (Action action) async {
           Future<void> handleError(dynamic e, StackTrace? trace) async {
+            diagnostics.report(
+                e as Object, trace ?? StackTrace.empty, DiagnosticError.caught);
             log("Error caught by error middleware",
                 error: e, stackTrace: trace);
             var stackTrace = trace;
             try {
-              stackTrace ??= e.stackTrace as StackTrace?;
+              stackTrace ??= (e as dynamic).stackTrace as StackTrace?;
             } catch (e) {
               // we can't get a stack trace
             }
@@ -1484,3 +1508,85 @@ Future<void> _checkShowPrivacyConsentAlert() async {
 
   await AnalyticsService.showPrivacyConsentDialog(context);
 }
+
+NextActionHandler _diagnosticsMiddleware(
+        MiddlewareApi<AppState, AppStateBuilder, AppActions> api) =>
+    (ActionHandler next) => (Action action) async {
+          final name = action.name;
+          var feature = 'unknown';
+          if (name.startsWith('Grades')) feature = 'grades';
+          if (name.startsWith('Calendar')) feature = 'timetable';
+          if (name.startsWith('Absences')) feature = 'absences';
+          if (name.startsWith('Dashboard')) feature = 'homework';
+          if (name.startsWith('Notifications')) feature = 'notifications';
+          if (name.startsWith('Login')) feature = 'authentication';
+          if (name.startsWith('Settings')) feature = 'settings';
+          if (name.startsWith('Messages')) feature = 'messages';
+          if (name.startsWith('Profile') || name.startsWith('Certificate')) {
+            feature = 'register';
+          }
+          diagnostics.values(
+              {'feature': feature, 'parser': feature, 'operation': 'load'});
+          if (feature == 'grades') {
+            diagnostics.update(
+                'selected_filter',
+                api.state.settingsState.typeSorted
+                    ? 'type_sorted'
+                    : 'date_sorted');
+          }
+          if (feature == 'homework') {
+            diagnostics.update('selected_filter',
+                api.state.dashboardState.future ? 'future' : 'past');
+          }
+          if (feature == 'authentication' && name == 'LoginActions-login') {
+            diagnostics.safeLog('login_started');
+          }
+          if (name.endsWith('-loaded') && feature != 'unknown') {
+            diagnostics.safeLog('parser_started');
+          }
+          if (feature == 'notifications') {
+            diagnostics.update('notification_type', 'general');
+          }
+          try {
+            await next(action);
+          } catch (e, stack) {
+            diagnostics.report(
+                e,
+                stack,
+                e is ParseException || e is FormatException
+                    ? DiagnosticError.parser
+                    : feature == 'authentication'
+                        ? DiagnosticError.login
+                        : feature == 'notifications'
+                            ? DiagnosticError.notification
+                            : DiagnosticError.caught);
+            rethrow;
+          } finally {
+            try {
+              diagnostics.auth(
+                  loggedIn: api.state.loginState.loggedIn,
+                  demo: wrapper.demoMode);
+              final screen = diagnostics.context['current_screen'];
+              if (screen == 'grades') {
+                diagnostics.update(
+                    'selected_filter',
+                    api.state.settingsState.typeSorted
+                        ? 'type_sorted'
+                        : 'date_sorted');
+              } else if (screen == 'dashboard' || screen == 'homework') {
+                diagnostics.update('selected_filter',
+                    api.state.dashboardState.future ? 'future' : 'past');
+              }
+              diagnostics.values({
+                'cache_enabled': !api.state.settingsState.noDataSaving,
+                'locale': api.state.settingsState.languageCode,
+                'semester':
+                    api.state.gradesState.semester.n?.toString() ?? 'all',
+                'notification_enabled': api.state.loginState.loggedIn,
+                'network_available': !api.state.noInternet
+              });
+            } catch (_) {
+              /* Optional context must never break action dispatch. */
+            }
+          }
+        };

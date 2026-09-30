@@ -1,4 +1,4 @@
-﻿// Copyright (C) 2026 Tobias Bucci
+// Copyright (C) 2026 Tobias Bucci
 //
 // This file is part of digitales_register.
 //
@@ -17,8 +17,8 @@
 
 import 'dart:async';
 import 'dart:convert';
-
 import 'package:dr/app_state.dart';
+import 'package:dr/diagnostics_service.dart';
 import 'package:dr/serializers.dart';
 import 'package:dr/util.dart';
 
@@ -106,7 +106,13 @@ class AppStatePersistenceService {
     }
 
     final stopwatch = Stopwatch()..start();
-    await request.writer(storageKey, toPersist);
+    diagnostics.values({'operation': 'save', 'data_source': 'local'});
+    try {
+      await request.writer(storageKey, toPersist);
+    } catch (e, stack) {
+      diagnostics.report(e, stack, DiagnosticError.storage);
+      rethrow;
+    }
     stopwatch.stop();
     _lastPersistedIdentity = identity;
     _lastPersistedKey = storageKey;

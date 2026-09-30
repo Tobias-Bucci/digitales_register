@@ -22,6 +22,7 @@ import 'package:dr/actions/app_actions.dart';
 import 'package:dr/actions/login_actions.dart';
 import 'package:dr/app_state.dart';
 import 'package:dr/container/exam_calendar_container.dart';
+import 'package:dr/diagnostics_service.dart';
 import 'package:dr/main.dart';
 import 'package:dr/middleware/middleware.dart';
 import 'package:dr/profile_picture.dart';
@@ -48,6 +49,7 @@ class SidebarContainer extends StatelessWidget {
   Widget build(BuildContext context) {
     return StoreConnection<AppState, AppActions, SidebarViewModel>(
       builder: (BuildContext context, state, AppActions actions) {
+        diagnostics.screen(currentSelected.name);
         return Sidebar(
           currentSelected: currentSelected,
           drawerExpanded: state.drawerInitiallyFullyExpanded,

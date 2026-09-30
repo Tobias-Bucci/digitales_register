@@ -19,9 +19,9 @@
 import 'dart:convert';
 import 'dart:developer';
 import 'dart:io';
-
 import 'package:collection/collection.dart';
 import 'package:dr/app_clock.dart';
+import 'package:dr/diagnostics_service.dart';
 import 'package:dr/utc_date_time.dart';
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
@@ -217,16 +217,17 @@ O tryParse<O, I>(
   try {
     return parse(input);
   } catch (e, trace) {
+    diagnostics.update('operation', 'parse');
+    diagnostics.safeLog('parser_failed');
     if (e is ParseException && e.hasEnoughContext) {
       // let parseExceptions bubble up, do not nest them
       rethrow;
     }
-    throw ParseException(
-      stringifyMaybeJson(input),
-      e.toString(),
-      trace,
-      hasEnoughContext: hasEnoughContext,
-    );
+    final failure = ParseException(
+        stringifyMaybeJson(input), e.toString(), trace,
+        hasEnoughContext: hasEnoughContext);
+    diagnostics.report(failure, trace, DiagnosticError.parser);
+    throw failure;
   }
 }
 

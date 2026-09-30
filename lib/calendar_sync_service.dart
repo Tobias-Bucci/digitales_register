@@ -18,9 +18,9 @@
 import 'dart:async';
 import 'dart:convert';
 import 'dart:developer';
-
 import 'package:dr/app_state.dart';
 import 'package:dr/data.dart';
+import 'package:dr/diagnostics_service.dart';
 import 'package:dr/i18n/app_language.dart';
 import 'package:dr/i18n/app_localizations.dart';
 import 'package:dr/local_reminder_assessments.dart';
@@ -168,8 +168,25 @@ extension CalendarSyncService on Never {
     _operationTail = done.future;
     await previous;
     try {
-      return await operation();
+      diagnostics.values({
+        'background_task': 'sync',
+        'sync_running': true,
+        'operation': 'sync'
+      });
+      diagnostics.safeLog('sync_started');
+      try {
+        final result = await operation();
+        diagnostics.update(
+            'last_sync_result', result == false ? 'partial' : 'success');
+        diagnostics.safeLog('sync_completed');
+        return result;
+      } catch (e, stack) {
+        diagnostics.update('last_sync_result', 'failed');
+        diagnostics.report(e, stack, DiagnosticError.background);
+        rethrow;
+      }
     } finally {
+      diagnostics.values({'sync_running': false, 'background_task': 'none'});
       done.complete();
     }
   }
@@ -245,6 +262,7 @@ extension CalendarSyncService on Never {
         await _deleteEvent(entry.value.eventId);
         updatedRecords.remove(entry.key);
       } catch (e, trace) {
+        diagnostics.report(e, trace, DiagnosticError.background);
         success = false;
         log(
           'Failed to delete calendar event for ${entry.key}',
@@ -294,6 +312,7 @@ extension CalendarSyncService on Never {
           fingerprint: item.fingerprint,
         );
       } catch (e, trace) {
+        diagnostics.report(e, trace, DiagnosticError.background);
         success = false;
         log(
           'Failed to upsert calendar event for ${item.syncKey}',
@@ -307,8 +326,7 @@ extension CalendarSyncService on Never {
     return success;
   }
 
-  static Future<bool> deleteTrackedEvents() =>
-      _serialize(_deleteTrackedEvents);
+  static Future<bool> deleteTrackedEvents() => _serialize(_deleteTrackedEvents);
 
   static Future<bool> _deleteTrackedEvents() async {
     final records = await _readRecords();
@@ -322,6 +340,7 @@ extension CalendarSyncService on Never {
       try {
         await _deleteEvent(entry.value.eventId);
       } catch (e, trace) {
+        diagnostics.report(e, trace, DiagnosticError.background);
         success = false;
         remaining[entry.key] = entry.value;
         log(
@@ -681,6 +700,7 @@ extension CalendarSyncService on Never {
       }
       return records;
     } catch (e, trace) {
+      diagnostics.report(e, trace, DiagnosticError.storage);
       log(
         'Failed to parse stored calendar sync records',
         error: e,

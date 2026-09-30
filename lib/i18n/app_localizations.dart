@@ -442,7 +442,12 @@ class AppLocalizations {
     ];
     for (final assetPath in assetPaths) {
       try {
-        final raw = await rootBundle.loadString(assetPath);
+        // Privacy copy takes the catalog just beyond loadString's 50 KB
+        // isolate threshold. Decode this small bundled catalog directly so
+        // localization remains deterministic during startup and widget tests.
+        final bytes = await rootBundle.load(assetPath);
+        final raw = utf8.decode(
+            bytes.buffer.asUint8List(bytes.offsetInBytes, bytes.lengthInBytes));
         final decoded = json.decode(raw) as Map<String, dynamic>;
         merged.addAll(
           decoded.map((key, value) => MapEntry(key, value.toString())),

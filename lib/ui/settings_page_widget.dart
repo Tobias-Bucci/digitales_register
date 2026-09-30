@@ -28,11 +28,13 @@ import 'package:dr/demo.dart';
 import 'package:dr/i18n/app_language.dart';
 import 'package:dr/i18n/app_localizations.dart';
 import 'package:dr/platform_adapter.dart';
+import 'package:dr/privacy_consent.dart';
 import 'package:dr/theme_controller.dart';
 import 'package:dr/tutorial/tutorial_page.dart';
 import 'package:dr/ui/autocomplete_options.dart';
 import 'package:dr/ui/dialog.dart';
 import 'package:dr/ui/network_protocol_page.dart';
+import 'package:dr/ui/privacy_data_details_page.dart';
 import 'package:dr/util.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_colorpicker/flutter_colorpicker.dart';
@@ -970,18 +972,38 @@ class _SettingsPageWidgetState extends State<SettingsPageWidget> {
     );
   }
 
+  Widget _buildPrivacySection(AppLocalizations l10n) => _SettingsSectionCard(
+        title: l10n.text('privacySettings.title'),
+        children: [
+          ListTile(
+              leading: const Icon(Icons.privacy_tip_outlined),
+              title: Text(l10n.text('privacySettings.status')),
+              subtitle: Text(l10n.text(!AnalyticsService.hasCurrentConsent
+                  ? 'privacySettings.pending'
+                  : AnalyticsService.privacy.decision.state ==
+                          TelemetryConsentState.allAllowed
+                      ? 'privacySettings.allowed'
+                      : 'privacyConsent.necessaryOnly'))),
+          ListTile(
+              title: Text(l10n.text('privacySettings.change')),
+              trailing: const Icon(Icons.chevron_right),
+              onTap: () async {
+                await AnalyticsService.showPrivacyOptionsForm(context);
+                if (mounted) setState(() {});
+              }),
+          ListTile(
+              title: Text(l10n.text('privacyDetails.title')),
+              trailing: const Icon(Icons.chevron_right),
+              onTap: () => Navigator.of(context).push(MaterialPageRoute<void>(
+                  settings: const RouteSettings(name: '/privacy_details'),
+                  builder: (_) => const PrivacyDataDetailsPage()))),
+        ],
+      );
+
   Widget _buildAdvancedSection(AppLocalizations l10n) {
     return _SettingsSectionCard(
       title: l10n.text('settings.section.advanced'),
       children: [
-        ListTile(
-          leading: const Icon(Icons.privacy_tip_outlined),
-          title: Text(l10n.text('settings.advanced.privacy')),
-          trailing: const Icon(Icons.chevron_right),
-          onTap: () async {
-            await AnalyticsService.showPrivacyOptionsForm(context);
-          },
-        ),
         ListTile(
           title: Text(l10n.text('settings.advanced.networkProtocol')),
           trailing: const Icon(Icons.chevron_right),
@@ -1097,6 +1119,8 @@ class _SettingsPageWidgetState extends State<SettingsPageWidget> {
           _buildCalendarSection(l10n),
           const SizedBox(height: 16),
           _buildTutorialSection(l10n),
+          const SizedBox(height: 16),
+          _buildPrivacySection(l10n),
           const SizedBox(height: 16),
           _buildAdvancedSection(l10n),
           if (widget.vm.username == 'debug')

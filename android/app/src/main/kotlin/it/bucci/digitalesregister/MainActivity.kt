@@ -32,6 +32,28 @@ class MainActivity: FlutterFragmentActivity() {
 
     override fun configureFlutterEngine(flutterEngine: FlutterEngine) {
         super.configureFlutterEngine(flutterEngine)
+        MethodChannel(flutterEngine.dartExecutor.binaryMessenger, "dr/privacy_bootstrap")
+            .setMethodCallHandler { call, result ->
+                when (call.method) {
+                    "ready" -> result.success(PrivacyApplication.ready)
+                    "installationSource" -> {
+                        try {
+                        val installer = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
+                            packageManager.getInstallSourceInfo(packageName).installingPackageName
+                        } else {
+                            @Suppress("DEPRECATION")
+                            packageManager.getInstallerPackageName(packageName)
+                        }
+                        result.success(when (installer) {
+                            "com.android.vending" -> "play_store"
+                            null -> "manual"
+                            else -> "other"
+                        })
+                        } catch (_: Exception) { result.success("unknown") }
+                    }
+                    else -> result.notImplemented()
+                }
+            }
         MethodChannel(
             flutterEngine.dartExecutor.binaryMessenger,
             CALENDAR_SYNC_METHOD_CHANNEL,

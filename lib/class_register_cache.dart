@@ -17,6 +17,7 @@
 
 import 'dart:convert';
 
+import 'package:dr/diagnostics_service.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 class ClassRegisterPayloadSnapshot {
@@ -78,7 +79,8 @@ class ClassRegisterPayloadSnapshot {
             ? storedFingerprint!
             : fingerprintForPayload(payload),
       );
-    } catch (_) {
+    } catch (e, stack) {
+      diagnostics.report(e, stack, DiagnosticError.storage);
       return null;
     }
   }
@@ -91,12 +93,25 @@ class ClassRegisterCacheService {
     if (raw == null || raw.isEmpty) {
       return null;
     }
-    return ClassRegisterPayloadSnapshot.tryParse(raw);
+    final snapshot = ClassRegisterPayloadSnapshot.tryParse(raw);
+    diagnostics.values({
+      'cache_hit': snapshot != null,
+      'data_source': snapshot != null ? 'cache' : 'unknown'
+    });
+    diagnostics.safeLog(snapshot != null ? 'cache_hit' : 'cache_miss');
+    return snapshot;
   }
 
   Future<void> save(String key, ClassRegisterPayloadSnapshot snapshot) async {
     final prefs = await SharedPreferences.getInstance();
-    await prefs.setString(key, json.encode(snapshot.toJson()));
+    try {
+      if (!await prefs.setString(key, json.encode(snapshot.toJson()))) {
+        throw StateError('Cache write failed');
+      }
+    } catch (e, stack) {
+      diagnostics.report(e, stack, DiagnosticError.storage);
+      rethrow;
+    }
   }
 }
 

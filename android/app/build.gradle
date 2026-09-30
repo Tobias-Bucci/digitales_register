@@ -70,6 +70,13 @@ android {
     }
     buildTypes {
         release {
+            firebaseCrashlytics {
+                nativeSymbolUploadEnabled true
+                // Supply unstripped native libraries for plugins/engine when available.
+                // Flutter AOT symbols are uploaded separately with the Firebase CLI.
+                def nativeSymbols = project.findProperty('crashlyticsNativeSymbolsDir')
+                if (nativeSymbols) unstrippedNativeLibsDir file(nativeSymbols)
+            }
             // Default: require the private release keystore.
             // Local override (explicit): set allowDebugSigningForRelease=true in local.properties
             // or ALLOW_DEBUG_SIGNING_FOR_RELEASE=true as environment variable.
@@ -108,4 +115,6 @@ dependencies {
     implementation platform('com.google.firebase:firebase-bom:34.13.0')
     implementation 'com.google.firebase:firebase-analytics'
     implementation 'com.google.firebase:firebase-crashlytics'
+    // Flutter embeds native engine/AOT shared libraries: NDK crashes apply.
+    implementation 'com.google.firebase:firebase-crashlytics-ndk'
 }

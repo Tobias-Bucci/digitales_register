@@ -1,4 +1,4 @@
-﻿// Copyright (C) 2026 Tobias Bucci
+// Copyright (C) 2026 Tobias Bucci
 //
 // This file is part of digitales_register.
 //
@@ -15,6 +15,7 @@
 // You should have received a copy of the GNU General Public License
 // along with digitales_register.  If not, see <http://www.gnu.org/licenses/>.
 
+import 'package:dr/diagnostics_service.dart';
 import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
@@ -70,12 +71,14 @@ class AppThemeController extends ChangeNotifier with WidgetsBindingObserver {
       _themePreference =
           isDark ? AppThemePreference.dark : AppThemePreference.light;
     }
+    diagnostics.update('theme', _themePreference.name);
     notifyListeners();
   }
 
   @override
   void didChangePlatformBrightness() {
     if (_themePreference == AppThemePreference.system) {
+      diagnostics.update('theme', _themePreference.name);
       notifyListeners();
     }
   }
@@ -168,6 +171,7 @@ class AppThemeController extends ChangeNotifier with WidgetsBindingObserver {
 
   Future<void> setThemePreference(AppThemePreference preference) async {
     _themePreference = preference;
+    diagnostics.update('theme', _themePreference.name);
     notifyListeners();
 
     final prefs = await SharedPreferences.getInstance();
@@ -185,6 +189,7 @@ class AppThemeController extends ChangeNotifier with WidgetsBindingObserver {
 
   Future<void> setPlatformOverride(bool value) async {
     _platformOverride = value;
+    diagnostics.update('theme', _themePreference.name);
     notifyListeners();
 
     final prefs = await SharedPreferences.getInstance();
@@ -195,6 +200,7 @@ class AppThemeController extends ChangeNotifier with WidgetsBindingObserver {
 
   Future<void> setContrastColor(Color color) async {
     _contrastColor = color;
+    diagnostics.update('theme', _themePreference.name);
     notifyListeners();
 
     final prefs = await SharedPreferences.getInstance();

@@ -20,15 +20,12 @@
 
 import 'dart:async';
 import 'dart:io';
-
 import 'package:built_redux/built_redux.dart';
 import 'package:dr/actions/app_actions.dart';
 import 'package:dr/analytics_service.dart';
 import 'package:dr/android_widget_service.dart';
 import 'package:dr/app_clock.dart';
 import 'package:dr/app_language_controller.dart';
-import 'package:dr/tutorial/tutorial_overlay.dart';
-import 'package:dr/tutorial/tutorial_service.dart';
 import 'package:dr/app_state.dart';
 import 'package:dr/app_subject_translation_controller.dart';
 import 'package:dr/biometric_app_lock.dart';
@@ -41,12 +38,15 @@ import 'package:dr/container/profile_container.dart';
 import 'package:dr/container/request_pass_reset_container.dart';
 import 'package:dr/container/settings_page.dart';
 import 'package:dr/desktop.dart';
+import 'package:dr/diagnostics_service.dart';
 import 'package:dr/i18n/app_language.dart';
 import 'package:dr/i18n/app_localizations.dart';
 import 'package:dr/middleware/middleware.dart';
 import 'package:dr/reducer/reducer.dart';
 import 'package:dr/settings_persistence_service.dart';
 import 'package:dr/theme_controller.dart';
+import 'package:dr/tutorial/tutorial_overlay.dart';
+import 'package:dr/tutorial/tutorial_service.dart';
 import 'package:dr/ui/grade_calculator.dart';
 import 'package:dr/ui/grades_chart_page.dart';
 import 'package:dr/util.dart';
@@ -80,6 +80,7 @@ Future<void> main() async {
   scaffoldKey = GlobalKey();
   scaffoldMessengerKey = GlobalKey();
   secureStorage = getFlutterSecureStorage();
+  await AnalyticsService.initLich();
   await appClock.initialize();
   await _loadStartupUserPreferences();
   await _removeLegacyNotificationData();
@@ -255,10 +256,14 @@ class RegisterApp extends StatelessWidget {
                 return supportedLocales.first;
               },
               navigatorKey: navigatorKey,
+              navigatorObservers: [
+                DiagnosticsNavigatorObserver(
+                    onScreen: (screen) =>
+                        unawaited(AnalyticsService.logScreenView(screen)))
+              ],
               scaffoldMessengerKey: scaffoldMessengerKey,
               initialRoute: "/",
               onGenerateRoute: (RouteSettings settings) {
-                unawaited(AnalyticsService.logScreenView(settings.name ?? '/'));
                 final List<String> pathElements = settings.name!.split("/");
                 if (pathElements[0] != "") return null;
                 switch (pathElements[1]) {
@@ -363,6 +368,13 @@ class LifecycleObserver with WidgetsBindingObserver {
   LifecycleObserver(this.onForeground, this.onBackground);
   @override
   void didChangeAppLifecycleState(AppLifecycleState state) {
+    diagnostics.update(
+        'app_state',
+        state == AppLifecycleState.resumed
+            ? 'foreground'
+            : state == AppLifecycleState.paused
+                ? 'background'
+                : state.name);
     if (state == AppLifecycleState.resumed) {
       unawaited(_handleResumed());
     }

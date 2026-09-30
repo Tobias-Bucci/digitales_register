@@ -16,7 +16,6 @@
 // You should have received a copy of the GNU General Public License
 // along with digitales_register.  If not, see <http://www.gnu.org/licenses/>.
 
-import 'package:dr/analytics_service.dart';
 import 'package:dr/app_state.dart';
 import 'package:dr/container/grades_chart_container.dart';
 import 'package:dr/container/grades_forecast_container.dart';
@@ -25,11 +24,11 @@ import 'package:dr/container/grades_page_container.dart';
 import 'package:dr/container/grades_statistics_container.dart';
 import 'package:dr/container/sorted_grades_container.dart';
 import 'package:dr/i18n/app_localizations.dart';
+import 'package:dr/tutorial/tutorial_target.dart';
 import 'package:dr/ui/animated_linear_progress_indicator.dart';
 import 'package:dr/ui/app_popup_button.dart';
 import 'package:dr/ui/last_fetched_overlay.dart';
 import 'package:dr/ui/no_internet.dart';
-import 'package:dr/tutorial/tutorial_target.dart';
 import 'package:flutter/material.dart';
 import 'package:responsive_scaffold/responsive_scaffold.dart';
 
@@ -104,8 +103,6 @@ class GradesPage extends StatefulWidget {
 }
 
 class _GradesPageState extends State<GradesPage> {
-  String? _lastLoggedAverage;
-
   void _showCertificateAverageInfo(BuildContext context) {
     final l10n = context.l10n;
     showDialog<void>(
@@ -126,21 +123,6 @@ class _GradesPageState extends State<GradesPage> {
   @override
   Widget build(BuildContext context) {
     final vm = widget.vm;
-
-    // Logge den Durchschnitt nur, wenn er sich geändert hat und gültig ist
-    if (vm.showAllSubjectsAverage &&
-        vm.allSubjectsAverage != '/' &&
-        vm.allSubjectsAverage != _lastLoggedAverage) {
-      _lastLoggedAverage = vm.allSubjectsAverage;
-      final parsed =
-          double.tryParse(vm.allSubjectsAverage.replaceAll(',', '.'));
-      if (parsed != null) {
-        AnalyticsService.logCustomEvent(
-          'user_average_grade',
-          {'average': parsed},
-        );
-      }
-    }
 
     final l10n = context.l10n;
     final averageStyle = Theme.of(context).textTheme.titleMedium;

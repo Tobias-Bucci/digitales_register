@@ -17,8 +17,8 @@
 
 import 'dart:convert';
 import 'dart:developer';
-
 import 'package:dr/app_state.dart';
+import 'package:dr/diagnostics_service.dart';
 import 'package:dr/serializers.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
@@ -38,6 +38,7 @@ class SettingsPersistenceService {
         return deserialized;
       }
     } catch (error, stackTrace) {
+      diagnostics.report(error, stackTrace, DiagnosticError.storage);
       log(
         'Failed to load global settings',
         error: error,
@@ -49,10 +50,15 @@ class SettingsPersistenceService {
 
   Future<void> save(SettingsState settings) async {
     final prefs = await SharedPreferences.getInstance();
-    await prefs.setString(
-      globalSettingsPreferenceKey,
-      json.encode(serializers.serialize(settings)),
-    );
+    try {
+      if (!await prefs.setString(globalSettingsPreferenceKey,
+          json.encode(serializers.serialize(settings)))) {
+        throw StateError('Settings write failed');
+      }
+    } catch (e, stack) {
+      diagnostics.report(e, stack, DiagnosticError.storage);
+      rethrow;
+    }
   }
 }
 

@@ -19,7 +19,6 @@
 import 'dart:async';
 import 'dart:developer';
 import 'dart:io';
-
 import 'package:cookie_jar/cookie_jar.dart';
 import 'package:dio/dio.dart';
 import 'package:dio/io.dart';
@@ -27,6 +26,8 @@ import 'package:dio_cookie_manager/dio_cookie_manager.dart';
 import 'package:dr/app_clock.dart';
 import 'package:dr/app_state.dart';
 import 'package:dr/demo.dart';
+import 'package:dr/diagnostics_network.dart';
+import 'package:dr/diagnostics_service.dart';
 import 'package:dr/main.dart';
 import 'package:dr/ui/dialog.dart';
 import 'package:dr/util.dart';
@@ -116,6 +117,7 @@ class Wrapper {
       ),
     );
     dio.interceptors.add(CookieManager(cookieJar));
+    dio.interceptors.add(DiagnosticsInterceptor());
     dio.interceptors.add(InterceptorsWrapper(onRequest: (options, handler) {
       if (!_appInForeground) {
         handler.reject(DioException(
@@ -396,7 +398,8 @@ class Wrapper {
         throw const AppRequestException(message: 'App is in the background');
       }
       try {
-        final result = await request();
+        final result = await runZoned(request,
+            zoneValues: {#diagnosticRetry: didRetry ? 1 : 0});
         stopwatch.stop();
         logPerformanceEvent(
           "network_request",
@@ -410,6 +413,8 @@ class Wrapper {
       } catch (error) {
         if (allowSingleRetry && !didRetry && _isTransientRequestError(error)) {
           didRetry = true;
+          diagnostics.update('request_retry_count', 1);
+          diagnostics.safeLog('request_retry');
           logPerformanceEvent(
             "network_retry",
             <String, Object?>{
@@ -496,7 +501,13 @@ class Wrapper {
       });
       throw UnexpectedLogoutException();
     }
-    config = parseConfig(source);
+    diagnostics.values({
+      'parser': 'authentication',
+      'feature': 'authentication',
+      'operation': 'parse',
+      'response_format': 'html'
+    });
+    config = tryParse(source, parseConfig);
   }
 
   static Config parseConfig(String source) {
@@ -694,6 +705,8 @@ class Wrapper {
   }) async {
     if (!_appInForeground) return null;
     if (demoMode) {
+      diagnostics.resetRequest();
+      diagnostics.update('data_source', 'local');
       return await getDemoResponse(url, args);
     }
     assert(!url.startsWith("/"));

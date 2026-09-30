@@ -54,6 +54,11 @@ Future<void> _deleteNotification(
   ActionHandler next,
   Action<Notification> action,
 ) async {
+  diagnostics.update(
+      'notification_type',
+      action.payload.type == 'message'
+          ? 'general'
+          : (action.payload.type ?? 'unknown'));
   await next(action);
   _markRuntimeCacheStale(_notificationsCacheKey);
   await wrapper.send(
