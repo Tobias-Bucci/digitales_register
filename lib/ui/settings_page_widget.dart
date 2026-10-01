@@ -979,26 +979,18 @@ class _SettingsPageWidgetState extends State<SettingsPageWidget> {
             ListTile(
                 title: Text(l10n.text('privacyCategory.$category.title')),
                 subtitle: Text(
-                    '${l10n.text('privacyCategory.$category.body')}\n${l10n.text((category == 'diagnostics' ? AnalyticsService.privacy.decision.diagnosticsAllowed : category == 'usage' ? AnalyticsService.privacy.decision.analyticsAllowed : AnalyticsService.privacy.decision.academicStatsAllowed) ? 'privacySettings.enabled' : 'privacySettings.disabled')}'),
-                trailing: const Icon(Icons.tune),
-                onTap: () async {
-                  await AnalyticsService.showPrivacyOptionsForm(context);
-                  if (mounted) setState(() {});
-                }),
+                    '${l10n.text('privacyCategory.$category.body')}\n${l10n.text((category == 'diagnostics' ? AnalyticsService.privacy.decision.diagnosticsAllowed : category == 'usage' ? AnalyticsService.privacy.decision.analyticsAllowed : AnalyticsService.privacy.decision.academicStatsAllowed) ? 'privacySettings.enabled' : 'privacySettings.disabled')}')),
           ListTile(
               title: Text(l10n.text('privacyAge.title')),
               subtitle: Text(l10n.text(
-                  'privacyAge.${AnalyticsService.privacy.decision.ageEligibility.name}')),
-              onTap: () async {
-                await AnalyticsService.showPrivacyOptionsForm(context);
-                if (mounted) setState(() {});
-              }),
+                  'privacyAge.${AnalyticsService.privacy.decision.ageEligibility.name}'))),
           if (AnalyticsService.privacy.decision.ageEligibility ==
               AnalyticsAgeEligibility.under14)
             Padding(
                 padding: const EdgeInsets.all(16),
                 child: Text(l10n.text('privacyAge.under14Explanation'))),
           ListTile(
+              leading: const Icon(Icons.tune),
               title: Text(l10n.text('privacySettings.change')),
               trailing: const Icon(Icons.chevron_right),
               onTap: () async {
@@ -1081,7 +1073,7 @@ class _SettingsPageWidgetState extends State<SettingsPageWidget> {
             showLicensePage(
               context: context,
               applicationName: l10n.text('settings.about.title'),
-              applicationVersion: l10n.text('settings.about.version'),
+              applicationVersion: appVersion,
             );
           },
         ),
@@ -1219,7 +1211,7 @@ class _SettingsPageWidgetState extends State<SettingsPageWidget> {
                             ),
                           ),
                           const SizedBox(height: 4),
-                          Text(l10n.text('settings.about.version')),
+                          Text('v$appVersion'),
                           const SizedBox(height: 12),
                           Text(l10n.text('settings.about.copyright')),
                           const SizedBox(height: 12),
