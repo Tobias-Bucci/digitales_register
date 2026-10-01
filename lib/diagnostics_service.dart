@@ -2,6 +2,7 @@ import 'dart:async';
 import 'dart:collection';
 import 'dart:io';
 import 'dart:isolate';
+import 'package:dr/telemetry_capabilities.dart';
 import 'package:firebase_crashlytics/firebase_crashlytics.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
@@ -27,14 +28,26 @@ abstract class DiagnosticSink {
 
 class FirebaseDiagnosticSink implements DiagnosticSink {
   @override
-  Future<void> key(String name, Object value) =>
-      FirebaseCrashlytics.instance.setCustomKey(name, value);
+  Future<void> key(String name, Object value) async {
+    if (TelemetryCapabilities.current().supportsCrashlytics) {
+      await FirebaseCrashlytics.instance.setCustomKey(name, value);
+    }
+  }
+
   @override
-  Future<void> log(String message) => FirebaseCrashlytics.instance.log(message);
+  Future<void> log(String message) async {
+    if (TelemetryCapabilities.current().supportsCrashlytics) {
+      await FirebaseCrashlytics.instance.log(message);
+    }
+  }
+
   @override
-  Future<void> error(String category, StackTrace stack, bool fatal) =>
-      FirebaseCrashlytics.instance.recordError(Exception(category), stack,
+  Future<void> error(String category, StackTrace stack, bool fatal) async {
+    if (TelemetryCapabilities.current().supportsCrashlytics) {
+      await FirebaseCrashlytics.instance.recordError(Exception(category), stack,
           fatal: fatal, reason: category);
+    }
+  }
 }
 
 // Only predefined values may cross the telemetry boundary. Redaction alone
@@ -143,14 +156,9 @@ class DiagnosticSanitizer {
   static StackTrace stack(StackTrace input) {
     // SDK receives symbol frames only. Drop absolute paths and unknown frames,
     // which may contain Windows usernames or isolate error message text.
-    final frames = input
-        .toString()
-        .split('\n')
-        .where((line) =>
-            RegExp(r'^#\d+\s').hasMatch(line) &&
-            RegExp(r'\((package:[a-zA-Z0-9_./-]+|dart:[a-zA-Z0-9_./-]+):\d+:\d+\)')
-                .hasMatch(line))
-        .map((line) => line.replaceAll(RegExp(r'\(file:.*\)'), '(redacted)'));
+    final frames = input.toString().split('\n').where((line) => RegExp(
+            r'^#\d+\s+(?:new )?[a-zA-Z0-9_.$<>]+(?:\.<anonymous closure>)?\s+\((?:package:[a-zA-Z0-9_./-]+|dart:[a-zA-Z0-9_./-]+):\d+:\d+\)\s*$')
+        .hasMatch(line));
     return StackTrace.fromString(frames.take(80).join('\n'));
   }
 }

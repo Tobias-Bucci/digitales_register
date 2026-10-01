@@ -15,6 +15,7 @@
 // You should have received a copy of the GNU General Public License
 // along with digitales_register.  If not, see <http://www.gnu.org/licenses/>.
 
+import 'package:dr/i18n/app_localizations.dart';
 import 'package:flutter/material.dart';
 
 import 'package:url_launcher/url_launcher.dart';
@@ -24,7 +25,7 @@ class Donate extends StatelessWidget {
   Widget build(BuildContext context) {
     final darkMode = Theme.of(context).brightness == Brightness.dark;
     return Scaffold(
-        appBar: AppBar(title: const Text("Unterstütze uns jetzt!")),
+        appBar: AppBar(title: Text(context.l10n.text('donate.title'))),
         body: ListView(
           children: <Widget>[
             Padding(
@@ -33,8 +34,8 @@ class Donate extends StatelessWidget {
                 clipBehavior: Clip.hardEdge,
                 elevation: 10,
                 child: ListTile(
-                    title: const Text("Spendiere jetzt einen Kaffee!"),
-                    subtitle: const Text("Betrag: 1,99€"),
+                    title: Text(context.l10n.text('donate.coffee')),
+                    subtitle: Text(context.l10n.text('donate.coffeeAmount')),
                     leading: Image.asset(darkMode
                         ? "assets/coffee-white.png"
                         : "assets/coffee-black.png"),
@@ -53,8 +54,8 @@ class Donate extends StatelessWidget {
                 clipBehavior: Clip.hardEdge,
                 elevation: 10,
                 child: ListTile(
-                    title: const Text("Werde jetzt Gönner!"),
-                    subtitle: const Text("Betrag: 0,97€/Monat"),
+                    title: Text(context.l10n.text('donate.patron')),
+                    subtitle: Text(context.l10n.text('donate.patronAmount')),
                     leading: Image.asset(darkMode
                         ? "assets/goenner-white.png"
                         : "assets/goenner-black.png"),
@@ -73,8 +74,8 @@ class Donate extends StatelessWidget {
                 clipBehavior: Clip.hardEdge,
                 elevation: 10,
                 child: ListTile(
-                    title: const Text("Werde jetzt Freund!"),
-                    subtitle: const Text("Betrag: 2,97/Monat"),
+                    title: Text(context.l10n.text('donate.friend')),
+                    subtitle: Text(context.l10n.text('donate.friendAmount')),
                     leading: Image.asset(darkMode
                         ? "assets/herz-white.png"
                         : "assets/herz-black.png"),
@@ -93,8 +94,8 @@ class Donate extends StatelessWidget {
                 clipBehavior: Clip.hardEdge,
                 elevation: 10,
                 child: ListTile(
-                    title: const Text("Individuelle Spende!"),
-                    subtitle: const Text("Hier geht's zur Website!"),
+                    title: Text(context.l10n.text('donate.custom')),
+                    subtitle: Text(context.l10n.text('donate.website')),
                     leading: Image.asset(darkMode
                         ? "assets/Sparschwein-white.png"
                         : "assets/Sparschwein-black.png"),
@@ -110,7 +111,7 @@ class Donate extends StatelessWidget {
             Padding(
               padding: const EdgeInsets.only(top: 45.0, left: 28, bottom: 10),
               child: Text(
-                "Jetzt uns sicher unterstützen mit",
+                context.l10n.text('donate.secure'),
                 style: TextStyle(
                     fontSize: 18,
                     fontWeight: FontWeight.bold,
@@ -142,9 +143,8 @@ class Donate extends StatelessWidget {
                 clipBehavior: Clip.hardEdge,
                 elevation: 10,
                 child: ListTile(
-                    title: const Text("Herzliches Dankeschön!"),
-                    subtitle: const Text(
-                        "Wir, Michael & Simon, bedanken uns für \nIhre liebenswerte Unterstützung!"),
+                    title: Text(context.l10n.text('donate.thanks')),
+                    subtitle: Text(context.l10n.text('donate.thanksBody')),
                     leading: Image.asset(darkMode
                         ? "assets/herz-white.png"
                         : "assets/herz-black.png"),

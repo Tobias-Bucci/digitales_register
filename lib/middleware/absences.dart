@@ -35,7 +35,6 @@ Future<void> _loadAbsences(
       _isFresh(api.state.absencesState.lastFetched, _absencesCacheTtl)) {
     return;
   }
-  _absencesDebug('load -> request');
   await _runCoalescedLoad(_absencesCacheKey, () async {
     await next(action);
     await _refreshAbsences(api);
@@ -53,19 +52,7 @@ Future<void> _refreshAbsences(
     return;
   }
   if (response == null) {
-    _absencesDebug('load <- null response');
     return;
-  }
-  final responseMap = getMap(response);
-  if (responseMap != null) {
-    final absencesCount = (responseMap['absences'] as List?)?.length;
-    final futureCount = (responseMap['futureAbsences'] as List?)?.length;
-    final dynamic canEdit = responseMap['canEdit'];
-    _absencesDebug(
-      'load <- canEdit=$canEdit absences=$absencesCount futureAbsences=$futureCount',
-    );
-  } else {
-    _absencesDebug('load <- non-map response: $response');
   }
   // A middleware action must not await another dispatch on the same store:
   // built_redux serializes dispatches, which otherwise creates a deadlock.
@@ -79,7 +66,6 @@ Future<void> _addFutureAbsence(
   Action<Map<String, dynamic>> action,
 ) async {
   if (api.state.noInternet) return;
-  _absencesDebug('add -> payload=${action.payload}');
   await next(action);
   dynamic response;
   try {
@@ -91,22 +77,16 @@ Future<void> _addFutureAbsence(
     await _handleUnexpectedLogout(api, 'add');
     return;
   }
-  _absencesDebug('add <- response=$response');
   if (_responseSucceeded(response)) {
-    _absencesDebug('add -> success, reloading absences');
     _markRuntimeCacheStale(_absencesCacheKey);
     await _refreshAbsences(api);
     if (!wrapper.noInternet) {
-      showSnackBar('Voraus-Absenz wurde eingetragen');
+      showSnackBar((await _loadMiddlewareLocalizations(api.state))
+          .text('absences.future.success'));
     }
   } else if (!wrapper.noInternet) {
-    _absencesDebug('add -> failed');
-    final message = _responseMessage(response);
-    showSnackBar(
-      message == null
-          ? 'Absenz konnte nicht eingetragen werden'
-          : 'Absenz konnte nicht eingetragen werden: $message',
-    );
+    showSnackBar((await _loadMiddlewareLocalizations(api.state))
+        .text('absences.future.addFailed'));
   }
 }
 
@@ -118,10 +98,10 @@ Future<void> _removeFutureAbsence(
   if (api.state.noInternet) return;
   await next(action);
   final payload = _buildRemoveFutureAbsencePayload(action.payload);
-  _absencesDebug('remove -> payload=$payload');
   if (payload == null) {
     if (!wrapper.noInternet) {
-      showSnackBar('Diese Voraus-Absenz kann nicht gelöscht werden');
+      showSnackBar((await _loadMiddlewareLocalizations(api.state))
+          .text('absences.future.invalidRemove'));
     }
     return;
   }
@@ -135,19 +115,12 @@ Future<void> _removeFutureAbsence(
     await _handleUnexpectedLogout(api, 'remove');
     return;
   }
-  _absencesDebug('remove <- response=$response');
   if (_responseSucceeded(response)) {
-    _absencesDebug('remove -> success, reloading absences');
     _markRuntimeCacheStale(_absencesCacheKey);
     await _refreshAbsences(api);
   } else if (!wrapper.noInternet) {
-    _absencesDebug('remove -> failed');
-    final message = _responseMessage(response);
-    showSnackBar(
-      message == null
-          ? 'Absenz konnte nicht gelöscht werden'
-          : 'Absenz konnte nicht gelöscht werden: $message',
-    );
+    showSnackBar((await _loadMiddlewareLocalizations(api.state))
+        .text('absences.future.removeFailed'));
   }
 }
 
@@ -159,7 +132,6 @@ Future<void> _justifyAbsence(
   if (api.state.noInternet) return;
   await next(action);
   final payload = _buildJustifyAbsencePayload(api.state, action.payload);
-  _absencesDebug('justify -> payload=$payload');
   if (payload == null) {
     if (!wrapper.noInternet) {
       final l10n = await _loadMiddlewareLocalizations(api.state);
@@ -177,16 +149,13 @@ Future<void> _justifyAbsence(
     await _handleUnexpectedLogout(api, 'justify');
     return;
   }
-  _absencesDebug('justify <- response=$response');
   if (_responseSucceeded(response)) {
-    _absencesDebug('justify -> success, reloading absences');
     _markRuntimeCacheStale(_absencesCacheKey);
     await _refreshAbsences(api);
     if (!wrapper.noInternet) {
       unawaited(_showJustificationSuccess(api.state));
     }
   } else if (!wrapper.noInternet) {
-    _absencesDebug('justify -> failed');
     final l10n = await _loadMiddlewareLocalizations(api.state);
     final message = _responseMessage(response);
     showSnackBar(
@@ -221,19 +190,13 @@ bool _responseSucceeded(dynamic response) {
   return false;
 }
 
-void _absencesDebug(String message) {
-  debugPrint('[AbsencesDebug] $message');
-}
-
 Future<void> _handleUnexpectedLogout(
   MiddlewareApi<AppState, AppStateBuilder, AppActions> api,
   String operation,
 ) async {
-  _absencesDebug(
-    '$operation -> unexpected logout from server, triggering forced logout',
-  );
   if (!wrapper.noInternet) {
-    showSnackBar('Sitzung abgelaufen, bitte erneut anmelden');
+    showSnackBar((await _loadMiddlewareLocalizations(api.state))
+        .text('error.sessionExpired'));
   }
   await api.actions.loginActions.logout(
     LogoutPayload(

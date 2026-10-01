@@ -34,14 +34,14 @@ import 'package:dr/local_reminder_assessments.dart';
 import 'package:dr/main.dart';
 import 'package:dr/middleware/middleware.dart';
 import 'package:dr/school_timeline.dart';
+import 'package:dr/tutorial/tutorial_service.dart';
+import 'package:dr/tutorial/tutorial_target.dart';
 import 'package:dr/ui/animated_linear_progress_indicator.dart';
 import 'package:dr/ui/dialog.dart';
 import 'package:dr/ui/favorite_subject_filter.dart';
 import 'package:dr/ui/last_fetched_overlay.dart';
 import 'package:dr/ui/no_internet.dart';
 import 'package:dr/ui/school_countdown_overview.dart';
-import 'package:dr/tutorial/tutorial_target.dart';
-import 'package:dr/tutorial/tutorial_service.dart';
 import 'package:dr/utc_date_time.dart';
 import 'package:dr/util.dart';
 import 'package:flutter/material.dart';
@@ -110,7 +110,7 @@ class _DaysWidgetState extends State<DaysWidget> {
   final controller = AutoScrollController(suggestedRowHeight: 100);
   String? _favoriteSubject;
   bool _showEmptyDays = true;
-  Map<String, DateTime> _gradeDeadlineOverrides = const <String, DateTime>{};
+  Map<String, DateTime> _gradeDeadlineOverrides = <String, DateTime>{};
   int _gradeDeadlineCount = 2;
 
   bool _afterFirstFrame = false;
@@ -228,8 +228,9 @@ class _DaysWidgetState extends State<DaysWidget> {
                     lastDate:
                         DateTime(appClock.now.year + 2, DateTime.december, 31),
                   );
-                  if (selected != null)
+                  if (selected != null) {
                     setDialogState(() => dates[index] = selected);
+                  }
                 },
               ),
           ]),
@@ -248,9 +249,10 @@ class _DaysWidgetState extends State<DaysWidget> {
     final updated = <String, DateTime>{..._gradeDeadlineOverrides};
     for (var index = 0; index < count; index++) {
       final key = candidates[index].preferenceKey;
-      if (key != null)
+      if (key != null) {
         updated[key] =
             DateTime(dates[index].year, dates[index].month, dates[index].day);
+      }
     }
     setState(() {
       _gradeDeadlineOverrides = updated;
@@ -1613,7 +1615,7 @@ class ItemWidget extends StatelessWidget {
                   alignment: Alignment.centerLeft,
                   child: Padding(
                     padding: const EdgeInsets.all(8.0),
-                    child: Text("Anhang",
+                    child: Text(context.l10n.text('ui.attachment'),
                         style: Theme.of(context).textTheme.titleMedium),
                   ),
                 ),
@@ -1715,7 +1717,7 @@ class AttachmentWidget extends StatelessWidget {
                 : () {
                     openCallback(ggs);
                   },
-            child: const Text("Öffnen"),
+            child: Text(context.l10n.text('ui.open')),
           )
         ],
       ),

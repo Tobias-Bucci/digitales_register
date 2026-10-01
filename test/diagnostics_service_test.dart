@@ -121,6 +121,12 @@ void main() {
     expect(DiagnosticSanitizer.screen('/grades/123?name=Alice'), 'grades');
     expect(DiagnosticSanitizer.screen('/Alice/123'), 'unknown');
     expect(DiagnosticSanitizer.screen('/'), 'dashboard');
+    final stack = DiagnosticSanitizer.stack(
+        StackTrace.fromString('#0 parse (package:dr/data.dart:1:2)\n'
+            '#1 password=secret (package:dr/data.dart:1:2)\n'
+            '#2 alice@example.org (package:dr/data.dart:1:2)\n'
+            '#3 parse (package:dr/data.dart:1:2) token=secret'));
+    expect(stack.toString(), '#0 parse (package:dr/data.dart:1:2)');
   });
   test('screen transition, logout reset and duplicate suppression', () async {
     final sink = MemorySink();

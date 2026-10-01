@@ -713,7 +713,7 @@ class _LoginPageContentState extends State<LoginPageContent> {
                                                   onPressed: () =>
                                                       Navigator.pop(context),
                                                   child: Text(
-                                                    l10n.text('dialog.cancel'),
+                                                    l10n.text('privacyConsent.cancel'),
                                                   ),
                                                 ),
                                                 FilledButton(

@@ -1,9 +1,11 @@
 import 'package:dr/assessment_attachments.dart';
 import 'package:dr/exam_study_plan.dart';
+import 'package:dr/i18n/app_localizations.dart';
 import 'package:dr/ui/exam_calendar_page.dart';
 import 'package:dr/utc_date_time.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:intl/date_symbol_data_local.dart';
 
 void main() {
@@ -29,6 +31,14 @@ void main() {
     );
 
     await tester.pumpWidget(MaterialApp(
+      locale: const Locale('de'),
+      supportedLocales: AppLocalizations.supportedLocales,
+      localizationsDelegates: const [
+        AppLocalizations.delegate,
+        GlobalMaterialLocalizations.delegate,
+        GlobalWidgetsLocalizations.delegate,
+        GlobalCupertinoLocalizations.delegate
+      ],
       home: ExamCalendarPage(
         assessments: [firstAssessment, secondAssessment],
         now: DateTime(2026, 4, 20),
@@ -43,6 +53,7 @@ void main() {
       ),
     ));
 
+    await tester.pumpAndSettle();
     await tester.tap(find.byKey(const Key('exam-calendar-week-view')));
     await tester.pumpAndSettle();
     expect(find.byKey(const Key('week-exam-assessment-1')), findsOneWidget);
@@ -67,6 +78,14 @@ void main() {
     );
 
     await tester.pumpWidget(MaterialApp(
+      locale: const Locale('de'),
+      supportedLocales: AppLocalizations.supportedLocales,
+      localizationsDelegates: const [
+        AppLocalizations.delegate,
+        GlobalMaterialLocalizations.delegate,
+        GlobalWidgetsLocalizations.delegate,
+        GlobalCupertinoLocalizations.delegate
+      ],
       home: ExamCalendarPage(
         assessments: [assessment],
         now: DateTime(2026, 4, 1),
@@ -81,6 +100,7 @@ void main() {
       ),
     ));
 
+    await tester.pumpAndSettle();
     await tester.tap(find.text('Textanalyse'));
     await tester.pumpAndSettle();
     await tester.tap(find.text('Bearbeiten'));

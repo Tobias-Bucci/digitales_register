@@ -17,6 +17,7 @@
 
 import 'package:built_collection/built_collection.dart';
 import 'package:dr/container/chart_legend_entry_container.dart';
+import 'package:dr/i18n/app_localizations.dart';
 import 'package:flutter/material.dart';
 
 class ChartLegend extends StatelessWidget {
@@ -27,7 +28,7 @@ class ChartLegend extends StatelessWidget {
   Widget build(BuildContext context) {
     final height = MediaQuery.of(context).size.height;
     return ExpansionTile(
-      title: const Text("Legende"),
+      title: Text(context.l10n.text('ui.legend')),
       children: <Widget>[
         // supports the case when there are not enough subjects to fill the available vertical space.
         // this is, however, quite unlikely.

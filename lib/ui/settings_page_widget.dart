@@ -777,7 +777,7 @@ class _SettingsPageWidgetState extends State<SettingsPageWidget> {
             });
             await appSubjectTranslationController.setEnabled(enabled);
             if (enabled) {
-              widget.onSetSubjectNicks(const {});
+              widget.onSetSubjectNicks({});
             } else {
               widget.onSetSubjectNicks(Map.of(defaultSubjectNicks));
             }
@@ -891,7 +891,7 @@ class _SettingsPageWidgetState extends State<SettingsPageWidget> {
           FutureBuilder<List<CalendarSyncCalendar>>(
             future: _calendarSyncCalendarsFuture,
             builder: (context, snapshot) {
-              final calendars = snapshot.data ?? const <CalendarSyncCalendar>[];
+              final calendars = snapshot.data ?? <CalendarSyncCalendar>[];
               CalendarSyncCalendar? selectedCalendar;
               for (final calendar in calendars) {
                 if (calendar.id == widget.vm.calendarSyncCalendarId) {
@@ -1134,7 +1134,7 @@ class _SettingsPageWidgetState extends State<SettingsPageWidget> {
               padding: const EdgeInsets.only(top: 16),
               child: ElevatedButton(
                 onPressed: widget.onShowDebug,
-                child: const Text("Debug Menu"),
+                child: Text(context.l10n.text('ui.debug')),
               ),
             ),
         ],
@@ -1158,8 +1158,7 @@ class _SettingsPageWidgetState extends State<SettingsPageWidget> {
       builder: (context) {
         return Dialog(
           backgroundColor: Colors.transparent,
-          insetPadding:
-              const EdgeInsets.symmetric(horizontal: 20, vertical: 24),
+          insetPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 24),
           child: DecoratedBox(
             decoration: BoxDecoration(
               color: accentBg,
@@ -1930,7 +1929,7 @@ class _SubstituteSettingsPageState extends State<_SubstituteSettingsPage> {
     final resolvedSubject =
         findStringIgnoreCase(updatedSubjects.keys, subject) ?? subject;
     final updatedTeachers = <String>[
-      ...updatedSubjects[resolvedSubject] ?? const <String>[],
+      ...updatedSubjects[resolvedSubject] ?? <String>[],
     ];
     if (!containsStringIgnoreCase(updatedTeachers, teacher)) {
       updatedTeachers.add(teacher);
@@ -2046,7 +2045,7 @@ class _SubstituteSettingsPageState extends State<_SubstituteSettingsPage> {
                                   _substitutePrimaryTeachers,
                                 );
                                 final teachers = List<String>.from(
-                                  updated[entry.key] ?? const <String>[],
+                                  updated[entry.key] ?? <String>[],
                                 );
                                 teachers.removeWhere(
                                   (item) => equalsIgnoreCase(item, teacher),
@@ -2208,7 +2207,7 @@ class _CalendarSyncSettingsDetailPage extends StatelessWidget {
           child: FutureBuilder<List<CalendarSyncCalendar>>(
             future: calendarsFuture,
             builder: (context, snapshot) {
-              final calendars = snapshot.data ?? const <CalendarSyncCalendar>[];
+              final calendars = snapshot.data ?? <CalendarSyncCalendar>[];
               CalendarSyncCalendar? selectedCalendar;
               for (final calendar in calendars) {
                 if (calendar.id == calendarSyncCalendarId) {
@@ -2452,7 +2451,7 @@ class _AddSubjectState extends State<AddSubject> {
   String? get _selectedSubject {
     if (widget.requireSuggestionMatch) {
       return findSubjectIgnoreCase(
-        widget.availableSubjects ?? const [],
+        widget.availableSubjects ?? [],
         subjectNameController.text,
       );
     }

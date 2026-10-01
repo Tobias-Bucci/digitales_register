@@ -151,7 +151,7 @@ The application supports background polling for unread notifications and display
 - Notifications must be enabled in app settings
 - Unread notifications are repeatedly reminded until marked as read
 - While the app is open: polling every 10 minutes
-- In background (Android): handled via WorkManager (typically ~15 minutes minimum interval enforced by OS)
+- No active background push/WorkManager integration is present in the current dependency set; register notifications are loaded in the app.
 - Multiple notifications are grouped into a single summary notification
 
 ---
@@ -212,3 +212,7 @@ Contributions are welcome.
 - Submit a pull request
 
 For significant changes, please open an issue first to discuss the proposed modifications.
+
+## Privacy version 4
+
+See [current privacy audit](docs/PRIVACY_AUDIT_V4.md), [data inventory](docs/PRIVACY_DATA_INVENTORY.md), [Firebase setup](docs/FIREBASE_ANALYTICS_SETUP.md) and [external retention tasks](docs/BIGQUERY_RETENTION.md). Optional diagnostics, usage analytics and academic statistics require separate current consent and age eligibility. App copy is bundled in German, Italian, English and Ladin.

@@ -687,6 +687,49 @@ class AppLocalizations {
     );
   }
 
+  String assessmentCountdown(int days) => text(
+      days < 0
+          ? 'exam.pastLabel'
+          : days == 0
+              ? 'day.today'
+              : days == 1
+                  ? 'exam.tomorrow'
+                  : 'exam.remaining',
+      args: {'count': '$days'});
+
+  String requestError(String? value) {
+    const keys = {
+      'error.timeout',
+      'error.network',
+      'error.generic',
+      'login.credentialsRejected'
+    };
+    if (keys.contains(value)) return text(value!);
+    if (value?.startsWith('Die Sitzung') == true) return text('error.session');
+    if (value?.startsWith('Es konnte keine sichere HTTPS') == true) {
+      return text('login.httpsRequired');
+    }
+    if (value == 'Keine Internetverbindung') return text('error.network');
+    return text('error.generic');
+  }
+
+  /// Translate generated defaults while preserving user-authored phase titles.
+  String studyLabel(String value) {
+    const keys = {
+      'Leicht': 'exam.light',
+      'Mittel': 'exam.medium',
+      'Intensiv': 'exam.intense',
+      'Letzte Wiederholung': 'exam.finalReview',
+      'Heute: finale Wiederholung': 'exam.todayReview',
+      'Stoff vorbereiten': 'exam.prepare',
+      'Finale Wiederholung': 'exam.finalReview',
+      'Vorbereitung starten': 'exam.start',
+      'Stoff vertiefen': 'exam.deepen',
+      'Üben und Wissenslücken schließen': 'exam.practice',
+    };
+    return keys.containsKey(value) ? text(keys[value]!) : value;
+  }
+
   String attachmentLabel(int count) {
     return text(
       count == 1 ? 'messages.attachment.one' : 'messages.attachment.other',
@@ -717,7 +760,7 @@ class AppLocalizations {
       'absences.future.recordedBy',
       args: {
         'timestamp': DateFormat(
-          "EEE d.M.yyyy 'um' HH:mm",
+          'EEE d.M.yyyy HH:mm',
           locale.toLanguageTag(),
         ).format(timestamp),
         'signature': signature,

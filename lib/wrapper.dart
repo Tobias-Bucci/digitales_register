@@ -17,8 +17,8 @@
 // along with digitales_register.  If not, see <http://www.gnu.org/licenses/>.
 
 import 'dart:async';
-import 'dart:developer';
 import 'dart:io';
+
 import 'package:cookie_jar/cookie_jar.dart';
 import 'package:dio/dio.dart';
 import 'package:dio/io.dart';
@@ -28,37 +28,14 @@ import 'package:dr/app_state.dart';
 import 'package:dr/demo.dart';
 import 'package:dr/diagnostics_network.dart';
 import 'package:dr/diagnostics_service.dart';
+import 'package:dr/i18n/app_localizations.dart';
 import 'package:dr/main.dart';
+import 'package:dr/privacy_log.dart';
 import 'package:dr/ui/dialog.dart';
 import 'package:dr/util.dart';
 import 'package:flutter/material.dart';
 import 'package:mutex/mutex.dart';
 
-/*
-// Debug all requests
-// IMPORTANT Don't include in release, contains sensitive info
-class DebugInterceptor extends Interceptor {
-  @override
-  Future onRequest(RequestOptions options) async {
-    log("Request, uri: ${options.uri},\ndata: ${options.data},\nheaders: ${options.headers}");
-    return super.onRequest(options);
-  }
-
-  @override
-  Future onResponse(Response response) async {
-    log("Response, uri: ${response.request.uri},\nheaders: ${response.headers}");
-    if (response.data.toString().length <= 100) {
-      log(response.data.toString());
-    } else {
-      log(response.data.toString().substring(0, 100));
-    }
-    return response;
-  }
-
-  @override
-  Future onError(DioException err) async => err;
-}
-*/
 typedef AddNetworkProtocolItem = void Function(NetworkProtocolItem item);
 
 class UnexpectedLogoutException implements Exception {}
@@ -261,15 +238,15 @@ class Wrapper {
       )!;
     } catch (e) {
       loggedInCompleter.complete(false);
-      log("Error while logging in (login failed)", error: e);
+      privacyLog('technical_operation');
       if (_mapRequestError(e).isConnectionIssue || await refreshNoInternet()) {
         noInternet = true;
       }
-      error = "Unknown Error:\n${_mapRequestError(e)}";
+      error = _mapRequestError(e).message;
       return null;
     }
     if (getBool(response["loggedIn"]) ?? false) {
-      log("login succeeded");
+      privacyLog('technical_operation');
       lastInteraction = DateTime.now();
       this.user = user;
       this.pass = pass;
@@ -280,9 +257,7 @@ class Wrapper {
         if (!loggedInCompleter.isCompleted) {
           loggedInCompleter.complete(false);
         }
-        log(
-          "login succeeded, but the server logged the user out before the config could be loaded",
-        );
+        privacyLog('technical_operation');
         error =
             "Die Sitzung wurde direkt nach dem Login beendet. Das passiert oft, wenn dasselbe Konto gleichzeitig auf mehreren Geräten verwendet wird.";
         _serverLogoutTime = null;
@@ -301,9 +276,9 @@ class Wrapper {
       _scheduleSessionRefresh();
       onConfigLoaded!();
     } else {
-      log("login did not succeed");
+      privacyLog('technical_operation');
       loggedInCompleter.complete(false);
-      error = "[${response["error"]}] ${response["message"]}";
+      error = 'login.credentialsRejected';
       switch (getString(response["error"])) {
         case "two_factor_needed":
           final tfaCode = await _request2FA();
@@ -329,22 +304,22 @@ class Wrapper {
         final textInputController = TextEditingController();
         return StatefulBuilder(
           builder: (context, setState) => InfoDialog(
-            title: Text(
-                wasWrong ? "Ungültiger Code" : "Zweiter Faktor wird benötigt"),
+            title: Text(context.l10n
+                .text(wasWrong ? 'login.invalid2FA' : 'login.require2FA')),
             content: TextField(
               controller: textInputController,
             ),
             actions: [
               TextButton(
                 onPressed: () => Navigator.pop(context),
-                child: const Text("Abbrechen"),
+                child: Text(context.l10n.text('privacyConsent.cancel')),
               ),
               ElevatedButton(
                 onPressed: () => Navigator.pop(
                   context,
                   textInputController.value.text,
                 ),
-                child: const Text("Bestätigen"),
+                child: Text(context.l10n.text('login.confirm2FA')),
               ),
             ],
           ),
@@ -359,7 +334,7 @@ class Wrapper {
     }
     if (error is TimeoutException) {
       return const AppRequestException(
-        message: "Die Anfrage hat das Zeitlimit ueberschritten.",
+        message: 'error.timeout',
         isTimeout: true,
         isConnectionIssue: true,
       );
@@ -371,13 +346,13 @@ class Wrapper {
       final isConnectionIssue =
           isTimeout || error.type == DioExceptionType.connectionError;
       return AppRequestException(
-        message: error.message ?? error.toString(),
+        message: isTimeout ? 'error.timeout' : 'error.network',
         isTimeout: isTimeout,
         isConnectionIssue: isConnectionIssue,
       );
     }
-    return AppRequestException(
-      message: error.toString(),
+    return const AppRequestException(
+      message: 'error.generic',
     );
   }
 
@@ -466,12 +441,12 @@ class Wrapper {
       )!;
     } catch (e) {
       _loggedIn = Future.value(false);
-      log("Failed to change pass", error: e);
-      error = "Unknown Error:\n${_mapRequestError(e)}";
+      privacyLog('technical_operation');
+      error = _mapRequestError(e).message;
       return null;
     }
     if (response["error"] != null) {
-      error = "[${response["error"]}] ${response["message"]}";
+      error = 'error.generic';
     } else {
       _loggedIn = Future.value(false);
       this.user = user;
@@ -649,7 +624,7 @@ class Wrapper {
         _loggedIn = Future.value(false);
       }
       if (forceRelogin) {
-        log("unexpected logout: forcing relogin before retrying the request.");
+        privacyLog('technical_operation');
         _loggedIn = Future.value(false);
         _lastUnexpectedLogout = DateTime.now();
       } else if (isRetryAfterUnexpectedLogout) {
@@ -660,10 +635,10 @@ class Wrapper {
                 ?.add(const Duration(minutes: 1))
                 .isAfter(DateTime.now()) ??
             false) {
-          log("unexpected logout: not trying to relogin, last relogin attempt was less than a minute ago.");
-          log("  retrying just the request (we might have logged in in the meantime, as requests are running in parallel).");
+          privacyLog('technical_operation');
+          privacyLog('technical_operation');
         } else {
-          log("unexpected logout: trying to relogin and retrying the request after that.");
+          privacyLog('technical_operation');
           _loggedIn = Future.value(false);
           _lastUnexpectedLogout = DateTime.now();
         }
@@ -715,7 +690,7 @@ class Wrapper {
       isRetryAfterUnexpectedLogout: isRetryAfterUnexpectedLogout,
       forceRelogin: forceRelogin,
     )) {
-      log("returning null for request to $url, user is not logged in");
+      privacyLog('technical_operation');
       return null;
     }
     if (!_appInForeground) return null;
@@ -742,15 +717,15 @@ class Wrapper {
     } on Exception catch (e) {
       await _handleError(e);
       onAddProtocolItem!(NetworkProtocolItem((b) => b
-        ..address = baseAddress + url
-        ..response = stringifyMaybeJson(responseData)
-        ..parameters = stringifyMaybeJson(args)));
+        ..address = DiagnosticSanitizer.endpoint(url)
+        ..response = responseData == null ? 'failed' : 'completed'
+        ..parameters = '[redacted]'));
       return null;
     }
     onAddProtocolItem!(NetworkProtocolItem((b) => b
-      ..address = baseAddress + url
-      ..response = stringifyMaybeJson(responseData)
-      ..parameters = stringifyMaybeJson(args)));
+      ..address = DiagnosticSanitizer.endpoint(url)
+      ..response = responseData == null ? 'failed' : 'completed'
+      ..parameters = '[redacted]'));
 
     // returned if we were logged out (there should be whitespace at both ends, but the editor is removing it):
     //	<script type="text/javascript">
@@ -765,9 +740,7 @@ class Wrapper {
       // If the server still keeps redirecting us to login, fail this request quietly
       // instead of surfacing an exception in the UI.
       if (unexpectedLogoutRetryCount >= 2) {
-        log(
-          "retrying the request was unsuccessful even after forced relogin; returning null.",
-        );
+        privacyLog('technical_operation');
         error = "Die Sitzung konnte nicht automatisch erneuert werden.";
         _loggedIn = Future.value(false);
         return null;
@@ -810,7 +783,7 @@ class Wrapper {
       isRetryAfterUnexpectedLogout: isRetryAfterUnexpectedLogout,
       forceRelogin: forceRelogin,
     )) {
-      log("returning null for binary request to $url, user is not logged in");
+      privacyLog('technical_operation');
       return null;
     }
     if (!_appInForeground) return null;
@@ -837,23 +810,19 @@ class Wrapper {
     } on Exception catch (e) {
       await _handleError(e);
       onAddProtocolItem!(NetworkProtocolItem((b) => b
-        ..address = baseAddress + url
-        ..response = stringifyMaybeJson(responseData)
-        ..parameters =
-            "multipart file payload (${bytes.length} bytes, $contentType, $fileName)"));
+        ..address = DiagnosticSanitizer.endpoint(url)
+        ..response = responseData == null ? 'failed' : 'completed'
+        ..parameters = '[redacted]'));
       return null;
     }
     onAddProtocolItem!(NetworkProtocolItem((b) => b
-      ..address = baseAddress + url
-      ..response = stringifyMaybeJson(responseData)
-      ..parameters =
-          "multipart file payload (${bytes.length} bytes, $contentType, $fileName)"));
+      ..address = DiagnosticSanitizer.endpoint(url)
+      ..response = responseData == null ? 'failed' : 'completed'
+      ..parameters = '[redacted]'));
 
     if (responseData is String && _isLoginRedirectPage(responseData)) {
       if (unexpectedLogoutRetryCount >= 2) {
-        log(
-          "retrying the binary request was unsuccessful even after forced relogin; returning null.",
-        );
+        privacyLog('technical_operation');
         error = "Die Sitzung konnte nicht automatisch erneuert werden.";
         _loggedIn = Future.value(false);
         return null;
@@ -873,7 +842,7 @@ class Wrapper {
 
   Future<void> _handleError(Exception e) async {
     if (!_appInForeground) return;
-    log("Error while sending request", error: e);
+    privacyLog('technical_operation');
     final requestError = _mapRequestError(e);
     if (requestError.isConnectionIssue || await refreshNoInternet()) {
       noInternet = true;
@@ -918,8 +887,8 @@ class Wrapper {
           },
         ),
       );
-    } catch (error, trace) {
-      log("Session refresh failed: ${error.runtimeType}", stackTrace: trace);
+    } catch (error) {
+      privacyLog('technical_operation');
       logPerformanceEvent("session_refresh_failed", <String, Object?>{
         "reason": error.runtimeType.toString(),
         "forcedLogout": true,

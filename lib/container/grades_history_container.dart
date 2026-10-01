@@ -3,6 +3,7 @@ import 'package:dr/analytics_service.dart';
 import 'package:dr/app_clock.dart';
 import 'package:dr/app_state.dart';
 import 'package:dr/grade_history.dart';
+import 'package:dr/i18n/app_localizations.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_built_redux/flutter_built_redux.dart';
 
@@ -17,7 +18,7 @@ class GradesHistoryContainer extends StatelessWidget {
         animation: appClock,
         builder: (context, _) => IconButton(
           icon: const Icon(Icons.history),
-          tooltip: 'Noten-Historie',
+          tooltip: context.l10n.text('tutorial.step.gradeHistory.title'),
           onPressed: () => _showHistory(context, state),
         ),
       ),
@@ -50,37 +51,37 @@ class _HistoryDialog extends StatelessWidget {
   Widget build(BuildContext context) {
     final data = comparison;
     return AlertDialog(
-      title: const Text('Noten-Historie'),
+      title: Text(context.l10n.text('tutorial.step.gradeHistory.title')),
       content: SizedBox(
         width: 520,
         child: data == null
-            ? const Text(
-                'Für einen Vergleich sind noch keine historischen Noten vorhanden.')
+            ? Text(context.l10n.text('grades.history.empty'))
             : SingleChildScrollView(
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
-                        '${data.previousSemester.name} → ${data.currentSemester.name}',
+                        '${context.l10n.semesterLabel(data.previousSemester)} → ${context.l10n.semesterLabel(data.currentSemester)}',
                         style: Theme.of(context).textTheme.titleSmall),
                     const SizedBox(height: 12),
                     if (data.change == null)
-                      const Text(
-                          'Für beide Zeiträume liegt noch kein vollständiger Durchschnitt vor.')
+                      Text(context.l10n.text('grades.history.incomplete'))
                     else
-                      Text(_changeText(data.change!),
+                      Text(_changeText(context, data.change!),
                           style: Theme.of(context).textTheme.titleMedium),
                     const SizedBox(height: 16),
                     if (data.subjects.isEmpty)
-                      const Text(
-                          'Es gibt noch kein Fach, das in beiden Zeiträumen vorhanden ist.')
+                      Text(context.l10n.text('grades.history.noSubjects'))
                     else
                       ...data.subjects.map((subject) => ListTile(
                             dense: true,
                             contentPadding: EdgeInsets.zero,
                             title: Text(subject.subject),
                             subtitle: Text(
-                              'Früher: ${_format(subject.previous)}  ·  Aktuell: ${_format(subject.current)}',
+                              context.l10n.text('grades.history.values', args: {
+                                'previous': _format(subject.previous),
+                                'current': _format(subject.current)
+                              }),
                             ),
                             trailing: Text(
                               '${subject.change >= 0 ? '+' : ''}${_format(subject.change)}',
@@ -99,15 +100,19 @@ class _HistoryDialog extends StatelessWidget {
       actions: [
         TextButton(
           onPressed: () => Navigator.of(context).pop(),
-          child: const Text('Schließen'),
+          child: Text(context.l10n.text('ui.close')),
         ),
       ],
     );
   }
 
-  static String _changeText(double change) {
-    if (change.abs() < 0.005) return 'Gesamtschnitt: unverändert';
-    return 'Gesamtschnitt: ${change > 0 ? 'besser' : 'schlechter'} um ${_format(change.abs())}';
+  static String _changeText(BuildContext context, double change) {
+    if (change.abs() < 0.005) {
+      return context.l10n.text('grades.history.unchanged');
+    }
+    return context.l10n.text(
+        change > 0 ? 'grades.history.better' : 'grades.history.worse',
+        args: {'value': _format(change.abs())});
   }
 
   static String _format(double value) =>

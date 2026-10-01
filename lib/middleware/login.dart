@@ -216,10 +216,12 @@ Future<void> _login(
         return;
       }
     }
+    final failureMessage = (await _loadMiddlewareLocalizations(api.state))
+        .requestError(wrapper.error);
     await api.actions.loginActions.loginFailed(
       LoginFailedPayload(
         (b) => b
-          ..cause = wrapper.error ?? "Unknown error"
+          ..cause = failureMessage
           ..username = action.payload.user,
       ),
     );
@@ -244,10 +246,12 @@ Future<void> _changePass(
     return;
   }
   if (result["error"] != null) {
+    final failureMessage = (await _loadMiddlewareLocalizations(api.state))
+        .requestError(wrapper.error);
     await api.actions.loginActions.loginFailed(
       LoginFailedPayload(
         (b) => b
-          ..cause = wrapper.error
+          ..cause = failureMessage
           ..username = action.payload.user,
       ),
     );

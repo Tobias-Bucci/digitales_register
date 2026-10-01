@@ -237,11 +237,15 @@ class ProductAnalytics {
   }
 
   Future<void> _setProperty(String key, String? value) async {
-    if (!enabled || !AnalyticsSchema.validProperty(key, value)) return;
-    if (_properties.containsKey(key) && _properties[key] == value) return;
+    final safeValue =
+        key == 'school_id' && (!decision().academicStatsAllowed || _demo)
+            ? null
+            : value;
+    if (!enabled || !AnalyticsSchema.validProperty(key, safeValue)) return;
+    if (_properties.containsKey(key) && _properties[key] == safeValue) return;
     final epoch = _epoch;
-    await sink.property(key, value);
-    if (epoch == _epoch && enabled) _properties[key] = value;
+    await sink.property(key, safeValue);
+    if (epoch == _epoch && enabled) _properties[key] = safeValue;
   }
 
   Future<void> updateUserProperties(Map<String, String?> values) =>
@@ -347,9 +351,9 @@ class ProductAnalytics {
       s['grade_average_tenths'] is int &&
       (s['grade_average_tenths']! as int) >= 0 &&
       (s['grade_average_tenths']! as int) <= 100 &&
-      {'1_5', '6_10', '11_20', '21_40', '41_plus'}
+      {'0', '1_5', '6_10', '11_20', '21_40', '41_plus'}
           .contains(s['grade_count_bucket']) &&
-      {'1_5', '6_10', '11_plus'}.contains(s['subject_count_bucket']) &&
+      {'0', '1_5', '6_10', '11_plus'}.contains(s['subject_count_bucket']) &&
       s['snapshot_schema_version'] is int &&
       s['snapshot_schema_version'] == 1;
   Future<void> developerTestProductAnalytics() async {
