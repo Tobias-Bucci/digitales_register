@@ -1,3 +1,5 @@
+> Current 2026-10-01 audit: [PRIVACY_AUDIT_V4.md](PRIVACY_AUDIT_V4.md), [inventory](PRIVACY_DATA_INVENTORY.md), [Analytics setup](FIREBASE_ANALYTICS_SETUP.md). The historic v3 section below describes the prior implementation and is not the current notice.
+
 # Version 4 privacy update — 2026-09-30
 
 The authoritative current notice version is **4**. The original version-3 audit below is preserved as historical context; its all-or-nothing consent description and statement that no new product Analytics exists are superseded by this update.

@@ -16,15 +16,13 @@
 // You should have received a copy of the GNU General Public License
 // along with digitales_register.  If not, see <http://www.gnu.org/licenses/>.
 
-import 'dart:developer';
-
 import 'package:built_collection/built_collection.dart';
 import 'package:built_redux/built_redux.dart';
 import 'package:collection/collection.dart' show IterableExtension;
-
 import 'package:dr/actions/dashboard_actions.dart';
 import 'package:dr/app_state.dart';
 import 'package:dr/data.dart';
+import 'package:dr/privacy_log.dart';
 import 'package:dr/utc_date_time.dart';
 import 'package:dr/util.dart';
 
@@ -257,8 +255,8 @@ GradeGroupSubmission? _parseGradeGroupSubmission(Map data) {
         ..gradeGroupId = getInt(data["gradeGroupId"])
         ..userId = getInt(data["userId"]),
     );
-  } catch (e, s) {
-    log("Failed to parse GradeGroupSubmission", error: e, stackTrace: s);
+  } catch (e) {
+    privacyLog('technical_operation');
     // TODO: figure out a way to notify the user about this failure.
     return null;
   }

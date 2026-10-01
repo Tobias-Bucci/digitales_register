@@ -2,6 +2,7 @@ import 'package:dr/actions/app_actions.dart';
 import 'package:dr/app_clock.dart';
 import 'package:dr/app_state.dart';
 import 'package:dr/grade_forecast.dart';
+import 'package:dr/i18n/app_localizations.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_built_redux/flutter_built_redux.dart';
 
@@ -32,8 +33,10 @@ class _GradesForecastRow extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final value =
-        forecast == null ? '—' : 'ca. ${_format(forecast!.predictedAverage)}';
+    final value = forecast == null
+        ? '—'
+        : context.l10n.text('grades.forecast.value',
+            args: {'value': _format(forecast!.predictedAverage)});
     return Padding(
       padding: const EdgeInsetsDirectional.fromSTEB(16, 2, 16, 2),
       child: SizedBox(
@@ -41,12 +44,12 @@ class _GradesForecastRow extends StatelessWidget {
         child: Row(
           children: [
             Expanded(
-              child: Text('Schnitt-Prognose',
+              child: Text(context.l10n.text('grades.forecast'),
                   style: Theme.of(context).textTheme.titleMedium),
             ),
             IconButton(
               icon: const Icon(Icons.info_outline),
-              tooltip: 'Informationen zur Schnitt-Prognose',
+              tooltip: context.l10n.text('grades.forecast.info'),
               onPressed: () => _showExplanation(context),
             ),
             SizedBox(
@@ -67,17 +70,12 @@ class _GradesForecastRow extends StatelessWidget {
     showDialog<void>(
       context: context,
       builder: (dialogContext) => AlertDialog(
-        title: const Text('Schnitt-Prognose'),
-        content: const Text(
-          'Die Prognose ist eine statistische Einschätzung und keine offizielle Zeugnisnote. '
-          'Dafür werden deine gültigen, gewichteten Noten dieses Schuljahres chronologisch ausgewertet. '
-          'Aus den kumulierten Durchschnittswerten wird ein linearer Trend bis zum Schuljahresende hochgerechnet. '
-          'Mindestens vier Noten an drei verschiedenen Tagen sind nötig. Neue Noten können das Ergebnis jederzeit verändern.',
-        ),
+        title: Text(context.l10n.text('grades.forecast')),
+        content: Text(context.l10n.text('grades.forecast.body')),
         actions: [
           TextButton(
             onPressed: () => Navigator.of(dialogContext).pop(),
-            child: const Text('Schließen'),
+            child: Text(context.l10n.text('ui.close')),
           ),
         ],
       ),

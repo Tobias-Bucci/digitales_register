@@ -1,6 +1,8 @@
+> Current privacy audit and validation: [PRIVACY_AUDIT_V4.md](PRIVACY_AUDIT_V4.md). Data inventory and manual cloud tasks are maintained separately.
+
 # Analytics implementation report — Digitales Register
 
-Implemented 2026-09-30. Current privacy notice version: **4**. No Firebase Console settings, live BigQuery queries or real-device delivery checks were performed. Companion documents: [Console configuration](FIREBASE_ANALYTICS_CONSOLE_CONFIGURATION.md), [BigQuery examples](ANALYTICS_BIGQUERY_EXAMPLES.md), [school reservations](analytics_school_mapping.csv).
+Implemented 2026-09-30; privacy hardening reviewed 2026-10-01. Current privacy notice version: **4**. No Firebase Console settings, live BigQuery queries or real-device delivery checks were performed. Companion documents: [Console configuration](FIREBASE_ANALYTICS_CONSOLE_CONFIGURATION.md), [BigQuery examples](ANALYTICS_BIGQUERY_EXAMPLES.md), [school reservations](analytics_school_mapping.csv).
 
 ## A. Summary
 
@@ -46,7 +48,7 @@ Allow-all with unresolved eligibility opens the age step. Under14 leaves all opt
 
 ## F. Firebase Analytics runtime configuration
 
-AnalyticsService owns one PrivacyController and one ProductAnalytics. _FirebaseCollection preserves native readiness/platform checks. It stops native collection promptly before asynchronously clearing SDK identity/properties, calls setAnalyticsCollectionEnabled and uses existing FlutterFire setConsent. Analytics storage is true only for current eligible usage consent. Ad storage, ad user data and ad personalization signals are always false.
+AnalyticsService owns one PrivacyController and one ProductAnalytics. _FirebaseCollection preserves native readiness/platform checks. On withdrawal it stops native collection before clearing SDK identity/properties and denying storage; on opt-in it sets all Consent Mode signals before enabling collection. Initialization failures are cached for the process. Analytics storage is true only for current eligible usage consent. Ad storage, ad user data and ad personalization signals are always false.
 
 Revocation closes the Dart gate synchronously. Queued event/identity/property/snapshot work is fenced by an epoch so old consent/account sessions are discarded. User-ID and all nine custom properties clear, collection/storage consent deny, and resetAnalyticsData runs. In-flight SDK work already accepted cannot be undone; uploaded history is not automatically deleted. Valid opted-in startup pauses collection and clears account attribution for safe reidentification without resetting app-instance data. Academic revocation alone blocks academic submission while allowed usage can resume.
 
@@ -68,11 +70,11 @@ The developer-only CSV contains analytics_id, school_display_name and technical_
 
 ## I. User properties
 
-Names/values are centrally validated; invalid strings are rejected rather than truncated. All require usage consent. All clear on usage revocation; account properties additionally clear on logout/switch.
+Names/values are centrally validated; invalid strings are rejected rather than truncated. All require usage consent. school_id additionally requires academic consent and non-demo mode at the central property boundary. All clear on usage revocation; account properties additionally clear on logout/switch.
 
 | ID | Firebase name | Source | Example | When set | When cleared |
 |---|---|---|---|---|---|
-| UP01 | school_id | Explicit unambiguous catalog reservation | school_0037 | Signed-in mapped non-demo context | Logout/switch, demo/unknown school, revoke |
+| UP01 | school_id | Explicit unambiguous catalog reservation | school_0037 | Signed-in mapped non-demo context with academic consent | Logout/switch, demo/unknown school, usage or academic revoke |
 | UP02 | school_api_type | Existing provider/demo mode | digital_register_api | Safe signed-in context | Logout/switch/revoke |
 | UP04 | demo_mode | AppState.isDemo | false | Signed-in context/change | Logout/switch/revoke |
 | UP05 | app_language | Settings, lld normalized to ld | de | Consent context/language change | Revoke |

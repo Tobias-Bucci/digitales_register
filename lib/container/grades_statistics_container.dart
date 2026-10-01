@@ -2,6 +2,7 @@ import 'package:dr/actions/app_actions.dart';
 import 'package:dr/app_clock.dart';
 import 'package:dr/app_state.dart';
 import 'package:dr/grade_statistics.dart';
+import 'package:dr/i18n/app_localizations.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_built_redux/flutter_built_redux.dart';
 
@@ -19,9 +20,10 @@ class GradesStatisticsContainer extends StatelessWidget {
           child: Card(
             clipBehavior: Clip.antiAlias,
             child: ListTile(
-              leading: const CircleAvatar(child: Icon(Icons.bar_chart_rounded)),
-              title: const Text('Notenstatistik'),
-              subtitle: const Text('Vergleich deiner Fach-Durchschnitte'),
+              leading: const CircleAvatar(
+                  child: Icon(Icons.bar_chart_rounded)),
+              title: Text(context.l10n.text('grades.statistics')),
+              subtitle: Text(context.l10n.text('grades.statistics.subtitle')),
               trailing: const Icon(Icons.chevron_right),
               onTap: () => _show(context, state),
             ),
@@ -54,10 +56,10 @@ class _StatisticsDialog extends StatelessWidget {
       titlePadding: const EdgeInsets.fromLTRB(24, 20, 12, 8),
       title: Row(
         children: [
-          const Expanded(child: Text('Notenstatistik')),
+          Expanded(child: Text(context.l10n.text('grades.statistics'))),
           IconButton(
             icon: const Icon(Icons.info_outline),
-            tooltip: 'Erklärung',
+            tooltip: context.l10n.text('grades.statistics.explanation'),
             onPressed: () => _showExplanation(context),
           ),
         ],
@@ -72,7 +74,7 @@ class _StatisticsDialog extends StatelessWidget {
                   children: [
                     _SectionCard(
                       icon: Icons.leaderboard_outlined,
-                      title: 'Fächervergleich',
+                      title: context.l10n.text('grades.statistics.subjects'),
                       child: _SubjectBars(values: stats.subjectAverages),
                     ),
                   ],
@@ -82,7 +84,7 @@ class _StatisticsDialog extends StatelessWidget {
       actions: [
         TextButton(
           onPressed: () => Navigator.of(context).pop(),
-          child: const Text('Schließen'),
+          child: Text(context.l10n.text('ui.close')),
         ),
       ],
     );
@@ -92,16 +94,12 @@ class _StatisticsDialog extends StatelessWidget {
     showDialog<void>(
       context: context,
       builder: (dialogContext) => AlertDialog(
-        title: const Text('So werden die Statistiken berechnet'),
-        content: const Text(
-          'Der Fächervergleich zeigt den gewichteten Durchschnitt jedes Fachs im aktuell ausgewählten Semester. '
-          'Stornierte, leere sowie Noten nach dem aktuellen Datum werden nicht berücksichtigt. '
-          'Im Demo-Modus ist damit auch das simulierte Datum wirksam.',
-        ),
+        title: Text(context.l10n.text('grades.statistics.how')),
+        content: Text(context.l10n.text('grades.statistics.body')),
         actions: [
           TextButton(
             onPressed: () => Navigator.of(dialogContext).pop(),
-            child: const Text('Verstanden'),
+            child: Text(context.l10n.text('ui.understood')),
           ),
         ],
       ),
@@ -185,12 +183,12 @@ class _EmptyStatistics extends StatelessWidget {
   const _EmptyStatistics();
 
   @override
-  Widget build(BuildContext context) => const Padding(
-        padding: EdgeInsets.symmetric(vertical: 24),
+  Widget build(BuildContext context) => Padding(
+        padding: const EdgeInsets.symmetric(vertical: 24),
         child: Column(mainAxisSize: MainAxisSize.min, children: [
-          Icon(Icons.bar_chart_outlined, size: 44),
-          SizedBox(height: 12),
-          Text('Noch keine gültigen Noten für Statistiken vorhanden.'),
+          const Icon(Icons.bar_chart_outlined, size: 44),
+          const SizedBox(height: 12),
+          Text(context.l10n.text('grades.statistics.empty')),
         ]),
       );
 }

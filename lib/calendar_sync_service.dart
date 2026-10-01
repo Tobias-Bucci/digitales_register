@@ -17,7 +17,6 @@
 
 import 'dart:async';
 import 'dart:convert';
-import 'dart:developer';
 
 import 'package:dr/analytics_schema.dart';
 import 'package:dr/analytics_service.dart';
@@ -28,6 +27,7 @@ import 'package:dr/i18n/app_language.dart';
 import 'package:dr/i18n/app_localizations.dart';
 import 'package:dr/local_reminder_assessments.dart';
 import 'package:dr/platform_adapter.dart';
+import 'package:dr/privacy_log.dart';
 import 'package:dr/utc_date_time.dart';
 import 'package:dr/util.dart';
 import 'package:flutter/foundation.dart';
@@ -287,11 +287,7 @@ extension CalendarSyncService on Never {
       } catch (e, trace) {
         diagnostics.report(e, trace, DiagnosticError.background);
         success = false;
-        log(
-          'Failed to delete calendar event for ${entry.key}',
-          error: e,
-          stackTrace: trace,
-        );
+        privacyLog('technical_operation');
       }
     }
 
@@ -337,11 +333,7 @@ extension CalendarSyncService on Never {
       } catch (e, trace) {
         diagnostics.report(e, trace, DiagnosticError.background);
         success = false;
-        log(
-          'Failed to upsert calendar event for ${item.syncKey}',
-          error: e,
-          stackTrace: trace,
-        );
+        privacyLog('technical_operation');
       }
     }
 
@@ -366,11 +358,7 @@ extension CalendarSyncService on Never {
         diagnostics.report(e, trace, DiagnosticError.background);
         success = false;
         remaining[entry.key] = entry.value;
-        log(
-          'Failed to remove tracked calendar event for ${entry.key}',
-          error: e,
-          stackTrace: trace,
-        );
+        privacyLog('technical_operation');
       }
     }
 
@@ -732,11 +720,7 @@ extension CalendarSyncService on Never {
       return records;
     } catch (e, trace) {
       diagnostics.report(e, trace, DiagnosticError.storage);
-      log(
-        'Failed to parse stored calendar sync records',
-        error: e,
-        stackTrace: trace,
-      );
+      privacyLog('technical_operation');
       return <String, CalendarSyncRecord>{};
     }
   }

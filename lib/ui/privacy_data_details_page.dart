@@ -7,8 +7,11 @@ class PrivacyDataDetailsPage extends StatelessWidget {
   const PrivacyDataDetailsPage({super.key});
 
   static const sections = <String, IconData>{
+    'notice': Icons.policy_outlined,
     'choice': Icons.tune,
     'required': Icons.lock_outline,
+    'local': Icons.storage_outlined,
+    'basis': Icons.check_circle_outline,
     'crashes': Icons.bug_report_outlined,
     'automatic': Icons.devices_outlined,
     'context': Icons.info_outline,
@@ -24,6 +27,9 @@ class PrivacyDataDetailsPage extends StatelessWidget {
     'revocation': Icons.stop_circle_outlined,
     'control': Icons.settings_outlined,
     'limits': Icons.cloud_outlined,
+    'retention': Icons.history,
+    'recipients': Icons.public,
+    'rights': Icons.gavel_outlined,
   };
 
   @override
@@ -66,6 +72,13 @@ class PrivacyDataDetailsPage extends StatelessWidget {
                     ),
                   ),
                 ),
+              ListTile(
+                  leading: const Icon(Icons.email_outlined),
+                  title: const Text('buccitobias774@gmail.com'),
+                  subtitle: Text(l10n.text('privacyDetails.contact')),
+                  onTap: () => launchUrl(
+                      Uri(scheme: 'mailto', path: 'buccitobias774@gmail.com'),
+                      mode: LaunchMode.externalApplication)),
               ListTile(
                   leading: const Icon(Icons.open_in_new),
                   title: Text(l10n.text('privacyDetails.firebase')),

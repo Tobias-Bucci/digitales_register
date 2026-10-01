@@ -154,6 +154,23 @@ void main() {
     expect(sink.ids.last, id);
     expect(sink.calls.any((call) => call.contains('local A')), false);
   });
+  test('school ID needs separate academic consent at every property boundary',
+      () async {
+    decision = consent(academic: false);
+    await service.identifyUser('A', demo: false, schoolId: 'school_0001');
+    await service.updateUserProperties({'school_id': 'school_0001'});
+    expect(sink.calls.contains('school_id:school_0001'), false);
+    expect(sink.calls.contains('school_id:null'), true);
+    decision = consent();
+    await service.identifyUser('A', demo: false, schoolId: 'school_0001');
+    expect(sink.calls.contains('school_id:school_0001'), true);
+    sink.calls.clear();
+    decision = consent(academic: false);
+    await service.identifyUser('A', demo: false, schoolId: 'school_0001');
+    expect(sink.calls, contains('school_id:null'));
+    await service.logAcademicSummary(summary);
+    expect(sink.events, isEmpty);
+  });
   test('switch clears old identity before identifying B', () async {
     await service.identifyUser('A', demo: false, schoolId: 'school_0001');
     final a = sink.ids.last;

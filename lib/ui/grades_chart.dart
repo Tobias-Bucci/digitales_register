@@ -374,9 +374,9 @@ class SelectionWidget extends StatelessWidget {
                 borderRadius: BorderRadius.circular(4),
                 color: Colors.grey.shade700,
               ),
-              child: const Text(
-                "Tippe auf das Diagramm, um Details zu sehen",
-                style: TextStyle(color: Colors.white),
+              child: Text(
+                context.l10n.text('ui.chartHint'),
+                style: const TextStyle(color: Colors.white),
               ),
             ),
     );

@@ -22,6 +22,7 @@ import 'package:dr/diagnostics_service.dart';
 import 'package:dr/i18n/app_localizations.dart';
 import 'package:dr/privacy_consent.dart';
 import 'package:dr/product_analytics.dart';
+import 'package:dr/telemetry_capabilities.dart';
 import 'package:dr/ui/privacy_data_details_page.dart';
 import 'package:firebase_analytics/firebase_analytics.dart';
 import 'package:firebase_core/firebase_core.dart';
@@ -34,13 +35,29 @@ import 'package:shared_preferences/shared_preferences.dart';
 
 enum PrivacyConsentChoice { necessaryOnly, all }
 
-class _FirebaseCollection extends TelemetryCollection {
+class FirebaseTelemetryCollection extends TelemetryCollection {
+  FirebaseTelemetryCollection({
+    FirebaseAnalytics? analytics,
+    Future<void> Function()? initialize,
+    TelemetryCapabilities? capabilities,
+  })  : _analytics = analytics,
+        _initialize = initialize,
+        _capabilities = capabilities;
+  final FirebaseAnalytics? _analytics;
+  final Future<void> Function()? _initialize;
+  final TelemetryCapabilities? _capabilities;
+  FirebaseAnalytics get analytics => _analytics ?? FirebaseAnalytics.instance;
   @override
   bool get available => supported;
   bool get supported =>
-      !kIsWeb && (Platform.isAndroid || Platform.isIOS || Platform.isMacOS);
+      (_capabilities ?? TelemetryCapabilities.current()).supportsAnalytics;
+  Future<void>? _initialization;
   Future<void> _ensure() async {
     if (!supported) return;
+    await (_initialization ??= _initialize?.call() ?? _initializeFirebase());
+  }
+
+  Future<void> _initializeFirebase() async {
     const bridge = MethodChannel('dr/privacy_bootstrap');
     if (await bridge.invokeMethod<bool>('ready') != true) {
       throw StateError('Native privacy bootstrap unavailable');
@@ -59,14 +76,20 @@ class _FirebaseCollection extends TelemetryCollection {
   Future<void> analyticsCollection(bool enabled) async {
     if (!supported) return;
     await _ensure();
-    // Stop native automatic collection promptly; the Dart gate is already shut.
-    await FirebaseAnalytics.instance.setAnalyticsCollectionEnabled(enabled);
-    if (!enabled) await AnalyticsService.product.clearTelemetry(reset: false);
-    await FirebaseAnalytics.instance.setConsent(
+    // On withdrawal stop collection first; on opt-in set consent before collection.
+    if (!enabled) {
+      await analytics.setAnalyticsCollectionEnabled(false);
+    }
+    await analytics.setConsent(
         analyticsStorageConsentGranted: enabled,
         adStorageConsentGranted: false,
         adUserDataConsentGranted: false,
         adPersonalizationSignalsConsentGranted: false);
+    if (enabled) {
+      await analytics.setAnalyticsCollectionEnabled(true);
+    } else {
+      await AnalyticsService.product.clearTelemetry(reset: false);
+    }
   }
 
   @override
@@ -80,7 +103,7 @@ class _FirebaseCollection extends TelemetryCollection {
   Future<void> resetAnalytics() async {
     if (!supported) return;
     await _ensure();
-    await FirebaseAnalytics.instance.resetAnalyticsData();
+    await analytics.resetAnalyticsData();
   }
 }
 
@@ -89,7 +112,7 @@ class _FirebaseCollection extends TelemetryCollection {
 class AnalyticsService {
   static final PrivacyController privacy = PrivacyController(
       store: PreferencesPrivacyStore(),
-      collection: _FirebaseCollection(),
+      collection: FirebaseTelemetryCollection(),
       gate: diagnostics.gate,
       analyticsGate: (enabled) => product.gate(enabled),
       onApplied: (_) async {
@@ -336,6 +359,12 @@ class _PrivacyConsentDialogState extends State<_PrivacyConsentDialog> {
                       children: [
                     if (!_askingAge) ...[
                       Text(l10n.text('privacyConsent.body')),
+                      if (update) ...[
+                        const SizedBox(height: 8),
+                        Text(l10n.text('privacyConsent.updateBody')),
+                      ],
+                      const SizedBox(height: 8),
+                      Text(l10n.text('privacyConsent.note')),
                       const SizedBox(height: 12),
                       for (final category in [
                         'diagnostics',
@@ -552,7 +581,8 @@ class _ConsentInfoTile extends StatelessWidget {
 
 class _FirebaseAnalyticsSink implements AnalyticsSink {
   bool get available =>
-      _FirebaseCollection().supported && Firebase.apps.isNotEmpty;
+      TelemetryCapabilities.current().supportsAnalytics &&
+      Firebase.apps.isNotEmpty;
   @override
   Future<void> event(String name, Map<String, Object> parameters) async {
     if (available) {

@@ -21,6 +21,7 @@ import 'package:dr/container/calendar_detail_container.dart';
 import 'package:dr/data.dart';
 import 'package:dr/i18n/app_localizations.dart';
 import 'package:dr/main.dart';
+import 'package:dr/tutorial/tutorial_target.dart';
 import 'package:dr/ui/calendar_week.dart';
 import 'package:dr/ui/last_fetched_overlay.dart';
 import 'package:dr/ui/no_internet.dart';
@@ -28,7 +29,6 @@ import 'package:dr/utc_date_time.dart';
 import 'package:dr/util.dart';
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
-import 'package:dr/tutorial/tutorial_target.dart';
 import 'package:responsive_scaffold/size_transition.dart' as rsc;
 import 'package:scrollable_positioned_list/scrollable_positioned_list.dart';
 

@@ -19,6 +19,7 @@ import 'package:built_redux/built_redux.dart';
 
 import 'package:dr/actions/app_actions.dart';
 import 'package:dr/app_state.dart';
+import 'package:dr/diagnostics_service.dart';
 
 final networkProtocolReducerBuilder = NestedReducerBuilder<AppState,
     AppStateBuilder, NetworkProtocolState, NetworkProtocolStateBuilder>(
@@ -28,5 +29,13 @@ final networkProtocolReducerBuilder = NestedReducerBuilder<AppState,
 
 void _networkProtocol(NetworkProtocolState state,
     Action<NetworkProtocolItem> action, NetworkProtocolStateBuilder builder) {
-  builder.items.add(action.payload);
+  builder.items.add(action.payload.rebuild((b) => b
+    ..address = DiagnosticSanitizer.endpoint(action.payload.address)
+    ..parameters = '[redacted]'
+    ..response = {'completed', 'failed'}.contains(action.payload.response)
+        ? action.payload.response
+        : '[redacted]'));
+  while (builder.items.length > 100) {
+    builder.items.removeAt(0);
+  }
 }

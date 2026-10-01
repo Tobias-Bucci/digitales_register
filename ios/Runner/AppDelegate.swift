@@ -27,6 +27,9 @@ import UserNotifications
 // Storage compatibility boundary for Firebase Apple Crashlytics.
 // Fail closed if the persisted override cannot be reset; Dart will skip Firebase.
 private func resetPrivacySDKDefaults(macOS: Bool = false) -> Bool {
+  guard Bundle.main.path(forResource: "GoogleService-Info", ofType: "plist") != nil else {
+    return false
+  }
   do {
     let support = try FileManager.default.url(for: .applicationSupportDirectory,
       in: .userDomainMask, appropriateFor: nil, create: true)

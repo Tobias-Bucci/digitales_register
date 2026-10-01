@@ -166,10 +166,10 @@ Future<void> _changeEmail(
     return;
   }
   if (result["error"] == null) {
-    showSnackBar(result["message"] as String);
+    showSnackBar(tr('profile.updated'));
     navigatorKey?.currentState?.pop();
   } else {
-    showSnackBar("[${result["error"]}]: ${result["message"]}");
+    showSnackBar(tr('profile.saveFailed'));
   }
   _markRuntimeCacheStale(_profileCacheKey);
   await _refreshProfile(api);
@@ -214,7 +214,7 @@ Future<void> _pickAndUploadProfilePicture(
     _markRuntimeCacheStale(_profileCacheKey);
     await _refreshProfile(api);
   } else {
-    showSnackBar("[${resultMap["error"]}] ${resultMap["message"]}");
+    showSnackBar(tr('profile.saveFailed'));
   }
 }
 
@@ -255,11 +255,11 @@ Future<void> _updateCodiceFiscale(
   }
 
   if (resultMap["error"] == null) {
-    showSnackBar(getString(resultMap["message"]) ?? tr('profile.taxIdUpdated'));
+    showSnackBar(tr('profile.taxIdUpdated'));
     _markRuntimeCacheStale(_profileCacheKey);
     await _refreshProfile(api);
   } else {
-    showSnackBar("[${resultMap["error"]}]: ${resultMap["message"]}");
+    showSnackBar(tr('profile.saveFailed'));
   }
 }
 

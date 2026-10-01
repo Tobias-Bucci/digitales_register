@@ -17,11 +17,12 @@
 // along with digitales_register.  If not, see <http://www.gnu.org/licenses/>.
 
 import 'dart:convert';
-import 'dart:developer';
 import 'dart:io';
+
 import 'package:collection/collection.dart';
 import 'package:dr/app_clock.dart';
 import 'package:dr/diagnostics_service.dart';
+import 'package:dr/privacy_log.dart';
 import 'package:dr/utc_date_time.dart';
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
@@ -58,12 +59,7 @@ void logPerformanceEvent(
   String event, [
   Map<String, Object?> details = const <String, Object?>{},
 ]) {
-  final payload =
-      details.entries.map((entry) => "${entry.key}=${entry.value}").join(", ");
-  log(
-    payload.isEmpty ? event : "$event [$payload]",
-    name: "dr.performance",
-  );
+  privacyLog('technical_operation');
 }
 
 Widget maybeWrap(Widget widget, Widget Function(Widget w) wrapWidget,
@@ -248,7 +244,7 @@ Never _unexpectedType<T>(dynamic value) {
 String? getString(dynamic value) {
   if (value == null) return null;
   if (value is! String) {
-    log("getString: expected String but got ${value.runtimeType}");
+    privacyLog('technical_operation');
   }
   return value.toString();
 }

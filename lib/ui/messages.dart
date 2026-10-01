@@ -23,12 +23,12 @@ import 'package:badges/badges.dart' as badge;
 import 'package:dr/app_state.dart';
 import 'package:dr/data.dart';
 import 'package:dr/i18n/app_localizations.dart';
+import 'package:dr/tutorial/tutorial_target.dart';
 import 'package:dr/ui/animated_linear_progress_indicator.dart';
 import 'package:dr/ui/last_fetched_overlay.dart';
 import 'package:dr/ui/no_internet.dart';
 import 'package:dr/util.dart';
 import 'package:flutter/material.dart';
-import 'package:dr/tutorial/tutorial_target.dart';
 import 'package:intl/intl.dart';
 import 'package:quill_delta/quill_delta.dart';
 import 'package:quill_delta_viewer/quill_delta_viewer.dart';
@@ -213,8 +213,9 @@ class _MessageWidgetState extends State<MessageWidget> {
   String _getTranslatedBadge(BuildContext context, String badgeKey) {
     if (badgeKey == "agree") return context.t('messages.agree');
     if (badgeKey == "not_agree") return context.t('messages.not_agree');
-    if (badgeKey == "Nicht beantwortet")
+    if (badgeKey == "Nicht beantwortet") {
       return context.t('messages.not_answered');
+    }
     return badgeKey;
   }
 

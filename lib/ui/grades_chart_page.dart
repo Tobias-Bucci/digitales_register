@@ -17,6 +17,7 @@
 
 import 'package:dr/container/chart_legend_container.dart';
 import 'package:dr/container/grades_chart_container.dart';
+import 'package:dr/i18n/app_localizations.dart';
 import 'package:flutter/material.dart';
 
 class GradesChartPage extends StatelessWidget {
@@ -26,7 +27,7 @@ class GradesChartPage extends StatelessWidget {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text("Notendiagramm"),
+        title: Text(context.l10n.text('ui.gradeChart')),
       ),
       body: Column(
         mainAxisSize: MainAxisSize.min,

@@ -3,9 +3,9 @@ import 'package:dr/app_clock.dart';
 import 'package:dr/app_state.dart';
 import 'package:dr/assessment_attachments.dart';
 import 'package:dr/exam_study_plan.dart';
-import 'package:dr/ui/exam_calendar_page.dart';
-import 'package:dr/tutorial/tutorial_service.dart';
 import 'package:dr/tutorial/tutorial_exam_example.dart';
+import 'package:dr/tutorial/tutorial_service.dart';
+import 'package:dr/ui/exam_calendar_page.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_built_redux/flutter_built_redux.dart';
 

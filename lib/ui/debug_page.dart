@@ -33,7 +33,7 @@ class DebugPageWidget extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: const Text('Debug Menu')),
+      appBar: AppBar(title: Text(context.l10n.text('ui.debug'))),
       body: ListView(
         padding: const EdgeInsets.all(16),
         children: [
@@ -60,7 +60,7 @@ class DebugPageWidget extends StatelessWidget {
                 ),
               );
             },
-            child: const Text("Update Popup simulieren"),
+            child: Text(context.l10n.text('ui.simulateUpdate')),
           ),
         ],
       ),

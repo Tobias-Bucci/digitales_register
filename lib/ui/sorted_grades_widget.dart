@@ -21,10 +21,10 @@ import 'package:dr/container/grades_page_container.dart';
 import 'package:dr/container/sorted_grades_container.dart';
 import 'package:dr/data.dart';
 import 'package:dr/i18n/app_localizations.dart';
+import 'package:dr/tutorial/tutorial_target.dart';
 import 'package:dr/ui/animated_linear_progress_indicator.dart';
 import 'package:dr/ui/favorite_subject_filter.dart';
 import 'package:dr/util.dart';
-import 'package:dr/tutorial/tutorial_target.dart';
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 

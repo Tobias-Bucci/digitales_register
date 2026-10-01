@@ -94,7 +94,8 @@ Future<void> _addReminder(
     },
   );
   if (result == null && !wrapper.noInternet) {
-    showSnackBar("Beim Speichern ist ein Fehler aufgetreten");
+    showSnackBar(
+        (await _loadMiddlewareLocalizations(api.state)).text('error.save'));
     return;
   }
   await api.actions.dashboardActions.homeworkAdded(
@@ -122,7 +123,8 @@ Future<void> _deleteHomework(
   if (result == null || result["success"] != true) {
     if (!wrapper.noInternet) {
       await api.actions.dashboardActions.load(api.state.dashboardState.future);
-      showSnackBar("Beim Speichern ist ein Fehler aufgetreten");
+      showSnackBar(
+          (await _loadMiddlewareLocalizations(api.state)).text('error.save'));
     }
   }
 }
@@ -141,7 +143,8 @@ Future<void> _editReminder(
       deleteResult["success"] != true ||
       wrapper.noInternet) {
     if (!wrapper.noInternet) {
-      showSnackBar("Beim Speichern ist ein Fehler aufgetreten");
+      showSnackBar(
+          (await _loadMiddlewareLocalizations(api.state)).text('error.save'));
     }
     return;
   }
@@ -157,7 +160,8 @@ Future<void> _editReminder(
   if (saveResult == null) {
     await api.actions.dashboardActions.load(api.state.dashboardState.future);
     if (!wrapper.noInternet) {
-      showSnackBar("Beim Speichern ist ein Fehler aufgetreten");
+      showSnackBar(
+          (await _loadMiddlewareLocalizations(api.state)).text('error.save'));
     }
     return;
   }
@@ -190,7 +194,8 @@ Future<void> _toggleDone(
     await next(action);
   } else {
     if (!wrapper.noInternet) {
-      showSnackBar("Beim Speichern ist ein Fehler aufgetreten");
+      showSnackBar(
+          (await _loadMiddlewareLocalizations(api.state)).text('error.save'));
     }
   }
 }

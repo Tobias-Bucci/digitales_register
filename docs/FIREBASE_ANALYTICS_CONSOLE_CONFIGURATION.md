@@ -121,7 +121,7 @@ Verify these scenarios on real Android and Apple devices:
 4. Unknown/under14 eligibility: no optional events, no user ID, no school or academic data.
 5. Under14 -> atLeast14: all optional choices stay off until explicitly chosen.
 6. Usage consent revoked: gate closes, ID and all nine properties clear, collection/consent deny, device Analytics data reset; no subsequent app events.
-7. Academic-only revocation: usage may continue but no summary is submitted.
+7. Academic-only revocation: usage may continue, school_id is cleared and no summary is submitted.
 8. Account switch/logout: old identity/properties clear before another account's activity; global consent remains.
 9. Demo: product usage allowed with usage consent; no real school ID or academic event.
 10. Repeat identical summaries, restart and changed summaries: deduplication and retry behavior match the report.

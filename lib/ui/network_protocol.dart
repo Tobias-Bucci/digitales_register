@@ -18,6 +18,7 @@
 import 'dart:convert';
 
 import 'package:dr/app_state.dart';
+import 'package:dr/i18n/app_localizations.dart';
 import 'package:dr/main.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
@@ -43,13 +44,13 @@ class NetworkProtocol extends StatelessWidget {
               ),
               const SizedBox(height: 16),
               Text(
-                'Noch keine Anfragen vorhanden',
+                context.l10n.text('network.empty'),
                 style: Theme.of(context).textTheme.titleLarge,
                 textAlign: TextAlign.center,
               ),
               const SizedBox(height: 8),
               Text(
-                'Sobald die App Anfragen sendet, erscheinen sie hier mit Parametern und Antwort.',
+                context.l10n.text('network.emptyHint'),
                 style: Theme.of(context).textTheme.bodyMedium,
                 textAlign: TextAlign.center,
               ),
@@ -86,7 +87,8 @@ class _Item extends StatelessWidget {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final addressInfo = _splitAddress(item.address);
-    final preview = _contentPreview(item.response) ?? _contentPreview(item.parameters);
+    final preview =
+        _contentPreview(item.response) ?? _contentPreview(item.parameters);
     final hasParameters = item.parameters.trim().isNotEmpty;
     final hasResponse = item.response.trim().isNotEmpty;
 
@@ -163,15 +165,22 @@ class _Item extends StatelessWidget {
                 children: [
                   _InfoChip(
                     icon: Icons.tune_rounded,
-                    label: hasParameters ? 'Parameter' : 'Keine Parameter',
+                    label: context.l10n.text(hasParameters
+                        ? 'network.parameters'
+                        : 'network.noParameters'),
                   ),
                   _InfoChip(
                     icon: Icons.reply_all_rounded,
-                    label: hasResponse ? 'Antwort' : 'Keine Antwort',
+                    label: context.l10n.text(hasResponse
+                        ? 'network.response'
+                        : 'network.noResponse'),
                   ),
                   _InfoChip(
                     icon: Icons.notes_rounded,
-                    label: '${_contentLength(item.parameters) + _contentLength(item.response)} Zeichen',
+                    label: context.l10n.text('network.characters', args: {
+                      'count':
+                          '${_contentLength(item.parameters) + _contentLength(item.response)}'
+                    }),
                   ),
                 ],
               ),
@@ -185,7 +194,7 @@ class _Item extends StatelessWidget {
                     borderRadius: BorderRadius.circular(14),
                   ),
                   child: Text(
-                    preview,
+                    _localProtocolText(context, preview),
                     maxLines: 3,
                     overflow: TextOverflow.ellipsis,
                     style: theme.textTheme.bodyMedium?.copyWith(
@@ -253,7 +262,8 @@ class _ProtocolSection extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    final formattedContent = _formatProtocolContent(content, title);
+    final formattedContent =
+        _localProtocolText(context, _formatProtocolContent(content, title));
 
     return Container(
       decoration: BoxDecoration(
@@ -281,11 +291,11 @@ class _ProtocolSection extends StatelessWidget {
                   ),
                 ),
                 IconButton(
-                  tooltip: 'Kopieren',
+                  tooltip: context.l10n.text('network.copy'),
                   icon: const Icon(Icons.content_copy_rounded),
                   onPressed: () {
                     Clipboard.setData(ClipboardData(text: formattedContent));
-                    showSnackBar('In die Zwischenablage kopiert');
+                    showSnackBar(context.l10n.text('network.copiedToClipboard'));
                   },
                 ),
               ],
@@ -353,27 +363,31 @@ void _showProtocolDetails(BuildContext context, NetworkProtocolItem item) {
                 children: [
                   _InfoChip(
                     icon: Icons.link_rounded,
-                    label: addressInfo.host.isEmpty ? 'Anfrage' : addressInfo.host,
+                    label: addressInfo.host.isEmpty
+                        ? context.l10n.text('network.request')
+                        : addressInfo.host,
                   ),
                   _InfoChip(
                     icon: Icons.tune_rounded,
-                    label: '${_contentLength(item.parameters)} Zeichen Parameter',
+                    label: context.l10n.text('network.parameterCharacters',
+                        args: {'count': '${_contentLength(item.parameters)}'}),
                   ),
                   _InfoChip(
                     icon: Icons.reply_rounded,
-                    label: '${_contentLength(item.response)} Zeichen Antwort',
+                    label: context.l10n.text('network.responseCharacters',
+                        args: {'count': '${_contentLength(item.response)}'}),
                   ),
                 ],
               ),
               const SizedBox(height: 16),
               _ProtocolSection(
-                title: 'Parameter',
+                title: context.l10n.text('network.parameters'),
                 content: item.parameters,
                 icon: Icons.tune_rounded,
               ),
               const SizedBox(height: 12),
               _ProtocolSection(
-                title: 'Antwort',
+                title: context.l10n.text('network.response'),
                 content: item.response,
                 icon: Icons.reply_all_rounded,
               ),
@@ -410,7 +424,7 @@ void _showProtocolDetails(BuildContext context, NetworkProtocolItem item) {
 String _formatProtocolContent(String? content, String title) {
   final value = content?.trim();
   if (value == null || value.isEmpty) {
-    return 'Keine $title';
+    return '[redacted]';
   }
 
   try {
@@ -438,3 +452,10 @@ String? _contentPreview(String? content) {
 int _contentLength(String? content) {
   return content?.trim().length ?? 0;
 }
+
+String _localProtocolText(BuildContext context, String value) =>
+    context.l10n.text(switch (value) {
+      'completed' => 'network.completed',
+      'failed' => 'network.failed',
+      _ => 'network.redacted'
+    });

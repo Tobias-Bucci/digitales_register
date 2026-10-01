@@ -2,9 +2,10 @@ import 'dart:math' as math;
 
 import 'package:dr/assessment_attachments.dart';
 import 'package:dr/exam_study_plan.dart';
+import 'package:dr/i18n/app_localizations.dart';
+import 'package:dr/tutorial/tutorial_target.dart';
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
-import 'package:dr/tutorial/tutorial_target.dart';
 
 class ExamCalendarPage extends StatelessWidget {
   const ExamCalendarPage({
@@ -44,13 +45,13 @@ class ExamCalendarPage extends StatelessWidget {
         .toList();
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Prüfungskalender'),
+        title: Text(context.l10n.text('tutorial.step.examOverview.title')),
         actions: [
           TutorialTarget(
             id: 'exams-week',
             child: IconButton(
               key: const Key('exam-calendar-week-view'),
-              tooltip: 'Kalenderansicht',
+              tooltip: context.l10n.text('exam.calendarView'),
               icon: const Icon(Icons.calendar_month_outlined),
               onPressed: () =>
                   Navigator.of(context).push(MaterialPageRoute<void>(
@@ -79,7 +80,7 @@ class ExamCalendarPage extends StatelessWidget {
                 padding: const EdgeInsets.fromLTRB(12, 16, 12, 32),
                 children: [
                   if (upcoming.isNotEmpty) ...[
-                    Text('Kommende Prüfungen',
+                    Text(context.l10n.text('exam.upcoming'),
                         style: Theme.of(context).textTheme.titleLarge),
                     const SizedBox(height: 8),
                     for (final assessment in upcoming)
@@ -106,13 +107,14 @@ class ExamCalendarPage extends StatelessWidget {
                   if (past.isNotEmpty) ...[
                     const SizedBox(height: 16),
                     ExpansionTile(
-                      title: Text('Vergangene Prüfungen (${past.length})'),
+                      title: Text(context.l10n.text('exam.past',
+                          args: {'count': '${past.length}'})),
                       children: [
                         for (final assessment in past)
                           ListTile(
                             leading: const Icon(Icons.history_rounded),
                             title: Text(assessment.title),
-                            subtitle: Text(_subtitle(assessment)),
+                            subtitle: Text(_subtitle(context, assessment)),
                             trailing: Text(DateFormat('dd.MM.yyyy')
                                 .format(assessment.date)),
                           ),
@@ -136,11 +138,10 @@ class _EmptyExamCalendar extends StatelessWidget {
             Icon(Icons.event_available_rounded,
                 size: 56, color: Theme.of(context).colorScheme.primary),
             const SizedBox(height: 16),
-            Text('Noch keine Prüfungen',
+            Text(context.l10n.text('exam.empty'),
                 style: Theme.of(context).textTheme.titleLarge),
             const SizedBox(height: 8),
-            const Text(
-                'Lege auf dem Dashboard eine Erinnerung mit /test, /cw oder /exam an. Sie erscheint automatisch hier und im Kalender.',
+            Text(context.l10n.text('exam.emptyHint'),
                 textAlign: TextAlign.center),
           ]),
         ),
@@ -205,12 +206,14 @@ class _AssessmentCard extends StatelessWidget {
               _CountdownChip(days: days),
             ]),
             const SizedBox(height: 4),
-            Text(_subtitle(assessment)),
+            Text(_subtitle(context, assessment)),
             const SizedBox(height: 12),
             LinearProgressIndicator(
                 value: phases.isEmpty ? 0 : count / phases.length),
             const SizedBox(height: 6),
-            Text('$count von ${phases.length} Lernphasen erledigt',
+            Text(
+                context.l10n.text('exam.progress',
+                    args: {'done': '$count', 'total': '${phases.length}'}),
                 style: Theme.of(context).textTheme.bodySmall),
           ]),
         ),
@@ -265,12 +268,12 @@ class _ExamDetailPageState extends State<_ExamDetailPage> {
   Widget build(BuildContext context) {
     final days = widget.assessment.daysUntil(widget.now);
     return Scaffold(
-      appBar: AppBar(title: const Text('Prüfungsdetails')),
+      appBar: AppBar(title: Text(context.l10n.text('exam.details'))),
       body: ListView(padding: const EdgeInsets.all(16), children: [
         Text(widget.assessment.title,
             style: Theme.of(context).textTheme.headlineSmall),
         const SizedBox(height: 6),
-        Text(_subtitle(widget.assessment)),
+        Text(_subtitle(context, widget.assessment)),
         const SizedBox(height: 10),
         _CountdownChip(days: days),
         const SizedBox(height: 24),
@@ -278,23 +281,26 @@ class _ExamDetailPageState extends State<_ExamDetailPage> {
             id: 'exams-plan',
             child: Row(children: [
               Expanded(
-                  child: Text('Lernplan',
+                  child: Text(context.l10n.text('exam.plan'),
                       style: Theme.of(context).textTheme.titleLarge)),
               TextButton.icon(
                 onPressed: () => _editPhases(_phases),
                 icon: const Icon(Icons.edit_outlined),
-                label: const Text('Bearbeiten'),
+                label: Text(context.l10n.text('exam.edit')),
               ),
             ])),
-        Text(
-            '${completed.where((id) => _phases.any((phase) => phase.id == id)).length} von ${_phases.length} Lernphasen erledigt'),
+        Text(context.l10n.text('exam.progress', args: {
+          'done':
+              '${completed.where((id) => _phases.any((phase) => phase.id == id)).length}',
+          'total': '${_phases.length}'
+        })),
         const SizedBox(height: 8),
         for (final phase in _phases)
           CheckboxListTile(
             contentPadding: EdgeInsets.zero,
             value: completed.contains(phase.id),
-            title: Text(phase.title),
-            subtitle: Text(_phaseSubtitle(phase)),
+            title: Text(context.l10n.studyLabel(phase.title)),
+            subtitle: Text(_phaseSubtitle(context, phase)),
             onChanged: (checked) => setState(() {
               checked == true
                   ? completed.add(phase.id)
@@ -303,7 +309,8 @@ class _ExamDetailPageState extends State<_ExamDetailPage> {
             }),
           ),
         const SizedBox(height: 16),
-        Text('Prüfungsstoff', style: Theme.of(context).textTheme.titleLarge),
+        Text(context.l10n.text('exam.material'),
+            style: Theme.of(context).textTheme.titleLarge),
         if (widget.assessment.material != null)
           Padding(
               padding: const EdgeInsets.only(top: 8),
@@ -315,9 +322,9 @@ class _ExamDetailPageState extends State<_ExamDetailPage> {
               controller: noteController,
               minLines: 2,
               maxLines: 5,
-              decoration: const InputDecoration(
-                  border: OutlineInputBorder(),
-                  labelText: 'Eigene Lernnotizen oder Stoff ergänzen'),
+              decoration: InputDecoration(
+                  border: const OutlineInputBorder(),
+                  labelText: context.l10n.text('exam.notes')),
               onChanged: widget.onNoteChanged,
             )),
         const SizedBox(height: 24),
@@ -325,21 +332,20 @@ class _ExamDetailPageState extends State<_ExamDetailPage> {
             id: 'exams-files',
             child: Row(children: [
               Expanded(
-                  child: Text('Lokale Dateien',
+                  child: Text(context.l10n.text('exam.files'),
                       style: Theme.of(context).textTheme.titleLarge)),
               OutlinedButton.icon(
                 onPressed: _addAttachment,
                 icon: const Icon(Icons.attach_file_rounded),
-                label: const Text('Datei hinzufügen'),
+                label: Text(context.l10n.text('exam.addFile')),
               ),
             ])),
         const SizedBox(height: 4),
-        const Text(
-            'PDF, TXT, Markdown und andere Dateien bleiben nur auf diesem Gerät.'),
+        Text(context.l10n.text('exam.localFilesHint')),
         if (attachments.isEmpty)
-          const Padding(
-              padding: EdgeInsets.only(top: 8),
-              child: Text('Noch keine Dateien angehängt.')),
+          Padding(
+              padding: const EdgeInsets.only(top: 8),
+              child: Text(context.l10n.text('exam.noFiles'))),
         for (final attachment in attachments)
           ListTile(
             contentPadding: EdgeInsets.zero,
@@ -347,7 +353,7 @@ class _ExamDetailPageState extends State<_ExamDetailPage> {
             title: Text(attachment.name),
             onTap: () => _openAttachment(attachment),
             trailing: IconButton(
-              tooltip: 'Datei entfernen',
+              tooltip: context.l10n.text('exam.removeFile'),
               icon: const Icon(Icons.delete_outline_rounded),
               onPressed: () => _removeAttachment(attachment),
             ),
@@ -373,7 +379,8 @@ class _ExamDetailPageState extends State<_ExamDetailPage> {
   Future<void> _openAttachment(AssessmentAttachment attachment) async {
     final error = await openAssessmentAttachment(attachment);
     if (!mounted || error == null) return;
-    ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(error)));
+    ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(context.l10n.text('attachment.openFailed'))));
   }
 
   Future<void> _editPhases(List<StudyPhase> current) async {
@@ -430,7 +437,8 @@ class _ExamWeekCalendarState extends State<_ExamWeekCalendar> {
   Widget build(BuildContext context) {
     final sunday = _monday.add(const Duration(days: 6));
     return Scaffold(
-      appBar: AppBar(title: const Text('Prüfungskalender')),
+      appBar: AppBar(
+          title: Text(context.l10n.text('tutorial.step.examOverview.title'))),
       body: Column(children: [
         TutorialTarget(
             id: 'exams-week-navigation',
@@ -438,7 +446,7 @@ class _ExamWeekCalendarState extends State<_ExamWeekCalendar> {
               padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
               child: Row(children: [
                 IconButton(
-                  tooltip: 'Vorherige Woche',
+                  tooltip: context.l10n.text('exam.previousWeek'),
                   onPressed: () => setState(
                     () => _monday = _monday.subtract(const Duration(days: 7)),
                   ),
@@ -454,10 +462,10 @@ class _ExamWeekCalendarState extends State<_ExamWeekCalendar> {
                 TextButton(
                   onPressed: () =>
                       setState(() => _monday = _mondayOf(widget.now)),
-                  child: const Text('Heute'),
+                  child: Text(context.l10n.text('day.today')),
                 ),
                 IconButton(
-                  tooltip: 'Nächste Woche',
+                  tooltip: context.l10n.text('exam.nextWeek'),
                   onPressed: () => setState(
                     () => _monday = _monday.add(const Duration(days: 7)),
                   ),
@@ -520,7 +528,9 @@ class _ExamWeekCalendarState extends State<_ExamWeekCalendar> {
           padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 9),
           color: theme.colorScheme.surfaceContainerHighest,
           child: Column(children: [
-            Text(DateFormat('EEE', 'de').format(date),
+            Text(
+                DateFormat('EEE', context.l10n.locale.toLanguageTag())
+                    .format(date),
                 style: theme.textTheme.labelLarge),
             Text(DateFormat('dd.MM.').format(date),
                 style: theme.textTheme.bodySmall),
@@ -558,7 +568,8 @@ class _ExamWeekCalendarState extends State<_ExamWeekCalendar> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text('Prüfung', style: Theme.of(context).textTheme.labelSmall),
+                Text(context.l10n.text('schoolTerm.exam'),
+                    style: Theme.of(context).textTheme.labelSmall),
                 const SizedBox(height: 2),
                 Text(assessment.title,
                     maxLines: 3, overflow: TextOverflow.ellipsis),
@@ -581,10 +592,13 @@ class _ExamWeekCalendarState extends State<_ExamWeekCalendar> {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Text('Lernphase · ${phase.effort}',
+              Text(
+                  context.l10n.text('exam.phase',
+                      args: {'effort': context.l10n.studyLabel(phase.effort)}),
                   style: Theme.of(context).textTheme.labelSmall),
               const SizedBox(height: 2),
-              Text(phase.title, maxLines: 3, overflow: TextOverflow.ellipsis),
+              Text(context.l10n.studyLabel(phase.title),
+                  maxLines: 3, overflow: TextOverflow.ellipsis),
               Text(assessment.title,
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
@@ -643,7 +657,7 @@ class _StudyPhaseEditorState extends State<_StudyPhaseEditor> {
 
   @override
   Widget build(BuildContext context) => AlertDialog(
-        title: const Text('Lernphasen bearbeiten'),
+        title: Text(context.l10n.text('exam.editPhases')),
         content: SizedBox(
           width: 520,
           child: ConstrainedBox(
@@ -656,11 +670,11 @@ class _StudyPhaseEditorState extends State<_StudyPhaseEditor> {
                     contentPadding: EdgeInsets.zero,
                     title: Text(_phases[index].title),
                     subtitle: Text(
-                      '${DateFormat('dd.MM.yyyy').format(_phases[index].date)} · ${_phases[index].durationDays} Tage · ${_phases[index].effort}',
+                      _phaseSubtitle(context, _phases[index]),
                     ),
                     onTap: () => _edit(index),
                     trailing: IconButton(
-                      tooltip: 'Löschen',
+                      tooltip: context.l10n.text('button.delete'),
                       onPressed: () => setState(() => _phases.removeAt(index)),
                       icon: const Icon(Icons.delete_outline_rounded),
                     ),
@@ -668,7 +682,7 @@ class _StudyPhaseEditorState extends State<_StudyPhaseEditor> {
                 OutlinedButton.icon(
                   onPressed: () => _edit(null),
                   icon: const Icon(Icons.add_rounded),
-                  label: const Text('Lernphase hinzufügen'),
+                  label: Text(context.l10n.text('exam.addPhase')),
                 ),
               ],
             ),
@@ -677,11 +691,11 @@ class _StudyPhaseEditorState extends State<_StudyPhaseEditor> {
         actions: [
           TextButton(
             onPressed: () => Navigator.of(context).pop(),
-            child: const Text('Abbrechen'),
+            child: Text(context.l10n.text('privacyConsent.cancel')),
           ),
           FilledButton(
             onPressed: () => Navigator.of(context).pop(_phases),
-            child: const Text('Speichern'),
+            child: Text(context.l10n.text('button.save')),
           ),
         ],
       );
@@ -697,33 +711,39 @@ class _StudyPhaseEditorState extends State<_StudyPhaseEditor> {
       builder: (dialogContext) => StatefulBuilder(
         builder: (context, setDialogState) => AlertDialog(
           scrollable: true,
-          title: Text(
-              index == null ? 'Lernphase hinzufügen' : 'Lernphase bearbeiten'),
+          title: Text(context.l10n
+              .text(index == null ? 'exam.addPhase' : 'exam.editPhase')),
           content: Column(mainAxisSize: MainAxisSize.min, children: [
             TextFormField(
-              initialValue: title,
+              initialValue: context.l10n.studyLabel(title),
               autofocus: true,
-              decoration: const InputDecoration(labelText: 'Bezeichnung'),
+              decoration:
+                  InputDecoration(labelText: context.l10n.text('exam.name')),
               onChanged: (value) => title = value,
             ),
             const SizedBox(height: 12),
             DropdownButtonFormField<String>(
               initialValue: effort,
-              decoration: const InputDecoration(labelText: 'Aufwand'),
-              items: const ['Leicht', 'Mittel', 'Intensiv']
-                  .map((value) =>
-                      DropdownMenuItem(value: value, child: Text(value)))
+              decoration:
+                  InputDecoration(labelText: context.l10n.text('exam.effort')),
+              items: ['Leicht', 'Mittel', 'Intensiv']
+                  .map((value) => DropdownMenuItem(
+                      value: value,
+                      child: Text(context.l10n.studyLabel(value))))
                   .toList(),
               onChanged: (value) => setDialogState(() => effort = value!),
             ),
             const SizedBox(height: 12),
             DropdownButtonFormField<int>(
               initialValue: durationDays,
-              decoration: const InputDecoration(labelText: 'Dauer'),
-              items: const [1, 2, 3, 5, 7, 14]
+              decoration: InputDecoration(
+                  labelText: context.l10n.text('exam.duration')),
+              items: [1, 2, 3, 5, 7, 14]
                   .map((value) => DropdownMenuItem(
                       value: value,
-                      child: Text('$value ${value == 1 ? 'Tag' : 'Tage'}')))
+                      child: Text(context.l10n.text(
+                          value == 1 ? 'exam.day' : 'exam.days',
+                          args: {'count': '$value'}))))
                   .toList(),
               onChanged: (value) => setDialogState(() => durationDays = value!),
             ),
@@ -745,7 +765,7 @@ class _StudyPhaseEditorState extends State<_StudyPhaseEditor> {
           actions: [
             TextButton(
                 onPressed: () => Navigator.pop(dialogContext),
-                child: const Text('Abbrechen')),
+                child: Text(context.l10n.text('privacyConsent.cancel'))),
             FilledButton(
               onPressed: () {
                 final value = title.trim();
@@ -761,7 +781,7 @@ class _StudyPhaseEditorState extends State<_StudyPhaseEditor> {
                       durationDays: durationDays),
                 );
               },
-              child: const Text('Fertig'),
+              child: Text(context.l10n.text('tutorial.finish')),
             ),
           ],
         ),
@@ -787,11 +807,13 @@ DateTime _dateOnly(DateTime date) => DateTime(date.year, date.month, date.day);
 DateTime _mondayOf(DateTime date) =>
     _dateOnly(date).subtract(Duration(days: date.weekday - 1));
 
-String _phaseSubtitle(StudyPhase phase) {
-  final date = DateFormat('EEE, dd.MM.', 'de').format(phase.date);
-  final duration =
-      phase.durationDays == 1 ? '1 Tag' : '${phase.durationDays} Tage';
-  return '$date · $duration · ${phase.effort}';
+String _phaseSubtitle(BuildContext context, StudyPhase phase) {
+  final date = DateFormat('EEE, dd.MM.', context.l10n.locale.toLanguageTag())
+      .format(phase.date);
+  final duration = context.l10n.text(
+      phase.durationDays == 1 ? 'exam.day' : 'exam.days',
+      args: {'count': '${phase.durationDays}'});
+  return '$date · $duration · ${context.l10n.studyLabel(phase.effort)}';
 }
 
 class _CountdownChip extends StatelessWidget {
@@ -802,12 +824,13 @@ class _CountdownChip extends StatelessWidget {
         avatar: Icon(
             days == 0 ? Icons.today_rounded : Icons.hourglass_top_rounded,
             size: 18),
-        label: Text(countdownLabel(days)),
+        label: Text(context.l10n.assessmentCountdown(days)),
       );
 }
 
-String _subtitle(ExamAssessment assessment) => [
+String _subtitle(BuildContext context, ExamAssessment assessment) => [
       if (assessment.subject != null && assessment.subject!.trim().isNotEmpty)
         assessment.subject!,
-      DateFormat('EEE, dd.MM.yyyy', 'de').format(assessment.date),
+      DateFormat('EEE, dd.MM.yyyy', context.l10n.locale.toLanguageTag())
+          .format(assessment.date),
     ].join(' · ');

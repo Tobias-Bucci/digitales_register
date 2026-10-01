@@ -18,7 +18,6 @@
 
 import 'dart:async';
 import 'dart:convert';
-import 'dart:developer';
 import 'dart:io';
 import 'dart:typed_data';
 
@@ -62,6 +61,7 @@ import 'package:dr/i18n/app_localizations.dart';
 import 'package:dr/main.dart';
 import 'package:dr/page_payload_cache.dart';
 import 'package:dr/platform_adapter.dart';
+import 'package:dr/privacy_log.dart';
 import 'package:dr/serializers.dart';
 import 'package:dr/settings_persistence_service.dart';
 import 'package:dr/state_persistence_service.dart';
@@ -482,10 +482,7 @@ Future<List<int>?> _downloadCourseMaterialCandidate(
       }
       return bytes;
     } catch (error) {
-      log(
-        'failed course material download candidate ${candidate.url}',
-        error: error,
-      );
+      privacyLog('technical_operation');
       return null;
     }
   }
@@ -759,29 +756,15 @@ NextActionHandler _errorMiddleware(
             }));
             diagnostics.report(
                 e as Object, trace ?? StackTrace.empty, DiagnosticError.caught);
-            log("Error caught by error middleware",
-                error: e, stackTrace: trace);
-            var stackTrace = trace;
-            try {
-              stackTrace ??= (e as dynamic).stackTrace as StackTrace?;
-            } catch (e) {
-              // we can't get a stack trace
-            }
-            var error = e.toString();
-            if (e is! ParseException) {
-              // ParseExceptions will already provide a more precise stack trace
-              error += "\n\n$stackTrace";
-            }
-            error +=
-                "\n\nApp Version: $appVersion\nOS: ${Platform.operatingSystem}\nServer: ${api.state.url}";
+            privacyLog('technical_operation');
             await navigatorKey?.currentState?.push(
               MaterialPageRoute<void>(
                 fullscreenDialog: true,
-                builder: (_) {
+                builder: (context) {
                   return Scaffold(
                     appBar: AppBar(
                       backgroundColor: Colors.red,
-                      title: const Text("Fehler!"),
+                      title: Text(context.l10n.text('error.title')),
                     ),
                     body: ListView(
                       padding: const EdgeInsets.all(16),
@@ -791,34 +774,21 @@ NextActionHandler _errorMiddleware(
                             onPressed: () async {
                               await launchUrl(
                                 Uri.parse(
-                                  "https://docs.google.com/forms/d/e/1FAIpQLScTmSAZzj0bjwX_8IHVx9dVTTVrncJJpZo_D20dF7mrnU_zdQ/viewform?usp=sf_link&entry.1875208362=${Uri.encodeQueryComponent(error)}",
+                                  "https://docs.google.com/forms/d/e/1FAIpQLScTmSAZzj0bjwX_8IHVx9dVTTVrncJJpZo_D20dF7mrnU_zdQ/viewform",
                                 ),
                               );
                             },
-                            child: const Text("Entwickler benachrichtigen"),
+                            child: Text(context.l10n.text('error.contact')),
                           ),
                         ),
                         Padding(
                           padding: const EdgeInsets.all(8.0),
-                          child: Text("""
-Ein Fehler ist aufgetreten.
-${e is UnexpectedLogoutException ? """
-
-Dieser Fehler kann auftreten, wenn zwei Geräte gleichzeitig auf dasselbe Konto zugreifen.
-In diesem Fall kannst du versuchen, die App zu schließen und erneut zu öffnen.
-
-Falls dies nicht zutrifft, bitte benachrichtige uns, damit wir diesen Fehler beheben können.""" : e is ParseException ? """
-
-Beim Einlesen der Daten ist ein Fehler aufgetreten.
-Bitte benachrichtige uns, damit wir diesen Fehler beheben können.
-Bitte beachte, dass das Fehlerprotokoll möglicherweise private Daten enthält.""" : """
-
-Eine Funktion wird eventuell noch nicht unterstützt.
-Bitte benachrichtige uns, damit wir diesen Fehler beheben können:"""}
-
- --  Fehlerprotokoll: --
-
-$error"""),
+                          child: Text(
+                              context.l10n.text(e is UnexpectedLogoutException
+                                  ? 'error.session'
+                                  : e is ParseException
+                                      ? 'error.parse'
+                                      : 'error.generic')),
                         ),
                       ],
                     ),
@@ -964,7 +934,7 @@ Future<void> _load(
   } catch (e) {
     login = const <Never, Never>{};
     showSnackBar(tr('error.savedDataLoadFailed'));
-    log("Failed to load login credentials", error: e);
+    privacyLog('technical_operation');
     try {
       await secureStorage.deleteAll();
     } catch (e) {
@@ -1047,7 +1017,7 @@ Future<void> _loggedIn(
   deletedData = false;
   final key = getStorageKey(action.payload.username, wrapper.loginAddress);
   if (!api.state.loginState.loggedIn && !action.payload.secondaryOnlineLogin) {
-    log("loading state");
+    privacyLog('technical_operation');
     final state = await _readFromStorage(key);
     if (state != null) {
       try {
@@ -1093,7 +1063,7 @@ Future<void> _loggedIn(
         );
       } catch (e) {
         showSnackBar(tr('error.savedDataLoadFailed'));
-        log("Failed to load data", error: e);
+        privacyLog('technical_operation');
         await next(action);
       }
     } else {
@@ -1381,9 +1351,7 @@ Future<String> _getAttachmentDownloadDirectory() {
           .first
           .path;
     } catch (_) {
-      log(
-        "failed to get download directory, falling back to application storage",
-      );
+      privacyLog('technical_operation');
       return (await getApplicationDocumentsDirectory()).path;
     }
   }();
@@ -1424,7 +1392,7 @@ Future<bool> downloadFile(
     await sink.close();
     success = result.statusCode == 200;
   } catch (e) {
-    log("failed to download file $url: $e");
+    privacyLog('technical_operation');
     success = false;
   }
 
@@ -1465,7 +1433,7 @@ Future<bool> canOpenFile(String fileName) async {
 }
 
 Future<void> openFile(String fileName) async {
-  log("opening file: $fileName");
+  privacyLog('technical_operation');
   await OpenFile.open("${await _getAttachmentDownloadDirectory()}/$fileName");
 }
 

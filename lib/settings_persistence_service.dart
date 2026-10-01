@@ -16,9 +16,10 @@
 // along with digitales_register.  If not, see <http://www.gnu.org/licenses/>.
 
 import 'dart:convert';
-import 'dart:developer';
+
 import 'package:dr/app_state.dart';
 import 'package:dr/diagnostics_service.dart';
+import 'package:dr/privacy_log.dart';
 import 'package:dr/serializers.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
@@ -39,11 +40,7 @@ class SettingsPersistenceService {
       }
     } catch (error, stackTrace) {
       diagnostics.report(error, stackTrace, DiagnosticError.storage);
-      log(
-        'Failed to load global settings',
-        error: error,
-        stackTrace: stackTrace,
-      );
+      privacyLog('technical_operation');
     }
     return null;
   }

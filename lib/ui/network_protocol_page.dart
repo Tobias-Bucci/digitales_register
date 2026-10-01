@@ -16,6 +16,7 @@
 // along with digitales_register.  If not, see <http://www.gnu.org/licenses/>.
 
 import 'package:dr/container/network_protocol_container.dart';
+import 'package:dr/i18n/app_localizations.dart';
 import 'package:flutter/material.dart';
 
 class NetworkProtocolPage extends StatelessWidget {
@@ -25,7 +26,7 @@ class NetworkProtocolPage extends StatelessWidget {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text("Netzwerkprotokoll"),
+        title: Text(context.l10n.text('settings.advanced.networkProtocol')),
         centerTitle: false,
       ),
       body: NetworkProtocolContainer(),
