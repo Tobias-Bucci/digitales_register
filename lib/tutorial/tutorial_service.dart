@@ -242,9 +242,7 @@ class TutorialService extends ChangeNotifier {
   Set<int> _previousReminderIds = {};
   int? _createdReminderId;
   UtcDateTime? _createdReminderDay;
-  bool _dashboardFuture = true;
-  bool get dashboardFuture => _dashboardFuture;
-  set dashboardFuture(bool value) => _dashboardFuture = value;
+  bool dashboardFuture = true;
   String? _targetFor(bool covered) {
     if (step.openedTarget != null &&
         tutorialTargets.rectFor(step.openedTarget) != null) {
@@ -546,7 +544,7 @@ class TutorialService extends ChangeNotifier {
       final previous = step;
       _index++;
       _actionComplete = false;
-      if (previous.key == 'past' && !_dashboardFuture) {
+      if (previous.key == 'past' && !dashboardFuture) {
         await actions.dashboardActions.switchFuture();
       }
       if (step.chapter != previous.chapter ||
