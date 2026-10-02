@@ -11,7 +11,6 @@ class MockAnalytics extends Mock implements FirebaseAnalytics {}
 
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
-  tearDown(() => debugDefaultTargetPlatformOverride = null);
   test('unsupported production platforms and web have no capabilities', () {
     for (final platform in [
       TargetPlatform.windows,
@@ -28,11 +27,14 @@ void main() {
   });
   test('Windows adapters never initialize Firebase or invoke plugins',
       () async {
-    debugDefaultTargetPlatformOverride = TargetPlatform.windows;
+    // UI platform overrides do not change dart:io's host OS. Inject the
+    // production policy into both adapters to test Windows on any runner.
+    const windows = TelemetryCapabilities(TargetPlatform.windows);
     final sdk = MockAnalytics();
     var initializationCalls = 0;
     final collection = FirebaseTelemetryCollection(
         analytics: sdk,
+        capabilities: windows,
         initialize: () async {
           initializationCalls++;
         });
@@ -42,7 +44,7 @@ void main() {
     await collection.crashCollection(false);
     await collection.deleteReports();
     await collection.resetAnalytics();
-    final sink = FirebaseDiagnosticSink();
+    final sink = FirebaseDiagnosticSink(capabilities: windows);
     await sink.key('logged_in', true);
     await sink.log('app_initialized');
     await sink.error('E01_flutterFatal', StackTrace.empty, true);
@@ -52,7 +54,6 @@ void main() {
   });
   test('consent precedes enabling collection and all advertising stays denied',
       () async {
-    debugDefaultTargetPlatformOverride = TargetPlatform.android;
     final sdk = MockAnalytics();
     final calls = <String>[];
     when(() => sdk.setConsent(
@@ -76,7 +77,6 @@ void main() {
   });
   test('unsupported initialization is attempted only once and never enables',
       () async {
-    debugDefaultTargetPlatformOverride = TargetPlatform.iOS;
     final sdk = MockAnalytics();
     var attempts = 0;
     final collection = FirebaseTelemetryCollection(
