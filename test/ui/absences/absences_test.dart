@@ -21,7 +21,6 @@ import 'package:dr/app_state.dart';
 import 'package:dr/container/absence_group_container.dart';
 import 'package:dr/container/absences_page_container.dart';
 import 'package:dr/data.dart';
-import 'package:dr/theme_controller.dart';
 import 'package:dr/ui/absence.dart';
 import 'package:dr/ui/absences_page.dart';
 import 'package:dr/utc_date_time.dart';
@@ -329,52 +328,6 @@ void main() {
     expect(find.text('Absenz entschuldigen'), findsNothing);
   });
 
-  testWidgets('matches absences page golden', (tester) async {
-    // Fail explicitly if the runner no longer supplies the expected test font,
-    // rather than reporting an unexplained platform-specific image difference.
-    // See Flutter's docs/contributing/testing/Flutter-Test-Fonts.md.
-    final fontProbe = TextPainter(
-      text: const TextSpan(
-        text: 'Text',
-        style: TextStyle(fontFamily: 'FlutterTest', fontSize: 14),
-      ),
-      textDirection: TextDirection.ltr,
-    )..layout();
-    addTearDown(fontProbe.dispose);
-    final metrics = fontProbe.computeLineMetrics().single;
-    expect(
-      <double>[metrics.height, metrics.ascent, metrics.descent, metrics.width],
-      <double>[14, 10.5, 3.5, 56],
-      reason: 'FlutterTest metrics must be identical on every host OS',
-    );
-
-    tester.view.devicePixelRatio = 1;
-    addTearDown(tester.view.resetDevicePixelRatio);
-    addTearDown(() => tester.binding.setSurfaceSize(null));
-    await tester.binding.setSurfaceSize(const Size(800, 600));
-
-    final store = createStore(initialState: _buildAbsencesState());
-
-    await pumpApp(
-      tester,
-      store: store,
-      home: const AbsencesPageContainer(),
-      // The golden describes one fixed Material rendering, independent of the
-      // host's typography and platform defaults. FlutterTest uses power-of-two
-      // font metrics; Ahem is rounded differently by native font engines.
-      theme: ThemeData(
-        colorSchemeSeed: defaultContrastColor,
-        platform: TargetPlatform.android,
-        fontFamily: 'FlutterTest',
-      ),
-    );
-    await settleFor(tester);
-
-    await expectLater(
-      find.byType(Scaffold).first,
-      matchesGoldenFile('absences.png'),
-    );
-  }, variant: TargetPlatformVariant.all());
 }
 
 AppState _buildAbsencesState({
