@@ -21,6 +21,7 @@ import 'package:dr/app_state.dart';
 import 'package:dr/container/absence_group_container.dart';
 import 'package:dr/container/absences_page_container.dart';
 import 'package:dr/data.dart';
+import 'package:dr/theme_controller.dart';
 import 'package:dr/ui/absence.dart';
 import 'package:dr/ui/absences_page.dart';
 import 'package:dr/utc_date_time.dart';
@@ -329,6 +330,8 @@ void main() {
   });
 
   testWidgets('matches absences page golden', (tester) async {
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.resetDevicePixelRatio);
     addTearDown(() => tester.binding.setSurfaceSize(null));
     await tester.binding.setSurfaceSize(const Size(800, 600));
 
@@ -338,6 +341,13 @@ void main() {
       tester,
       store: store,
       home: const AbsencesPageContainer(),
+      // The golden describes one fixed Material rendering, independent of the
+      // host's typography and platform defaults. Ahem is Flutter's test font.
+      theme: ThemeData(
+        colorSchemeSeed: defaultContrastColor,
+        platform: TargetPlatform.android,
+        fontFamily: 'Ahem',
+      ),
     );
     await settleFor(tester);
 
@@ -345,7 +355,7 @@ void main() {
       find.byType(Scaffold).first,
       matchesGoldenFile('absences.png'),
     );
-  });
+  }, variant: TargetPlatformVariant.all());
 }
 
 AppState _buildAbsencesState({
