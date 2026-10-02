@@ -1,1 +1,2 @@
 "NSFaceIDUsageDescription" = "Biometrics are used to unlock the app securely.";
+"NSPhotoLibraryUsageDescription" = "Choose a photo from your library as your register profile picture.";

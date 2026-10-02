@@ -1,1 +1,2 @@
 "NSFaceIDUsageDescription" = "Biometrie wird verwendet, um die App sicher zu entsperren.";
+"NSPhotoLibraryUsageDescription" = "Wähle ein Foto aus deiner Mediathek als Profilbild für das Register.";

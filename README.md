@@ -15,7 +15,10 @@ It builds upon the original implementation and may include modifications, improv
 Digitales Register (App) provides a mobile-friendly interface to access the Digital Register system.  
 The goal of this project is to improve usability, accessibility, and convenience compared to the web version by offering a native mobile experience.
 
-The application is developed using Flutter and targets Android and Windows devices.
+The application is developed using Flutter and targets Android, iOS and Windows devices.
+
+For iOS configuration, checks without a build, and remaining Mac/App Store steps,
+see [iOS release preparation](docs/IOS_RELEASE_READINESS.md).
 
 ---
 
