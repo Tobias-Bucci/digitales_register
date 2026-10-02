@@ -15,17 +15,19 @@
 		<key>CFBundleInfoDictionaryVersion</key>
 		<string>6.0</string>
 		<key>CFBundleName</key>
-		<string>dr</string>
+		<string>Digitales Register</string>
 		<key>CFBundlePackageType</key>
 		<string>APPL</string>
 		<key>CFBundleShortVersionString</key>
-		<string>$(MARKETING_VERSION)</string>
+		<string>$(FLUTTER_BUILD_NAME)</string>
 		<key>CFBundleSignature</key>
 		<string>????</string>
 		<key>CFBundleVersion</key>
-		<string>$(CURRENT_PROJECT_VERSION)</string>
+		<string>$(FLUTTER_BUILD_NUMBER)</string>
 		<key>NSFaceIDUsageDescription</key>
 		<string>Biometrie wird verwendet, um die App sicher zu entsperren.</string>
+		<key>NSPhotoLibraryUsageDescription</key>
+		<string>Wähle ein Foto aus deiner Mediathek als Profilbild für das Register.</string>
 		<key>LSRequiresIPhoneOS</key>
 		<true/>
 		<key>UILaunchStoryboardName</key>
