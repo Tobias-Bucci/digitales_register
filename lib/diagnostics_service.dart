@@ -27,23 +27,30 @@ abstract class DiagnosticSink {
 }
 
 class FirebaseDiagnosticSink implements DiagnosticSink {
+  FirebaseDiagnosticSink({TelemetryCapabilities? capabilities})
+      : _capabilities = capabilities;
+
+  final TelemetryCapabilities? _capabilities;
+  bool get _supported =>
+      (_capabilities ?? TelemetryCapabilities.current()).supportsCrashlytics;
+
   @override
   Future<void> key(String name, Object value) async {
-    if (TelemetryCapabilities.current().supportsCrashlytics) {
+    if (_supported) {
       await FirebaseCrashlytics.instance.setCustomKey(name, value);
     }
   }
 
   @override
   Future<void> log(String message) async {
-    if (TelemetryCapabilities.current().supportsCrashlytics) {
+    if (_supported) {
       await FirebaseCrashlytics.instance.log(message);
     }
   }
 
   @override
   Future<void> error(String category, StackTrace stack, bool fatal) async {
-    if (TelemetryCapabilities.current().supportsCrashlytics) {
+    if (_supported) {
       await FirebaseCrashlytics.instance.recordError(Exception(category), stack,
           fatal: fatal, reason: category);
     }

@@ -330,6 +330,24 @@ void main() {
   });
 
   testWidgets('matches absences page golden', (tester) async {
+    // Fail explicitly if the runner no longer supplies the expected test font,
+    // rather than reporting an unexplained platform-specific image difference.
+    // See Flutter's docs/contributing/testing/Flutter-Test-Fonts.md.
+    final fontProbe = TextPainter(
+      text: const TextSpan(
+        text: 'Text',
+        style: TextStyle(fontFamily: 'FlutterTest', fontSize: 14),
+      ),
+      textDirection: TextDirection.ltr,
+    )..layout();
+    addTearDown(fontProbe.dispose);
+    final metrics = fontProbe.computeLineMetrics().single;
+    expect(
+      <double>[metrics.height, metrics.ascent, metrics.descent, metrics.width],
+      <double>[14, 10.5, 3.5, 56],
+      reason: 'FlutterTest metrics must be identical on every host OS',
+    );
+
     tester.view.devicePixelRatio = 1;
     addTearDown(tester.view.resetDevicePixelRatio);
     addTearDown(() => tester.binding.setSurfaceSize(null));
@@ -342,11 +360,12 @@ void main() {
       store: store,
       home: const AbsencesPageContainer(),
       // The golden describes one fixed Material rendering, independent of the
-      // host's typography and platform defaults. Ahem is Flutter's test font.
+      // host's typography and platform defaults. FlutterTest uses power-of-two
+      // font metrics; Ahem is rounded differently by native font engines.
       theme: ThemeData(
         colorSchemeSeed: defaultContrastColor,
         platform: TargetPlatform.android,
-        fontFamily: 'Ahem',
+        fontFamily: 'FlutterTest',
       ),
     );
     await settleFor(tester);
