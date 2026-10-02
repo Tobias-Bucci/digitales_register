@@ -6,6 +6,7 @@ import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:package_info_plus/package_info_plus.dart';
+import 'support/privacy_test_mocks.dart';
 
 Widget app(Widget home,
         {Brightness brightness = Brightness.light,
@@ -24,6 +25,7 @@ Widget app(Widget home,
     );
 
 void main() {
+  setUp(mockPrivacyPlugins);
   testWidgets(
       'details preserve unresolved choice; required-only closes once; settings can reopen',
       (tester) async {

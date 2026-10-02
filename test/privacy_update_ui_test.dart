@@ -5,8 +5,10 @@ import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:package_info_plus/package_info_plus.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'support/privacy_test_mocks.dart';
 
 void main() {
+  setUp(mockPrivacyPlugins);
   testWidgets('legacy user sees one privacy update until a decision is saved',
       (tester) async {
     SharedPreferences.setMockInitialValues(
