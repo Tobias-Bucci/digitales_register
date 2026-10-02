@@ -774,7 +774,7 @@ class _AbsencesStatisticWidgetState extends State<AbsencesStatisticWidget> {
                     key: const ValueKey('expanded-stats'),
                     padding: const EdgeInsets.only(top: 12),
                     child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
+                      crossAxisAlignment: CrossAxisAlignment.stretch,
                       children: [
                         if (metrics.isNotEmpty) ...[
                           _AbsenceMetricList(metrics: metrics),
