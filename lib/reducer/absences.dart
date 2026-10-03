@@ -29,11 +29,43 @@ final absencesReducerBuilder = NestedReducerBuilder<AppState, AppStateBuilder,
     AbsencesState, AbsencesStateBuilder>(
   (s) => s.absencesState,
   (b) => b.absencesState,
-)..add<dynamic>(AbsencesActionsNames.loaded, _loaded);
+)
+  ..add<dynamic>(AbsencesActionsNames.loaded, _loaded)
+  ..add(AbsencesActionsNames.load, (state, action, builder) {
+    builder
+      ..loading = true
+      ..loadFailed = false;
+  })
+  ..add(AbsencesActionsNames.notLoaded, (state, action, builder) {
+    builder
+      ..loading = false
+      ..loadFailed = true;
+  });
 
 void _loaded(
     AbsencesState state, Action<dynamic> action, AbsencesStateBuilder builder) {
-  final parsed = tryParse(getMap(action.payload)!, _parseAbsences);
+  try {
+    _applyLoaded(state, action, builder);
+  } catch (_) {
+    builder
+      ..loading = false
+      ..loadFailed = true;
+  }
+}
+
+void _applyLoaded(
+    AbsencesState state, Action<dynamic> action, AbsencesStateBuilder builder) {
+  final payload = getMap(action.payload);
+  if (payload == null ||
+      getMap(payload['statistics']) == null ||
+      payload['absences'] is! List ||
+      payload['futureAbsences'] is! List) {
+    builder
+      ..loading = false
+      ..loadFailed = true;
+    return;
+  }
+  final parsed = tryParse(payload, _parseAbsences);
   if (parsed.absences.length >= state.absences.length) {
     return builder.replace(parsed);
   }

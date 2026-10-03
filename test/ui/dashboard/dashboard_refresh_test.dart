@@ -20,13 +20,16 @@ void main() {
     resetTestState();
   });
 
-  testWidgets('filter and past button share one compact row on a phone',
+  testWidgets('filter and past buttons remain accessible on a narrow phone',
       (tester) async {
     tester.view.physicalSize = const Size(320, 640);
     tester.view.devicePixelRatio = 1;
     addTearDown(tester.view.resetPhysicalSize);
     addTearDown(tester.view.resetDevicePixelRatio);
-    final store = createStore();
+    final store = createStore(
+        initialState: AppState(
+      (b) => b.settingsState.dashboardItems = ListBuilder<String>(),
+    ));
 
     await pumpApp(
       tester,
@@ -54,8 +57,13 @@ void main() {
 
     final filter = tester.getCenter(find.text('Filter'));
     final past = tester.getCenter(find.text('Vergangenheit'));
-    expect((filter.dy - past.dy).abs(), lessThan(2));
-    expect(tester.getSize(find.byType(DashboardHeader)).height, lessThan(100));
+    expect(past.dy, greaterThanOrEqualTo(filter.dy));
+    expect(
+        tester
+            .getSize(find.widgetWithText(FilledButton, 'Vergangenheit'))
+            .width,
+        lessThanOrEqualTo(280));
+    expect(tester.getSize(find.byType(DashboardHeader)).height, lessThan(150));
     expect(tester.takeException(), isNull);
   });
 

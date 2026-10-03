@@ -31,7 +31,8 @@ Future<void> _loadAbsences(
   Action<void> action,
 ) async {
   if (api.state.noInternet) return;
-  if (!_isCacheMarkedStale(_absencesCacheKey) &&
+  if (!api.state.absencesState.loadFailed &&
+      !_isCacheMarkedStale(_absencesCacheKey) &&
       _isFresh(api.state.absencesState.lastFetched, _absencesCacheTtl)) {
     return;
   }
@@ -48,10 +49,16 @@ Future<void> _refreshAbsences(
   try {
     response = await wrapper.send("api/student/dashboard/absences");
   } on UnexpectedLogoutException {
+    unawaited(api.actions.absencesActions.notLoaded());
     await _handleUnexpectedLogout(api, 'load');
+    return;
+  } catch (error, stack) {
+    diagnostics.report(error, stack, DiagnosticError.http);
+    unawaited(api.actions.absencesActions.notLoaded());
     return;
   }
   if (response == null) {
+    unawaited(api.actions.absencesActions.notLoaded());
     return;
   }
   // A middleware action must not await another dispatch on the same store:

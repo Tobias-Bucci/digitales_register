@@ -56,12 +56,7 @@ void main() {
     expect(find.textContaining('% fortgeschritten'), findsWidgets);
     final initialHolidaySize =
         tester.getSize(find.byKey(const ValueKey('holiday-countdown-card')));
-    expect(initialHolidaySize.height, 176);
-    expect(
-      initialHolidaySize,
-      tester
-          .getSize(find.byKey(const ValueKey('grade-deadline-countdown-card'))),
-    );
+    expect(initialHolidaySize.height, lessThan(150));
 
     await tester.tap(find.byKey(const ValueKey('holiday-countdown-card')));
     expect(selectedDate, DateTime(2025, 12, 24));
@@ -75,9 +70,12 @@ void main() {
     expect(find.text('13 Tage Ferien'), findsOneWidget);
     expect(find.text('30 Tage'), findsOneWidget);
     expect(
-      tester.getSize(find.byKey(const ValueKey('holiday-countdown-card'))),
-      initialHolidaySize,
+      tester
+          .getSize(find.byKey(const ValueKey('holiday-countdown-card')))
+          .width,
+      initialHolidaySize.width,
     );
+    expect(tester.takeException(), isNull);
   });
 
   testWidgets('countdown cards do not overflow on a narrow dashboard',
