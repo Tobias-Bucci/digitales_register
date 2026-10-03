@@ -28,9 +28,9 @@ import 'package:dr/demo.dart';
 import 'package:dr/i18n/app_language.dart';
 import 'package:dr/i18n/app_localizations.dart';
 import 'package:dr/platform_adapter.dart';
-import 'package:dr/privacy_consent.dart';
 import 'package:dr/theme_controller.dart';
 import 'package:dr/tutorial/tutorial_page.dart';
+import 'package:dr/ui/about_app_dialog.dart';
 import 'package:dr/ui/autocomplete_options.dart';
 import 'package:dr/ui/dialog.dart';
 import 'package:dr/ui/network_protocol_page.dart';
@@ -981,16 +981,6 @@ class _SettingsPageWidgetState extends State<SettingsPageWidget> {
                 subtitle: Text(
                     '${l10n.text('privacyCategory.$category.body')}\n${l10n.text((category == 'diagnostics' ? AnalyticsService.privacy.decision.diagnosticsAllowed : category == 'usage' ? AnalyticsService.privacy.decision.analyticsAllowed : AnalyticsService.privacy.decision.academicStatsAllowed) ? 'privacySettings.enabled' : 'privacySettings.disabled')}')),
           ListTile(
-              title: Text(l10n.text('privacyAge.title')),
-              subtitle: Text(l10n.text(
-                  'privacyAge.${AnalyticsService.privacy.decision.ageEligibility.name}'))),
-          if (AnalyticsService.privacy.decision.ageEligibility ==
-              AnalyticsAgeEligibility.under14)
-            Padding(
-                padding: const EdgeInsets.all(16),
-                child: Text(l10n.text('privacyAge.under14Explanation'))),
-          ListTile(
-              leading: const Icon(Icons.tune),
               title: Text(l10n.text('privacySettings.change')),
               trailing: const Icon(Icons.chevron_right),
               onTap: () async {
@@ -1142,144 +1132,10 @@ class _SettingsPageWidgetState extends State<SettingsPageWidget> {
     );
   }
 
-  Future<void> _showAboutAppDialog(BuildContext context) async {
-    final l10n = context.l10n;
-    final theme = Theme.of(context);
-    final isDark = theme.brightness == Brightness.dark;
-    final accent = theme.colorScheme.primary;
-    final officialSourceUrl = Uri.parse("https://digitalesregister.it");
-    final accentBg = Color.alphaBlend(
-      accent.withValues(alpha: isDark ? 0.24 : 0.14),
-      theme.colorScheme.surface,
-    );
-
-    await showDialog<void>(
-      context: context,
-      builder: (context) {
-        return Dialog(
-          backgroundColor: Colors.transparent,
-          insetPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 24),
-          child: DecoratedBox(
-            decoration: BoxDecoration(
-              color: accentBg,
-              borderRadius: BorderRadius.circular(22),
-              border: Border.all(color: accent.withValues(alpha: 0.35)),
-            ),
-            child: SingleChildScrollView(
-              padding: const EdgeInsets.fromLTRB(18, 18, 18, 16),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.stretch,
-                children: [
-                  Text(
-                    l10n.text('settings.about.appName'),
-                    textAlign: TextAlign.center,
-                    style: theme.textTheme.headlineSmall?.copyWith(
-                      fontWeight: FontWeight.w700,
-                      letterSpacing: 0.2,
-                      color: theme.colorScheme.onSurface,
-                    ),
-                  ),
-                  const SizedBox(height: 8),
-                  Center(
-                    child: Container(
-                      width: 68,
-                      height: 3,
-                      decoration: BoxDecoration(
-                        color: accent.withValues(alpha: 0.9),
-                        borderRadius: BorderRadius.circular(12),
-                      ),
-                    ),
-                  ),
-                  const SizedBox(height: 14),
-                  Card(
-                    elevation: 0,
-                    color: theme.colorScheme.surface,
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(16),
-                      side: BorderSide(color: accent.withValues(alpha: 0.25)),
-                    ),
-                    child: Padding(
-                      padding: const EdgeInsets.fromLTRB(14, 14, 14, 14),
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(
-                            l10n.text('settings.about.title'),
-                            style: theme.textTheme.titleMedium?.copyWith(
-                              fontWeight: FontWeight.w700,
-                            ),
-                          ),
-                          const SizedBox(height: 4),
-                          Text('v$appVersion'),
-                          const SizedBox(height: 12),
-                          Text(l10n.text('settings.about.copyright')),
-                          const SizedBox(height: 12),
-                          Text(l10n.text('settings.about.description')),
-                          const SizedBox(height: 12),
-                          Text(l10n.text('settings.about.disclaimer')),
-                          const SizedBox(height: 12),
-                          Text(
-                            l10n.text('settings.about.officialSourcesTitle'),
-                            style: theme.textTheme.titleSmall?.copyWith(
-                              fontWeight: FontWeight.w700,
-                            ),
-                          ),
-                          const SizedBox(height: 4),
-                          Text(l10n.text('settings.about.officialSourcesBody')),
-                          const SizedBox(height: 8),
-                          InkWell(
-                            onTap: () {
-                              launchUrl(
-                                officialSourceUrl,
-                                mode: LaunchMode.externalApplication,
-                              );
-                            },
-                            child: Text(
-                              l10n.text('settings.about.officialSourcesLink'),
-                              style: TextStyle(color: accent),
-                            ),
-                          ),
-                          const SizedBox(height: 12),
-                          Text(l10n.text('settings.about.gpl')),
-                          const SizedBox(height: 4),
-                          Text(l10n.text('settings.about.warranty')),
-                          const SizedBox(height: 8),
-                          InkWell(
-                            onTap: () {
-                              launchUrl(
-                                Uri.parse(
-                                  "https://www.gnu.org/licenses/gpl-3.0.html",
-                                ),
-                                mode: LaunchMode.externalApplication,
-                              );
-                            },
-                            child: Text(
-                              l10n.text('settings.about.gnuDetails'),
-                              style: TextStyle(color: accent),
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                  ),
-                  const SizedBox(height: 12),
-                  FilledButton.tonal(
-                    style: FilledButton.styleFrom(
-                      backgroundColor: accentBg,
-                      foregroundColor: theme.colorScheme.onSurface,
-                    ),
-                    onPressed: () => Navigator.of(context).pop(),
-                    child: Text(l10n.text('common.close')),
-                  ),
-                ],
-              ),
-            ),
-          ),
-        );
-      },
-    );
-  }
-
+  Future<void> _showAboutAppDialog(BuildContext context) => showDialog<void>(
+        context: context,
+        builder: (_) => AboutAppDialog(version: appVersion),
+      );
   Future<_CalendarSyncDisableAction?> _showCalendarSyncDisableDialog(
     BuildContext context,
   ) {

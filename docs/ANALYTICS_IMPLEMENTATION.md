@@ -1,4 +1,8 @@
-> Current privacy audit and validation: [PRIVACY_AUDIT_V4.md](PRIVACY_AUDIT_V4.md). Data inventory and manual cloud tasks are maintained separately.
+> Update 2026-10-03: privacy notice version **5** removes the age question, age gating and age storage for new decisions. Explicit purpose consent, default-off startup and platform safeguards remain. The redesigned dialog integrates details and customization into its content and emphasizes the allow-all action. Existing decisions require a new explicit choice. Verification: 337 tests passed, including 24 dialog layout cases; analysis found no issues. The report and v4 audit below describe the earlier implementation.
+
+> Previous privacy audit: [PRIVACY_AUDIT_V4.md](PRIVACY_AUDIT_V4.md). Data inventory and manual cloud tasks are maintained separately.
+
+> Dialog follow-up 2026-10-03: unsaved purpose choices start selected; saving accepts the current selection, while reopening settings preserves saved choices. The title is one short localized word, without the header icon or update wording. About now uses a compact theme-based dialog with expandable project/license details. 65 dialog/settings tests passed and analysis found no issues.
 
 # Analytics implementation report — Digitales Register
 

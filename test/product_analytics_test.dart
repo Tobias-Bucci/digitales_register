@@ -58,7 +58,7 @@ PrivacyDecision consent(
         bool academic = true,
         bool diagnostics = false,
         AnalyticsAgeEligibility age = AnalyticsAgeEligibility.atLeast14,
-        int version = 4}) =>
+        int version = currentPrivacyNoticeVersion}) =>
     PrivacyDecision(
         version: version,
         completed: true,
@@ -102,18 +102,19 @@ void main() {
         .firstWhere((url) => schools.values.where((v) => v == url).length > 1);
     expect(analyticsSchoolIdForUrl(duplicate), isNull);
   });
-  test('old consent and under14 cannot authorize any purpose', () async {
+  test('old consent cannot authorize; current choice needs no age check',
+      () async {
     for (final age in AnalyticsAgeEligibility.values) {
       decision = consent(age: age, version: 3);
       await service.event('account_switch');
       expect(sink.calls, isEmpty);
     }
     decision = consent(age: AnalyticsAgeEligibility.under14, diagnostics: true);
-    expect(decision.diagnosticsAllowed, false);
-    expect(decision.analyticsAllowed, false);
-    expect(decision.academicStatsAllowed, false);
+    expect(decision.diagnosticsAllowed, true);
+    expect(decision.analyticsAllowed, true);
+    expect(decision.academicStatsAllowed, true);
     await service.event('account_switch');
-    expect(sink.calls, isEmpty);
+    expect(sink.calls, contains('account_switch'));
   });
   test(
       'diagnostics and usage choices are independent; academic depends on usage',
@@ -273,7 +274,7 @@ void main() {
     expect(AnalyticsSchema.year('2026_2028'), false);
     expect(AnalyticsSchema.year('2026_2027'), true);
   });
-  test('granular controller enables each SDK independently and denies under14',
+  test('granular controller enables each SDK independently without age checks',
       () async {
     for (final diagnostics in [false, true]) {
       for (final usage in [false, true]) {
@@ -288,24 +289,24 @@ void main() {
             gate: gates.add,
             analyticsGate: productGates.add);
         await controller.chooseGranular(
-            diagnostics:
-                diagnostics ? ConsentChoice.granted : ConsentChoice.denied,
-            usage: usage ? ConsentChoice.granted : ConsentChoice.denied,
-            academic: ConsentChoice.granted,
-            age: AnalyticsAgeEligibility.atLeast14);
+          diagnostics:
+              diagnostics ? ConsentChoice.granted : ConsentChoice.denied,
+          usage: usage ? ConsentChoice.granted : ConsentChoice.denied,
+          academic: ConsentChoice.granted,
+        );
         expect(calls.contains('crash:true'), diagnostics);
         expect(calls.contains('analytics:true'), usage);
         expect(controller.decision.academicStatsAllowed, usage);
         expect(gates.last, diagnostics);
         expect(productGates.last, usage);
         await controller.chooseGranular(
-            diagnostics: ConsentChoice.granted,
-            usage: ConsentChoice.granted,
-            academic: ConsentChoice.granted,
-            age: AnalyticsAgeEligibility.under14);
-        expect(controller.decision.requiredOnly, true);
-        expect(gates.last, false);
-        expect(productGates.last, false);
+          diagnostics: ConsentChoice.granted,
+          usage: ConsentChoice.granted,
+          academic: ConsentChoice.granted,
+        );
+        expect(controller.decision.allOptionalAllowed, true);
+        expect(gates.last, true);
+        expect(productGates.last, true);
       }
     }
   });
@@ -341,7 +342,7 @@ void main() {
     await service.clearIdentity();
     expect(ownership.matches('A', ['1']), false);
   });
-  test('No revokes immediately; age confirmation alone never grants purposes',
+  test('required-only revokes immediately and new choices need no age value',
       () async {
     final calls = <String>[];
     final store = MemoryStore(calls);
@@ -350,22 +351,20 @@ void main() {
     final controller = PrivacyController(
         store: store, collection: sdk, gate: (_) {}, analyticsGate: gates.add);
     await controller.chooseGranular(
-        diagnostics: ConsentChoice.granted,
-        usage: ConsentChoice.granted,
-        academic: ConsentChoice.granted,
-        age: AnalyticsAgeEligibility.atLeast14);
+      diagnostics: ConsentChoice.granted,
+      usage: ConsentChoice.granted,
+      academic: ConsentChoice.granted,
+    );
     expect(gates.last, true);
-    final denied =
-        controller.resolveAgeEligibility(AnalyticsAgeEligibility.under14);
+    final denied = controller.choose(TelemetryConsentState.requiredOnly);
     expect(gates.last, false);
     await denied;
-    expect(controller.decision.ageEligibility, AnalyticsAgeEligibility.under14);
-    await controller.resolveAgeEligibility(AnalyticsAgeEligibility.atLeast14);
     expect(controller.decision.requiredOnly, true);
     final fresh = PrivacyController(
         store: MemoryStore([]), collection: FakeCollection([]), gate: (_) {});
-    await fresh.resolveAgeEligibility(AnalyticsAgeEligibility.atLeast14);
-    expect(fresh.decision.isCurrent, false);
-    expect(fresh.decision.requiredOnly, true);
+    await fresh.choose(TelemetryConsentState.allAllowed);
+    expect(fresh.decision.isCurrent, true);
+    expect(fresh.decision.allOptionalAllowed, true);
+    expect(fresh.decision.serialize(), isNot(contains('ageEligibility')));
   });
 }

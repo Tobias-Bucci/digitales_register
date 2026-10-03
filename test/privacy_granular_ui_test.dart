@@ -45,78 +45,102 @@ void main() {
     await tester.pumpAndSettle();
   }
 
-  testWidgets('customize does not save; under14 disables every optional toggle',
+  testWidgets('customize needs no age; academic depends on usage',
       (tester) async {
-    // The facade caches initialization Futures across tests. Keep native work
-    // in the real async zone so it cannot retain a previous test's FakeAsync.
     await tester.runAsync(() async {
       await open(tester);
+      await tester.ensureVisible(find.text('Auswahl anpassen'));
       await tester.tap(find.text('Auswahl anpassen'));
       await tester.pumpAndSettle();
       expect(AnalyticsService.hasCurrentConsent, false);
-      for (final widget
-          in tester.widgetList<SwitchListTile>(find.byType(SwitchListTile))) {
-        expect(widget.onChanged, isNull);
-      }
-      await tester.ensureVisible(find.text('Altersberechtigung'));
-      await tester.tap(find.text('Altersberechtigung'));
+      final switches = tester
+          .widgetList<SwitchListTile>(find.byType(SwitchListTile))
+          .toList();
+      expect(switches[0].onChanged, isNotNull);
+      expect(switches[1].onChanged, isNotNull);
+      expect(switches[2].onChanged, isNotNull);
+      expect(switches.every((tile) => tile.value), true);
+      expect(find.text('Altersberechtigung'), findsNothing);
+      await tester.ensureVisible(find.byType(SwitchListTile).at(1));
+      await tester.tap(find.byType(SwitchListTile).at(1));
       await tester.pumpAndSettle();
-      await tester.tap(find.text('Nein'));
-      await tester.pumpAndSettle();
-      expect(AnalyticsService.hasCurrentConsent, false);
-      for (final widget
-          in tester.widgetList<SwitchListTile>(find.byType(SwitchListTile))) {
-        expect(widget.value, false);
-        expect(widget.onChanged, isNull);
-      }
       await tester.tap(find.text('Auswahl speichern'));
       await tester.pumpAndSettle();
       final decision = AnalyticsService.privacy.decision;
-      expect(decision.ageEligibility, AnalyticsAgeEligibility.under14);
-      expect(decision.requiredOnly, true);
-      expect(decision.diagnosticsConsent, ConsentChoice.denied);
-      expect(decision.usageAnalyticsConsent, ConsentChoice.denied);
-      expect(decision.academicStatisticsConsent, ConsentChoice.denied);
+      expect(decision.diagnosticsAllowed, true);
+      expect(decision.analyticsAllowed, false);
+      expect(decision.academicStatsAllowed, false);
+      expect(decision.serialize(), isNot(contains('ageEligibility')));
     });
   });
-  testWidgets('all optional first requires age and No cannot enable collection',
+  testWidgets('save accepts all initial defaults without enabling before save',
       (tester) async {
     await tester.runAsync(() async {
       await open(tester);
-      await tester.tap(find.text('Alle optionalen Daten erlauben'));
-      await tester.pumpAndSettle();
-      expect(find.text('Bist du mindestens 14 Jahre alt?'), findsOneWidget);
+      expect(AnalyticsService.privacy.sdkReady, false);
       expect(AnalyticsService.hasCurrentConsent, false);
-      await tester.tap(find.text('Nein'));
-      await tester.pumpAndSettle();
-      await tester.tap(find.text('Auswahl speichern'));
-      await tester.pumpAndSettle();
-      expect(AnalyticsService.privacy.decision.analyticsAllowed, false);
-      expect(AnalyticsService.privacy.decision.diagnosticsAllowed, false);
-    });
-  });
-  testWidgets(
-      'later eligibility change requires a new explicit optional choice',
-      (tester) async {
-    await tester.runAsync(() async {
-      await open(tester);
+      await tester.ensureVisible(find.text('Auswahl anpassen'));
       await tester.tap(find.text('Auswahl anpassen'));
       await tester.pumpAndSettle();
-      await tester.ensureVisible(find.text('Altersberechtigung'));
-      await tester.tap(find.text('Altersberechtigung'));
-      await tester.pumpAndSettle();
-      await tester.tap(find.text('Ja'));
-      await tester.pumpAndSettle();
-      for (final widget
-          in tester.widgetList<SwitchListTile>(find.byType(SwitchListTile))) {
-        expect(widget.value, false);
-      }
       expect(AnalyticsService.hasCurrentConsent, false);
       await tester.tap(find.text('Auswahl speichern'));
       await tester.pumpAndSettle();
-      expect(AnalyticsService.privacy.decision.ageEligibility,
-          AnalyticsAgeEligibility.atLeast14);
-      expect(AnalyticsService.privacy.decision.requiredOnly, true);
+      expect(AnalyticsService.privacy.decision.allOptionalAllowed, true);
+      expect(find.byType(Dialog), findsNothing);
+    });
+  });
+  testWidgets('allow all saves immediately with no extra question',
+      (tester) async {
+    await tester.runAsync(() async {
+      await open(tester);
+      expect(
+          find.ancestor(
+              of: find.text('Alle optionalen Daten erlauben'),
+              matching:
+                  find.byWidgetPredicate((widget) => widget is FilledButton)),
+          findsOneWidget);
+      await tester.tap(find.text('Alle optionalen Daten erlauben'));
+      await tester.pumpAndSettle();
+      expect(find.text('Bist du mindestens 14 Jahre alt?'), findsNothing);
+      expect(find.byType(Dialog), findsNothing);
+      expect(AnalyticsService.privacy.decision.allOptionalAllowed, true);
+    });
+  });
+  testWidgets('custom selection can enable usage and revoke academic again',
+      (tester) async {
+    await tester.runAsync(() async {
+      await open(tester);
+      await tester.ensureVisible(find.text('Auswahl anpassen'));
+      await tester.tap(find.text('Auswahl anpassen'));
+      await tester.pumpAndSettle();
+      await tester.ensureVisible(find.byType(SwitchListTile).at(1));
+      await tester.ensureVisible(find.byType(SwitchListTile).at(1));
+      await tester.tap(find.byType(SwitchListTile).at(1));
+      await tester.pumpAndSettle();
+      expect(
+          tester
+              .widget<SwitchListTile>(find.byType(SwitchListTile).at(2))
+              .value,
+          false);
+      await tester.ensureVisible(find.byType(SwitchListTile).at(1));
+      await tester.tap(find.byType(SwitchListTile).at(1));
+      await tester.pumpAndSettle();
+      await tester.ensureVisible(find.byType(SwitchListTile).at(2));
+      await tester.ensureVisible(find.byType(SwitchListTile).at(2));
+      await tester.tap(find.byType(SwitchListTile).at(2));
+      await tester.pumpAndSettle();
+      await tester.ensureVisible(find.byType(SwitchListTile).at(1));
+      await tester.tap(find.byType(SwitchListTile).at(1));
+      await tester.pumpAndSettle();
+      expect(
+          tester
+              .widget<SwitchListTile>(find.byType(SwitchListTile).at(2))
+              .value,
+          false);
+      await tester.tap(find.text('Auswahl speichern'));
+      await tester.pumpAndSettle();
+      expect(AnalyticsService.privacy.decision.diagnosticsAllowed, true);
+      expect(AnalyticsService.privacy.decision.analyticsAllowed, false);
     });
   });
 }

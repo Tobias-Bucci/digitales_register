@@ -1,7 +1,7 @@
 import 'dart:convert';
 import 'package:shared_preferences/shared_preferences.dart';
 
-const currentPrivacyNoticeVersion = 4;
+const currentPrivacyNoticeVersion = 5;
 const privacyDecisionKey = 'privacyDecision';
 
 enum TelemetryConsentState { unknown, requiredOnly, allAllowed }
@@ -39,8 +39,8 @@ class PrivacyDecision {
   final DateTime? timestamp;
   final bool reportsPurged;
   bool get isCurrent => completed && version == currentPrivacyNoticeVersion;
-  bool get eligible =>
-      isCurrent && ageEligibility == AnalyticsAgeEligibility.atLeast14;
+  // Age values are retained only to read older saved decisions.
+  bool get eligible => isCurrent;
   bool get diagnosticsAllowed =>
       eligible && diagnosticsConsent == ConsentChoice.granted;
   bool get analyticsAllowed =>
@@ -57,7 +57,6 @@ class PrivacyDecision {
         'diagnosticsConsent': diagnosticsConsent.name,
         'usageAnalyticsConsent': usageAnalyticsConsent.name,
         'academicStatisticsConsent': academicStatisticsConsent.name,
-        'ageEligibility': ageEligibility.name,
         'consentDecisionTimestamp': timestamp?.toUtc().toIso8601String(),
         'completed': completed,
         'reportsPurged': reportsPurged,
@@ -221,8 +220,7 @@ class PrivacyController {
     if (await _stop(resetAnalytics: !decision.analyticsAllowed)) await _apply();
   }
 
-  Future<void> choose(
-          TelemetryConsentState state) =>
+  Future<void> choose(TelemetryConsentState state) =>
       state == TelemetryConsentState.unknown
           ? Future.value()
           : chooseGranular(
@@ -235,30 +233,18 @@ class PrivacyController {
               academic: state == TelemetryConsentState.allAllowed
                   ? ConsentChoice.granted
                   : ConsentChoice.denied,
-              age: decision.ageEligibility);
-
-  // Confirming eligibility stores only the local age decision and revokes any
-  // prior optional choices. A pending notice stays pending until purpose Save.
-  Future<void> resolveAgeEligibility(AnalyticsAgeEligibility age) =>
-      chooseGranular(
-          diagnostics: ConsentChoice.denied,
-          usage: ConsentChoice.denied,
-          academic: ConsentChoice.denied,
-          age: age,
-          complete: decision.isCurrent);
+            );
 
   Future<void> chooseGranular(
       {required ConsentChoice diagnostics,
       required ConsentChoice usage,
       required ConsentChoice academic,
-      required AnalyticsAgeEligibility age,
       bool complete = true}) async {
     if (busy) return;
     busy = true;
     _close(); // Synchronous closure before SDK or preference awaits.
     try {
-      final nextAllowsAnalytics = age == AnalyticsAgeEligibility.atLeast14 &&
-          usage == ConsentChoice.granted;
+      final nextAllowsAnalytics = usage == ConsentChoice.granted;
       final stopped = await _stop(
           resetAnalytics: decision.analyticsAllowed && !nextAllowsAnalytics);
       var purged = false;
@@ -266,15 +252,12 @@ class PrivacyController {
         await collection.deleteReports();
         purged = stopped;
       } catch (_) {}
-      final eligible = age == AnalyticsAgeEligibility.atLeast14;
       final next = PrivacyDecision(
           version: currentPrivacyNoticeVersion,
-          diagnosticsConsent: eligible ? diagnostics : ConsentChoice.denied,
-          usageAnalyticsConsent: eligible ? usage : ConsentChoice.denied,
-          academicStatisticsConsent: eligible && usage == ConsentChoice.granted
-              ? academic
-              : ConsentChoice.denied,
-          ageEligibility: age,
+          diagnosticsConsent: diagnostics,
+          usageAnalyticsConsent: usage,
+          academicStatisticsConsent:
+              usage == ConsentChoice.granted ? academic : ConsentChoice.denied,
           completed: complete,
           timestamp: DateTime.now().toUtc(),
           reportsPurged: purged);

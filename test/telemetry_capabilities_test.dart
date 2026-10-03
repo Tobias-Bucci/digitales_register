@@ -1,11 +1,13 @@
 import 'package:dr/analytics_service.dart';
 import 'package:dr/diagnostics_service.dart';
+import 'package:dr/privacy_consent.dart';
 import 'package:dr/telemetry_capabilities.dart';
 import 'package:firebase_analytics/firebase_analytics.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:mocktail/mocktail.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 class MockAnalytics extends Mock implements FirebaseAnalytics {}
 
@@ -93,6 +95,61 @@ void main() {
     expect(attempts, 1);
     verifyZeroInteractions(sdk);
   });
+  for (final bootstrapFailure in [
+    'not ready',
+    'missing channel',
+    'native error'
+  ]) {
+    test('iOS $bootstrapFailure leaves startup and opt-in safe', () async {
+      SharedPreferences.setMockInitialValues({});
+      const bridge = MethodChannel('dr/privacy_bootstrap');
+      var readinessChecks = 0;
+      TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
+          .setMockMethodCallHandler(bridge, (call) async {
+        expect(call.method, 'ready');
+        readinessChecks++;
+        if (bootstrapFailure == 'missing channel') {
+          throw MissingPluginException();
+        }
+        if (bootstrapFailure == 'native error') {
+          throw PlatformException(code: 'bootstrap_failed');
+        }
+        return false;
+      });
+      addTearDown(() {
+        TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
+            .setMockMethodCallHandler(bridge, null);
+      });
+      final sdk = MockAnalytics();
+      final collection = FirebaseTelemetryCollection(
+          analytics: sdk,
+          capabilities: const TelemetryCapabilities(TargetPlatform.iOS));
+      var diagnosticsEnabled = false;
+      var analyticsEnabled = false;
+      final privacy = PrivacyController(
+          store: PreferencesPrivacyStore(),
+          collection: collection,
+          gate: (enabled) => diagnosticsEnabled = enabled,
+          analyticsGate: (enabled) => analyticsEnabled = enabled);
+
+      // Exercise the real adapter and controller: native bootstrap failure
+      // must never escape into the app's awaited startup or consent dialog.
+      await privacy.initialize();
+      await privacy.chooseGranular(
+        diagnostics: ConsentChoice.granted,
+        usage: ConsentChoice.granted,
+        academic: ConsentChoice.granted,
+      );
+      await privacy.initialize();
+
+      expect(privacy.sdkReady, false);
+      expect(diagnosticsEnabled, false);
+      expect(analyticsEnabled, false);
+      expect(privacy.busy, false);
+      expect(readinessChecks, 1);
+      verifyZeroInteractions(sdk);
+    });
+  }
   test('withdrawal stops collection before denying storage; ads remain denied',
       () async {
     final sdk = MockAnalytics();

@@ -59,6 +59,7 @@ void main() {
     expect(find.text('Nur erforderliche Daten'), findsWidgets);
     expect(find.text('Alle optionalen Daten erlauben'), findsOneWidget);
     expect(AnalyticsService.hasCurrentConsent, false);
+    await tester.ensureVisible(find.text('Mehr erfahren'));
     await tester.tap(find.text('Mehr erfahren'));
     await tester.pumpAndSettle();
     expect(find.byType(PrivacyDataDetailsPage), findsOneWidget);
@@ -76,11 +77,12 @@ void main() {
     expect(find.text('Alle optionalen Daten erlauben'), findsNothing);
     await tester.tap(find.text('manage'));
     await tester.pumpAndSettle();
+    for (final tile
+        in tester.widgetList<SwitchListTile>(find.byType(SwitchListTile))) {
+      expect(tile.value, false);
+    }
     expect(find.text('Alle optionalen Daten erlauben'), findsOneWidget);
     await tester.tap(find.text('Alle optionalen Daten erlauben'));
-    await tester.pumpAndSettle();
-    expect(AnalyticsService.privacy.decision.allowsTelemetry, false);
-    await tester.tap(find.text('Ja'));
     await tester.pumpAndSettle();
     expect(AnalyticsService.privacy.decision.allowsTelemetry, true);
     expect(tester.takeException(), isNull);
