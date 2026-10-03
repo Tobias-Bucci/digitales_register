@@ -43,6 +43,25 @@ Linux icons at 32, 48, 64, 128, 256 and 512 pixels,
 validates desktop/AppStream metadata and creates a release bundle, `.tar.gz`,
 `.deb` and SHA-256 files in `build/linux/packages`.
 
+### Direct Flutter build and missing Builder classes
+
+The generated `*.g.dart` files are ignored by Git. After cloning the repository,
+generate them before invoking Flutter directly. On a native ARM64 host:
+
+```bash
+flutter pub get
+dart run build_runner build
+flutter build linux --release --target-platform linux-arm64
+```
+
+On x64, use `--target-platform linux-x64`. Stop if code generation fails and
+resolve its first error before building. Errors such as
+`NotificationStateBuilder isn't a type`, `ProfileStateBuilder isn't a type`
+and subsequent undefined setters on `Object?` indicate missing or invalid
+generated sources; they do not by themselves indicate an ARM compatibility
+problem. `bash tool/build_linux.sh arm64` performs generation, asset preparation,
+building and packaging together on ARM64.
+
 ## Installation and runtime
 
 ### WSLg preview from Windows
