@@ -1,0 +1,7 @@
+# Linux metadata, shell scripts and build files must keep Unix line endings.
+linux/** text eol=lf
+linux/**/*.png binary
+linux/icon.png binary
+tool/*.sh text eol=lf
+tool/*.py text eol=lf
+.github/workflows/*.yaml text eol=lf

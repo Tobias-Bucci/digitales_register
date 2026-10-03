@@ -127,6 +127,11 @@ Product identity**.
 
 ---
 
+## Build (Linux)
+
+For native Linux x64 and ARM64 builds, package installation and runtime
+requirements, see [Linux release preparation](docs/LINUX_RELEASE_READINESS.md).
+
 ## Demo Mode
 
 The application includes a demo mode for testing purposes without requiring a real account.
