@@ -64,7 +64,8 @@ void main() {
         buildDay(
           date: UtcDateTime(2026, 4, 10),
           homework: <Homework>[
-            buildHomework(id: 7, title: 'Reminder', type: HomeworkType.homework),
+            buildHomework(
+                id: 7, title: 'Reminder', type: HomeworkType.homework),
           ],
         ),
       ]);
@@ -75,7 +76,8 @@ void main() {
     await Future<void>.delayed(const Duration(milliseconds: 50));
     expect(upserts, hasLength(1));
     firstUpsert.complete();
-    expect(await Future.wait(<Future<bool>>[first, second]), everyElement(isTrue));
+    expect(
+        await Future.wait(<Future<bool>>[first, second]), everyElement(isTrue));
     expect(upserts, hasLength(1));
   });
 
@@ -139,8 +141,8 @@ void main() {
         upserts.map((request) => request.title),
         containsAll(<String>[
           'Erinnerung',
-          'Worksheet',
-          'Chapter test',
+          'Worksheet: Mathematics',
+          'Exam: Biology',
         ]));
     expect(
       upserts.every(
@@ -184,8 +186,43 @@ void main() {
 
     expect(success, isTrue);
     expect(upserts, hasLength(1));
-    expect(upserts.single.title, 'Schularbeit');
+    expect(upserts.single.title, 'Schularbeit: Deutsch');
     expect(upserts.single.description, contains('Kapitel 3 und 4'));
+  });
+
+  test('homework titles show the subject while preserving the description',
+      () async {
+    final upserts = <CalendarSyncUpsertRequest>[];
+    CalendarSyncService.upsertEventOverride = (request) async {
+      upserts.add(request);
+      return 100;
+    };
+    final state = AppState((b) {
+      b.settingsState.calendarSyncEnabled = true;
+      b.dashboardState.allDays = ListBuilder<Day>(<Day>[
+        buildDay(
+          date: UtcDateTime(2026, 4, 10),
+          homework: <Homework>[
+            buildHomework(
+              id: 7,
+              title: 'Hausaufgabe',
+              subtitle: 'Seite 12, Aufgaben 1 bis 3',
+              label: 'Mathematik',
+            ),
+          ],
+        ),
+      ]);
+    });
+
+    expect(await CalendarSyncService.reconcile(state), isTrue);
+    expect(await CalendarSyncService.reconcile(state), isTrue);
+
+    expect(upserts, hasLength(1));
+    expect(upserts.single.title, 'Hausaufgabe: Mathematik');
+    expect(
+        upserts.single.description,
+        'Mathematik\nSeite 12, Aufgaben 1 bis 3\n\n'
+        '[Digitales Register Sync: dashboard:2026-04-10:lessonHomework:7]');
   });
 
   test(
@@ -240,7 +277,8 @@ void main() {
 
     expect(success, isTrue);
     expect(upserts, hasLength(1));
-    expect(upserts.single.title, '1. Schularbeit');
+    expect(upserts.single.title, 'Schularbeit: Deutsch');
+    expect(upserts.single.description, contains('1. Schularbeit'));
   });
 
   test('editing a reminder updates the existing tracked event', () async {
@@ -392,7 +430,7 @@ void main() {
     expect(upserts, hasLength(2));
     expect(upserts.map((request) => request.title), <String>[
       'Arbeitsblatt',
-      'Kapiteltest',
+      'Pruefung: Mathematik',
     ]);
   });
 
@@ -657,7 +695,7 @@ void main() {
 
     expect(success, isTrue);
     expect(upserts, hasLength(1));
-    expect(upserts.single.title, 'Reminder');
+    expect(upserts.single.title, 'Reminder: Deutsch');
     expect(upserts.single.description, contains('Homework'));
   });
 }

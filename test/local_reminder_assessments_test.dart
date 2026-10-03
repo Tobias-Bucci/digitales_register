@@ -147,9 +147,10 @@ void main() {
     final items = CalendarSyncService.collectDesiredItems(state, l10n);
 
     expect(items, hasLength(1));
-    expect(items.single.title, 'Grammar quiz');
+    expect(items.single.title, 'Test: Italienisch');
     expect(items.single.description, contains('Test'));
     expect(items.single.description, contains('Italienisch'));
+    expect(items.single.description, contains('Grammar quiz'));
   });
 
   test('calendar sync skips local reminder assessments without period',

@@ -22,8 +22,64 @@ final _messagesMiddleware =
     MiddlewareBuilder<AppState, AppStateBuilder, AppActions>()
       ..add(MessagesActionsNames.load, _loadMessages)
       ..add(MessagesActionsNames.markAsRead, _markAsRead)
+      ..add(MessagesActionsNames.archiveMessage, _archiveMessage)
       ..add(MessagesActionsNames.openFile, _openFile)
       ..add(MessagesActionsNames.replyMessage, _replyMessage);
+
+Future<void> _archiveMessage(
+  MiddlewareApi<AppState, AppStateBuilder, AppActions> api,
+  ActionHandler next,
+  Action<int> action,
+) async {
+  final message = api.state.messagesState.messages
+      .where((m) => m.id == action.payload)
+      .firstOrNull;
+  if (api.state.noInternet ||
+      message == null ||
+      !(message.canArchive || message.canUnarchive) ||
+      message.archiving) {
+    return;
+  }
+  await next(action);
+  final archived = !message.archived;
+  final failureKey =
+      archived ? 'messages.archiveFailed' : 'messages.unarchiveFailed';
+  try {
+    final dynamic response = await wrapper.send(
+      'api/message/archiveMessage',
+      args: {'messageId': action.payload, 'archiveType': archived ? 1 : 2},
+      acceptEmptyResponse: true,
+    );
+    final result = response is Map ? response : null;
+    final error = result?['error'];
+    final hasError =
+        error != null && error != false && error != 0 && error != '';
+    if (response == null ||
+        response == false ||
+        (result != null &&
+            (result['success'] == false ||
+                result['success'] == 0 ||
+                hasError))) {
+      await api.actions.messagesActions.archiveMessageFailed(action.payload);
+      showSnackBar(tr(failureKey));
+      return;
+    }
+    await api.actions.messagesActions.archivedMessage(
+      ArchiveMessageResult(messageId: action.payload, archived: archived),
+    );
+    _markRuntimeCacheStale(_messagesCacheKey);
+    // Reload the server labels so restored messages return to their original folder.
+    try {
+      await api.actions.messagesActions.load();
+    } catch (e, stack) {
+      diagnostics.report(e, stack, DiagnosticError.http);
+    }
+  } catch (e, stack) {
+    await api.actions.messagesActions.archiveMessageFailed(action.payload);
+    diagnostics.report(e, stack, DiagnosticError.http);
+    showSnackBar(tr(failureKey));
+  }
+}
 
 Future<void> _replyMessage(
   MiddlewareApi<AppState, AppStateBuilder, AppActions> api,

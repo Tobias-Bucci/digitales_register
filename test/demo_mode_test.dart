@@ -99,6 +99,42 @@ void main() {
     expect(certificate, contains('Durchschnitt'));
   });
 
+  test('archiving a demo message survives reloading the message list',
+      () async {
+    final messages = await getDemoResponse(
+      'api/message/getMyMessages',
+      const <String, Object?>{},
+    ) as List<dynamic>;
+    final id = (messages.first as Map)['id'];
+    final response = await getDemoResponse(
+      'api/message/archiveMessage',
+      <String, Object?>{'messageId': id, 'archiveType': 1},
+    ) as Map;
+    expect(response['success'], isTrue);
+
+    final reloaded = await getDemoResponse(
+      'api/message/getMyMessages',
+      const <String, Object?>{},
+    ) as List<dynamic>;
+    final archived = reloaded.cast<Map>().firstWhere((m) => m['id'] == id);
+    expect(archived['label_archived'], isTrue);
+    expect(archived['label_incoming'], isFalse);
+    expect(archived['label_all'], isTrue);
+    expect(archived['archiveMessageEnabled'], 2);
+
+    await getDemoResponse('api/message/archiveMessage',
+        <String, Object?>{'messageId': id, 'archiveType': 2});
+    final restoredMessages = await getDemoResponse(
+      'api/message/getMyMessages',
+      const <String, Object?>{},
+    ) as List<dynamic>;
+    final restored =
+        restoredMessages.cast<Map>().firstWhere((m) => m['id'] == id);
+    expect(restored['label_archived'], isFalse);
+    expect(restored['label_incoming'], isTrue);
+    expect(restored['archiveMessageEnabled'], 1);
+  });
+
   test('assessment settings persist, filter, and reset with the demo cache',
       () async {
     await setDemoAssessmentSettings(const DemoAssessmentSettings(
@@ -120,8 +156,8 @@ void main() {
             ((day['1'] as Map<String, dynamic>)['1'] as Map<String, dynamic>)
                 .values)
         .cast<Map<String, dynamic>>()
-        .expand((entry) => ((entry['lesson']
-            as Map<String, dynamic>)['homeworkExams'] as List))
+        .expand((entry) =>
+            (entry['lesson'] as Map<String, dynamic>)['homeworkExams'] as List)
         .where((entry) => (entry as Map<String, dynamic>)['warning'] == true);
     expect(exams, isEmpty);
 

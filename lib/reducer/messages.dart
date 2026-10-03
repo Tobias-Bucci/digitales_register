@@ -36,7 +36,45 @@ final messagesReducerBuilder = NestedReducerBuilder<AppState, AppStateBuilder,
   ..add(MessagesActionsNames.fileAvailable, _fileAvailable)
   ..add(MessagesActionsNames.downloadFile, _downloadFile)
   ..add(MessagesActionsNames.markAsRead, _markAsRead)
+  ..add(MessagesActionsNames.archiveMessage, _archiveMessage)
+  ..add(MessagesActionsNames.archivedMessage, _archivedMessage)
+  ..add(MessagesActionsNames.archiveMessageFailed, _archiveMessageFailed)
   ..add(MessagesActionsNames.repliedMessage, _repliedMessage);
+
+void _archiveMessage(
+    MessagesState state, Action<int> action, MessagesStateBuilder builder) {
+  final index = state.messages.indexWhere((m) => m.id == action.payload);
+  if (index == -1 ||
+      !(state.messages[index].canArchive ||
+          state.messages[index].canUnarchive)) {
+    return;
+  }
+  builder.messages[index] = state.messages[index].rebuild(
+    (b) => b..archiving = true,
+  );
+}
+
+void _archivedMessage(MessagesState state, Action<ArchiveMessageResult> action,
+    MessagesStateBuilder builder) {
+  final index =
+      state.messages.indexWhere((m) => m.id == action.payload.messageId);
+  if (index == -1) return;
+  builder.messages[index] = state.messages[index].rebuild(
+    (b) => b
+      ..archived = action.payload.archived
+      ..archiveMessageEnabled = action.payload.archived ? 2 : 1
+      ..archiving = false,
+  );
+}
+
+void _archiveMessageFailed(
+    MessagesState state, Action<int> action, MessagesStateBuilder builder) {
+  final index = state.messages.indexWhere((m) => m.id == action.payload);
+  if (index == -1) return;
+  builder.messages[index] = state.messages[index].rebuild(
+    (b) => b..archiving = false,
+  );
+}
 
 void _loaded(
     MessagesState state, Action<List> action, MessagesStateBuilder builder) {
@@ -101,18 +139,21 @@ void _markAsRead(
   );
 }
 
-void _repliedMessage(
-    MessagesState state, Action<ReplyMessagePayload> action, MessagesStateBuilder builder) {
-  final index = state.messages.indexWhere((m) => m.id == action.payload.messageId);
+void _repliedMessage(MessagesState state, Action<ReplyMessagePayload> action,
+    MessagesStateBuilder builder) {
+  final index =
+      state.messages.indexWhere((m) => m.id == action.payload.messageId);
   if (index == -1) return;
   builder.messages[index] = state.messages[index].rebuild(
     (b) => b
       ..needsResponse = false
       ..showReply = false
       ..timeRead = b.timeRead ?? now
-      ..badge = action.payload.response == "agree" ? "agree" : "not_agree" // Restore badge logic
-      ..historyString = action.payload.response == "agree" 
-          ? "Mit \"Stimme zu\" beantwortet." 
+      ..badge = action.payload.response == "agree"
+          ? "agree"
+          : "not_agree" // Restore badge logic
+      ..historyString = action.payload.response == "agree"
+          ? "Mit \"Stimme zu\" beantwortet."
           : "Mit \"Stimme nicht zu\" beantwortet.",
   );
 }
@@ -122,14 +163,16 @@ MessagesState _parseMessages(List json, MessagesState state) {
       .map((dynamic m) =>
           tryParse(getMap(m), (Map? m) => _parseMessage(m!, state)))
       .toList();
-  return MessagesState(
+  return state.rebuild(
     (b) => b
       ..messages = ListBuilder<Message>(messages)
       ..lastFetched = UtcDateTime.now(),
   );
 }
 
-Message _parseMessage(Map json, MessagesState state) {
+Message _parseMessage(Map payload, MessagesState state) {
+  final json = getMap(payload['message']) ?? payload;
+  final outgoing = getBool(json['label_outgoing']) ?? false;
   final message = MessageBuilder()
     ..subject = getString(json["subject"])
     ..text = getString(json["text"])
@@ -140,6 +183,13 @@ Message _parseMessage(Map json, MessagesState state) {
     ..recipientString = getString(json["recipientString"])
     ..fromName = getString(json["fromName"])
     ..id = getInt(json["id"])
+    ..incoming = getBool(json['label_incoming']) ?? !outgoing
+    ..outgoing = outgoing
+    ..archived = (getBool(json['label_archived']) ?? false) ||
+        (getBool(json['archived']) ?? false) ||
+        (getBool(json['rarchived']) ?? false)
+    ..labelAll = getBool(json['label_all']) ?? true
+    ..archiveMessageEnabled = getInt(json['archiveMessageEnabled']) ?? 0
     ..responseRequired = getInt(json["responseRequired"])
     ..responseType = getString(json["responseType"])
     ..needsResponse = getBool(json["needsResponse"])

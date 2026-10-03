@@ -34,7 +34,9 @@ class MessagesPageContainer extends StatelessWidget {
           noInternet: vm.item2,
           onOpenFile: actions.messagesActions.openFile.call,
           onMarkAsRead: (m) => actions.messagesActions.markAsRead(m.id),
-          onReply: (id, response) => actions.messagesActions.replyMessage(ReplyMessagePayload(messageId: id, response: response)),
+          onArchive: (m) => actions.messagesActions.archiveMessage(m.id),
+          onReply: (id, response) => actions.messagesActions.replyMessage(
+              ReplyMessagePayload(messageId: id, response: response)),
         );
       },
       connect: (state) {

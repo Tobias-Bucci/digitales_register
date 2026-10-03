@@ -32,7 +32,10 @@ abstract class MessagesActions extends ReduxActions {
   abstract final ActionDispatcher<MessageAttachmentFile> fileAvailable;
   abstract final ActionDispatcher<MessageAttachmentFile> openFile;
   abstract final ActionDispatcher<int> markAsRead;
-  
+  abstract final ActionDispatcher<int> archiveMessage;
+  abstract final ActionDispatcher<ArchiveMessageResult> archivedMessage;
+  abstract final ActionDispatcher<int> archiveMessageFailed;
+
   abstract final ActionDispatcher<ReplyMessagePayload> replyMessage;
   abstract final ActionDispatcher<ReplyMessagePayload> repliedMessage;
 }
@@ -40,6 +43,13 @@ abstract class MessagesActions extends ReduxActions {
 class ReplyMessagePayload {
   final int messageId;
   final String response;
-  
+
   ReplyMessagePayload({required this.messageId, required this.response});
+}
+
+class ArchiveMessageResult {
+  const ArchiveMessageResult({required this.messageId, required this.archived});
+
+  final int messageId;
+  final bool archived;
 }

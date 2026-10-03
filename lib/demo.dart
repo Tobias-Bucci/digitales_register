@@ -181,6 +181,8 @@ class _DemoStore {
         return _buildMessages();
       case 'api/message/markAsRead':
         return _markMessageAsRead(args);
+      case 'api/message/archiveMessage':
+        return _archiveMessage(args);
       case 'student/certificate':
         return _buildCertificateHtml();
       default:
@@ -835,6 +837,11 @@ class _DemoStore {
             'fromName': _messageSender(message),
             'timeSent': message['timeSent'] as String,
             'timeRead': message['timeRead'] as String?,
+            'label_all': true,
+            'label_incoming': message['archived'] != true,
+            'label_outgoing': false,
+            'label_archived': message['archived'] == true,
+            'archiveMessageEnabled': message['archived'] == true ? 2 : 1,
             'submissions': (message['submissions'] as List)
                 .cast<Map<String, dynamic>>()
                 .map((entry) => Map<String, Object?>.from(entry))
@@ -857,6 +864,21 @@ class _DemoStore {
     }
     _persistSync();
     return <String, Object?>{'success': true};
+  }
+
+  Map<String, Object?> _archiveMessage(Map<String, Object?> args) {
+    final id = args['messageId'] as int?;
+    if (args['archiveType'] != 1 && args['archiveType'] != 2) {
+      return {'success': false};
+    }
+    for (final message in _messages) {
+      if (message['id'] == id) {
+        message['archived'] = args['archiveType'] == 1;
+        _persistSync();
+        return {'success': true};
+      }
+    }
+    return {'success': false};
   }
 
   String _buildCertificateHtml() {

@@ -38,11 +38,14 @@ final LinkedHashMap<int, _CachedMessageDelta> _messageDeltaCache =
     LinkedHashMap<int, _CachedMessageDelta>();
 const _messageDeltaCacheLimit = 200;
 
+enum _MessageFolder { incoming, outgoing, archived, all }
+
 class MessagesPage extends StatefulWidget {
   final MessagesState? state;
   final bool noInternet;
   final void Function(MessageAttachmentFile message) onOpenFile;
   final void Function(Message message) onMarkAsRead;
+  final void Function(Message message) onArchive;
   final void Function(int messageId, String response) onReply;
 
   const MessagesPage({
@@ -51,24 +54,61 @@ class MessagesPage extends StatefulWidget {
     required this.noInternet,
     required this.onOpenFile,
     required this.onMarkAsRead,
+    required this.onArchive,
     required this.onReply,
   });
   @override
   State<MessagesPage> createState() => _MessagesPageState();
 }
 
-class _MessagesPageState extends State<MessagesPage> {
+class _MessagesPageState extends State<MessagesPage>
+    with SingleTickerProviderStateMixin {
   int? _expandedMessageId;
+  late final TabController _tabs;
 
   @override
   void initState() {
     super.initState();
     _expandedMessageId = widget.state?.showMessage;
+    _tabs = TabController(length: _MessageFolder.values.length, vsync: this);
+    _selectMessageFolder(_expandedMessageId);
+    _tabs.addListener(_folderChanged);
+  }
+
+  void _folderChanged() => setState(() {});
+
+  void _selectMessageFolder(int? id) {
+    final message =
+        widget.state?.messages.where((message) => message.id == id).firstOrNull;
+    if (message == null) return;
+    _tabs.index = (message.archived
+            ? _MessageFolder.archived
+            : message.incoming
+                ? _MessageFolder.incoming
+                : message.outgoing
+                    ? _MessageFolder.outgoing
+                    : _MessageFolder.all)
+        .index;
+  }
+
+  @override
+  void dispose() {
+    _tabs.removeListener(_folderChanged);
+    _tabs.dispose();
+    super.dispose();
   }
 
   @override
   void didUpdateWidget(covariant MessagesPage oldWidget) {
     super.didUpdateWidget(oldWidget);
+    if (widget.state?.showMessage != null &&
+        (oldWidget.state?.showMessage != widget.state?.showMessage ||
+            !(oldWidget.state?.messages.any(
+                    (message) => message.id == widget.state!.showMessage) ??
+                false))) {
+      _selectMessageFolder(widget.state!.showMessage);
+      _expandedMessageId = widget.state!.showMessage;
+    }
     final messages = _visibleMessages(widget.state);
     if (_expandedMessageId != null &&
         !messages.any((message) => message.id == _expandedMessageId)) {
@@ -91,64 +131,96 @@ class _MessagesPageState extends State<MessagesPage> {
         title: TutorialTarget(
             id: 'messages-page', child: Text(context.t('messages.title'))),
       ),
-      body: widget.state == null
-          ? widget.noInternet
-              ? const NoInternet()
-              : const Center(child: CircularProgressIndicator())
-          : LastFetchedOverlay(
-              lastFetched: widget.state!.lastFetched,
-              noInternet: widget.noInternet,
-              child: Stack(
-                children: <Widget>[
-                  AnimatedLinearProgressIndicator(
-                    show: widget.state!.showMessage != null &&
-                        !visibleMessages.any(
-                          (m) => m.id == widget.state!.showMessage,
-                        ),
-                  ),
-                  if (visibleMessages.isEmpty)
-                    Center(
-                      child: Text(
-                        context.t('messages.none'),
-                        style: Theme.of(context).textTheme.headlineMedium,
-                        textAlign: TextAlign.center,
-                      ),
-                    ),
-                  ListView.builder(
-                    itemCount: visibleMessages.length,
-                    itemBuilder: (context, i) {
-                      return MessageWidget(
-                        key: ValueKey(visibleMessages[i].id),
-                        message: visibleMessages[i],
-                        onOpenFile: widget.onOpenFile,
-                        onMarkAsRead: widget.onMarkAsRead,
-                        onReply: widget.onReply,
-                        noInternet: widget.noInternet,
-                        expand: visibleMessages[i].id == _expandedMessageId,
-                        onExpansionChanged: (expanded) {
-                          setState(() {
-                            if (expanded) {
-                              _expandedMessageId = visibleMessages[i].id;
-                            } else if (_expandedMessageId ==
-                                visibleMessages[i].id) {
-                              _expandedMessageId = null;
-                            }
-                          });
-                        },
-                      );
-                    },
-                  ),
-                ],
-              ),
-            ),
+      body: Column(
+        children: [
+          TabBar(
+            controller: _tabs,
+            isScrollable: true,
+            tabAlignment: TabAlignment.start,
+            labelPadding: const EdgeInsets.symmetric(horizontal: 12),
+            tabs: [
+              Tab(text: context.t('messages.incoming')),
+              Tab(text: context.t('messages.outgoing')),
+              Tab(text: context.t('messages.archived')),
+              Tab(text: context.t('messages.all')),
+            ],
+          ),
+          Expanded(child: _buildMessageList(context, visibleMessages)),
+        ],
+      ),
     );
+  }
+
+  Widget _buildMessageList(
+      BuildContext context, List<Message> visibleMessages) {
+    return widget.state == null
+        ? widget.noInternet
+            ? const NoInternet()
+            : const Center(child: CircularProgressIndicator())
+        : LastFetchedOverlay(
+            lastFetched: widget.state!.lastFetched,
+            noInternet: widget.noInternet,
+            child: Stack(
+              children: <Widget>[
+                AnimatedLinearProgressIndicator(
+                  show: widget.state!.showMessage != null &&
+                      !widget.state!.messages.any(
+                        (m) => m.id == widget.state!.showMessage,
+                      ),
+                ),
+                if (visibleMessages.isEmpty)
+                  Center(
+                    child: Text(
+                      context.t('messages.none'),
+                      style: Theme.of(context).textTheme.headlineMedium,
+                      textAlign: TextAlign.center,
+                    ),
+                  ),
+                ListView.builder(
+                    key: ValueKey('messages-folder-${_tabs.index}'),
+                  itemCount: visibleMessages.length,
+                  itemBuilder: (context, i) {
+                    return MessageWidget(
+                      key: ValueKey(visibleMessages[i].id),
+                      message: visibleMessages[i],
+                      onOpenFile: widget.onOpenFile,
+                      onMarkAsRead: widget.onMarkAsRead,
+                      onArchive: widget.onArchive,
+                      onReply: widget.onReply,
+                      noInternet: widget.noInternet,
+                      expand: visibleMessages[i].id == _expandedMessageId,
+                      onExpansionChanged: (expanded) {
+                        setState(() {
+                          if (expanded) {
+                            _expandedMessageId = visibleMessages[i].id;
+                          } else if (_expandedMessageId ==
+                              visibleMessages[i].id) {
+                            _expandedMessageId = null;
+                          }
+                        });
+                      },
+                    );
+                  },
+                ),
+              ],
+            ),
+          );
   }
 
   List<Message> _visibleMessages(MessagesState? state) {
     if (state == null) {
       return const <Message>[];
     }
-    return state.messages.where(_canRenderMessage).toList(growable: false);
+    final folder = _MessageFolder.values[_tabs.index];
+    return state.messages.where((message) {
+      final matches = switch (folder) {
+        _MessageFolder.incoming => message.incoming && !message.archived,
+        _MessageFolder.outgoing => message.outgoing && !message.archived,
+        _MessageFolder.archived => message.archived,
+        _MessageFolder.all => message.labelAll,
+      };
+      return matches && _canRenderMessage(message);
+    }).toList(growable: false);
   }
 }
 
@@ -156,6 +228,7 @@ class MessageWidget extends StatefulWidget {
   final Message message;
   final void Function(MessageAttachmentFile message) onOpenFile;
   final void Function(Message message) onMarkAsRead;
+  final void Function(Message message) onArchive;
   final void Function(int messageId, String response) onReply;
   final bool noInternet;
   final bool expand;
@@ -167,6 +240,7 @@ class MessageWidget extends StatefulWidget {
     required this.onOpenFile,
     required this.noInternet,
     required this.onMarkAsRead,
+    required this.onArchive,
     required this.onReply,
     required this.expand,
     required this.onExpansionChanged,
@@ -183,7 +257,7 @@ class _MessageWidgetState extends State<MessageWidget> {
   void initState() {
     super.initState();
     _controller = ExpansibleController();
-    if (widget.expand) {
+    if (widget.expand && widget.message.isNew) {
       widget.onMarkAsRead(widget.message);
     }
   }
@@ -444,6 +518,29 @@ class _MessageWidgetState extends State<MessageWidget> {
                       child: Text(context.t('messages.not_agree')),
                     ),
                   ],
+                ),
+              ],
+              if (widget.message.canArchive || widget.message.canUnarchive) ...[
+                const Divider(),
+                Align(
+                  alignment: Alignment.centerRight,
+                  child: TextButton.icon(
+                    onPressed: widget.noInternet || widget.message.archiving
+                        ? null
+                        : () => widget.onArchive(widget.message),
+                    icon: widget.message.archiving
+                        ? const SizedBox(
+                            width: 18,
+                            height: 18,
+                            child: CircularProgressIndicator(strokeWidth: 2),
+                          )
+                        : Icon(widget.message.archived
+                            ? Icons.unarchive_outlined
+                            : Icons.archive_outlined),
+                    label: Text(context.t(widget.message.archived
+                        ? 'messages.unarchive'
+                        : 'messages.archive')),
+                  ),
                 ),
               ],
             ],

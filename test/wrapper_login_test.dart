@@ -190,6 +190,56 @@ window.location = "https://vinzentinum.digitalesregister.it/v2/login";
     expect(await wrapper.send('api/message/getMyMessages'), isEmpty);
     expect(messageRequests, 1);
   });
+
+  test('archive uses the configured school URL and accepts empty HTTP success',
+      () async {
+    final server = await HttpServer.bind(InternetAddress.loopbackIPv4, 0);
+    addTearDown(server.close);
+    final payloads = <Map<String, dynamic>>[];
+    server.listen((request) async {
+      if (request.uri.path == '/v2/api/auth/login') {
+        request.response.headers.contentType = ContentType.json;
+        request.response.write(json.encode({'loggedIn': true}));
+      } else if (request.uri.path == '/v2/' && request.method == 'GET') {
+        request.response.headers.contentType = ContentType.html;
+        request.response.write(_configPageSource);
+      } else if (request.uri.path == '/v2/api/message/archiveMessage' &&
+          request.method == 'POST') {
+        final payload = json.decode(await utf8.decoder.bind(request).join())
+            as Map<String, dynamic>;
+        payloads.add(payload);
+        if (payload['archiveType'] == 1) {
+          request.response.headers.contentType = ContentType.json;
+          request.response.write('null');
+        } else {
+          request.response.statusCode = HttpStatus.noContent;
+        }
+      } else {
+        request.response.statusCode = HttpStatus.notFound;
+      }
+      await request.response.close();
+    });
+    final wrapper = Wrapper(allowInsecureConnections: true);
+    addTearDown(() {
+      wrapper.pauseNetworkActivity();
+      Wrapper().resumeNetworkActivity();
+    });
+    await wrapper.login('user', 'pass', null, 'http://127.0.0.1:${server.port}',
+        logout: () {},
+        configLoaded: () {},
+        relogin: () {},
+        addProtocolItem: (_) {});
+    for (final archiveType in [1, 2]) {
+      final response = await wrapper.send('api/message/archiveMessage',
+          args: {'messageId': 1, 'archiveType': archiveType},
+          acceptEmptyResponse: true);
+      expect(response, isNotNull);
+    }
+    expect(payloads, [
+      {'messageId': 1, 'archiveType': 1},
+      {'messageId': 1, 'archiveType': 2},
+    ]);
+  });
 }
 
 const String _configPageSource = '''

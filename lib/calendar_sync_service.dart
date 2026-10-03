@@ -410,8 +410,12 @@ extension CalendarSyncService on Never {
             : 'dashboard:${_dateKey(dueDate)}:${homework.type.name}:${homework.id > 0 ? homework.id : _stableHash('${homework.title}|${homework.subtitle}|${homework.label ?? ''}')}';
         items[syncKey] = _buildDesiredItem(
           syncKey: syncKey,
-          title: l10n.translateDashboardServerText(
-            parsed?.displaySubtitle ?? parsed?.displayTitle ?? homework.title,
+          title: _titleWithSubject(
+            l10n.translateDashboardServerText(
+              parsed?.displayTitle ?? homework.title,
+            ),
+            l10n.translateSubjectName(
+                parsed?.displayLabel ?? homework.label ?? ''),
           ),
           date: dueDate,
           details: <String>[
@@ -446,13 +450,20 @@ extension CalendarSyncService on Never {
           final syncKey = 'calendar:${homeworkExam.id}';
           items[syncKey] = _buildDesiredItem(
             syncKey: syncKey,
-            title: l10n.translateSchoolTerm(homeworkExam.name),
+            title: _titleWithSubject(
+              l10n.translateSchoolTerm(homeworkExam.typeName.trim().isNotEmpty
+                  ? homeworkExam.typeName
+                  : homeworkExam.name),
+              l10n.translateSubjectName(hour.subject),
+            ),
             date: dueDate,
             details: <String>[
               if (homeworkExam.typeName.isNotEmpty)
                 l10n.translateSchoolTerm(homeworkExam.typeName),
               if (hour.subject.isNotEmpty)
                 l10n.translateSubjectName(hour.subject),
+              if (homeworkExam.name.isNotEmpty)
+                l10n.translateSchoolTerm(homeworkExam.name),
             ],
           );
         }
@@ -468,6 +479,11 @@ extension CalendarSyncService on Never {
         return a.syncKey.compareTo(b.syncKey);
       });
     return result;
+  }
+
+  static String _titleWithSubject(String title, String subject) {
+    final reason = title.trim().isEmpty ? 'Digitales Register' : title.trim();
+    return subject.trim().isEmpty ? reason : '$reason: ${subject.trim()}';
   }
 
   static CalendarSyncDesiredItem _buildDesiredItem({
