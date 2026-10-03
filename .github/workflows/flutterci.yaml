@@ -1,55 +1,78 @@
-name: FlutterCi
+name: Linux release builds
 
 on:
   push:
-    branches:
-      - main
-    paths-ignore:
-      - "README.md"
+    branches: [main]
+    paths-ignore: ["README.md"]
+  pull_request:
   workflow_dispatch:
   release:
-    types:
-      - created
-      - edited
+    types: [published]
+
+permissions:
+  contents: read
 
 jobs:
-  
   build-linux:
-    name: Linux
-    runs-on: ubuntu-latest
-
+    name: Linux ${{ matrix.arch }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - arch: x64
+            runner: ubuntu-22.04
+          - arch: arm64
+            runner: ubuntu-22.04-arm
+    runs-on: ${{ matrix.runner }}
     steps:
-      - uses: actions/checkout@v2
-
-      - name: Setup flutter
-        uses: subosito/flutter-action@master
-        with:
-          channel: stable
-
-      - name: Install linux app dependencies
-        run: sudo apt-get update -y && sudo apt-get install -y ninja-build libgtk-3-dev dpkg-dev pkg-config libjsoncpp-dev libsecret-1-dev
-
-      - name: Enable desktop support
-        run: flutter config --enable-linux-desktop
-
-      - name: Build Flutter app
+      - uses: actions/checkout@v4
+      - name: Install Linux build and runtime dependencies
         run: |
-          flutter pub get
-          flutter pub run build_runner build
-          flutter build linux -v
-
-      - name: Build Tarball
+          sudo apt-get update
+          sudo apt-get install -y clang cmake ninja-build pkg-config libgtk-3-dev \
+            libsecret-1-dev libjsoncpp-dev libstdc++-12-dev curl git unzip xz-utils \
+            zip python3 dpkg-dev desktop-file-utils appstream xdg-utils \
+            gnome-keyring dbus-x11 xvfb x11-utils libgl1-mesa-dri
+      - name: Set up Flutter on the native architecture
+        # Git bootstrap downloads the matching Linux Dart SDK on both architectures.
         run: |
-          cp linux/icon.png build/linux/x64/release/bundle/icon.png
-          cp linux/digitales_register.desktop build/linux/x64/release/bundle/digitales_register.desktop
-          cp linux/digitales_register.metainfo.xml build/linux/x64/release/bundle/digitales_register.metainfo.xml
-          tar czf digitales_register-linux-x86_64.tar.gz -C build/linux/x64/release/bundle/ .
-      - uses: svenstaro/upload-release-action@latest
+          git clone --depth 1 --branch 3.47.2 https://github.com/flutter/flutter.git "$RUNNER_TEMP/flutter"
+          echo "$RUNNER_TEMP/flutter/bin" >> "$GITHUB_PATH"
+          "$RUNNER_TEMP/flutter/bin/flutter" --version
+      - name: Build and validate release packages
+        run: bash tool/build_linux.sh "${{ matrix.arch }}"
+      - name: Test platform policies and package validation
+        run: |
+          flutter test test/telemetry_capabilities_test.dart test/assessment_attachments_test.dart
+          python3 tool/test_linux_packaging.py
+      - name: Smoke test the native release
+        run: bash tool/smoke_linux.sh "${{ matrix.arch }}"
+      - name: Test the portable installation
+        run: |
+          for archive in build/linux/packages/*.tar.gz; do
+            bash tool/test_linux_install.sh "$archive"
+          done
+      - uses: actions/upload-artifact@v4
         with:
-          repo_token: ${{ secrets.GITHUB_TOKEN }}
-          file: ./digitales_register-linux-x86_64*
-          file_glob: true
-          prerelease: ${{ github.event_name != 'release' }}
-          release_name: ${{ github.event_name == 'release' && github.event.release.name || 'Development Build' }}
-          tag: ${{ github.event_name == 'release' && github.event.release.tag_name || 'continuous' }}
-          overwrite: true
+          name: linux-${{ matrix.arch }}
+          path: build/linux/packages/*
+          if-no-files-found: error
+
+  publish-linux:
+    if: github.event_name == 'release'
+    needs: build-linux
+    runs-on: ubuntu-22.04
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          pattern: linux-*
+          path: packages
+          merge-multiple: true
+      - name: Attach both architectures to the published release
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+          RELEASE_TAG: ${{ github.event.release.tag_name }}
+        run: gh release upload "$RELEASE_TAG" packages/* --clobber

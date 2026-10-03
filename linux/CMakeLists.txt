@@ -66,6 +66,9 @@ set_target_properties(${BINARY_NAME}
 
 # Generated plugin build rules, which manage building the plugins and adding
 # them to the application.
+# JNI is an Android-only transitive dependency in this app. Do not let a JDK
+# preinstalled on a CI runner add a libjvm dependency to the Linux desktop app.
+set(CMAKE_DISABLE_FIND_PACKAGE_JNI TRUE)
 include(flutter/generated_plugins.cmake)
 
 
@@ -89,6 +92,17 @@ install(TARGETS ${BINARY_NAME} RUNTIME DESTINATION "${CMAKE_INSTALL_PREFIX}"
   COMPONENT Runtime)
 
 install(FILES "${FLUTTER_ICU_DATA_FILE}" DESTINATION "${INSTALL_BUNDLE_DATA_DIR}"
+  COMPONENT Runtime)
+
+install(FILES "icon.png" DESTINATION "${INSTALL_BUNDLE_DATA_DIR}"
+  COMPONENT Runtime)
+install(FILES "digitales_register.desktop"
+  DESTINATION "${CMAKE_INSTALL_PREFIX}/share/applications"
+  RENAME "${APPLICATION_ID}.desktop" COMPONENT Runtime)
+install(FILES "digitales_register.metainfo.xml"
+  DESTINATION "${CMAKE_INSTALL_PREFIX}/share/metainfo"
+  RENAME "${APPLICATION_ID}.metainfo.xml" COMPONENT Runtime)
+install(DIRECTORY "icons/" DESTINATION "${CMAKE_INSTALL_PREFIX}/share/icons/hicolor"
   COMPONENT Runtime)
 
 install(FILES "${FLUTTER_LIBRARY}" DESTINATION "${INSTALL_BUNDLE_LIB_DIR}"

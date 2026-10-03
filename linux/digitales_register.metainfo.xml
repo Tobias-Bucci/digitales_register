@@ -2,10 +2,10 @@
 <!-- Copyright 2021 Michael Debertol <michael.debertol@gmail.com> -->
 <!-- Copyright 2026 Tobias Bucci <buccitobias774@gmail.com> -->
 <component type="desktop-application">
-  <id>io.github.mideb.digitales_register</id>
+  <id>it.bucci.digitalesregister</id>
   <metadata_license>CC0-1.0</metadata_license>
   <project_license>GPL-3.0-or-later</project_license>
-  <name>Digitales Register</name>
+  <name>Schulregister Südtirol</name>
   <summary>Inoffizieller Client für das Digitale Register</summary>
   <description>
     <p>
@@ -27,59 +27,18 @@ Einzelne Funktionen, wie das Eintragen von neuen Absenzen, sind jedoch noch nich
 </p>
   </description>
   <releases>
+    <release version="1.17.0" date="2026-10-03">
+      <description>
+        <p>Linux-Pakete für x86_64 und aarch64 mit aktuellem App-Logo und Desktop-Integration.</p>
+      </description>
+    </release>
     <release version="1.8.4" date="2026-04-23">
       <description>
         <p>Updated the demo account with complete local test data and improved translations.</p>
       </description>
     </release>
-    <release version="1.0" date="2023-06-10">
-      <description>
-        <p>Fächerfarben für den Kalender! (Danke an @yegvla!)</p>
-      </description>
-    </release>
-    <release version="8.2.12" date="2023-06-03">
-      <description>
-        <p>Bug fix</p>
-      </description>
-    </release>
-    <release version="8.2.11" date="2023-06-02">
-      <description>
-        <p>Bug fixes</p>
-        <p>Updated schools</p>
-      </description>
-    </release>
-    <release version="8.2.10" date="2022-12-12">
-      <description>
-        <p>Updated Branding</p>
-      </description>
-    </release>
-    <release version="8.2.9" date="2022-10-21">
-      <description>
-        <p>Eine Schule wurde hinzugefügt.</p>
-        <p>Ein Demo-Modus ist nun verfügbar (Schule: Leer, User: "demo", PW: "demo").</p>
-        <p>Die UX von Dateianhängen wurde verbessert.</p>
-      </description>
-    </release>
-    <release version="8.2.8" date="2022-10-16">
-      <description>
-        Dateianhänge von Stundenbeschreibungen im Kalender können nun heruntergeladen werden.
-      </description>
-    </release>
-    <release version="8.2.6" date="2022-09-24">
-      <description>
-        Die Liste der voreingestellten Schulen wurde aktualisiert.
-      </description>
-    </release>
-    <release version="8.2.5" date="2022-01-25">
-      <description>
-        Unerwartete Logouts werden jetzt behandelt.
-      </description>
-    </release>
-    <release version="8.2.4" date="2022-01-15" />
-    <release version="8.2.3" date="2021-12-12" />
-    <release version="8.2.2" date="2021-12-12" />
   </releases>
-  <launchable type="desktop-id">io.github.mideb.digitales_register.desktop</launchable>
+  <launchable type="desktop-id">it.bucci.digitalesregister.desktop</launchable>
   <screenshots>
     <screenshot type="default">
       <caption>Hausaufgaben-Übersicht</caption>
