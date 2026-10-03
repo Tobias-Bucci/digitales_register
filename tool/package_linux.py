@@ -13,7 +13,7 @@ import tempfile
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
-APP_ID = "it.bucci.digitalesregister"
+APP_ID = "io.github.Tobias_Bucci.digitales_register"
 BINARY = "digitales_register"
 ARCHITECTURES = {"x64": ("x86_64", "amd64", 62), "arm64": ("aarch64", "arm64", 183)}
 

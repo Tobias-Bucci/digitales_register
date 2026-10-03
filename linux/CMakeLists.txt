@@ -2,7 +2,7 @@ cmake_minimum_required(VERSION 3.10)
 project(runner LANGUAGES CXX)
 
 set(BINARY_NAME "digitales_register")
-set(APPLICATION_ID "it.bucci.digitalesregister")
+set(APPLICATION_ID "io.github.Tobias_Bucci.digitales_register")
 
 cmake_policy(SET CMP0063 NEW)
 
