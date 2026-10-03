@@ -132,6 +132,12 @@ Product identity**.
 For native Linux x64 and ARM64 builds, package installation and runtime
 requirements, see [Linux release preparation](docs/LINUX_RELEASE_READINESS.md).
 
+After installing the prerequisites, run `bash tool/build_linux.sh` on the
+Linux build host. It detects x64 or ARM64 and generates the required Dart
+sources before building and packaging. A direct `flutter build linux` does
+not generate these ignored sources; first run `flutter pub get` and
+`dart run build_runner build`.
+
 ## Demo Mode
 
 The application includes a demo mode for testing purposes without requiring a real account.

@@ -73,12 +73,12 @@ include(flutter/generated_plugins.cmake)
 
 
 # === Installation ===
-# By default, "installing" just makes a relocatable bundle in the build
-# directory.
+# Flutter's install target assembles a relocatable bundle in the build
+# directory. Always reset the prefix, including caches containing /usr/local.
+# System installation is handled separately by the Linux package/installer.
 set(BUILD_BUNDLE_DIR "${PROJECT_BINARY_DIR}/bundle")
-if(CMAKE_INSTALL_PREFIX_INITIALIZED_TO_DEFAULT)
-  set(CMAKE_INSTALL_PREFIX "${BUILD_BUNDLE_DIR}" CACHE PATH "..." FORCE)
-endif()
+set(CMAKE_INSTALL_PREFIX "${BUILD_BUNDLE_DIR}" CACHE PATH
+  "Flutter application bundle directory" FORCE)
 
 # Start with a clean build bundle directory every time.
 install(CODE "
