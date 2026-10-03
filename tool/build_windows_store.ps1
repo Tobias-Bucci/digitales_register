@@ -4,7 +4,7 @@ $projectRoot = (Resolve-Path (Join-Path $PSScriptRoot '..')).Path
 $storeConfigPath = Join-Path $projectRoot 'tool\microsoft_store.local.psd1'
 $stagingImages = Join-Path $projectRoot 'build\windows\x64\runner\Release\Images'
 $sourceLogo = Join-Path $projectRoot 'assets\index.png'
-$outputPackage = Join-Path $projectRoot 'build\windows\msix\Schulregister-Suedtirol-1.14.40.0-x64.msix'
+$outputPackage = Join-Path $projectRoot 'build\windows\msix\Schulregister-Suedtirol-1.17.44.0-x64.msix'
 
 if (-not (Test-Path -LiteralPath $storeConfigPath)) {
     throw "Microsoft Store configuration not found: $storeConfigPath. Copy tool\\microsoft_store.local.psd1.example and enter the Partner Center values."
