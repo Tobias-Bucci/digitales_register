@@ -48,11 +48,10 @@ app.*.symbols
 # Obfuscation related
 app.*.map.json
 
-# Exceptions to above rules.
+# Exceptions to above rules
 !/packages/flutter_tools/test/data/dart_dependencies_test/**/.packages
 
-
-# Generated files
+# Generated Dart files
 **.g.dart
 
 # Temporary test files
@@ -63,7 +62,7 @@ app.*.map.json
 # Private requests & answers
 **/lib/requests/
 
-# Vendored plugin examples are not needed by the app overrides.
+# Vendored plugin examples are not needed by the app overrides
 packages/firebase_analytics/example/
 packages/package_info_plus/example/
 
@@ -80,15 +79,17 @@ android/*.jks
 *.msixbundle
 tool/microsoft_store.local.psd1
 **/google-services.json
+
+# iOS / macOS generated files
 ios/Flutter/ephemeral/
 macos/Flutter/GeneratedPluginRegistrant.swift
 
-# ======= IOS =======
-# Pods und Symlinks MÜSSEN ignoriert werden. Die werden auf dem Mac via "pod install" neu erzeugt!
+# ======= iOS =======
+# Pods and symlinks are generated on macOS via pod install
 **/ios/Pods/
 **/ios/.symlinks/
 
-# Generierte Konfigurationen für iOS, baut Flutter auf dem Mac automatisch neu
+# Generated Flutter iOS configuration
 **/ios/Flutter/Flutter.podspec
 **/ios/Flutter/Generated.xcconfig
 **/ios/Flutter/app.flx
@@ -96,7 +97,7 @@ macos/Flutter/GeneratedPluginRegistrant.swift
 **/ios/Flutter/flutter_assets/
 **/ios/Flutter/flutter_export_environment.sh
 
-# User-spezifische Xcode Cache-Dateien (verhindert Git-Merge-Konflikte)
+# User-specific Xcode files
 *.mode1v3
 *.mode2v3
 *.pbxuser
@@ -104,3 +105,8 @@ macos/Flutter/GeneratedPluginRegistrant.swift
 *.xcuserstate
 *.xcworkspace/xcuserdata/
 *.xcodeproj/xcuserdata/
+
+# Flatpak local build artifacts
+.flatpak-builder/
+build-dir/
+repo/
