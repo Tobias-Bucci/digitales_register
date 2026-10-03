@@ -93,10 +93,10 @@ void main() {
   test('allow deletes BEFORE persist and enable; revoke stops gate first',
       () async {
     await controller.chooseGranular(
-        diagnostics: ConsentChoice.granted,
-        usage: ConsentChoice.granted,
-        academic: ConsentChoice.granted,
-        age: AnalyticsAgeEligibility.atLeast14);
+      diagnostics: ConsentChoice.granted,
+      usage: ConsentChoice.granted,
+      academic: ConsentChoice.granted,
+    );
     expect(calls, [
       'gate:false',
       'analytics:false',
@@ -114,10 +114,10 @@ void main() {
         ['gate:false', 'analytics:false', 'crash:false', 'delete', 'persist']);
     calls.clear();
     await controller.chooseGranular(
-        diagnostics: ConsentChoice.granted,
-        usage: ConsentChoice.granted,
-        academic: ConsentChoice.granted,
-        age: AnalyticsAgeEligibility.atLeast14);
+      diagnostics: ConsentChoice.granted,
+      usage: ConsentChoice.granted,
+      academic: ConsentChoice.granted,
+    );
     expect(calls.indexOf('delete'), lessThan(calls.indexOf('crash:true')));
   });
   test('existing installation needs update; old notice never enables',
@@ -132,19 +132,19 @@ void main() {
     expect(controller.decision.isCurrent, false);
     expect(calls.contains('crash:true'), false);
     await controller.chooseGranular(
-        diagnostics: ConsentChoice.granted,
-        usage: ConsentChoice.granted,
-        academic: ConsentChoice.granted,
-        age: AnalyticsAgeEligibility.atLeast14);
+      diagnostics: ConsentChoice.granted,
+      usage: ConsentChoice.granted,
+      academic: ConsentChoice.granted,
+    );
     expect(controller.decision.version, currentPrivacyNoticeVersion);
   });
   test('restart retains valid allowed reports and required-only decision',
       () async {
     await controller.chooseGranular(
-        diagnostics: ConsentChoice.granted,
-        usage: ConsentChoice.granted,
-        academic: ConsentChoice.granted,
-        age: AnalyticsAgeEligibility.atLeast14);
+      diagnostics: ConsentChoice.granted,
+      usage: ConsentChoice.granted,
+      academic: ConsentChoice.granted,
+    );
     calls.clear();
     await controller.initialize();
     expect(calls.contains('delete'), false);
@@ -158,10 +158,10 @@ void main() {
   test('failed purge cannot enable, including on restart', () async {
     sdk.failDelete = true;
     await controller.chooseGranular(
-        diagnostics: ConsentChoice.granted,
-        usage: ConsentChoice.granted,
-        academic: ConsentChoice.granted,
-        age: AnalyticsAgeEligibility.atLeast14);
+      diagnostics: ConsentChoice.granted,
+      usage: ConsentChoice.granted,
+      academic: ConsentChoice.granted,
+    );
     expect(store.value.state, TelemetryConsentState.allAllowed);
     expect(controller.sdkReady, false);
     expect(calls.contains('crash:true'), false);
@@ -184,20 +184,20 @@ void main() {
     store.fail = true;
     await expectLater(
         controller.chooseGranular(
-            diagnostics: ConsentChoice.granted,
-            usage: ConsentChoice.granted,
-            academic: ConsentChoice.granted,
-            age: AnalyticsAgeEligibility.atLeast14),
+          diagnostics: ConsentChoice.granted,
+          usage: ConsentChoice.granted,
+          academic: ConsentChoice.granted,
+        ),
         throwsStateError);
     expect(calls.contains('crash:true'), false);
     store.fail = false;
     calls.clear();
     final first = controller.choose(TelemetryConsentState.requiredOnly);
     final second = controller.chooseGranular(
-        diagnostics: ConsentChoice.granted,
-        usage: ConsentChoice.granted,
-        academic: ConsentChoice.granted,
-        age: AnalyticsAgeEligibility.atLeast14);
+      diagnostics: ConsentChoice.granted,
+      usage: ConsentChoice.granted,
+      academic: ConsentChoice.granted,
+    );
     await Future.wait([first, second]);
     expect(controller.decision.state, TelemetryConsentState.requiredOnly);
     expect(calls.where((e) => e == 'persist'), hasLength(1));

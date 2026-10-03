@@ -242,24 +242,15 @@ class _PrivacyConsentDialogState extends State<_PrivacyConsentDialog> {
   bool _saving = false;
   bool _failed = false;
   late bool _custom = widget.management;
-  bool _askingAge = false;
-  bool _allowAfterAge = false;
-  late AnalyticsAgeEligibility _age =
-      AnalyticsService.privacy.decision.ageEligibility;
-  late bool _diagnostics = AnalyticsService.privacy.decision.diagnosticsAllowed;
-  late bool _usage = AnalyticsService.privacy.decision.analyticsAllowed;
-  late bool _academic = AnalyticsService.privacy.decision.academicStatsAllowed;
+  late bool _diagnostics = !AnalyticsService.hasCurrentConsent ||
+      AnalyticsService.privacy.decision.diagnosticsAllowed;
+  late bool _usage = !AnalyticsService.hasCurrentConsent ||
+      AnalyticsService.privacy.decision.analyticsAllowed;
+  late bool _academic = !AnalyticsService.hasCurrentConsent ||
+      AnalyticsService.privacy.decision.academicStatsAllowed;
 
   Future<void> _save({bool requiredOnly = false}) async {
     if (_saving) return;
-    if (!requiredOnly &&
-        (_diagnostics || _usage || _academic) &&
-        _age == AnalyticsAgeEligibility.unknown) {
-      setState(() {
-        _askingAge = true;
-      });
-      return;
-    }
     setState(() {
       _saving = true;
       _failed = false;
@@ -274,8 +265,7 @@ class _PrivacyConsentDialogState extends State<_PrivacyConsentDialog> {
               : ConsentChoice.denied,
           academic: !requiredOnly && _academic
               ? ConsentChoice.granted
-              : ConsentChoice.denied,
-          age: _age);
+              : ConsentChoice.denied);
       unawaited(AnalyticsService.product
           .event('privacy_settings_changed', {'action': 'saved'}));
       if (mounted) Navigator.of(context).pop();
@@ -290,289 +280,245 @@ class _PrivacyConsentDialogState extends State<_PrivacyConsentDialog> {
   }
 
   Future<void> _allowAll() async {
-    if (_age != AnalyticsAgeEligibility.atLeast14) {
-      setState(() {
-        _askingAge = true;
-        _allowAfterAge = true;
-      });
-      return;
-    }
     _diagnostics = _usage = _academic = true;
     await _save();
   }
 
-  Future<void> _answerAge(bool eligible) async {
-    if (_saving) return;
-    setState(() {
-      _age = eligible
-          ? AnalyticsAgeEligibility.atLeast14
-          : AnalyticsAgeEligibility.under14;
-      _askingAge = false;
-      _custom = true;
-      // Reopening eligibility never silently grants optional choices.
-      _diagnostics = _usage = _academic = false;
-      _saving = true;
-    });
-    try {
-      await AnalyticsService.privacy.resolveAgeEligibility(_age);
-    } catch (_) {
-      if (mounted) {
-        setState(() {
-          _saving = false;
-          _failed = true;
-        });
-      }
-      return;
-    }
-    if (!mounted) return;
-    setState(() {
-      _saving = false;
-    });
-    if (eligible && _allowAfterAge) await _allowAll();
-    _allowAfterAge = false;
+  void _details() {
+    Navigator.of(context).push(MaterialPageRoute<void>(
+        settings: const RouteSettings(name: '/privacy_details'),
+        builder: (_) => const PrivacyDataDetailsPage()));
   }
 
   @override
   Widget build(BuildContext context) {
     final l10n = context.l10n;
-    final eligible = _age == AnalyticsAgeEligibility.atLeast14;
-    final update = AnalyticsService.privacy.existingInstallation &&
-        !AnalyticsService.hasCurrentConsent;
-    return PopScope(
-        canPop: widget.management && !_saving,
-        child: AlertDialog(
-          insetPadding:
-              const EdgeInsets.symmetric(horizontal: 20, vertical: 24),
-          title: Text(l10n.text(_askingAge
-              ? 'privacyAge.question'
-              : update
-                  ? 'privacyConsent.updateTitle'
-                  : 'privacyConsent.title')),
-          content: ConstrainedBox(
-              constraints: BoxConstraints(
-                  maxWidth: 560,
-                  maxHeight: MediaQuery.sizeOf(context).height * .6),
-              child: SingleChildScrollView(
-                  child: Column(
-                      mainAxisSize: MainAxisSize.min,
-                      crossAxisAlignment: CrossAxisAlignment.stretch,
-                      children: [
-                    if (!_askingAge) ...[
-                      Text(l10n.text('privacyConsent.body')),
-                      if (update) ...[
-                        const SizedBox(height: 8),
-                        Text(l10n.text('privacyConsent.updateBody')),
-                      ],
-                      const SizedBox(height: 8),
-                      Text(l10n.text('privacyConsent.note')),
-                      const SizedBox(height: 12),
-                      for (final category in [
-                        'diagnostics',
-                        'usage',
-                        'academic'
-                      ]) ...[
-                        if (_custom)
-                          SwitchListTile(
-                            contentPadding: EdgeInsets.zero,
-                            title: Text(
-                                l10n.text('privacyCategory.$category.title')),
-                            subtitle: Text(
-                                l10n.text('privacyCategory.$category.body')),
-                            value: category == 'diagnostics'
-                                ? _diagnostics
-                                : category == 'usage'
-                                    ? _usage
-                                    : _academic,
-                            onChanged: _saving ||
-                                    !eligible ||
-                                    (category == 'academic' && !_usage)
-                                ? null
-                                : (value) => setState(() {
-                                      if (category == 'diagnostics') {
-                                        _diagnostics = value;
-                                      }
-                                      if (category == 'usage') {
-                                        _usage = value;
-                                        if (!value) _academic = false;
-                                      }
-                                      if (category == 'academic') {
-                                        _academic = value;
-                                      }
-                                    }),
-                          )
-                        else
-                          _ConsentInfoTile(
-                              icon: category == 'diagnostics'
-                                  ? Icons.bug_report_outlined
-                                  : Icons.analytics_outlined,
-                              title:
-                                  l10n.text('privacyCategory.$category.title'),
-                              body: l10n.text('privacyCategory.$category.body'),
-                              details: '',
-                              alwaysActive: false),
-                        const SizedBox(height: 8),
-                      ],
-                      if (_custom)
-                        ListTile(
-                            contentPadding: EdgeInsets.zero,
-                            title: Text(l10n.text('privacyAge.title')),
-                            subtitle:
-                                Text(l10n.text('privacyAge.${_age.name}')),
-                            onTap: _saving
-                                ? null
-                                : () => setState(() {
-                                      _askingAge = true;
-                                      _allowAfterAge = false;
-                                    })),
-                      if (_age == AnalyticsAgeEligibility.under14)
-                        Text(l10n.text('privacyAge.under14Explanation')),
-                      if (_age == AnalyticsAgeEligibility.unknown && _custom)
-                        Text(l10n.text('privacyAge.resolve')),
-                    ],
-                    if (_failed) Text(l10n.text('privacyConsent.saveError')),
-                    if (_saving)
-                      const Center(child: CircularProgressIndicator()),
-                  ]))),
-          actions: [
-            if (_askingAge) ...[
-              TextButton(
-                  onPressed: _saving ? null : () => _answerAge(false),
-                  child: Text(l10n.text('privacyAge.no'))),
-              FilledButton(
-                  onPressed: _saving ? null : () => _answerAge(true),
-                  child: Text(l10n.text('privacyAge.yes'))),
-            ] else ...[
-              TextButton(
-                  onPressed: _saving
-                      ? null
-                      : () => Navigator.of(context).push(
-                          MaterialPageRoute<void>(
-                              settings:
-                                  const RouteSettings(name: '/privacy_details'),
-                              builder: (_) => const PrivacyDataDetailsPage())),
-                  child: Text(l10n.text('privacyConsent.more'))),
-              if (_custom)
-                TextButton(
-                    onPressed: _saving ? null : _allowAll,
-                    child: Text(l10n.text('privacyConsent.acceptAll'))),
-              if (!_custom)
-                TextButton(
-                    onPressed: _saving
-                        ? null
-                        : () => setState(() {
-                              _custom = true;
-                            }),
-                    child: Text(l10n.text('privacyConsent.customize'))),
-              TextButton(
-                  onPressed: _saving ? null : () => _save(requiredOnly: true),
-                  child: Text(l10n.text('privacyConsent.necessaryOnly'))),
-              FilledButton(
-                  onPressed: _saving
-                      ? null
-                      : _custom
-                          ? () => _save()
-                          : _allowAll,
-                  child: Text(l10n.text(_custom
-                      ? 'privacyConsent.save'
-                      : 'privacyConsent.acceptAll'))),
-              if (widget.management)
-                TextButton(
-                    onPressed:
-                        _saving ? null : () => Navigator.of(context).pop(),
-                    child: Text(l10n.text('privacyConsent.cancel'))),
-            ]
-          ],
-        ));
-  }
-}
-
-class _ConsentInfoTile extends StatelessWidget {
-  const _ConsentInfoTile({
-    required this.icon,
-    required this.title,
-    required this.body,
-    required this.details,
-    required this.alwaysActive,
-  });
-
-  final IconData icon;
-  final String title;
-  final String body;
-  final String details;
-  final bool alwaysActive;
-
-  @override
-  Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    final colorScheme = theme.colorScheme;
-    final statusLabel = alwaysActive
-        ? context.l10n.text('privacyConsent.alwaysActive')
-        : context.l10n.text('privacyConsent.optional');
-    return DecoratedBox(
-      decoration: BoxDecoration(
-        border: Border.all(color: colorScheme.outlineVariant),
-        borderRadius: BorderRadius.circular(8),
-      ),
-      child: Padding(
-        padding: const EdgeInsets.all(12),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
-            Row(
-              crossAxisAlignment: CrossAxisAlignment.start,
+    final colors = theme.colorScheme;
+    return PopScope(
+      canPop: widget.management && !_saving,
+      child: Dialog(
+        insetPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 24),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
+        clipBehavior: Clip.antiAlias,
+        child: ConstrainedBox(
+          constraints: BoxConstraints(
+            maxWidth: 520,
+            maxHeight: MediaQuery.sizeOf(context).height - 48,
+          ),
+          child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
-                Icon(icon, color: colorScheme.primary),
-                const SizedBox(width: 12),
-                Expanded(
-                  child: Text(
-                    title,
-                    style: theme.textTheme.titleSmall?.copyWith(
-                      fontWeight: FontWeight.w700,
-                      height: 1.25,
-                    ),
+                Padding(
+                  padding: const EdgeInsets.fromLTRB(24, 24, 16, 12),
+                  child: Row(children: [
+                    Expanded(
+                        child: Text(l10n.text('privacyConsent.title'),
+                            maxLines: 1,
+                            style: theme.textTheme.titleLarge
+                                ?.copyWith(fontWeight: FontWeight.w700))),
+                    if (widget.management)
+                      IconButton(
+                          tooltip: l10n.text('privacyConsent.cancel'),
+                          onPressed: _saving
+                              ? null
+                              : () => Navigator.of(context).pop(),
+                          icon: const Icon(Icons.close)),
+                  ]),
+                ),
+                Flexible(
+                  child: SingleChildScrollView(
+                    padding: const EdgeInsets.fromLTRB(24, 0, 24, 12),
+                    child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.stretch,
+                        children: [
+                          Text(l10n.text('privacyConsent.body'),
+                              style: theme.textTheme.bodyMedium
+                                  ?.copyWith(height: 1.45)),
+                          const SizedBox(height: 12),
+                          Text(l10n.text('privacyConsent.note'),
+                              style: theme.textTheme.bodySmall?.copyWith(
+                                  color: colors.onSurfaceVariant, height: 1.4)),
+                          Align(
+                              alignment: Alignment.centerLeft,
+                              child: TextButton.icon(
+                                  style: TextButton.styleFrom(
+                                      padding: EdgeInsets.zero),
+                                  onPressed: _saving ? null : _details,
+                                  icon:
+                                      const Icon(Icons.info_outline, size: 18),
+                                  label:
+                                      Text(l10n.text('privacyConsent.more')))),
+                          const SizedBox(height: 4),
+                          Material(
+                              color: colors.surfaceContainerLow,
+                              shape: RoundedRectangleBorder(
+                                  borderRadius: BorderRadius.circular(16),
+                                  side:
+                                      BorderSide(color: colors.outlineVariant)),
+                              clipBehavior: Clip.antiAlias,
+                              child: Column(children: [
+                                if (!_custom)
+                                  ListTile(
+                                      leading: Icon(Icons.tune,
+                                          color: colors.primary),
+                                      title: Text(
+                                          l10n.text('privacyConsent.customize'),
+                                          style: theme.textTheme.labelLarge),
+                                      trailing: const Icon(Icons.chevron_right),
+                                      onTap: _saving
+                                          ? null
+                                          : () =>
+                                              setState(() => _custom = true)),
+                                for (final category in [
+                                  'diagnostics',
+                                  'usage',
+                                  'academic'
+                                ])
+                                  Padding(
+                                      padding: const EdgeInsets.symmetric(
+                                          horizontal: 14),
+                                      child: _custom
+                                          ? SwitchListTile(
+                                              contentPadding: EdgeInsets.zero,
+                                              title: Text(
+                                                  l10n.text(
+                                                      'privacyCategory.$category.title'),
+                                                  style: theme
+                                                      .textTheme.titleSmall),
+                                              subtitle: Text(l10n.text(
+                                                  'privacyCategory.$category.body')),
+                                              value: category == 'diagnostics'
+                                                  ? _diagnostics
+                                                  : category == 'usage'
+                                                      ? _usage
+                                                      : _academic,
+                                              onChanged: _saving ||
+                                                      (category == 'academic' &&
+                                                          !_usage)
+                                                  ? null
+                                                  : (value) => setState(() {
+                                                        if (category ==
+                                                            'diagnostics') {
+                                                          _diagnostics = value;
+                                                        }
+                                                        if (category ==
+                                                            'usage') {
+                                                          _usage = value;
+                                                          if (!value) {
+                                                            _academic = false;
+                                                          }
+                                                        }
+                                                        if (category ==
+                                                            'academic') {
+                                                          _academic = value;
+                                                        }
+                                                      }))
+                                          : Padding(
+                                              padding:
+                                                  const EdgeInsets.symmetric(
+                                                      vertical: 12),
+                                              child: Row(
+                                                  crossAxisAlignment:
+                                                      CrossAxisAlignment.start,
+                                                  children: [
+                                                    Icon(
+                                                        category ==
+                                                                'diagnostics'
+                                                            ? Icons
+                                                                .bug_report_outlined
+                                                            : category ==
+                                                                    'usage'
+                                                                ? Icons
+                                                                    .insights_outlined
+                                                                : Icons
+                                                                    .school_outlined,
+                                                        color: colors.primary,
+                                                        size: 22),
+                                                    const SizedBox(width: 12),
+                                                    Expanded(
+                                                        child: Column(
+                                                            crossAxisAlignment:
+                                                                CrossAxisAlignment
+                                                                    .start,
+                                                            children: [
+                                                          Text(
+                                                              l10n.text(
+                                                                  'privacyCategory.$category.title'),
+                                                              style: theme
+                                                                  .textTheme
+                                                                  .titleSmall),
+                                                          const SizedBox(
+                                                              height: 4),
+                                                          Text(
+                                                              l10n.text(
+                                                                  'privacySummary.$category'),
+                                                              style: theme
+                                                                  .textTheme
+                                                                  .bodySmall
+                                                                  ?.copyWith(
+                                                                      color: colors
+                                                                          .onSurfaceVariant,
+                                                                      height:
+                                                                          1.4)),
+                                                        ])),
+                                                  ]))),
+                              ])),
+                          if (_failed) ...[
+                            const SizedBox(height: 12),
+                            Text(l10n.text('privacyConsent.saveError'),
+                                style: TextStyle(color: colors.error)),
+                          ],
+                        ]),
                   ),
                 ),
-              ],
-            ),
-            const SizedBox(height: 10),
-            Align(
-              alignment: Alignment.centerLeft,
-              child: DecoratedBox(
-                decoration: BoxDecoration(
-                  color: alwaysActive
-                      ? colorScheme.surfaceContainerHighest
-                      : colorScheme.primaryContainer,
-                  borderRadius: BorderRadius.circular(8),
-                ),
-                child: Padding(
-                  padding:
-                      const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
-                  child: Text(
-                    statusLabel,
-                    style: theme.textTheme.labelMedium?.copyWith(
-                      color: alwaysActive
-                          ? colorScheme.onSurfaceVariant
-                          : colorScheme.onPrimaryContainer,
-                      fontWeight: FontWeight.w700,
-                    ),
-                  ),
-                ),
-              ),
-            ),
-            const SizedBox(height: 10),
-            Text(
-              body,
-              style: theme.textTheme.bodyMedium?.copyWith(height: 1.35),
-            ),
-            const SizedBox(height: 8),
-            Text(
-              details,
-              style: theme.textTheme.bodySmall?.copyWith(
-                color: colorScheme.onSurfaceVariant,
-                height: 1.35,
-              ),
-            ),
-          ],
+                Container(
+                    padding: const EdgeInsets.fromLTRB(24, 16, 24, 16),
+                    decoration: BoxDecoration(
+                        border: Border(
+                            top: BorderSide(color: colors.outlineVariant))),
+                    child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.stretch,
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          if (_custom) ...[
+                            FilledButton.icon(
+                                onPressed: _saving ? null : () => _save(),
+                                icon: const Icon(Icons.check, size: 20),
+                                label: Text(l10n.text('privacyConsent.save'),
+                                    textAlign: TextAlign.center)),
+                            const SizedBox(height: 8),
+                            OutlinedButton(
+                                onPressed: _saving ? null : _allowAll,
+                                child: Text(
+                                    l10n.text('privacyConsent.acceptAll'),
+                                    textAlign: TextAlign.center)),
+                          ] else
+                            FilledButton.icon(
+                                style: FilledButton.styleFrom(
+                                    padding: const EdgeInsets.symmetric(
+                                        horizontal: 16, vertical: 14),
+                                    textStyle: theme.textTheme.labelLarge
+                                        ?.copyWith(
+                                            fontWeight: FontWeight.w700)),
+                                onPressed: _saving ? null : _allowAll,
+                                icon: const Icon(Icons.check_circle_outline,
+                                    size: 20),
+                                label: Text(
+                                    l10n.text('privacyConsent.acceptAll'),
+                                    textAlign: TextAlign.center)),
+                          const SizedBox(height: 4),
+                          TextButton(
+                              onPressed: _saving
+                                  ? null
+                                  : () => _save(requiredOnly: true),
+                              child: Text(
+                                  l10n.text('privacyConsent.necessaryOnly'),
+                                  textAlign: TextAlign.center)),
+                          if (_saving) const LinearProgressIndicator(),
+                        ])),
+              ]),
         ),
       ),
     );

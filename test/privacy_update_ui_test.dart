@@ -40,7 +40,7 @@ void main() {
     await tester.pumpAndSettle();
     await tester.tap(find.text('open'));
     await tester.pumpAndSettle();
-    expect(find.text('Aktualisierte Datenschutzeinstellungen'), findsOneWidget);
+    expect(find.text('Datenschutz'), findsOneWidget);
     await tester
         .tap(find.widgetWithText(TextButton, 'Nur erforderliche Daten'));
     await tester.pumpAndSettle();
@@ -48,7 +48,7 @@ void main() {
     expect(AnalyticsService.statisticsEnabled, false);
     await tester.tap(find.text('open'));
     await tester.pumpAndSettle();
-    expect(find.text('Aktualisierte Datenschutzeinstellungen'), findsNothing);
+    expect(find.text('Datenschutz'), findsNothing);
     final prefs = await SharedPreferences.getInstance();
     expect(prefs.containsKey('privacy_consent_choice_v2'), false);
   });

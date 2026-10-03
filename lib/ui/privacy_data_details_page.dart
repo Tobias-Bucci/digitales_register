@@ -23,7 +23,6 @@ class PrivacyDataDetailsPage extends StatelessWidget {
     'school': Icons.school_outlined,
     'academic': Icons.analytics_outlined,
     'analyticsAutomatic': Icons.devices_outlined,
-    'age': Icons.person_outline,
     'revocation': Icons.stop_circle_outlined,
     'control': Icons.settings_outlined,
     'limits': Icons.cloud_outlined,
