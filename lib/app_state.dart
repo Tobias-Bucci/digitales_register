@@ -20,6 +20,7 @@ import 'package:built_collection/built_collection.dart';
 import 'package:built_value/built_value.dart';
 import 'package:built_value/serializer.dart';
 
+import 'package:dr/dashboard_items.dart';
 import 'package:dr/data.dart';
 import 'package:dr/utc_date_time.dart';
 
@@ -374,6 +375,13 @@ abstract class SettingsState
   BuiltMap<String, SubjectTheme> get subjectThemes;
   BuiltList<String> get ignoreForGradesAverage;
   BuiltList<String> get favoriteSubjects;
+
+  /// Ordered visible summary cards; an empty list intentionally hides all.
+  BuiltList<String> get dashboardItems;
+
+  /// Stable widget IDs to desired column spans (1 = half, 2 = full).
+  /// Absent entries use the original automatic layout.
+  BuiltMap<String, int> get dashboardItemSpans;
   BuiltMap<String, BuiltList<String>> get substitutePrimaryTeachers;
   BuiltList<String> get substituteKnownTeachers;
   BuiltList<String> get substitutePrimaryTeachersLockedSubjects;
@@ -408,6 +416,8 @@ abstract class SettingsState
       ..drawerFullyExpanded = true
       ..ignoreForGradesAverage = ListBuilder()
       ..favoriteSubjects = ListBuilder()
+      ..dashboardItems = ListBuilder<String>(defaultDashboardItems)
+      ..dashboardItemSpans = MapBuilder<String, int>()
       ..dashboardColorBorders = false
       ..calendarColorBackground = false
       ..substituteDetectionEnabled = true
@@ -453,6 +463,10 @@ abstract class AbsencesState
   AbsencesState._();
   static Serializer<AbsencesState> get serializer => _$absencesStateSerializer;
 
+  @BuiltValueField(serialize: false)
+  bool get loading;
+  @BuiltValueField(serialize: false)
+  bool get loadFailed;
   AbsenceStatistic? get statistic;
   bool get canEdit;
   BuiltList<AbsenceGroup> get absences;
@@ -462,6 +476,8 @@ abstract class AbsencesState
 
   static void _initializeBuilder(AbsencesStateBuilder builder) {
     builder
+      ..loading = false
+      ..loadFailed = false
       ..canEdit = false
       ..absences = ListBuilder<AbsenceGroup>()
       ..futureAbsences = ListBuilder<FutureAbsence>();

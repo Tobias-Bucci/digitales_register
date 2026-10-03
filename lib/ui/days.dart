@@ -22,12 +22,15 @@ import 'dart:convert';
 import 'package:badges/badges.dart' as badge;
 import 'package:built_collection/built_collection.dart';
 import 'package:deleteable_tile/deleteable_tile.dart';
+import 'package:dr/actions/app_actions.dart';
 import 'package:dr/app_clock.dart';
 import 'package:dr/app_state.dart';
+import 'package:dr/container/dashboard_overview.dart';
 import 'package:dr/container/days_container.dart';
 import 'package:dr/container/homework_filter_container.dart';
 import 'package:dr/container/notification_icon_container.dart';
 import 'package:dr/container/sidebar_container.dart';
+import 'package:dr/dashboard_items.dart';
 import 'package:dr/data.dart';
 import 'package:dr/i18n/app_localizations.dart';
 import 'package:dr/local_reminder_assessments.dart';
@@ -41,11 +44,11 @@ import 'package:dr/ui/dialog.dart';
 import 'package:dr/ui/favorite_subject_filter.dart';
 import 'package:dr/ui/last_fetched_overlay.dart';
 import 'package:dr/ui/no_internet.dart';
-import 'package:dr/ui/school_countdown_overview.dart';
 import 'package:dr/utc_date_time.dart';
 import 'package:dr/util.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/rendering.dart';
+import 'package:flutter_built_redux/flutter_built_redux.dart';
 import 'package:intl/intl.dart';
 import 'package:responsive_scaffold/responsive_scaffold.dart';
 import 'package:scroll_to_index/scroll_to_index.dart';
@@ -581,9 +584,10 @@ class _DaysWidgetState extends State<DaysWidget> {
           ),
         );
       }
-      body = Column(
-        children: [
-          DashboardHeader(
+      body = CustomScrollView(
+        slivers: [
+          SliverToBoxAdapter(
+              child: DashboardHeader(
             future: widget.vm.future,
             onSwitchFuture: widget.onSwitchFuture,
             favoriteSubjects: availableFavoriteSubjects,
@@ -607,8 +611,9 @@ class _DaysWidgetState extends State<DaysWidget> {
             schoolTimeline: schoolTimeline,
             openCalendarAt: widget.openCalendarAt,
             editGradeDeadline: _editGradeDeadline,
-          ),
-          Expanded(
+          )),
+          SliverFillRemaining(
+            hasScrollBody: false,
             child: Center(child: fullScreenBody),
           ),
         ],
@@ -726,10 +731,14 @@ class _DaysWidgetState extends State<DaysWidget> {
           children: [
             const Icon(Icons.dashboard_customize_outlined),
             const SizedBox(width: 8),
-            Text(l10n.text('dashboard.title')),
+            Flexible(
+              child: Text(l10n.text('dashboard.title'),
+                  maxLines: 1, overflow: TextOverflow.ellipsis),
+            ),
           ],
         ),
         actions: <Widget>[
+          const DashboardCustomizeButton(),
           if (widget.vm.noInternet)
             Tooltip(
               message: l10n.text('dashboard.noConnectionReload'),
@@ -941,126 +950,132 @@ class DashboardHeader extends StatelessWidget {
   });
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context) =>
+      StoreConnection<AppState, AppActions, bool>(
+        connect: (state) =>
+            resolveDashboardItems(state.settingsState.dashboardItems)
+                .isNotEmpty,
+        builder: (context, hasCards, actions) =>
+            _buildHeader(context, hasCards),
+      );
+
+  Widget _buildHeader(BuildContext context, bool hasCards) {
     final l10n = context.l10n;
     final theme = Theme.of(context);
     final scheme = theme.colorScheme;
+    final favoriteFilter = FavoriteSubjectFilter(
+      subjects: favoriteSubjects,
+      selectedSubject: selectedFavoriteSubject,
+      onSelected: onFavoriteSubjectChanged,
+      subjectThemes: subjectThemes,
+    );
     return Padding(
       padding: const EdgeInsets.fromLTRB(12, 8, 12, 12),
-      child: AnimatedContainer(
-        duration: const Duration(milliseconds: 240),
-        curve: Curves.easeOutCubic,
-        decoration: BoxDecoration(
-          color: scheme.surface,
-          borderRadius: BorderRadius.circular(16),
-          border: Border.all(
-            color: scheme.outline.withValues(
-              alpha: theme.brightness == Brightness.dark ? 0.45 : 0.2,
-            ),
-          ),
-          boxShadow: [
-            if (theme.brightness == Brightness.light)
-              BoxShadow(
-                color: Colors.black.withValues(alpha: 0.04),
-                blurRadius: 16,
-                offset: const Offset(0, 6),
+      child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            AnimatedContainer(
+              duration: const Duration(milliseconds: 240),
+              curve: Curves.easeOutCubic,
+              key: const ValueKey('dashboard-header-box'),
+              decoration: BoxDecoration(
+                color: scheme.surface,
+                borderRadius: BorderRadius.circular(16),
+                border: Border.all(
+                  color: scheme.outline.withValues(
+                    alpha: theme.brightness == Brightness.dark ? 0.45 : 0.2,
+                  ),
+                ),
+                boxShadow: [
+                  if (theme.brightness == Brightness.light)
+                    BoxShadow(
+                      color: Colors.black.withValues(alpha: 0.04),
+                      blurRadius: 16,
+                      offset: const Offset(0, 6),
+                    ),
+                ],
               ),
-          ],
-        ),
-        child: Padding(
-          padding: const EdgeInsets.fromLTRB(8, 6, 8, 6),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              if (schoolTimeline.holidays.isNotEmpty ||
-                  schoolTimeline.gradeDeadlines.isNotEmpty) ...[
-                SchoolCountdownOverview(
+              child: Padding(
+                padding: const EdgeInsets.fromLTRB(8, 6, 8, 6),
+                child: DashboardOverview(
                   timeline: schoolTimeline,
                   onOpenCalendarAt: openCalendarAt,
                   onEditGradeDeadline: editGradeDeadline,
+                  footer: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      LayoutBuilder(builder: (context, constraints) {
+                        final filter = TutorialTarget(
+                          id: 'dashboard-filter',
+                          action: true,
+                          child: HomeworkFilterContainer(
+                            showEmptyDays: showEmptyDays,
+                            onShowEmptyDaysChanged: onShowEmptyDaysChanged,
+                          ),
+                        );
+                        final past = TutorialTarget(
+                          id: 'dashboard-past',
+                          action: true,
+                          child: AnimatedSwitcher(
+                            duration: const Duration(milliseconds: 220),
+                            transitionBuilder: (child, animation) {
+                              return FadeTransition(
+                                opacity: animation,
+                                child: ScaleTransition(
+                                    scale: animation, child: child),
+                              );
+                            },
+                            child: FilledButton.tonalIcon(
+                              key: ValueKey(future),
+                              onPressed: onSwitchFuture,
+                              icon: Icon(
+                                future
+                                    ? Icons.history_toggle_off
+                                    : Icons.upcoming_rounded,
+                              ),
+                              label: Text(future
+                                  ? l10n.text('dashboard.past')
+                                  : l10n.text('dashboard.future')),
+                              style: FilledButton.styleFrom(
+                                shape: const StadiumBorder(),
+                                visualDensity: VisualDensity.compact,
+                                padding: const EdgeInsets.symmetric(
+                                  horizontal: 14,
+                                  vertical: 12,
+                                ),
+                              ),
+                            ),
+                          ),
+                        );
+                        return SizedBox(
+                          key: const ValueKey('dashboard-header-controls'),
+                          width: constraints.maxWidth,
+                          child: Wrap(
+                              alignment: WrapAlignment.spaceBetween,
+                              spacing: 8,
+                              runSpacing: 8,
+                              children: [
+                                filter,
+                                past,
+                              ]),
+                        );
+                      }),
+                      if (hasCards && favoriteSubjects.isNotEmpty) ...[
+                        const SizedBox(height: 8),
+                        favoriteFilter,
+                      ],
+                    ],
+                  ),
                 ),
-                const SizedBox(height: 10),
-              ],
-              LayoutBuilder(builder: (context, constraints) {
-                final filter = TutorialTarget(
-                  id: 'dashboard-filter',
-                  action: true,
-                  child: HomeworkFilterContainer(
-                    showEmptyDays: showEmptyDays,
-                    onShowEmptyDaysChanged: onShowEmptyDaysChanged,
-                  ),
-                );
-                final past = TutorialTarget(
-                  id: 'dashboard-past',
-                  action: true,
-                  child: AnimatedSwitcher(
-                    duration: const Duration(milliseconds: 220),
-                    transitionBuilder: (child, animation) {
-                      return FadeTransition(
-                        opacity: animation,
-                        child: ScaleTransition(scale: animation, child: child),
-                      );
-                    },
-                    child: FilledButton.tonalIcon(
-                      key: ValueKey(future),
-                      onPressed: onSwitchFuture,
-                      icon: Icon(
-                        future
-                            ? Icons.history_toggle_off
-                            : Icons.upcoming_rounded,
-                      ),
-                      label: Text(future
-                          ? l10n.text('dashboard.past')
-                          : l10n.text('dashboard.future')),
-                      style: FilledButton.styleFrom(
-                        shape: const StadiumBorder(),
-                        visualDensity: VisualDensity.compact,
-                        padding: const EdgeInsets.symmetric(
-                          horizontal: 14,
-                          vertical: 12,
-                        ),
-                      ),
-                    ),
-                  ),
-                );
-                return Row(children: [
-                  filter,
-                  if (constraints.maxWidth >= 420 &&
-                      schoolTimeline.holidays.isEmpty &&
-                      schoolTimeline.gradeDeadlines.isEmpty)
-                    Padding(
-                      padding: const EdgeInsets.only(left: 8),
-                      child: Tooltip(
-                        message: l10n.text('schoolCountdown.missingData'),
-                        child: Icon(Icons.event_busy_outlined,
-                            color: scheme.onSurfaceVariant),
-                      ),
-                    ),
-                  Expanded(
-                    child: Align(
-                      alignment: Alignment.centerRight,
-                      child: FittedBox(
-                        fit: BoxFit.scaleDown,
-                        alignment: Alignment.centerRight,
-                        child: past,
-                      ),
-                    ),
-                  ),
-                ]);
-              }),
-              if (favoriteSubjects.isNotEmpty) ...[
-                const SizedBox(height: 8),
-                FavoriteSubjectFilter(
-                  subjects: favoriteSubjects,
-                  selectedSubject: selectedFavoriteSubject,
-                  onSelected: onFavoriteSubjectChanged,
-                  subjectThemes: subjectThemes,
-                ),
-              ],
+              ),
+            ),
+            if (!hasCards && favoriteSubjects.isNotEmpty) ...[
+              const SizedBox(height: 8),
+              favoriteFilter,
             ],
-          ),
-        ),
-      ),
+          ]),
     );
   }
 }

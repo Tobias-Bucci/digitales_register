@@ -25,6 +25,7 @@ abstract class AbsencesActions extends ReduxActions {
   AbsencesActions._();
 
   abstract final VoidActionDispatcher load;
+  abstract final VoidActionDispatcher notLoaded;
   abstract final ActionDispatcher<dynamic> loaded;
   abstract final ActionDispatcher<Map<String, dynamic>> addFutureAbsence;
   abstract final ActionDispatcher<Map<String, dynamic>> justifyAbsence;

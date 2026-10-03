@@ -3,9 +3,11 @@
 // This file is part of digitales_register.
 
 import 'package:dr/app_clock.dart';
+import 'package:dr/dashboard_items.dart';
 import 'package:dr/i18n/app_localizations.dart';
 import 'package:dr/school_timeline.dart';
 import 'package:dr/tutorial/tutorial_target.dart';
+import 'package:dr/ui/dashboard_card_layout.dart';
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 
@@ -15,9 +17,17 @@ class SchoolCountdownOverview extends StatelessWidget {
     required this.timeline,
     this.onOpenCalendarAt,
     this.onEditGradeDeadline,
+    this.items = const [DashboardItem.holidays, DashboardItem.gradingDeadline],
+    this.additionalCards = const {},
+    this.spans = const {},
+    this.loading = false,
   });
 
   final SchoolTimeline timeline;
+  final List<DashboardItem> items;
+  final Map<DashboardItem, Widget> additionalCards;
+  final bool loading;
+  final Map<String, int> spans;
   final Future<void> Function(DateTime date)? onOpenCalendarAt;
   final Future<void> Function(GradeDeadline deadline)? onEditGradeDeadline;
 
@@ -29,29 +39,41 @@ class SchoolCountdownOverview extends StatelessWidget {
         final today = appClock.now;
         final holiday = timeline.holidayCountdownAt(today);
         final deadline = timeline.gradeDeadlineCountdownAt(today);
-        return Row(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Expanded(
-              child: TutorialTarget(
+        final cards = <Widget>[
+          for (final item in items)
+            switch (item) {
+              DashboardItem.holidays => TutorialTarget(
                   id: 'dashboard-holidays',
-                  child: _HolidayCountdownCard(
-                    countdown: holiday,
-                    today: today,
-                    onOpenCalendarAt: onOpenCalendarAt,
-                  )),
-            ),
-            const SizedBox(width: 10),
-            Expanded(
-              child: TutorialTarget(
-                id: 'dashboard-deadline',
-                action: true,
-                child: _GradeDeadlineCountdownCard(
-                  countdown: deadline,
-                  onEditGradeDeadline: onEditGradeDeadline,
+                  child: loading && holiday == null
+                      ? DashboardLoadingCard(title: context.t(item.titleKey))
+                      : _HolidayCountdownCard(
+                          countdown: holiday,
+                          today: today,
+                          onOpenCalendarAt: onOpenCalendarAt),
                 ),
-              ),
-            ),
+              DashboardItem.gradingDeadline => TutorialTarget(
+                  id: 'dashboard-deadline',
+                  action: true,
+                  child: loading && deadline == null
+                      ? DashboardLoadingCard(title: context.t(item.titleKey))
+                      : _GradeDeadlineCountdownCard(
+                          countdown: deadline,
+                          onEditGradeDeadline: onEditGradeDeadline),
+                ),
+              _ => additionalCards[item] ?? const SizedBox.shrink(),
+            },
+        ];
+        return DashboardCardLayout(
+          widths: [
+            for (final item in items)
+              DashboardItemWidth.fromSpan(spans[item.id])
+          ],
+          textScale: MediaQuery.textScalerOf(context).scale(14) / 14,
+          children: [
+            for (var i = 0; i < cards.length; i++)
+              SizedBox(
+                  key: ValueKey('dashboard-item-${items[i].id}'),
+                  child: cards[i]),
           ],
         );
       },
@@ -75,7 +97,7 @@ class _HolidayCountdownCard extends StatelessWidget {
     final l10n = context.l10n;
     final value = countdown;
     if (value == null) {
-      return _CountdownCard(
+      return DashboardSummaryCard(
         icon: Icons.beach_access_rounded,
         title: l10n.text('schoolCountdown.holidays.title'),
         primaryText: l10n.text('schoolCountdown.holidays.none'),
@@ -86,7 +108,7 @@ class _HolidayCountdownCard extends StatelessWidget {
     final remaining = value.isOnHoliday
         ? _remainingHolidayText(l10n, value.remainingDays)
         : _remainingDaysText(l10n, value.remainingDays);
-    return _CountdownCard(
+    return DashboardSummaryCard(
       key: const ValueKey('holiday-countdown-card'),
       icon: value.isOnHoliday
           ? Icons.celebration_rounded
@@ -126,7 +148,7 @@ class _GradeDeadlineCountdownCard extends StatelessWidget {
     final l10n = context.l10n;
     final value = countdown;
     if (value == null) {
-      return _CountdownCard(
+      return DashboardSummaryCard(
         icon: Icons.fact_check_outlined,
         title: l10n.text('schoolCountdown.grades.title'),
         primaryText: l10n.text('schoolCountdown.grades.none'),
@@ -134,7 +156,7 @@ class _GradeDeadlineCountdownCard extends StatelessWidget {
       );
     }
 
-    return _CountdownCard(
+    return DashboardSummaryCard(
       key: const ValueKey('grade-deadline-countdown-card'),
       icon: Icons.fact_check_outlined,
       title: l10n.text('schoolCountdown.grades.title'),
@@ -153,8 +175,8 @@ class _GradeDeadlineCountdownCard extends StatelessWidget {
   }
 }
 
-class _CountdownCard extends StatelessWidget {
-  const _CountdownCard({
+class DashboardSummaryCard extends StatelessWidget {
+  const DashboardSummaryCard({
     super.key,
     required this.icon,
     required this.title,
@@ -176,101 +198,92 @@ class _CountdownCard extends StatelessWidget {
     final theme = Theme.of(context);
     final scheme = theme.colorScheme;
     final progressValue = progress?.clamp(0.0, 1.0);
-    return SizedBox(
-      height: 176,
-      child: Material(
-        color: Colors.transparent,
-        child: InkWell(
-          onTap: onTap == null ? null : () => onTap!(),
-          borderRadius: BorderRadius.circular(14),
-          child: Container(
-            padding: const EdgeInsets.all(11),
-            decoration: BoxDecoration(
-              color: scheme.primaryContainer.withValues(alpha: 0.36),
-              borderRadius: BorderRadius.circular(14),
-              border: Border.all(color: scheme.primary.withValues(alpha: 0.16)),
-            ),
-            child: LayoutBuilder(
-              builder: (context, _) {
-                return Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Row(
-                      children: [
-                        Icon(
-                          icon,
-                          size: 20,
-                          color: scheme.primary,
-                        ),
-                        const SizedBox(width: 6),
-                        Expanded(
-                          child: Text(
-                            title,
-                            maxLines: 1,
-                            softWrap: false,
-                            overflow: TextOverflow.ellipsis,
-                            style: theme.textTheme.titleSmall?.copyWith(
-                              fontWeight: FontWeight.w700,
-                            ),
-                          ),
-                        ),
-                      ],
-                    ),
-                    const SizedBox(height: 4),
-                    Text(
-                      primaryText,
-                      maxLines: 1,
-                      softWrap: false,
-                      overflow: TextOverflow.ellipsis,
-                      style: theme.textTheme.titleLarge?.copyWith(
-                        fontWeight: FontWeight.w700,
+    return Material(
+      color: Colors.transparent,
+      child: InkWell(
+        onTap: onTap == null ? null : () => onTap!(),
+        borderRadius: BorderRadius.circular(14),
+        child: Container(
+          padding: const EdgeInsets.all(11),
+          decoration: BoxDecoration(
+            color: scheme.primaryContainer.withValues(alpha: 0.36),
+            borderRadius: BorderRadius.circular(14),
+            border: Border.all(color: scheme.primary.withValues(alpha: 0.16)),
+          ),
+          child: LayoutBuilder(
+            builder: (context, constraints) {
+              return Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
+                    children: [
+                      Icon(
+                        icon,
+                        size: 20,
+                        color: scheme.primary,
                       ),
-                    ),
-                    const SizedBox(height: 2),
-                    Text(
-                      secondaryText,
-                      maxLines: 1,
-                      softWrap: false,
-                      overflow: TextOverflow.ellipsis,
-                      style: theme.textTheme.bodySmall?.copyWith(
-                        color: scheme.onSurfaceVariant,
-                      ),
-                    ),
-                    if (progressValue != null) ...[
-                      const Spacer(),
-                      Semantics(
-                        label: context.l10n.text('schoolCountdown.progress'),
-                        value: '${(progressValue * 100).round()} %',
-                        child: ClipRRect(
-                          borderRadius: BorderRadius.circular(20),
-                          child: LinearProgressIndicator(
-                            minHeight: 8,
-                            value: progressValue,
-                            backgroundColor: scheme.surfaceContainerHighest,
-                          ),
-                        ),
-                      ),
-                      const SizedBox(height: 3),
-                      Align(
-                        alignment: Alignment.centerRight,
+                      const SizedBox(width: 6),
+                      Expanded(
                         child: Text(
-                          context.l10n.text(
-                            'schoolCountdown.progressValue',
-                            args: {
-                              'percent': '${(progressValue * 100).round()}',
-                            },
+                          title,
+                          softWrap: true,
+                          style: theme.textTheme.titleSmall?.copyWith(
+                            fontWeight: FontWeight.w700,
                           ),
-                          maxLines: 1,
-                          softWrap: false,
-                          overflow: TextOverflow.ellipsis,
-                          style: theme.textTheme.labelSmall,
                         ),
                       ),
                     ],
+                  ),
+                  const SizedBox(height: 4),
+                  Text(
+                    primaryText,
+                    softWrap: true,
+                    style: theme.textTheme.titleLarge?.copyWith(
+                      fontWeight: FontWeight.w700,
+                    ),
+                  ),
+                  const SizedBox(height: 2),
+                  Text(
+                    secondaryText,
+                    softWrap: true,
+                    style: theme.textTheme.bodySmall?.copyWith(
+                      color: scheme.onSurfaceVariant,
+                    ),
+                  ),
+                  if (progressValue != null) ...[
+                    const SizedBox(height: 8),
+                    if (constraints.hasBoundedHeight) const Spacer(),
+                    Semantics(
+                      label: context.l10n.text('schoolCountdown.progress'),
+                      value: '${(progressValue * 100).round()} %',
+                      child: ClipRRect(
+                        borderRadius: BorderRadius.circular(20),
+                        child: LinearProgressIndicator(
+                          minHeight: 4,
+                          value: progressValue,
+                          backgroundColor: scheme.surfaceContainerHighest,
+                        ),
+                      ),
+                    ),
+                    const SizedBox(height: 3),
+                    Align(
+                      alignment: Alignment.centerRight,
+                      child: Text(
+                        context.l10n.text(
+                          'schoolCountdown.progressValue',
+                          args: {
+                            'percent': '${(progressValue * 100).round()}',
+                          },
+                        ),
+                        softWrap: true,
+                        style: theme.textTheme.labelSmall,
+                      ),
+                    ),
                   ],
-                );
-              },
-            ),
+                ],
+              );
+            },
           ),
         ),
       ),
@@ -301,3 +314,47 @@ String _remainingDaysText(AppLocalizations l10n, int days) {
 String _formatDate(BuildContext context, DateTime date) =>
     DateFormat.yMMMd(Localizations.localeOf(context).toLanguageTag())
         .format(date);
+
+/// Skeleton follows the compact card layout and retains a spoken loading label.
+class DashboardLoadingCard extends StatelessWidget {
+  const DashboardLoadingCard({super.key, required this.title});
+  final String title;
+
+  @override
+  Widget build(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
+    final scale = MediaQuery.textScalerOf(context).scale(14) / 14;
+    Widget bar(double factor, double height) => FractionallySizedBox(
+          widthFactor: factor,
+          child: Container(
+              height: height * scale,
+              decoration: BoxDecoration(
+                  color: scheme.onSurface.withValues(alpha: 0.12),
+                  borderRadius: BorderRadius.circular(8))),
+        );
+    return Semantics(
+      label: '$title: ${context.t('dashboard.customize.loading')}',
+      child: ExcludeSemantics(
+          child: Container(
+        padding: const EdgeInsets.all(11),
+        decoration: BoxDecoration(
+          color: scheme.primaryContainer.withValues(alpha: 0.36),
+          borderRadius: BorderRadius.circular(14),
+          border: Border.all(color: scheme.primary.withValues(alpha: 0.16)),
+        ),
+        child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              bar(0.7, 20),
+              const SizedBox(height: 6),
+              bar(0.55, 24),
+              const SizedBox(height: 6),
+              bar(0.85, 14),
+              const SizedBox(height: 8),
+              bar(1, 4),
+            ]),
+      )),
+    );
+  }
+}

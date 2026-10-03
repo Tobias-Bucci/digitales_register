@@ -992,9 +992,13 @@ Future<void> _refresh(
   await next(action);
   _markRuntimeCacheStale(_dashboardCacheKey(api.state.dashboardState.future));
   _markRuntimeCacheStale(_notificationsCacheKey);
+  final showAbsences =
+      api.state.settingsState.dashboardItems.contains('absences');
+  if (showAbsences) _markRuntimeCacheStale(_absencesCacheKey);
   await Future.wait([
     api.actions.dashboardActions.load(api.state.dashboardState.future),
     api.actions.notificationsActions.load(),
+    if (showAbsences) api.actions.absencesActions.load(),
   ]);
 }
 
@@ -1117,7 +1121,10 @@ NextActionHandler _saveStateMiddleware(
           final previousSettings = api.state.settingsState;
           await next(action);
           if (action.name != AppActionsNames.mountAppState.name &&
-              api.state.settingsState != previousSettings) {
+              (api.state.settingsState != previousSettings ||
+                  action.name == SettingsActionsNames.dashboardItems.name ||
+                  action.name ==
+                      SettingsActionsNames.setDashboardConfiguration.name)) {
             await settingsPersistenceService.save(api.state.settingsState);
           }
           if (api.state.loginState.loggedIn &&

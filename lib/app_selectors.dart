@@ -158,7 +158,8 @@ class _DashboardDaysSelector {
                         .where(
                           (hw) => !_isBlacklisted(
                             hw,
-                            state.dashboardState.blacklist!,
+                            state.dashboardState.blacklist ??
+                                BuiltList<HomeworkType>(),
                             knownSubjects,
                           ),
                         ),
@@ -176,7 +177,8 @@ class _DashboardDaysSelector {
                         .where(
                           (hw) => !_isBlacklisted(
                             hw,
-                            state.dashboardState.blacklist!,
+                            state.dashboardState.blacklist ??
+                                BuiltList<HomeworkType>(),
                             knownSubjects,
                           ),
                         ),

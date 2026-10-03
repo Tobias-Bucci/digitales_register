@@ -145,7 +145,8 @@ abstract class DaysViewModel
         ..loading = state.dashboardState.loading || state.loginState.loading
         ..askWhenDelete = state.settingsState.askWhenDelete
         ..showAddReminder =
-            !state.dashboardState.blacklist!.contains(HomeworkType.homework)
+            !(state.dashboardState.blacklist?.contains(HomeworkType.homework) ??
+                false)
         ..showNotifications =
             (state.notificationState.notifications?.length ?? 0) > 0
         ..favoriteSubjects = state.settingsState.favoriteSubjects.toBuilder()

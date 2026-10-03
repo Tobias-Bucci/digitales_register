@@ -1,4 +1,4 @@
-﻿// Copyright (C) 2021 Michael Debertol
+// Copyright (C) 2021 Michael Debertol
 // Copyright (C) 2026 Tobias Bucci
 //
 // This file is part of digitales_register.
@@ -52,7 +52,9 @@ class HomeworkFilterContainer extends StatelessWidget {
       connect: (AppState state) {
         return HomeworkFilterVM(
           (b) => b
-            ..currentBlacklist = state.dashboardState.blacklist!.toBuilder()
+            ..currentBlacklist =
+                (state.dashboardState.blacklist ?? BuiltList<HomeworkType>())
+                    .toBuilder()
             ..allTypes = HomeworkType.values.toBuilder(),
         );
       },

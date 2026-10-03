@@ -21,6 +21,7 @@ import 'package:built_redux/built_redux.dart';
 import 'package:dr/actions/routing_actions.dart';
 import 'package:dr/actions/settings_actions.dart';
 import 'package:dr/app_state.dart';
+import 'package:dr/dashboard_items.dart';
 import 'package:flutter/material.dart' hide Action;
 
 final settingsReducerBuilder = NestedReducerBuilder<AppState, AppStateBuilder,
@@ -53,6 +54,8 @@ final settingsReducerBuilder = NestedReducerBuilder<AppState, AppStateBuilder,
   ..add(
       SettingsActionsNames.ignoreSubjectsForAverage, _ignoreSubjectsForAverage)
   ..add(SettingsActionsNames.favoriteSubjects, _favoriteSubjects)
+  ..add(SettingsActionsNames.dashboardItems, _dashboardItems)
+  ..add(SettingsActionsNames.setDashboardConfiguration, _dashboardConfiguration)
   ..add(SettingsActionsNames.markNotSeenDashboardEntries,
       _markNotSeenDashboardEntries)
   ..add(SettingsActionsNames.deduplicateDashboardEntries,
@@ -346,3 +349,16 @@ final _similarColors = [
 ];
 
 const _defaultThick = 2;
+
+void _dashboardItems(SettingsState state, Action<BuiltList<String>> action,
+    SettingsStateBuilder builder) {
+  builder.dashboardItems
+      .replace(resolveDashboardItems(action.payload).map((item) => item.id));
+}
+
+void _dashboardConfiguration(SettingsState state,
+    Action<DashboardConfiguration> action, SettingsStateBuilder builder) {
+  builder
+    ..dashboardItems.replace(action.payload.items)
+    ..dashboardItemSpans.replace(action.payload.spans);
+}
