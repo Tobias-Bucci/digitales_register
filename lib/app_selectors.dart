@@ -52,6 +52,15 @@ class AppSelectors {
 
 final AppSelectors appSelectors = AppSelectors();
 
+// Match the neutral theme used by calendar cards while subject settings are
+// missing (for example between loading grades and updating subject themes).
+final _fallbackChartTheme = SubjectTheme((b) => b
+  ..color = 0xFF9E9E9E
+  ..thick = 1);
+
+SubjectTheme chartSubjectTheme(AppState state, String name) =>
+    state.settingsState.subjectThemes[name] ?? _fallbackChartTheme;
+
 class AbsenceStatsViewModel {
   final AbsenceStatistic statistic;
   final BuiltList<AbsenceMonthlyHistoryValue> monthlyHistory;
@@ -295,11 +304,12 @@ class _GradesChartSelector {
   Map<SubjectGrades, SubjectTheme>? _lastResult;
 
   Map<SubjectGrades, SubjectTheme> select(AppState state) {
+    final cachedResult = _lastResult;
     if (identical(state.gradesState.subjects, _subjects) &&
         identical(state.settingsState.subjectThemes, _subjectThemes) &&
         identical(state.gradesState.semester, _semester) &&
-        _lastResult != null) {
-      return _lastResult!;
+        cachedResult != null) {
+      return cachedResult;
     }
 
     final result = <SubjectGrades, SubjectTheme>{};
@@ -308,17 +318,20 @@ class _GradesChartSelector {
           ? (subject.gradesAll.values.fold<List<GradeAll>>(
               <GradeAll>[],
               (a, b) => <GradeAll>[...a, ...b],
-            )..sort((a, b) => a.date.compareTo(b.date)))
+            ))
           : subject.gradesAll[state.gradesState.semester]?.toList() ??
               <GradeAll>[];
-      grades.removeWhere((grade) => grade.cancelled || grade.grade == null);
-      result[SubjectGrades(
-        {
-          for (final grade in grades)
-            grade.date: Tuple2(grade.grade!, grade.type),
-        },
-        subject.name,
-      )] = state.settingsState.subjectThemes[subject.name]!;
+      // Domain bounds require chronological points even if a single semester
+      // was loaded in a different order by the server.
+      grades.sort((a, b) => a.date.compareTo(b.date));
+      final points = <UtcDateTime, Tuple2<int, String>>{};
+      for (final grade in grades) {
+        final value = grade.grade;
+        if (grade.cancelled || value == null) continue;
+        points[grade.date] = Tuple2(value, grade.type);
+      }
+      result[SubjectGrades(points, subject.name)] =
+          chartSubjectTheme(state, subject.name);
     }
 
     _subjects = state.gradesState.subjects;

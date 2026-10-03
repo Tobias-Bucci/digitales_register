@@ -301,9 +301,9 @@ abstract class Subject implements Built<Subject, SubjectBuilder> {
           .fold<List<GradeAll>>([], (a, b) => [...a, if (b != null) ...b])
         ..sort((a, b) => -a.date.compareTo(b.date));
     }
-    if (gradesAll[semester] == null) return null;
-    return gradesAll[semester]!.toList()
-      ..sort((a, b) => -a.date.compareTo(b.date));
+    final semesterGrades = gradesAll[semester];
+    if (semesterGrades == null) return null;
+    return semesterGrades.toList()..sort((a, b) => -a.date.compareTo(b.date));
   }
 
   List<DetailEntry>? detailEntries(Semester semester) {
@@ -328,10 +328,12 @@ abstract class Subject implements Built<Subject, SubjectBuilder> {
           .fold<List<DetailEntry>>([], (a, b) => [...a, if (b != null) ...b])
         ..sort((a, b) => -a.date.compareTo(b.date));
     }
-    if (grades[semester] == null || observations[semester] == null) return null;
+    final semesterGrades = grades[semester];
+    final semesterObservations = observations[semester];
+    if (semesterGrades == null || semesterObservations == null) return null;
     return <DetailEntry>[
-      ...grades[semester]!,
-      ...observations[semester]!,
+      ...semesterGrades,
+      ...semesterObservations,
     ]..sort((a, b) => -a.date.compareTo(b.date));
   }
 
@@ -348,8 +350,9 @@ abstract class Subject implements Built<Subject, SubjectBuilder> {
     var sum = 0;
     var n = 0;
     for (final grade in grades) {
-      if (grade.cancelled || grade.grade == null) continue;
-      sum += grade.grade! * grade.weightPercentage;
+      final value = grade.grade;
+      if (grade.cancelled || value == null) continue;
+      sum += value * grade.weightPercentage;
       n += grade.weightPercentage;
     }
     if (n == 0) {

@@ -202,7 +202,8 @@ class GradesChart extends StatelessWidget {
                       final grade = datum.datum.value.item1 as int;
                       final type = datum.datum.value.item2 as String;
                       final subject = datum.series.displayName ?? '';
-                      final color = datum.series.colorFn!(0)!;
+                      final color = datum.series.colorFn?.call(0) ??
+                          charts.MaterialPalette.gray.shadeDefault;
                       final date = datum.datum.key as UtcDateTime;
                       assert(allDate == null || allDate == date);
                       allDate = date;
@@ -216,9 +217,10 @@ class GradesChart extends StatelessWidget {
                         ),
                       );
                     }).toBuiltList();
-                    if (allDate != null) {
+                    final selectedDate = allDate;
+                    if (selectedDate != null) {
                       selection.value = Tuple2(
-                        allDate!,
+                        selectedDate,
                         selections,
                       );
                     } else {

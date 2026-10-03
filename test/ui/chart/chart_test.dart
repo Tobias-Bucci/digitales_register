@@ -18,6 +18,49 @@ void main() {
 
   tearDown(resetTestState);
 
+  final incompleteStates = <String, AppState>{
+    'initial loading': AppState((b) => b.gradesState.loading = true),
+    'empty subjects': AppState(),
+    'subject without semester data or theme':
+        AppState((b) => b.gradesState.subjects = ListBuilder<Subject>([
+              buildSubject(name: 'Neues Fach'),
+            ])),
+    'null-only grades without theme':
+        AppState((b) => b.gradesState.subjects = ListBuilder<Subject>([
+              buildSubject(name: 'Neues Fach', gradesAll: {
+                Semester.first: BuiltList<GradeAll>([
+                  buildGradeAll(date: UtcDateTime(2026, 1, 2), grade: 700)
+                      .rebuild((b) => b.grade = null),
+                ]),
+              }),
+            ])),
+    'real grades without theme': buildGradesPageState()
+        .rebuild((b) => b.settingsState.subjectThemes.clear()),
+  };
+  for (final entry in incompleteStates.entries) {
+    testWidgets('chart and legend render safely with ${entry.key}',
+        (tester) async {
+      await pumpApp(
+        tester,
+        store: createStore(initialState: entry.value),
+        home: const SizedBox(
+          width: 900,
+          height: 700,
+          child: GradesChartPage(),
+        ),
+      );
+      await settleFor(tester);
+      expect(find.byType(charts.TimeSeriesChart), findsOneWidget);
+      expect(tester.takeException(), isNull);
+      await tester.tap(find.text('Legende'));
+      await settleFor(tester);
+      for (final subject in entry.value.gradesState.subjects) {
+        expect(find.text(subject.name), findsOneWidget);
+      }
+      expect(tester.takeException(), isNull);
+    });
+  }
+
   testWidgets('tapping the chart reveals the selected grade details',
       (tester) async {
     final store = createStore(initialState: buildGradesPageState());
