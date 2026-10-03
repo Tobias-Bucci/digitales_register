@@ -32,7 +32,10 @@ class ChartLegendContainer extends StatelessWidget {
         );
       },
       connect: (state) {
-        return state.settingsState.subjectThemes.keys.toBuiltList();
+        return <String>{
+          ...state.settingsState.subjectThemes.keys,
+          ...state.gradesState.subjects.map((subject) => subject.name),
+        }.toBuiltList();
       },
     );
   }

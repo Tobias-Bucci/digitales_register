@@ -17,6 +17,7 @@
 
 import 'package:built_value/built_value.dart';
 import 'package:dr/actions/app_actions.dart';
+import 'package:dr/app_selectors.dart';
 import 'package:dr/app_state.dart';
 import 'package:dr/ui/grades_chart_legend_entry.dart';
 import 'package:flutter/material.dart' hide Builder;
@@ -68,7 +69,7 @@ abstract class ChartLegendEntryVM
     return ChartLegendEntryVM(
       (b) => b
         ..name = name
-        ..config = state.settingsState.subjectThemes[name]!.toBuilder(),
+        ..config = chartSubjectTheme(state, name).toBuilder(),
     );
   }
 }
