@@ -1,5 +1,4 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<!-- Copyright 2021 Michael Debertol <michael.debertol@gmail.com> -->
 <!-- Copyright 2026 Tobias Bucci <buccitobias774@gmail.com> -->
 <component type="desktop-application">
   <id>it.bucci.digitalesregister</id>
@@ -63,6 +62,8 @@ Einzelne Funktionen, wie das Eintragen von neuen Absenzen, sind jedoch noch nich
   </screenshots>
   <content_rating type="oars-1.1" />
   <url type="homepage">https://github.com/Tobias-Bucci/digitales_register</url>
-  <developer_name>Tobias Bucci</developer_name>
+  <developer id="it.bucci">
+      <name>Tobias Bucci</name>
+  </developer>
   <update_contact>buccitobias774@gmail.com</update_contact>
 </component>

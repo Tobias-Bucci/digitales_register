@@ -11,7 +11,7 @@ void main() {
         width: size, height: size, interpolation: img.Interpolation.average);
     final bytes = img.encodePng(icon);
     final file =
-        File('linux/icons/${size}x$size/apps/it.bucci.digitalesregister.png');
+        File('linux/icons/${size}x$size/apps/io.github.Tobias_Bucci.digitales_register.png');
     file.parent.createSync(recursive: true);
     file.writeAsBytesSync(bytes);
     if (size == 512) File('linux/icon.png').writeAsBytesSync(bytes);
