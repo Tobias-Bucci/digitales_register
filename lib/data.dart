@@ -751,14 +751,31 @@ abstract class Message implements Built<Message, MessageBuilder> {
   String? get badge;
   String? get historyString;
 
-  bool get isNew => timeRead == null;
+  bool get incoming;
+  bool get outgoing;
+  bool get archived;
+  bool get labelAll;
+  int get archiveMessageEnabled;
+
+  @BuiltValueField(serialize: false)
+  bool get archiving;
+
+  bool get isNew => incoming && timeRead == null;
+  bool get canArchive => archiveMessageEnabled > 0 && !archived;
+  bool get canUnarchive => archiveMessageEnabled > 0 && archived;
 
   static Serializer<Message> get serializer => _$messageSerializer;
   factory Message([Function(MessageBuilder b)? updates]) = _$Message;
   Message._();
 
-  static void _initializeBuilder(MessageBuilder b) =>
-      b..attachments = ListBuilder<MessageAttachmentFile>();
+  static void _initializeBuilder(MessageBuilder b) => b
+    ..attachments = ListBuilder<MessageAttachmentFile>()
+    ..incoming = true
+    ..outgoing = false
+    ..archived = false
+    ..labelAll = true
+    ..archiveMessageEnabled = 0
+    ..archiving = false;
 }
 
 abstract class MessageAttachmentFile

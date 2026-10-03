@@ -677,6 +677,7 @@ class Wrapper {
     bool isRetryAfterUnexpectedLogout = false,
     bool forceRelogin = false,
     int unexpectedLogoutRetryCount = 0,
+    bool acceptEmptyResponse = false,
   }) async {
     if (!_appInForeground) return null;
     if (demoMode) {
@@ -714,6 +715,14 @@ class Wrapper {
         allowSingleRetry: method == "GET",
       );
       responseData = response.data;
+      // Some mutation endpoints acknowledge success with an empty HTTP body.
+      // Keep null reserved for failures for callers that opt into this behavior.
+      if (acceptEmptyResponse &&
+          responseData == null &&
+          (response.statusCode ?? 0) >= 200 &&
+          (response.statusCode ?? 0) < 300) {
+        responseData = true;
+      }
     } on Exception catch (e) {
       await _handleError(e);
       onAddProtocolItem!(NetworkProtocolItem((b) => b
@@ -754,6 +763,7 @@ class Wrapper {
         isRetryAfterUnexpectedLogout: true,
         forceRelogin: unexpectedLogoutRetryCount >= 1,
         unexpectedLogoutRetryCount: unexpectedLogoutRetryCount + 1,
+        acceptEmptyResponse: acceptEmptyResponse,
       );
     }
     return responseData;
