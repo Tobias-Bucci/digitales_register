@@ -103,7 +103,7 @@ flutter build apk --release
 
 ## Build (Windows / Microsoft Store)
 
-The Windows app uses the Microsoft Store name **Schulregister Südtirol**.
+The Windows app uses the Microsoft Store name **Schulregister Suedtirol**.
 Android keeps its existing name and application ID.
 
 Build and run the unpackaged release app:

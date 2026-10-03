@@ -72,7 +72,7 @@ def main():
     elfs = check_bundle(bundle, args.arch, version, build)
     output = ROOT / "build/linux/packages"
     output.mkdir(parents=True, exist_ok=True)
-    stem = f"Schulregister-Suedtirol-{version}+{build}-linux-{display_arch}"
+    stem = f"Digitales-Register-{version}+{build}-linux-{display_arch}"
     tar_path = output / (stem + ".tar.gz")
     deb_path = output / (stem + ".deb")
 
@@ -85,7 +85,7 @@ def main():
         shutil.copy2(ROOT / "LICENSE.txt", portable / "LICENSE.txt")
         (portable / "LICENSE.txt").chmod(0o644)
         (portable / "LINUX-README.txt").write_text(
-            f"Schulregister Südtirol {version}, build {build} ({display_arch})\n"
+            f"Digitales Register {version}, build {build} ({display_arch})\n"
             "Start: ./digitales_register\nInstall for current user: bash install.sh\n"
             "Requires GTK 3, libsecret, jsoncpp, xdg-utils, an OpenGL-capable desktop\n"
             "and an unlocked Secret Service keyring (GNOME Keyring or compatible).\n"
@@ -117,7 +117,7 @@ def main():
             "Source: schulregister-suedtirol\nSection: education\nPriority: optional\n"
             "Maintainer: Tobias Bucci <buccitobias774@gmail.com>\n\n"
             "Package: schulregister-suedtirol\nArchitecture: any\n"
-            "Description: Schulregister Südtirol\n", encoding="utf-8")
+            "Description: Digitales Register\n", encoding="utf-8")
         deps_result = subprocess.run(
             ["dpkg-shlibdeps", "--ignore-missing-info", "-O", f"-l{bundle / 'lib'}",
              *(f"-e{path}" for path in elfs)], cwd=work, check=True,
@@ -136,7 +136,7 @@ def main():
             "Recommends: gnome-keyring, xdg-desktop-portal, "
             "xdg-desktop-portal-gtk\n"
             "Homepage: https://github.com/Tobias-Bucci/digitales_register\n"
-            "Description: Schulregister Südtirol\n"
+            "Description: Digitales Register\n"
             " Inoffizieller Schulplaner für das Digitale Register in Südtirol.\n",
             encoding="utf-8")
         subprocess.run(["dpkg-deb", "--root-owner-group", "--build", str(package), str(deb_path)],

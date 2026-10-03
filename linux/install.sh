@@ -35,4 +35,4 @@ if command -v gtk-update-icon-cache >/dev/null && [[ -f "$data_home/icons/hicolo
   gtk-update-icon-cache -f -t "$data_home/icons/hicolor"
 fi
 echo "Installed: $target"
-echo 'Start Schulregister Südtirol from your application menu.'
+echo 'Start Digitales Register from your application menu.'

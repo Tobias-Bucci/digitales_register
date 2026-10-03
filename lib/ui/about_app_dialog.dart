@@ -1,4 +1,5 @@
 import 'package:dr/i18n/app_localizations.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:url_launcher/url_launcher.dart';
 
@@ -21,6 +22,11 @@ class AboutAppDialog extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final l10n = context.l10n;
+    final appName = !kIsWeb && defaultTargetPlatform == TargetPlatform.windows
+        ? 'Schulregister Suedtirol'
+        : !kIsWeb && defaultTargetPlatform == TargetPlatform.linux
+            ? 'Digitales Register'
+            : l10n.text('settings.about.appName');
     final theme = Theme.of(context);
     final colors = theme.colorScheme;
     final displayVersion = version.startsWith('v') ? version : 'v$version';
@@ -48,7 +54,7 @@ class AboutAppDialog extends StatelessWidget {
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Text(l10n.text('settings.about.appName'),
+                      Text(appName,
                           style: theme.textTheme.titleMedium
                               ?.copyWith(fontWeight: FontWeight.w700)),
                       const SizedBox(height: 4),
@@ -137,8 +143,7 @@ class AboutAppDialog extends StatelessWidget {
                                   const Icon(Icons.chevron_right, size: 18),
                               onTap: () => showLicensePage(
                                   context: context,
-                                  applicationName:
-                                      l10n.text('settings.about.appName'),
+                                  applicationName: appName,
                                   applicationVersion: version),
                             ),
                           ],

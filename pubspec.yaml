@@ -142,7 +142,7 @@ flutter:
 
 msix_config:
   # This name is used exclusively for the Microsoft Store package.
-  display_name: Schulregister Südtirol
+  display_name: Schulregister Suedtirol
   # Partner Center identity and publisher data are intentionally supplied from
   # tool/microsoft_store.local.psd1 by the Store build script, not Git.
   # Microsoft Store requires the fourth (revision) component to be zero.
