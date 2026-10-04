@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <!-- Copyright 2026 Tobias Bucci <buccitobias774@gmail.com> -->
 <component type="desktop-application">
-  <id>io.github.Tobias_Bucci.digitales_register</id>
+  <id>io.github.tobias_bucci.digitales_register</id>
   <metadata_license>CC0-1.0</metadata_license>
   <project_license>GPL-3.0-or-later</project_license>
   <name>Digitales Register</name>
@@ -37,7 +37,7 @@ Einzelne Funktionen, wie das Eintragen von neuen Absenzen, sind jedoch noch nich
       </description>
     </release>
   </releases>
-  <launchable type="desktop-id">io.github.Tobias_Bucci.digitales_register.desktop</launchable>
+  <launchable type="desktop-id">io.github.tobias_bucci.digitales_register.desktop</launchable>
   <screenshots>
     <screenshot type="default">
       <caption>Hausaufgaben-Übersicht</caption>

@@ -29,10 +29,10 @@ if ! kill -0 "$app_pid" 2>/dev/null; then
 fi
 if command -v xprop >/dev/null; then
   # Locate by ASCII application ID, since legacy WM_NAME can use Latin-1.
-  window_id=$(xwininfo -root -tree | awk '/io.github.Tobias_Bucci.digitales_register/ {print $1; exit}')
+  window_id=$(xwininfo -root -tree | awk '/io.github.tobias_bucci.digitales_register/ {print $1; exit}')
   [[ -n "$window_id" ]] || { xwininfo -root -tree; exit 1; }
   xprop -id "$window_id" WM_CLASS _NET_WM_NAME | tee -a "$SCHULREGISTER_SMOKE_LOG"
-  xprop -id "$window_id" WM_CLASS | grep -F 'io.github.Tobias_Bucci.digitales_register'
+  xprop -id "$window_id" WM_CLASS | grep -F 'io.github.tobias_bucci.digitales_register'
 fi
 if python3 -c 'from PIL import ImageGrab' 2>/dev/null; then
   python3 - "$SCHULREGISTER_SMOKE_LOG.png" <<'PY'

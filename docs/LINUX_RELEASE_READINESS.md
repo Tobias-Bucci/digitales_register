@@ -1,7 +1,7 @@
 # Linux release preparation
 
 Linux is named **Digitales Register** and uses the current shared logo from `assets/index.png`,
-application ID `io.github.Tobias_Bucci.digitales_register` and binary `digitales_register`.
+application ID `io.github.tobias_bucci.digitales_register` and binary `digitales_register`.
 The version and build number come from `pubspec.yaml`: **1.17.0+44**.
 Other platform versions and build numbers are unchanged.
 
@@ -93,10 +93,10 @@ sudo apt install ./Digitales-Register-1.17.0+44-linux-x86_64.deb
 For the portable archive, extract it and run `./digitales_register` inside the
 extracted directory. Keep `data/`, `lib/` and the executable together.
 `bash install.sh` installs the complete bundle for the current user under
-`~/.local/opt/io.github.Tobias_Bucci.digitales_register` and adds the application-menu entry,
+`~/.local/opt/io.github.tobias_bucci.digitales_register` and adds the application-menu entry,
 icons and AppStream metadata. The installer requires Python 3. To remove this
 user installation, remove that exact directory and the corresponding
-`io.github.Tobias_Bucci.digitales_register` desktop, metainfo and icon files under
+`io.github.tobias_bucci.digitales_register` desktop, metainfo and icon files under
 `${XDG_DATA_HOME:-$HOME/.local/share}`.
 
 Runtime requirements:
