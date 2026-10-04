@@ -6,7 +6,7 @@ Checked on 2026-10-02 without starting an application build.
 | --- | --- |
 | App name | Digitales Register |
 | Bundle ID | it.bucci.digitalesregister |
-| Version / build | 1.17.0 / 44, sourced from pubspec.yaml through Flutter build variables |
+| Version / build | 1.17.1 / 45, sourced from pubspec.yaml through Flutter build variables |
 | Deployment target | iOS 15.0; required by the current Firebase pods |
 | Devices | iPhone and iPad |
 | Signing | Existing team 4838ZPN3B8, automatic signing; account access unverified |
@@ -49,7 +49,7 @@ also removes iOS alpha so later icon regeneration preserves the opaque backgroun
 3. Open `ios/Runner.xcworkspace` and confirm the existing Apple team has access to
    the registered bundle ID and valid signing/provisioning. Configure distribution
    signing through Xcode's Organizer when an archive is eventually requested.
-4. Confirm App Store Connect accepts version **1.17.0** and that build **44** has
+4. Confirm App Store Connect accepts version **1.17.1** and that build **45** has
    not already been uploaded for it. Increase the build number in `pubspec.yaml`
    if already used. The remote App Store record and name reservation were not
    accessible during this repository audit.

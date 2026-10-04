@@ -31,14 +31,14 @@ void main() {
                           onPressed: () => showDialog<void>(
                               context: context,
                               builder: (_) =>
-                                  const AboutAppDialog(version: '1.17.0')),
+                                  const AboutAppDialog(version: '1.17.1')),
                           child: const Text('open')))),
               brightness: brightness,
               locale: locale));
           await tester.pumpAndSettle();
           await tester.tap(find.text('open'));
           await tester.pumpAndSettle();
-          expect(find.text('v1.17.0'), findsOneWidget);
+          expect(find.text('v1.17.1'), findsOneWidget);
           expect(find.text('digitalesregister.it'), findsOneWidget);
           expect(find.text('GNU GPLv3'), findsNothing);
           expect(
