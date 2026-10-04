@@ -6,7 +6,7 @@
 #
 # Visit the project at https://github.com/TheAppgineer/flatpak-flutter
 
-id: io.github.Tobias_Bucci.digitales_register
+id: io.github.tobias_bucci.digitales_register
 runtime: org.freedesktop.Platform
 runtime-version: '26.08'
 sdk: org.freedesktop.Sdk
@@ -39,12 +39,12 @@ modules:
       - setup-flutter.sh -C .
       - dart run build_runner build
       - flutter build linux --release --no-pub
-      - cp -r $BUNDLE_PATH /app/io.github.Tobias_Bucci.digitales_register
-      - install -Dm644 linux/digitales_register.desktop /app/share/applications/io.github.Tobias_Bucci.digitales_register.desktop
-      - install -Dm644 linux/digitales_register.metainfo.xml /app/share/metainfo/io.github.Tobias_Bucci.digitales_register.metainfo.xml
-      - install -Dm644 linux/icon.png /app/share/icons/hicolor/512x512/apps/io.github.Tobias_Bucci.digitales_register.png
+      - cp -r $BUNDLE_PATH /app/io.github.tobias_bucci.digitales_register
+      - install -Dm644 linux/digitales_register.desktop /app/share/applications/io.github.tobias_bucci.digitales_register.desktop
+      - install -Dm644 linux/digitales_register.metainfo.xml /app/share/metainfo/io.github.tobias_bucci.digitales_register.metainfo.xml
+      - install -Dm644 linux/icon.png /app/share/icons/hicolor/512x512/apps/io.github.tobias_bucci.digitales_register.png
       - mkdir -p /app/bin
-      - ln -s /app/io.github.Tobias_Bucci.digitales_register/digitales_register /app/bin/digitales_register
+      - ln -s /app/io.github.tobias_bucci.digitales_register/digitales_register /app/bin/digitales_register
     sources:
       - type: git
         url: https://github.com/Tobias-Bucci/digitales_register.git

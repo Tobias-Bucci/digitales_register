@@ -2,7 +2,7 @@
 # Install a portable bundle for the current user without requiring root.
 set -euo pipefail
 source_dir=$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)
-app_id=io.github.Tobias_Bucci.digitales_register
+app_id=io.github.tobias_bucci.digitales_register
 data_home=${XDG_DATA_HOME:-$HOME/.local/share}
 target=${SCHULREGISTER_INSTALL_DIR:-$HOME/.local/opt/$app_id}
 [[ -x "$source_dir/digitales_register" ]] || { echo 'Run from an extracted Linux release bundle.' >&2; exit 1; }
@@ -17,7 +17,7 @@ import pathlib
 import sys
 
 target = pathlib.Path(sys.argv[1])
-text = (target / 'share/applications/io.github.Tobias_Bucci.digitales_register.desktop').read_text()
+text = (target / 'share/applications/io.github.tobias_bucci.digitales_register.desktop').read_text()
 # Desktop Exec quoting is different from shell quoting (no shell is invoked).
 def quote(value):
     for old, new in [('\\', '\\\\'), ('"', '\\"'), ('`', '\\`'), ('$', '\\$')]:

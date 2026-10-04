@@ -27,7 +27,7 @@ position_preview() {
           wmctrl -ia "$window_id"
           return
         fi
-      done < <(xwininfo -root -tree | awk '/io.github.Tobias_Bucci.digitales_register/ && !/ 10x10[+-]/ {print $1}')
+      done < <(xwininfo -root -tree | awk '/io.github.tobias_bucci.digitales_register/ && !/ 10x10[+-]/ {print $1}')
     fi
     sleep 0.25
   done
