@@ -73,7 +73,7 @@ import 'package:dr/utc_date_time.dart';
 import 'package:dr/util.dart';
 import 'package:dr/wrapper.dart';
 import 'package:file_picker/file_picker.dart';
-import 'package:flutter/foundation.dart' show kDebugMode;
+import 'package:flutter/foundation.dart' show defaultTargetPlatform, kDebugMode;
 import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart' hide Action, Notification;
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
@@ -413,38 +413,102 @@ void _addCourseMaterialSources(
   }
 }
 
+@visibleForTesting
+Future<String> Function()? attachmentDownloadDirectoryOverride;
+
+@visibleForTesting
+Future<OpenResult> Function(String)? courseMaterialFileOpenerOverride;
+
+@visibleForTesting
+TargetPlatform? courseMaterialPlatformOverride;
+
+// Local console only: never send filenames/paths to telemetry or network logs.
+// Use a closed set of fields; never render requests, headers or exceptions.
+void _materialLog(String stage, Map<String, Object?> fields) {
+  if (Platform.isWindows || Platform.isLinux) {
+    debugPrint('[CourseMaterial] ${jsonEncode({'stage': stage, ...fields})}');
+  }
+}
+
+String? _materialFileLabel(String? value) {
+  if (value == null) return null;
+  final uri = Uri.tryParse(value);
+  if (uri != null && uri.hasScheme) return uri.pathSegments.lastOrNull;
+  return value.split(RegExp('[?#]')).first;
+}
+
 Future<bool> openCourseMaterialEntry(CourseMaterialEntry entry) async {
-  if (entry.isLink) {
-    final link = entry.link;
-    if (link == null || link.trim().isEmpty) {
-      return false;
+  var stage = 'entry';
+  try {
+    _materialLog(stage, {
+      'id': entry.id,
+      'courseContentId': entry.courseContentId,
+      'type': entry.type,
+      'file': _materialFileLabel(entry.file),
+      'originalName': entry.originalName,
+      'uniqueName': entry.uniqueName,
+    });
+    if (entry.isLink) {
+      final link = entry.link;
+      if (link == null || link.trim().isEmpty) {
+        return false;
+      }
+      return await launchUrl(Uri.parse(link),
+          mode: LaunchMode.externalApplication);
     }
-    return launchUrl(Uri.parse(link), mode: LaunchMode.externalApplication);
-  }
 
-  if (await canOpenFile(entry.uniqueName)) {
-    if (Platform.isLinux) {
-      return _openLinuxDownloadedFile(entry.uniqueName);
+    stage = 'local_check';
+    final local = await canOpenFile(entry.uniqueName);
+    _materialLog(stage, {'exists': local});
+    if (!local) {
+      stage = 'download';
+      if (!await _downloadCourseMaterialFile(entry)) return false;
     }
-    await openFile(entry.uniqueName);
-    return true;
-  }
-
-  if (await _downloadCourseMaterialFile(entry)) {
-    if (Platform.isLinux) {
-      return _openLinuxDownloadedFile(entry.uniqueName);
+    stage = 'open';
+    final path =
+        '${await _getAttachmentDownloadDirectory()}/${entry.uniqueName}';
+    final file = File(path);
+    final exists = await file.exists();
+    _materialLog(stage, {'path': file.absolute.path, 'exists': exists});
+    if (!exists) return false;
+    final platform = courseMaterialPlatformOverride ?? defaultTargetPlatform;
+    if (platform == TargetPlatform.windows ||
+        platform == TargetPlatform.linux) {
+      final result =
+          await (courseMaterialFileOpenerOverride ?? OpenFile.open)(path);
+      _materialLog('open_result', {
+        'result': result.type.name,
+        if (const {
+          'Opening cancelled',
+          'Portal could not open file',
+          'File opening request timed out',
+          'Invalid portal response',
+        }.contains(result.message))
+          'reason': result.message,
+      });
+      return result.type == ResultType.done;
     }
-    await openFile(entry.uniqueName);
+    // Preserve the existing mobile/macOS opening behavior.
+    if (courseMaterialFileOpenerOverride != null) {
+      await courseMaterialFileOpenerOverride!(path);
+    } else {
+      await openFile(entry.uniqueName);
+    }
     return true;
+  } catch (error) {
+    _materialLog(
+        'failed', {'at': stage, 'errorType': error.runtimeType.toString()});
+    return false;
   }
-  return false;
 }
 
 Future<bool> _downloadCourseMaterialFile(CourseMaterialEntry entry) async {
-  await wrapper.ensureLoggedIn();
+  final loggedIn = await wrapper.ensureLoggedIn();
+  _materialLog('authentication', {'loggedIn': loggedIn});
 
   final saveFile =
       File("${await _getAttachmentDownloadDirectory()}/${entry.uniqueName}");
+  _materialLog('destination', {'path': saveFile.absolute.path});
   if (await saveFile.exists()) {
     final shouldOverwrite = await askShouldOverwriteFile(entry.uniqueName);
     if (shouldOverwrite == null) {
@@ -460,6 +524,11 @@ Future<bool> _downloadCourseMaterialFile(CourseMaterialEntry entry) async {
     if (bytes != null) {
       await saveFile.parent.create(recursive: true);
       await saveFile.writeAsBytes(bytes);
+      _materialLog('saved', {
+        'saved': true,
+        'path': saveFile.absolute.path,
+        'bytes': await saveFile.length(),
+      });
       return true;
     }
   }
@@ -467,6 +536,8 @@ Future<bool> _downloadCourseMaterialFile(CourseMaterialEntry entry) async {
   if (await saveFile.exists()) {
     await saveFile.delete();
   }
+  _materialLog(
+      'download_failed', {'saved': false, 'path': saveFile.absolute.path});
   return false;
 }
 
@@ -474,39 +545,83 @@ Future<List<int>?> _downloadCourseMaterialCandidate(
   _CourseMaterialDownloadCandidate candidate,
 ) async {
   Future<List<int>?> validate(
-    Future<dio.Response<List<int>>> request,
+    String method,
   ) async {
+    // The endpoint path excludes host, userinfo, query and fragments.
+    final endpoint = Uri.parse(candidate.url);
+    final segments = endpoint.pathSegments;
+    final hasFileSegment = segments.length > 1 &&
+        const {'file', 'downloadFile'}.contains(segments[segments.length - 2]);
+    _materialLog('request', {
+      'endpoint': hasFileSegment
+          ? '/${segments.take(segments.length - 1).join('/')}/[file]'
+          : endpoint.path,
+      'method': method,
+      'parameters': {
+        for (final parameter in candidate.parameters.entries)
+          parameter.key: parameter.key == 'file'
+              ? _materialFileLabel(parameter.value as String?)
+              : parameter.value,
+      },
+    });
+    void logResponse(dio.Response<List<int>> response) {
+      _materialLog('response', {
+        'method': method,
+        'status': response.statusCode,
+        'contentType': response.headers.value(HttpHeaders.contentTypeHeader),
+        'bytes': response.data?.length ?? 0,
+        'redirected': response.redirects.isNotEmpty,
+      });
+    }
+
     try {
-      final response = await request;
+      final response = method == 'GET'
+          ? await wrapper.dio.get<List<int>>(candidate.url,
+              queryParameters: candidate.parameters,
+              options: dio.Options(responseType: dio.ResponseType.bytes))
+          : await wrapper.dio.post<List<int>>(candidate.url,
+              data: candidate.parameters,
+              options: dio.Options(responseType: dio.ResponseType.bytes));
+      logResponse(response);
       final bytes = response.data ?? const <int>[];
       final contentType =
           response.headers.value(HttpHeaders.contentTypeHeader) ?? '';
       if (response.statusCode != 200 ||
           bytes.isEmpty ||
           _looksLikeErrorDocument(bytes, contentType)) {
+        _materialLog('rejected', {
+          'method': method,
+          'reason': response.statusCode != 200
+              ? 'http_status'
+              : bytes.isEmpty
+                  ? 'empty_body'
+                  : 'error_document'
+        });
         return null;
       }
       return bytes;
     } catch (error) {
+      if (error is dio.DioException) {
+        final response = error.response;
+        _materialLog('request_failed', {
+          'method': method,
+          'errorType': error.type.name,
+          'status': response?.statusCode,
+          'contentType': response?.headers.value(HttpHeaders.contentTypeHeader),
+          'bytes': response?.data is List<int>
+              ? (response!.data as List<int>).length
+              : 0,
+        });
+      } else {
+        _materialLog('request_failed',
+            {'method': method, 'errorType': error.runtimeType.toString()});
+      }
       privacyLog('technical_operation');
       return null;
     }
   }
 
-  return await validate(
-        wrapper.dio.get<List<int>>(
-          candidate.url,
-          queryParameters: candidate.parameters,
-          options: dio.Options(responseType: dio.ResponseType.bytes),
-        ),
-      ) ??
-      await validate(
-        wrapper.dio.post<List<int>>(
-          candidate.url,
-          data: candidate.parameters,
-          options: dio.Options(responseType: dio.ResponseType.bytes),
-        ),
-      );
+  return await validate('GET') ?? await validate('POST');
 }
 
 bool _looksLikeErrorDocument(List<int> bytes, String contentType) {
@@ -1350,6 +1465,8 @@ final Map<String, Future<Uint8List>> _authenticatedBytesInFlight =
     <String, Future<Uint8List>>{};
 
 Future<String> _getAttachmentDownloadDirectory() {
+  final override = attachmentDownloadDirectoryOverride;
+  if (override != null) return override();
   final cached = _attachmentDownloadDirectoryFuture;
   if (cached != null) {
     return cached;

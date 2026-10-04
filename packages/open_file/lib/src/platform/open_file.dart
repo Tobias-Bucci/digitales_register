@@ -5,6 +5,7 @@ import 'dart:io';
 import 'package:flutter/services.dart';
 import 'package:open_file/src/common/open_result.dart';
 import 'package:open_file/src/platform/linux_open_file.dart';
+import 'package:open_file/src/platform/windows_open_file.dart';
 
 // ignore: avoid_classes_with_only_static_members
 class OpenFile {
@@ -15,7 +16,9 @@ class OpenFile {
       {String? type, String? uti, String linuxDesktopName = "xdg"}) async {
     if (!Platform.isIOS && !Platform.isAndroid) {
       late final int resultCode;
-      if (Platform.isMacOS || Platform.isWindows) {
+      if (Platform.isWindows) {
+        return openWindowsFile(filePath);
+      } else if (Platform.isMacOS) {
         final process = await Process.start("open", [filePath]);
         resultCode = await process.exitCode;
       } else if (Platform.isLinux) {
