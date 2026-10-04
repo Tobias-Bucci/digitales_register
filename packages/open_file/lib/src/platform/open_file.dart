@@ -4,6 +4,7 @@ import 'dart:io';
 
 import 'package:flutter/services.dart';
 import 'package:open_file/src/common/open_result.dart';
+import 'package:open_file/src/platform/linux_open_file.dart';
 
 // ignore: avoid_classes_with_only_static_members
 class OpenFile {
@@ -18,9 +19,7 @@ class OpenFile {
         final process = await Process.start("open", [filePath]);
         resultCode = await process.exitCode;
       } else if (Platform.isLinux) {
-        final process =
-            await Process.start("$linuxDesktopName-open", [filePath]);
-        resultCode = await process.exitCode;
+        return openLinuxFile(filePath);
       } else {
         throw UnsupportedError("Unsupported platform");
       }
