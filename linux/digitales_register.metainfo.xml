@@ -26,6 +26,11 @@ Einzelne Funktionen, wie das Eintragen von neuen Absenzen, sind jedoch noch nich
 </p>
   </description>
   <releases>
+    <release version="1.17.2" date="2026-10-04">
+      <description>
+        <p>Lokale Anhänge unter Linux und Flatpak über das Desktop-Portal öffnen.</p>
+      </description>
+    </release>
     <release version="1.17.1" date="2026-10-03">
       <description>
         <p>Linux-Pakete für x86_64 und aarch64 mit aktuellem App-Logo und Desktop-Integration.</p>

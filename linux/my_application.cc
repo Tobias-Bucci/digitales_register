@@ -6,6 +6,7 @@
 #endif
 
 #include "flutter/generated_plugin_registrant.h"
+#include "file_open_portal.h"
 
 struct _MyApplication {
   GtkApplication parent_instance;
@@ -68,6 +69,7 @@ static void my_application_activate(GApplication* application) {
   gtk_container_add(GTK_CONTAINER(window), GTK_WIDGET(view));
 
   fl_register_plugins(FL_PLUGIN_REGISTRY(view));
+  register_file_open_portal(fl_engine_get_binary_messenger(fl_view_get_engine(view)));
 
   gtk_widget_grab_focus(GTK_WIDGET(view));
 }

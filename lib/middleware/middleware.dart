@@ -423,11 +423,17 @@ Future<bool> openCourseMaterialEntry(CourseMaterialEntry entry) async {
   }
 
   if (await canOpenFile(entry.uniqueName)) {
+    if (Platform.isLinux) {
+      return _openLinuxDownloadedFile(entry.uniqueName);
+    }
     await openFile(entry.uniqueName);
     return true;
   }
 
   if (await _downloadCourseMaterialFile(entry)) {
+    if (Platform.isLinux) {
+      return _openLinuxDownloadedFile(entry.uniqueName);
+    }
     await openFile(entry.uniqueName);
     return true;
   }
@@ -1441,7 +1447,23 @@ Future<bool> canOpenFile(String fileName) async {
 
 Future<void> openFile(String fileName) async {
   privacyLog('technical_operation');
+  if (Platform.isLinux) {
+    if (!await _openLinuxDownloadedFile(fileName)) {
+      showSnackBar(tr('courseMaterials.openFailed'));
+    }
+    return;
+  }
   await OpenFile.open("${await _getAttachmentDownloadDirectory()}/$fileName");
+}
+
+Future<bool> _openLinuxDownloadedFile(String fileName) async {
+  try {
+    final result = await OpenFile.open(
+        "${await _getAttachmentDownloadDirectory()}/$fileName");
+    return result.type == ResultType.done;
+  } catch (_) {
+    return false;
+  }
 }
 
 Future<bool?> askShouldOverwriteFile(String fileName) {
