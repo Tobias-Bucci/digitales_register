@@ -46,7 +46,7 @@ modules:
     sources:
       - type: git
         url: https://github.com/Tobias-Bucci/digitales_register.git
-        commit: a95f92a60da4cef28a46f2a5cae7adc7cedde0c4
+        commit: 9f029917388b147790bc3876e49abb28923fbec4
 
       - type: git
         url: https://github.com/flutter/flutter.git
