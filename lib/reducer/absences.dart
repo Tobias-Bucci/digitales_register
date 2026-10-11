@@ -66,41 +66,9 @@ void _applyLoaded(
     return;
   }
   final parsed = tryParse(payload, _parseAbsences);
-  if (parsed.absences.length >= state.absences.length) {
-    return builder.replace(parsed);
-  }
-
-  final mergedByKey = <String, AbsenceGroup>{
-    for (final oldGroup in state.absences) _absenceGroupKey(oldGroup): oldGroup,
-  };
-  for (final newGroup in parsed.absences) {
-    mergedByKey[_absenceGroupKey(newGroup)] = newGroup;
-  }
-
-  final merged = mergedByKey.values.toList()
-    ..sort((a, b) {
-      final latestA =
-          a.absences.reduce((x, y) => x.date.isAfter(y.date) ? x : y).date;
-      final latestB =
-          b.absences.reduce((x, y) => x.date.isAfter(y.date) ? x : y).date;
-      return latestB.compareTo(latestA);
-    });
-
-  return builder.replace(
-    parsed.rebuild(
-      (b) => b..absences = ListBuilder(merged),
-    ),
-  );
-}
-
-String _absenceGroupKey(AbsenceGroup group) {
-  final absenceItems = group.absences
-      .map(
-        (a) =>
-            '${a.date.toIso8601String()}|${a.hour}|${a.minutes}|${a.minutesCameTooLate}|${a.minutesLeftTooEarly}',
-      )
-      .join('||');
-  return '${group.justified.name}::${group.reason ?? ''}::${group.note ?? ''}::${group.reasonSignature ?? ''}::${group.reasonTimestamp?.toIso8601String() ?? ''}::$absenceItems';
+  // The endpoint returns a complete snapshot, including removals and regrouping
+  // after justification. Keeping old groups would retain obsolete entries.
+  builder.replace(parsed);
 }
 
 AbsencesState _parseAbsences(Map json) {

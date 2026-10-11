@@ -354,8 +354,25 @@ class _AbsenceStatsSelector {
     }
 
     final historyByMonth = <UtcDateTime, double>{};
+    var counter = 0;
+    var justified = 0;
+    var notJustified = 0;
+    var forSchool = 0;
+    var delayed = 0;
     for (final group in state.absences) {
       for (final absence in group.absences) {
+        counter++;
+        final status = absence.justified ?? group.justified;
+        if (status == AbsenceJustified.justified) {
+          justified++;
+        } else if (status == AbsenceJustified.forSchool) {
+          forSchool++;
+        } else {
+          notJustified++;
+        }
+        if (absence.minutesCameTooLate > 0) {
+          delayed++;
+        }
         final month = UtcDateTime(absence.date.year, absence.date.month);
         historyByMonth.update(
           month,
@@ -367,7 +384,15 @@ class _AbsenceStatsSelector {
 
     final sortedMonths = historyByMonth.keys.toList()..sort();
     final result = AbsenceStatsViewModel(
-      statistic: state.statistic ?? AbsenceStatistic(),
+      // Derive all counters from the same entries as the history. The server's
+      // percentage needs the total taught lessons, which this state lacks.
+      statistic: AbsenceStatistic((b) => b
+        ..counter = counter
+        ..justified = justified
+        ..notJustified = notJustified
+        ..counterForSchool = forSchool
+        ..delayed = delayed
+        ..percentage = state.statistic?.percentage),
       monthlyHistory: BuiltList<AbsenceMonthlyHistoryValue>(
         sortedMonths.map(
           (month) => AbsenceMonthlyHistoryValue(
