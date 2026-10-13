@@ -20,6 +20,8 @@ plugins {
     id "dev.flutter.flutter-plugin-loader" version "1.0.0"
     id "com.android.application" version "9.2.0" apply false
     id "com.android.library" version "9.2.0" apply false
+    // Pin the compiler used by AGP's built-in Kotlin. No module applies KGP.
+    // AGP's default 2.2.10 is below Flutter 3.47's required 2.2.20.
     id "org.jetbrains.kotlin.android" version "2.3.21" apply false
     id "com.google.gms.google-services" version "4.4.4" apply false
 }

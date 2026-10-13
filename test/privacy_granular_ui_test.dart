@@ -1,6 +1,7 @@
 import 'package:dr/analytics_service.dart';
 import 'package:dr/privacy_consent.dart';
 import 'package:dr/telemetry_capabilities.dart';
+import 'package:firebase_crashlytics/firebase_crashlytics.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:package_info_plus/package_info_plus.dart';
@@ -18,10 +19,19 @@ void main() {
     // Covers the macOS SDK path even when the suite runs on Windows/Linux.
     await collection.analyticsCollection(false);
     await collection.crashCollection(false);
+    expect(FirebaseCrashlytics.instance.isCrashlyticsCollectionEnabled, false);
     await collection.deleteReports();
     await collection.resetAnalytics();
     await collection.analyticsCollection(true);
     await collection.crashCollection(true);
+    expect(FirebaseCrashlytics.instance.isCrashlyticsCollectionEnabled, true);
+    await FirebaseCrashlytics.instance.setCustomKey('screen', 'test');
+    await FirebaseCrashlytics.instance.log('test');
+    await FirebaseCrashlytics.instance.recordError(
+      StateError('test'),
+      StackTrace.current,
+      printDetails: false,
+    );
   });
 
   Future<void> open(WidgetTester tester) async {

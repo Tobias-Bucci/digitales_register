@@ -40,25 +40,31 @@ void mockPrivacyPlugins() {
       (_) async => <Object?>[null],
     );
   }
-  messenger.setMockMethodCallHandler(
-    const MethodChannel('plugins.flutter.io/firebase_crashlytics'),
-    (call) async {
-      switch (call.method) {
-        case 'Crashlytics#setCrashlyticsCollectionEnabled':
-          return <String, Object?>{
-            'isCrashlyticsCollectionEnabled': call.arguments['enabled'],
-          };
-        case 'Crashlytics#deleteUnsentReports':
-        case 'Crashlytics#setCustomKey':
-        case 'Crashlytics#log':
-        case 'Crashlytics#recordError':
-          return null;
-        default:
-          throw MissingPluginException(
-              'Unexpected crashlytics: ${call.method}');
-      }
-    },
+  // Crashlytics 5.4 also uses Pigeon. Enabling collection returns a bool;
+  // the other methods below return a void envelope.
+  const crashlyticsPrefix =
+      'dev.flutter.pigeon.firebase_crashlytics_platform_interface.'
+      'FirebaseCrashlyticsHostApi.';
+  messenger.setMockDecodedMessageHandler<Object?>(
+    const BasicMessageChannel<Object?>(
+      '${crashlyticsPrefix}setCrashlyticsCollectionEnabled',
+      StandardMessageCodec(),
+    ),
+    (message) async => <Object?>[(message! as List<Object?>).single],
   );
+  for (final method in <String>[
+    'deleteUnsentReports',
+    'setCustomKey',
+    'log',
+    'recordError',
+  ]) {
+    // recordError carries generated Pigeon objects. The mock only acknowledges
+    // delivery, so leave its payload encoded instead of decoding custom tags.
+    messenger.setMockMessageHandler(
+      '$crashlyticsPrefix$method',
+      (_) async => const StandardMessageCodec().encodeMessage(<Object?>[null]),
+    );
+  }
 }
 
 class _PrivacyFirebaseCore extends MockFirebaseApp {
