@@ -1,0 +1,29 @@
+// Run from android/: ./gradlew -I ../tool/verify_builtin_kotlin.gradle verifyBuiltInKotlin
+// Inspect the configured Gradle plugins, independently of Flutter's text scanner.
+gradle.projectsEvaluated {
+    gradle.rootProject.tasks.register('verifyBuiltInKotlin') {
+        doLast {
+            def root = gradle.rootProject
+            if (root.providers.gradleProperty('android.builtInKotlin').orNull != 'true') {
+                throw new GradleException('Built-in Kotlin must be enabled.')
+            }
+            root.allprojects.each { module ->
+                if (module.plugins.hasPlugin('org.jetbrains.kotlin.android') ||
+                        module.plugins.hasPlugin('kotlin-android')) {
+                    throw new GradleException("Legacy Android KGP applied in ${module.path}")
+                }
+            }
+            [':app', ':firebase_core', ':firebase_analytics', ':firebase_crashlytics'].each { path ->
+                def module = root.project(path)
+                // AGP enables built-in Kotlin internally; the standalone
+                // com.android.built-in-kotlin ID is only for selective opt-in.
+                def compileTask = module.tasks.findByName('compileDebugKotlin')
+                if (compileTask == null || compileTask.compilerOptions.jvmTarget.get().target != '17') {
+                    throw new GradleException("Expected Kotlin debug compilation targeting JVM 17 in ${path}")
+                }
+                println "${path}: built-in Kotlin, JVM 17, no Android KGP"
+            }
+            println 'BUILT_IN_KOTLIN_VERIFIED'
+        }
+    }
+}

@@ -26,7 +26,7 @@ packages/uni_links/**/**/.settings/
 **/ios/Flutter/.last_build_id
 **/.gradle/
 **/.kotlin/
-.dart_tool/
+**/.dart_tool/
 .flutter-plugins
 .flutter-plugins-dependencies
 .packages
@@ -65,10 +65,17 @@ app.*.map.json
 # Vendored plugin examples are not needed by the app overrides
 packages/firebase_analytics/example/
 packages/package_info_plus/example/
+packages/flutterfire/**/example/
 
 # Android signing secrets
 android/key.properties
 android/*.jks
+**/key.properties
+**/local.properties
+*.jks
+*.keystore
+*.p8
+*.mobileprovision
 *.pfx
 *.p12
 *.pvk
@@ -79,6 +86,18 @@ android/*.jks
 *.msixbundle
 tool/microsoft_store.local.psd1
 **/google-services.json
+**/GoogleService-Info.plist
+/lib/firebase_options.dart
+
+# Local environment secrets and Firebase Admin credentials
+.env
+.env.*
+!.env.example
+!.env.template
+**/credentials.json
+**/service-account*.json
+**/*-firebase-adminsdk-*.json
+**/secrets.json
 
 # iOS / macOS generated files
 ios/Flutter/ephemeral/

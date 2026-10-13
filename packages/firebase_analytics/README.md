@@ -1,5 +1,11 @@
 # Firebase Analytics Plugin for Flutter
 
+> Project note (2026-10-13): this directory is an inactive historical fork.
+> The app now uses official firebase_analytics 12.6.0 or compatible releases from
+> pub.dev. Its Android build fixes are available upstream. See the
+> [migration report](../../docs/firebase_migration_2026-10-13.md) before restoring
+> the path override.
+
 A Flutter plugin to use the [Firebase Analytics API](https://firebase.google.com/docs/analytics/).
 
 To learn more about Firebase Analytics, please visit the [Firebase website](https://firebase.google.com/products/analytics)
