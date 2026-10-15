@@ -3,7 +3,7 @@
 #import "ImageUtils.h"
 #import <Flutter/Flutter.h>
 
-#ifdef PICKER_MEDIA
+#ifdef PICKER_LEGACY_MEDIA
 @import DKImagePickerController;
 
 @interface FilePickerPlugin() <DKImageAssetExporterObserver>
@@ -12,7 +12,7 @@
 #endif
 @property (nonatomic) FlutterResult result;
 @property (nonatomic) FlutterEventSink eventSink;
-#ifdef PICKER_MEDIA
+#ifdef PICKER_LEGACY_MEDIA
 @property (nonatomic) UIImagePickerController *galleryPickerController;
 #endif
 #ifdef PICKER_DOCUMENT
@@ -253,6 +253,7 @@
     }
 #endif
     
+#ifdef PICKER_LEGACY_MEDIA
     if(multiPick) {
         [self resolveMultiPickFromGallery:type withCompressionAllowed:allowCompression];
         return;
@@ -283,10 +284,11 @@
     }
     
     [[self viewControllerWithWindow:nil] presentViewController:self.galleryPickerController animated:YES completion:nil];
-    
+#endif // PICKER_LEGACY_MEDIA
     
 }
 
+#ifdef PICKER_LEGACY_MEDIA
 - (void) resolveMultiPickFromGallery:(MediaType)type withCompressionAllowed:(BOOL)allowCompression {
     DKImagePickerController * dkImagePickerController = [[DKImagePickerController alloc] init];
     
@@ -361,6 +363,7 @@
     
     [[self viewControllerWithWindow:nil] presentViewController:dkImagePickerController animated:YES completion:nil];
 }
+#endif // PICKER_LEGACY_MEDIA
 #endif // PICKER_MEDIA
 
 #ifdef PICKER_AUDIO
@@ -447,6 +450,7 @@ didPickDocumentsAtURLs:(NSArray<NSURL *> *)urls{
 #endif // PICKER_DOCUMENT
 
 #ifdef PICKER_MEDIA
+#ifdef PICKER_LEGACY_MEDIA
 // ImagePicker delegate
 - (void)imagePickerController:(UIImagePickerController *)picker didFinishPickingMediaWithInfo:(NSDictionary *)info {
     if(_result == nil) {
@@ -487,6 +491,7 @@ didPickDocumentsAtURLs:(NSArray<NSURL *> *)urls{
 
     [self handleResult: pickedVideoUrl != nil ? pickedVideoUrl : pickedImageUrl];
 }
+#endif // PICKER_LEGACY_MEDIA
 
 #ifdef PHPicker
 
@@ -706,7 +711,7 @@ didPickDocumentsAtURLs:(NSArray<NSURL *> *)urls{
 }
 #endif // PICKER_DOCUMENT
 
-#ifdef PICKER_MEDIA
+#ifdef PICKER_LEGACY_MEDIA
 - (void)imagePickerControllerDidCancel:(UIImagePickerController *)picker {
     Log(@"FilePicker canceled");
     _result(nil);

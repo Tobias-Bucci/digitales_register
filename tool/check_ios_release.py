@@ -1,4 +1,5 @@
 """Read-only iOS configuration checks. Python 3; no build or external packages."""
+import argparse
 import json
 from pathlib import Path
 import plistlib
@@ -8,6 +9,9 @@ import sys
 import xml.etree.ElementTree as ET
 
 ROOT = Path(__file__).resolve().parents[1]
+parser = argparse.ArgumentParser(description=__doc__)
+parser.add_argument('--app-plist', type=Path, help='Also check the built Runner.app/Info.plist')
+args = parser.parse_args()
 errors = []
 
 
@@ -46,6 +50,20 @@ for setting, value, count in [
     check(project.count(f'{setting} = {value};') == count, f'Inconsistent {setting}')
 podfile = (ROOT / 'ios/Podfile').read_text(encoding='utf-8')
 check("platform :ios, '15.0'" in podfile, 'Podfile minimum iOS mismatch')
+check('Pod::PICKER_LEGACY_MEDIA = false' in podfile,
+      'Unused camera/location media fallback must be excluded')
+picker_spec = (ROOT / 'packages/file_picker/ios/file_picker.podspec').read_text(encoding='utf-8')
+check('if !Pod.const_defined?(:PICKER_LEGACY_MEDIA) || Pod::PICKER_LEGACY_MEDIA' in picker_spec,
+      'file_picker must honor the legacy media opt-out')
+if args.app_plist and version:
+    built_info = plistlib.loads(args.app_plist.read_bytes())
+    for key, expected in [
+        ('CFBundleShortVersionString', version[1]),
+        ('CFBundleVersion', version[2]),
+        ('CFBundleIdentifier', 'it.bucci.digitalesregister'),
+    ]:
+        check(built_info.get(key) == expected,
+              f'Built {key}: expected {expected}, got {built_info.get(key)}')
 check(plist('ios/Flutter/AppFrameworkInfo.plist')['MinimumOSVersion'] == '15.0',
       'Flutter framework minimum iOS mismatch')
 check('keychain-access-groups' in plist('ios/Runner/Runner.entitlements'), 'Missing keychain entitlement')
@@ -101,4 +119,6 @@ if version:
 print('Manual: confirm unused build number and signing in App Store Connect; resolve CocoaPods on macOS.')
 if not (ROOT / 'ios/Runner/GoogleService-Info.plist').is_file():
     print('Optional Firebase is unconfigured; telemetry stays disabled. See docs/IOS_FIREBASE_SETUP.md.')
-print('No build started. Xcode/archive validation and device testing remain unverified.')
+if args.app_plist:
+    print(f'Built app identity checked: {args.app_plist}')
+print('Xcode/archive validation and device testing remain separate checks.')

@@ -1,6 +1,10 @@
 # Use FlutterFire's Analytics Core dependency without advertising-ID support.
 $FirebaseAnalyticsWithoutAdIdSupport = true
 
+# iOS 15+ uses PHPicker. Exclude the unused UIImagePickerController/DK fallback
+# (including DKAsset's CLLocation reference), while retaining media selection.
+Pod::PICKER_LEGACY_MEDIA = false
+
 platform :ios, '15.0'
 
 # CocoaPods analytics sends network stats synchronously affecting flutter build latency.

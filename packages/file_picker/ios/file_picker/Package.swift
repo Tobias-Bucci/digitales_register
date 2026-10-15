@@ -26,6 +26,7 @@ let package = Package(
             cSettings: [
                 .headerSearchPath("include/file_picker"),
                 .define("PICKER_MEDIA"),
+                .define("PICKER_LEGACY_MEDIA"),
                 .define("PICKER_AUDIO"),
                 .define("PICKER_DOCUMENT")
             ]
