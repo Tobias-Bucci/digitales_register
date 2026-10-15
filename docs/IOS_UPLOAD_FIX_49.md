@@ -1,5 +1,10 @@
 # iOS upload fix: 1.17.3+49
 
+Superseded by [the build-50 investigation](IOS_UPLOAD_FIX_50.md). Apple's rejection
+of build 49 and inspection of its actual IPA showed the legacy picker was still
+statically linked through the Swift Package dependency path. The changes and
+expectations below did not validate that release's actual binary.
+
 ## Findings and change
 
 The app selects an existing profile picture with `FilePicker.pickFiles(type:

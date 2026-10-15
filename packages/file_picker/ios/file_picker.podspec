@@ -16,20 +16,14 @@ A flutter plugin to show native file picker dialogs.
   s.public_header_files   = 'file_picker/Sources/file_picker/include/**/*.h'
   s.module_map            = 'file_picker/Sources/file_picker/include/file_picker.modulemap'
   
-  s.ios.deployment_target = '12.0'
+  # This app requires iOS 15; its media picker uses PHPicker (iOS 14+).
+  s.ios.deployment_target = '14.0'
 
   s.dependency 'Flutter'
 
   preprocess_definitions=[]
   if !Pod.const_defined?(:PICKER_MEDIA) || PICKER_MEDIA
     preprocess_definitions << "PICKER_MEDIA=1"
-    if !Pod.const_defined?(:PICKER_LEGACY_MEDIA) || Pod::PICKER_LEGACY_MEDIA
-      preprocess_definitions << "PICKER_LEGACY_MEDIA=1"
-      s.dependency 'DKImagePickerController/PhotoGallery'
-    else
-      # PHPicker is available from iOS 14; never compile a missing fallback.
-      s.ios.deployment_target = '14.0'
-    end
   end
   if !Pod.const_defined?(:PICKER_AUDIO) || PICKER_AUDIO
     preprocess_definitions << "PICKER_AUDIO=1"

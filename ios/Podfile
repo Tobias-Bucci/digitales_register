@@ -1,9 +1,8 @@
 # Use FlutterFire's Analytics Core dependency without advertising-ID support.
 $FirebaseAnalyticsWithoutAdIdSupport = true
 
-# iOS 15+ uses PHPicker. Exclude the unused UIImagePickerController/DK fallback
-# (including DKAsset's CLLocation reference), while retaining media selection.
-Pod::PICKER_LEGACY_MEDIA = false
+# The vendored file_picker supports PHPicker only; no Podfile-scoped opt-out
+# is needed or allowed to determine its dependency graph.
 
 platform :ios, '15.0'
 
@@ -41,6 +40,10 @@ target 'Runner' do
 end
 
 post_install do |installer|
+  legacy_pods = installer.pod_targets.map(&:name).grep(/DKImagePickerController|DKPhotoGallery|DKCamera/)
+  unless legacy_pods.empty?
+    raise "Unexpected legacy media Pods: #{legacy_pods.join(', ')}. Resolve the vendored file_picker podspec."
+  end
   installer.pods_project.targets.each do |target|
     flutter_additional_ios_build_settings(target)
     target.build_configurations.each do |config|
