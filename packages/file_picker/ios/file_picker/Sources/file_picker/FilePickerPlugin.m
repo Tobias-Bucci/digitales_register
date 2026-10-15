@@ -3,18 +3,9 @@
 #import "ImageUtils.h"
 #import <Flutter/Flutter.h>
 
-#ifdef PICKER_LEGACY_MEDIA
-@import DKImagePickerController;
-
-@interface FilePickerPlugin() <DKImageAssetExporterObserver>
-#else
 @interface FilePickerPlugin()
-#endif
 @property (nonatomic) FlutterResult result;
 @property (nonatomic) FlutterEventSink eventSink;
-#ifdef PICKER_LEGACY_MEDIA
-@property (nonatomic) UIImagePickerController *galleryPickerController;
-#endif
 #ifdef PICKER_DOCUMENT
 @property (nonatomic) UIDocumentPickerViewController *documentPickerController;
 @property (nonatomic) UIDocumentInteractionController *interactionController;
@@ -253,117 +244,9 @@
     }
 #endif
     
-#ifdef PICKER_LEGACY_MEDIA
-    if(multiPick) {
-        [self resolveMultiPickFromGallery:type withCompressionAllowed:allowCompression];
-        return;
-    }
-    
-    NSArray<NSString*> * videoTypes = @[(NSString*)kUTTypeMovie, (NSString*)kUTTypeAVIMovie, (NSString*)kUTTypeVideo, (NSString*)kUTTypeMPEG4];
-    NSArray<NSString*> * imageTypes = @[(NSString *)kUTTypeImage];
-    
-    self.galleryPickerController = [[UIImagePickerController alloc] init];
-    self.galleryPickerController.delegate = self;
-    self.galleryPickerController.presentationController.delegate = self;
-    self.galleryPickerController.videoQuality = UIImagePickerControllerQualityTypeHigh;
-    
-    switch (type) {
-        case IMAGE:
-            self.galleryPickerController.mediaTypes = imageTypes;
-            self.galleryPickerController.imageExportPreset = allowCompression ? UIImagePickerControllerImageURLExportPresetCompatible : UIImagePickerControllerImageURLExportPresetCurrent;
-            break;
-            
-        case VIDEO:
-            self.galleryPickerController.mediaTypes = videoTypes;
-            self.galleryPickerController.videoExportPreset = allowCompression ? AVAssetExportPresetHighestQuality : AVAssetExportPresetPassthrough;
-            break;
-            
-        default:
-            self.galleryPickerController.mediaTypes = [videoTypes arrayByAddingObjectsFromArray:imageTypes];
-            break;
-    }
-    
-    [[self viewControllerWithWindow:nil] presentViewController:self.galleryPickerController animated:YES completion:nil];
-#endif // PICKER_LEGACY_MEDIA
     
 }
 
-#ifdef PICKER_LEGACY_MEDIA
-- (void) resolveMultiPickFromGallery:(MediaType)type withCompressionAllowed:(BOOL)allowCompression {
-    DKImagePickerController * dkImagePickerController = [[DKImagePickerController alloc] init];
-    
-    UIAlertController* alert = [UIAlertController alertControllerWithTitle:@"" message:@"" preferredStyle:UIAlertControllerStyleAlert];
-    UIActivityIndicatorView* indicator = [[UIActivityIndicatorView alloc] initWithActivityIndicatorStyle:UIActivityIndicatorViewStyleWhite];
-    
-    UIViewController *currentViewController = [self viewControllerWithWindow:nil];
-    if(_eventSink == nil) {
-        // Create alert dialog for asset caching
-        [alert.view setCenter: currentViewController.view.center];
-        [alert.view addConstraint: [NSLayoutConstraint constraintWithItem:alert.view attribute:NSLayoutAttributeHeight relatedBy:NSLayoutRelationEqual toItem:nil attribute:NSLayoutAttributeNotAnAttribute multiplier:1 constant:100]];
-        
-        // Create a default loader if user don't provide a status handler
-        indicator.hidesWhenStopped = YES;
-        [indicator setCenter: alert.view.center];
-        indicator.autoresizingMask = (UIViewAutoresizingFlexibleRightMargin | UIViewAutoresizingFlexibleLeftMargin | UIViewAutoresizingFlexibleBottomMargin | UIViewAutoresizingFlexibleTopMargin);
-        [alert.view addSubview: indicator];
-    }
-    
-    DKImageAssetExporterConfiguration * exportConfiguration = [[DKImageAssetExporterConfiguration alloc] init];
-    exportConfiguration.imageExportPreset = allowCompression ? DKImageExportPresentCompatible : DKImageExportPresentCurrent;
-    exportConfiguration.videoExportPreset = allowCompression ? AVAssetExportPresetHighestQuality : AVAssetExportPresetPassthrough;
-    dkImagePickerController.exporter = [dkImagePickerController.exporter initWithConfiguration:exportConfiguration];
-    
-    dkImagePickerController.exportsWhenCompleted = YES;
-    dkImagePickerController.showsCancelButton = YES;
-    dkImagePickerController.sourceType = DKImagePickerControllerSourceTypePhoto;
-    dkImagePickerController.assetType = type == VIDEO ? DKImagePickerControllerAssetTypeAllVideos : type == IMAGE ? DKImagePickerControllerAssetTypeAllPhotos : DKImagePickerControllerAssetTypeAllAssets;
-    
-    // Export status changed
-    [dkImagePickerController setExportStatusChanged:^(enum DKImagePickerControllerExportStatus status) {
-        
-        if(status == DKImagePickerControllerExportStatusExporting && dkImagePickerController.selectedAssets.count > 0){
-            Log("Exporting assets, this operation may take a while if remote (iCloud) assets are being cached.");
-            
-            if(self->_eventSink != nil){
-                self->_eventSink([NSNumber numberWithBool:YES]);
-            } else {
-                [indicator startAnimating];
-                [currentViewController showViewController:alert sender:nil];
-            }
-            
-        } else {
-            if(self->_eventSink != nil) {
-                self->_eventSink([NSNumber numberWithBool:NO]);
-            } else {
-                [indicator stopAnimating];
-                [alert dismissViewControllerAnimated:YES completion:nil];
-            }
-            
-        }
-    }];
-    
-    // Did cancel
-    [dkImagePickerController setDidCancel:^(){
-        self->_result(nil);
-        self->_result = nil;
-    }];
-    
-    // Did select
-    [dkImagePickerController setDidSelectAssets:^(NSArray<DKAsset*> * __nonnull DKAssets) {
-        NSMutableArray<NSURL*>* paths = [[NSMutableArray<NSURL*> alloc] init];
-        
-        for(DKAsset * asset in DKAssets) {
-            if(asset.localTemporaryPath.absoluteURL != nil) {
-                [paths addObject:asset.localTemporaryPath.absoluteURL];
-            }
-        }
-        
-        [self handleResult: paths];
-    }];
-    
-    [[self viewControllerWithWindow:nil] presentViewController:dkImagePickerController animated:YES completion:nil];
-}
-#endif // PICKER_LEGACY_MEDIA
 #endif // PICKER_MEDIA
 
 #ifdef PICKER_AUDIO
@@ -450,48 +333,6 @@ didPickDocumentsAtURLs:(NSArray<NSURL *> *)urls{
 #endif // PICKER_DOCUMENT
 
 #ifdef PICKER_MEDIA
-#ifdef PICKER_LEGACY_MEDIA
-// ImagePicker delegate
-- (void)imagePickerController:(UIImagePickerController *)picker didFinishPickingMediaWithInfo:(NSDictionary *)info {
-    if(_result == nil) {
-        return;
-    }
-    
-    NSURL *pickedVideoUrl = [info objectForKey:UIImagePickerControllerMediaURL];
-    NSURL *pickedImageUrl;
-
-    if(@available(iOS 13.0, *)) {
-
-        if(pickedVideoUrl != nil) {
-            NSString * fileName = [pickedVideoUrl lastPathComponent];
-            NSURL * destination = [NSURL fileURLWithPath:[NSTemporaryDirectory() stringByAppendingPathComponent:fileName]];
-
-            if([[NSFileManager defaultManager] isReadableFileAtPath: [pickedVideoUrl path]]) {
-                Log(@"Caching video file for iOS 13 or above...");
-                [[NSFileManager defaultManager] copyItemAtURL:pickedVideoUrl toURL:destination error:nil];
-                pickedVideoUrl = destination;
-            }
-        } else {
-            pickedImageUrl = [info objectForKey:UIImagePickerControllerImageURL];
-        }
-
-    } else {
-        pickedImageUrl = [info objectForKey:UIImagePickerControllerImageURL];
-    }
-
-    [picker dismissViewControllerAnimated:YES completion:NULL];
-
-    if(pickedImageUrl == nil && pickedVideoUrl == nil) {
-        _result([FlutterError errorWithCode:@"file_picker_error"
-                                    message:@"Temporary file could not be created"
-                                    details:nil]);
-        _result = nil;
-        return;
-    }
-
-    [self handleResult: pickedVideoUrl != nil ? pickedVideoUrl : pickedImageUrl];
-}
-#endif // PICKER_LEGACY_MEDIA
 
 #ifdef PHPicker
 
@@ -711,14 +552,6 @@ didPickDocumentsAtURLs:(NSArray<NSURL *> *)urls{
 }
 #endif // PICKER_DOCUMENT
 
-#ifdef PICKER_LEGACY_MEDIA
-- (void)imagePickerControllerDidCancel:(UIImagePickerController *)picker {
-    Log(@"FilePicker canceled");
-    _result(nil);
-    _result = nil;
-    [picker dismissViewControllerAnimated:YES completion:NULL];
-}
-#endif
 
 #pragma mark - Alert dialog
 

@@ -50,11 +50,17 @@ for setting, value, count in [
     check(project.count(f'{setting} = {value};') == count, f'Inconsistent {setting}')
 podfile = (ROOT / 'ios/Podfile').read_text(encoding='utf-8')
 check("platform :ios, '15.0'" in podfile, 'Podfile minimum iOS mismatch')
-check('Pod::PICKER_LEGACY_MEDIA = false' in podfile,
-      'Unused camera/location media fallback must be excluded')
 picker_spec = (ROOT / 'packages/file_picker/ios/file_picker.podspec').read_text(encoding='utf-8')
-check('if !Pod.const_defined?(:PICKER_LEGACY_MEDIA) || Pod::PICKER_LEGACY_MEDIA' in picker_spec,
-      'file_picker must honor the legacy media opt-out')
+picker_root = ROOT / 'packages/file_picker/ios/file_picker'
+for path in [ROOT / 'packages/file_picker/ios/file_picker.podspec',
+             picker_root / 'Package.swift',
+             *picker_root.joinpath('Sources').rglob('*.m'),
+             *picker_root.joinpath('Sources').rglob('*.h')]:
+    source = path.read_text(encoding='utf-8')
+    check(not re.search(r'DKImagePickerController|DKCamera|DKPhotoGallery|UIImagePickerController|PICKER_LEGACY_MEDIA', source),
+          f'Legacy media dependency/API still present: {path.relative_to(ROOT)}')
+check("s.ios.deployment_target = '14.0'" in picker_spec, 'PHPicker requires iOS 14+')
+check(not (picker_root / 'Package.resolved').exists(), 'Stale file_picker SPM resolution')
 if args.app_plist and version:
     built_info = plistlib.loads(args.app_plist.read_bytes())
     for key, expected in [

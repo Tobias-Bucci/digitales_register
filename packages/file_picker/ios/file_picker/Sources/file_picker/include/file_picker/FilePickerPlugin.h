@@ -9,14 +9,11 @@
 #import <PhotosUI/PHPicker.h>
 #endif
 
-#if defined(PICKER_MEDIA) && !defined(PICKER_LEGACY_MEDIA) && !defined(PHPicker)
-#error PHPicker is required when PICKER_LEGACY_MEDIA is disabled.
+#if defined(PICKER_MEDIA) && !defined(PHPicker)
+#error This file_picker requires PHPicker (iOS 14+).
 #endif
 
 @interface FilePickerPlugin : NSObject<FlutterPlugin, FlutterStreamHandler, UITabBarDelegate, UINavigationControllerDelegate, UIAdaptivePresentationControllerDelegate
-#ifdef PICKER_LEGACY_MEDIA
-    , UIImagePickerControllerDelegate
-#endif
 #ifdef PICKER_MEDIA
 #ifdef PHPicker
     , PHPickerViewControllerDelegate
