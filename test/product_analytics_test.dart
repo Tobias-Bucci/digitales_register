@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:convert';
 import 'package:dr/analytics_schema.dart';
 import 'package:dr/analytics_school_ids.dart';
 import 'package:dr/config.dart';
@@ -9,10 +10,17 @@ import 'privacy_consent_test.dart' show MemoryStore, FakeCollection;
 
 class MemoryAnalyticsStore implements AnalyticsLocalStore {
   final values = <String, String>{};
+  bool failRead = false;
+  bool failWrite = false;
   @override
-  Future<String?> read(String key) async => values[key];
+  Future<String?> read(String key) async {
+    if (failRead) throw StateError('storage read');
+    return values[key];
+  }
+
   @override
   Future<void> write(String key, String value) async {
+    if (failWrite) throw StateError('storage write');
     values[key] = value;
   }
 }
@@ -102,6 +110,52 @@ void main() {
         .firstWhere((url) => schools.values.where((v) => v == url).length > 1);
     expect(analyticsSchoolIdForUrl(duplicate), isNull);
   });
+  for (final raw in [
+    '{',
+    '[]',
+    'null',
+    '{"A":null}',
+    '{"A":5}',
+    '{"version":3,"identities":{}}',
+    '{}'
+  ]) {
+    test('repairs corrupt/legacy identity $raw and remains stable after reload',
+        () async {
+      store.values['analyticsIdentityMapV4'] = raw;
+      await service.identifyUser('A', demo: false);
+      expect(service.identityReady, true);
+      final id = sink.ids.last;
+      expect(jsonDecode(store.values['analyticsIdentityMapV4']!)['A'], id);
+      await service.clearIdentity();
+      await service.identifyUser('A', demo: false);
+      expect(sink.ids.last, id);
+    });
+  }
+  test('repair retains valid identities for other accounts', () async {
+    final valid = ProductAnalytics.newUuid();
+    store.values['analyticsIdentityMapV4'] =
+        jsonEncode({'kept': valid, 'A': 5});
+    await service.identifyUser('A', demo: false);
+    expect(jsonDecode(store.values['analyticsIdentityMapV4']!)['kept'], valid);
+    await service.identifyUser('kept', demo: false);
+    expect(sink.ids.last, valid);
+  });
+  for (final readFailure in [false, true]) {
+    test(
+        'identity retries after storage ${readFailure ? 'read' : 'write'} failure',
+        () async {
+      store.failRead = readFailure;
+      store.failWrite = !readFailure;
+      store.values['analyticsIdentityMapV4'] = '{';
+      await service.identifyUser('A', demo: false);
+      expect(service.identityReady, false);
+      expect(sink.ids, isEmpty);
+      store.failRead = store.failWrite = false;
+      await service.identifyUser('A', demo: false);
+      expect(service.identityReady, true);
+      expect(sink.ids, hasLength(1));
+    });
+  }
   test('old consent cannot authorize; current choice needs no age check',
       () async {
     for (final age in AnalyticsAgeEligibility.values) {

@@ -1,4 +1,6 @@
 import 'dart:convert';
+import 'package:dr/diagnostics_service.dart';
+import 'package:dr/privacy_log.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 const currentPrivacyNoticeVersion = 5;
@@ -50,6 +52,17 @@ class PrivacyDecision {
   bool get allOptionalAllowed => diagnosticsAllowed && academicStatsAllowed;
   bool get requiredOnly => !diagnosticsAllowed && !analyticsAllowed;
   bool get allowsTelemetry => allOptionalAllowed;
+
+  PrivacyDecision withReportsPurged() => PrivacyDecision(
+      version: version,
+      state: _legacyState,
+      diagnosticsConsent: diagnosticsConsent,
+      usageAnalyticsConsent: usageAnalyticsConsent,
+      academicStatisticsConsent: academicStatisticsConsent,
+      ageEligibility: ageEligibility,
+      completed: completed,
+      timestamp: timestamp,
+      reportsPurged: true);
 
   String serialize() => jsonEncode({
         'privacyNoticeVersionAccepted': version,
@@ -167,35 +180,66 @@ class PrivacyController {
     sdkReady = false;
   }
 
-  Future<bool> _stop({bool resetAnalytics = false}) async {
-    var success = true;
+  void _report(Object error, StackTrace stack) {
+    privacyLog('technical_operation');
+    diagnostics.report(error, stack, DiagnosticError.caught);
+  }
+
+  Future<({bool analytics, bool diagnostics, bool reset})> _stop(
+      {bool resetAnalytics = false}) async {
+    var analytics = true;
+    var diagnostics = true;
+    var reset = true;
     try {
       await collection.analyticsCollection(false);
-    } catch (_) {
-      success = false;
+    } catch (error, stack) {
+      _report(error, stack);
+      analytics = false;
     }
     try {
       await collection.crashCollection(false);
-    } catch (_) {
-      success = false;
+    } catch (error, stack) {
+      _report(error, stack);
+      diagnostics = false;
     }
     if (resetAnalytics) {
       try {
         await collection.resetAnalytics();
-      } catch (_) {
-        success = false;
+      } catch (error, stack) {
+        _report(error, stack);
+        reset = false;
       }
     }
-    return success;
+    return (analytics: analytics, diagnostics: diagnostics, reset: reset);
   }
 
-  Future<void> _apply({bool alreadyPurged = false}) async {
+  Future<void> _apply(
+      {bool alreadyPurged = false,
+      required ({
+        bool analytics,
+        bool diagnostics,
+        bool reset
+      }) stopped}) async {
     // Purge cached diagnostics before a newly authorized diagnostic session.
     try {
       if (!alreadyPurged &&
           (!decision.diagnosticsAllowed || !decision.reportsPurged)) {
         await collection.deleteReports();
+        if (decision.isCurrent && !decision.reportsPurged) {
+          final purgedDecision = decision.withReportsPurged();
+          await store.write(purgedDecision);
+          decision = purgedDecision;
+        }
       }
+      // A failed stop of a now-authorized SDK can be reconciled by its start.
+      // A denied SDK must actually be disabled before any gate is opened.
+      if (!decision.diagnosticsAllowed && !stopped.diagnostics) {
+        await collection.crashCollection(false);
+      }
+      if (!decision.analyticsAllowed && !stopped.analytics) {
+        await collection.analyticsCollection(false);
+      }
+      if (!stopped.reset) await collection.resetAnalytics();
       if (!decision.diagnosticsAllowed && !decision.analyticsAllowed) return;
       if (decision.diagnosticsAllowed) await collection.crashCollection(true);
       if (decision.analyticsAllowed) await collection.analyticsCollection(true);
@@ -203,7 +247,8 @@ class PrivacyController {
       gate(sdkReady && decision.diagnosticsAllowed);
       analyticsGate?.call(sdkReady && decision.analyticsAllowed);
       await onApplied?.call(decision);
-    } catch (_) {
+    } catch (error, stack) {
+      _report(error, stack);
       _close();
       await _stop();
     }
@@ -214,10 +259,12 @@ class PrivacyController {
     try {
       existingInstallation = await store.installationExisted();
       decision = await store.read();
-    } catch (_) {
+    } catch (error, stack) {
+      _report(error, stack);
       decision = const PrivacyDecision();
     }
-    if (await _stop(resetAnalytics: !decision.analyticsAllowed)) await _apply();
+    final stopped = await _stop(resetAnalytics: !decision.analyticsAllowed);
+    await _apply(stopped: stopped);
   }
 
   Future<void> choose(TelemetryConsentState state) =>
@@ -250,8 +297,10 @@ class PrivacyController {
       var purged = false;
       try {
         await collection.deleteReports();
-        purged = stopped;
-      } catch (_) {}
+        purged = true;
+      } catch (error, stack) {
+        _report(error, stack);
+      }
       final next = PrivacyDecision(
           version: currentPrivacyNoticeVersion,
           diagnosticsConsent: diagnostics,
@@ -263,7 +312,7 @@ class PrivacyController {
           reportsPurged: purged);
       await store.write(next);
       decision = next;
-      if (purged) await _apply(alreadyPurged: true);
+      if (purged) await _apply(alreadyPurged: true, stopped: stopped);
     } finally {
       busy = false;
     }

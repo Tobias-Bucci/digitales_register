@@ -22,6 +22,7 @@ import 'package:built_value/serializer.dart';
 import 'package:collection/collection.dart';
 
 import 'package:dr/app_state.dart';
+import 'package:dr/diagnostics_service.dart';
 import 'package:dr/grade_average.dart';
 import 'package:dr/utc_date_time.dart';
 import 'package:dr/util.dart';
@@ -185,23 +186,61 @@ abstract class Homework implements Built<Homework, HomeworkBuilder> {
     ..firstSeen = realNow;
 }
 
+/// Parses a complete nonnegative decimal into the existing hundredths model.
+/// Decimal rounding is exact (half up), avoiding binary floating-point errors
+/// such as 1.005 * 100 falling just below 100.5. There is no school-grade cap;
+/// only finite numbers representable by the integer model can be stored.
+int? parseBackendGradeHundredths(String? grade) {
+  if (grade == null) return null;
+  final text = grade.trim();
+  final match =
+      RegExp(r'\+?(?:([0-9]+)(?:\.([0-9]*))?|\.([0-9]+))').firstMatch(text);
+  final value = double.tryParse(text);
+  if (match != null &&
+      match.start == 0 &&
+      match.end == text.length &&
+      value != null &&
+      value.isFinite &&
+      value >= 0) {
+    final decimals = match.group(2) ?? match.group(3) ?? '';
+    var hundredths = BigInt.parse(match.group(1) ?? '0') * BigInt.from(100) +
+        BigInt.parse(decimals.padRight(2, '0').substring(0, 2));
+    if (decimals.length > 2 && decimals.codeUnitAt(2) >= '5'.codeUnitAt(0)) {
+      hundredths += BigInt.one;
+    }
+    final result = int.tryParse(hundredths.toString());
+    if (result != null) return result;
+  }
+  diagnostics.report(const FormatException('Invalid backend grade'),
+      StackTrace.current, DiagnosticError.parser);
+  return null;
+}
+
+/// Canonical numeric representation for dashboard storage and comparisons.
+String? validateBackendGrade(String? grade) {
+  final value = parseBackendGradeHundredths(grade);
+  return value == null ? null : _backendGradeDecimal(value);
+}
+
+String _backendGradeDecimal(int hundredths) =>
+    '${hundredths ~/ 100}.${(hundredths % 100).toString().padLeft(2, '0')}';
+
 String formatGradeFromString(String? grade) {
-  if (grade == null) return "keine Note eingetragen";
-  final List<String> split = grade.split(".");
-  assert(split.length == 2);
-  final int mainGrade = int.parse(split[0]);
-  final String decimals = split[1];
+  final value = parseBackendGradeHundredths(grade);
+  if (value == null) return "keine Note eingetragen";
+  final mainGrade = value ~/ 100;
+  final decimals = value % 100;
   switch (decimals) {
-    case "00":
+    case 0:
       return "$mainGrade";
-    case "25":
+    case 25:
       return "$mainGrade+";
-    case "50":
+    case 50:
       return "$mainGrade/${mainGrade + 1}";
-    case "75":
+    case 75:
       return "${mainGrade + 1}-";
   }
-  return grade;
+  return _backendGradeDecimal(value);
 }
 
 class HomeworkType extends EnumClass {

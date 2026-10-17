@@ -65,6 +65,7 @@ import 'package:dr/privacy_log.dart';
 import 'package:dr/serializers.dart';
 import 'package:dr/settings_persistence_service.dart';
 import 'package:dr/state_persistence_service.dart';
+import 'package:dr/stored_login.dart';
 import 'package:dr/theme_controller.dart';
 import 'package:dr/tutorial/tutorial_service.dart';
 import 'package:dr/ui/debug_page.dart';
@@ -1049,18 +1050,17 @@ Future<void> _load(
   wrapper.noInternet = api.state.noInternet;
   await next(action);
   if (!api.state.noInternet) _popAll();
-  dynamic login;
+  Map<String, dynamic> login = <String, dynamic>{};
   try {
-    login = json.decode(await secureStorage.read(key: "login") ?? "{}");
-  } catch (e) {
-    login = const <Never, Never>{};
-    showSnackBar(tr('error.savedDataLoadFailed'));
-    privacyLog('technical_operation');
-    try {
-      await secureStorage.deleteAll();
-    } catch (e) {
-      showSnackBar(tr('error.reinstallSuggested'));
+    final raw = await secureStorage.read(key: 'login');
+    login = decodeStoredLogin(raw);
+    if (raw != null && json.encode(login) != raw) {
+      await secureStorage.write(key: 'login', value: json.encode(login));
     }
+  } catch (e, stack) {
+    diagnostics.report(e, stack, DiagnosticError.storage);
+    // A failed repair must not discard the valid accounts already recovered.
+    showSnackBar(tr('error.savedDataLoadFailed'));
   }
 
   final user = getString(login["user"]);
@@ -1080,7 +1080,7 @@ Future<void> _load(
     await api.actions.savePassActions.delete();
     await api.actions.routingActions.showLogin();
   } else {
-    if (user != null && pass != null) {
+    if (user != null && pass != null && url != null) {
       await api.actions.loginActions.login(
         LoginPayload(
           (b) => b
