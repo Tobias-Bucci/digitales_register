@@ -33,6 +33,13 @@ class _ChangeEmailState extends State<ChangeEmail> {
   final _passController = TextEditingController(),
       _emailController = TextEditingController();
   @override
+  void dispose() {
+    _passController.dispose();
+    _emailController.dispose();
+    super.dispose();
+  }
+
+  @override
   Widget build(BuildContext context) {
     final l10n = context.l10n;
     return Scaffold(

@@ -42,9 +42,20 @@ class _PassResetState extends State<PassReset> {
       _newPass2Controller = TextEditingController();
   @override
   void initState() {
-    _newPass1Controller.addListener(() => setState(() {}));
-    _newPass2Controller.addListener(() => setState(() {}));
+    _newPass1Controller.addListener(_onPasswordChanged);
+    _newPass2Controller.addListener(_onPasswordChanged);
     super.initState();
+  }
+
+  void _onPasswordChanged() => setState(() {});
+
+  @override
+  void dispose() {
+    _newPass1Controller.removeListener(_onPasswordChanged);
+    _newPass2Controller.removeListener(_onPasswordChanged);
+    _newPass1Controller.dispose();
+    _newPass2Controller.dispose();
+    super.dispose();
   }
 
   @override

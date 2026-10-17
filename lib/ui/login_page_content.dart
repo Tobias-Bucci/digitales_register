@@ -99,12 +99,23 @@ class _LoginPageContentState extends State<LoginPageContent> {
         _customSchoolSelected = true;
       }
     }
-    _schoolFocusNode.addListener(() {
-      setState(() {
-        // We manually check hasFocus
-      });
-    });
+    _schoolFocusNode.addListener(_onSchoolFocusChanged);
     super.initState();
+  }
+
+  void _onSchoolFocusChanged() => setState(() {});
+
+  @override
+  void dispose() {
+    _schoolFocusNode.removeListener(_onSchoolFocusChanged);
+    _schoolFocusNode.dispose();
+    _usernameController.dispose();
+    _passwordController.dispose();
+    _newPassword1Controller.dispose();
+    _newPassword2Controller.dispose();
+    _schoolController.dispose();
+    _urlController.dispose();
+    super.dispose();
   }
 
   String get url => selectedPresetServer?.item2 ?? _urlController.text;
@@ -713,7 +724,8 @@ class _LoginPageContentState extends State<LoginPageContent> {
                                                   onPressed: () =>
                                                       Navigator.pop(context),
                                                   child: Text(
-                                                    l10n.text('privacyConsent.cancel'),
+                                                    l10n.text(
+                                                        'privacyConsent.cancel'),
                                                   ),
                                                 ),
                                                 FilledButton(
