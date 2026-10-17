@@ -81,25 +81,77 @@ Future<void> _archiveMessage(
   }
 }
 
+// Scope pending replies to the session and store, so navigation does not release
+// the guard and an account switch cannot update the new account's messages.
+final _pendingReplies = Expando<Expando<Set<int>>>();
+
+bool _replyAccepted(dynamic response) {
+  if (response == true || response == '') return true;
+  if (response is! Map) return false;
+  final error = response['error'];
+  if (error != null && error != false && error != 0 && error != '') {
+    return false;
+  }
+  if (response.containsKey('success') &&
+      response['success'] != true &&
+      response['success'] != 1) {
+    return false;
+  }
+  return response.isEmpty ||
+      response.containsKey('error') ||
+      response.containsKey('success');
+}
+
 Future<void> _replyMessage(
   MiddlewareApi<AppState, AppStateBuilder, AppActions> api,
   ActionHandler next,
   Action<ReplyMessagePayload> action,
 ) async {
-  await next(action);
+  final session = wrapper;
+  final username = api.state.loginState.username;
+  final sessionUrl = session.url;
+  final sessionUser = session.user;
+  final stores = _pendingReplies[session] ??= Expando<Set<int>>();
+  final pending = stores[api.actions] ??= <int>{};
+  final message = api.state.messagesState.messages
+      .where((m) => m.id == action.payload.messageId)
+      .firstOrNull;
+  if (message == null ||
+      message.showReply != true ||
+      !pending.add(action.payload.messageId)) {
+    return;
+  }
   try {
-    await wrapper.send(
+    await next(action);
+    final dynamic response = await session.send(
       "api/message/reply",
       args: {
         "messageId": action.payload.messageId,
         "response": {"response": action.payload.response},
       },
+      acceptEmptyResponse: true,
     );
-    // If the API call completes without throwing, we consider it a success
+    if (!_replyAccepted(response)) {
+      diagnostics.report(const FormatException('Reply not acknowledged'),
+          StackTrace.current, DiagnosticError.http);
+      if (identical(wrapper, session)) showSnackBar(tr('messages.replyFailed'));
+      return;
+    }
+    if (!identical(wrapper, session) ||
+        session.url != sessionUrl ||
+        session.user != sessionUser ||
+        api.state.loginState.username != username ||
+        !api.state.messagesState.messages
+            .any((m) => m.id == message.id && m.showReply == true)) {
+      return;
+    }
     await api.actions.messagesActions.repliedMessage(action.payload);
     _markRuntimeCacheStale(_messagesCacheKey);
-  } catch (e) {
-    // Optionally handle error? The wrapper probably shows an error snackbar for generic failures.
+  } catch (error, stack) {
+    diagnostics.report(error, stack, DiagnosticError.http);
+    if (identical(wrapper, session)) showSnackBar(tr('messages.replyFailed'));
+  } finally {
+    pending.remove(action.payload.messageId);
   }
 }
 

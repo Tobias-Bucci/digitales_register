@@ -389,6 +389,7 @@
   "messages.archive": "Archiviëia",
   "messages.unarchive": "Anulëia l'archiviaziun",
   "messages.unarchiveFailed": "L'archiviaziun ne à nia podü gní anulada. Proa indô.",
+  "messages.replyFailed": "La resposta ne à nia podü gní menada. Proa indô.",
   "messages.archiveFailed": "La comunicaziun ne à nia podü gní archiviada. Proa indô.",
   "messages.none": "Ciamò degüna comunicaziun",
   "messages.new": "nü",

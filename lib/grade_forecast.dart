@@ -1,5 +1,6 @@
 import 'package:dr/app_clock.dart';
 import 'package:dr/app_state.dart';
+import 'package:dr/calendar_date.dart';
 import 'package:dr/data.dart';
 
 enum GradeForecastTrend { rising, falling, stable }
@@ -38,7 +39,7 @@ GradeForecast? calculateGradeForecast({
   DateTime? now,
   DateTime? schoolYearEnd,
 }) {
-  final asOf = _dateOnly(now ?? appClock.now);
+  final asOf = calendarDate(now ?? appClock.now);
   final schoolYearStart = appClock.isDemoMode
       ? AppClock.demoSchoolYearStart
       : (asOf.month >= 8 ? DateTime(asOf.year, 9) : DateTime(asOf.year - 1, 9));
@@ -51,18 +52,18 @@ GradeForecast? calculateGradeForecast({
     for (final grade in subject.basicGrades(semester) ?? const <GradeAll>[]) {
       if (grade.grade != null &&
           !grade.cancelled &&
-          !grade.date.isBefore(schoolYearStart) &&
-          !grade.date.isAfter(asOf)) {
+          !calendarDate(grade.date).isBefore(calendarDate(schoolYearStart)) &&
+          !calendarDate(grade.date).isAfter(asOf)) {
         grades.add(grade);
       }
     }
   }
   if (grades.isEmpty) return null;
-  grades.sort((a, b) => a.date.compareTo(b.date));
+  grades.sort((a, b) => calendarDate(a.date).compareTo(calendarDate(b.date)));
 
   final byDay = <DateTime, List<GradeAll>>{};
   for (final grade in grades) {
-    final day = DateTime(grade.date.year, grade.date.month, grade.date.day);
+    final day = calendarDate(grade.date);
     byDay.putIfAbsent(day, () => <GradeAll>[]).add(grade);
   }
   if (grades.length < 4 || byDay.length < 3) return null;
@@ -98,7 +99,7 @@ GradeForecast? calculateGradeForecast({
   if (denominator == 0) return null;
   final slope = numerator / denominator;
   final intercept = yMean - slope * xMean;
-  final endX = end.difference(first).inDays.toDouble();
+  final endX = calendarDaysBetween(end, first).toDouble();
   final prediction = (intercept + slope * endX).clamp(100.0, 1000.0);
   return GradeForecast(
     currentAverage: sum / weight,
@@ -125,5 +126,3 @@ class _Observation {
 DateTime _schoolYearEnd(DateTime date) => date.month >= 8
     ? DateTime(date.year + 1, 6, 30)
     : DateTime(date.year, 6, 30);
-
-DateTime _dateOnly(DateTime date) => DateTime(date.year, date.month, date.day);

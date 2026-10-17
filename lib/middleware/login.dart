@@ -122,136 +122,153 @@ Future<void> _login(
   Action<LoginPayload> action,
 ) async {
   await next(action);
-  if (action.payload.user == "" || action.payload.pass == "") {
-    final emptyCredentials = await _loginText('login.emptyCredentials');
-    await api.actions.loginActions.loginFailed(
-      LoginFailedPayload(
-        (b) => b
-          ..cause = emptyCredentials
-          ..username = action.payload.user,
-      ),
-    );
-    return;
+  var failureDispatched = false;
+  Future<void> fail(LoginFailedPayload payload) {
+    failureDispatched = true;
+    return api.actions.loginActions.loginFailed(payload);
   }
 
-  final rawUrl = action.payload.url.trim();
-  final isDemoLogin = action.payload.user == 'demo' &&
-      action.payload.pass == 'demo' &&
-      rawUrl.isEmpty;
-
-  final isDebugLogin = action.payload.user == 'debug';
-  final actualUser = isDebugLogin ? 'stbuctob' : action.payload.user;
-  final url = isDemoLogin ? '' : fixupUrl(rawUrl);
-  if (!isDemoLogin && Uri.parse(url).scheme != 'https') {
-    final httpsRequired = await _loginText('login.httpsRequired');
-    await api.actions.loginActions.loginFailed(
-      LoginFailedPayload(
-        (b) => b
-          ..cause = httpsRequired
-          ..username = action.payload.user,
-      ),
-    );
-    return;
-  }
-  await api.actions.loginActions.loggingIn();
-
-  // We need to set the url earlier because other parts of the app will try to read it
-  // because we pretend we are logged in earlier than we actually are.
-  wrapper.url = url;
-
-  bool offlineLogin = false;
-  if (action.payload.fromStorage) {
-    // log the user in locally so they don't have to
-    // wait for the network request to finish
-    assert(action.payload.fromStorage);
-    await api.actions.loginActions.loggedIn(
-      LoggedInPayload(
-        (b) => b
-          ..username = action.payload.user // Keep displaying "debug"
-          ..fromStorage = true
-          ..offlineOnly = true
-          ..keepShowingLoadingIndicator = true,
-      ),
-    );
-    await api.actions.setUrl(url);
-    offlineLogin = true;
-  }
-
-  final dynamic result = await wrapper.login(
-    actualUser, // Send 'stbuctob' if it was a debug login
-    action.payload.pass,
-    null,
-    url,
-    logout: () => api.actions.loginActions.logout(
-      LogoutPayload(
-        (b) => b
-          ..hard = api.state.settingsState.noPasswordSaving
-          ..forced = true,
-      ),
-    ),
-    configLoaded: () => api.actions.setConfig(wrapper.config),
-    relogin: api.actions.loginActions.automaticallyReloggedIn.call,
-    addProtocolItem: api.actions.addNetworkProtocolItem.call,
-  );
-  if (await wrapper.loggedIn) {
-    if (!wrapper.config.isStudentOrParent) {
-      wrapper.logout(hard: true);
-      final unsupportedMessage = await _loginText(
-        'login.userTypeUnsupported.message',
+  try {
+    if (action.payload.user == "" || action.payload.pass == "") {
+      final emptyCredentials = await _loginText('login.emptyCredentials');
+      await fail(
+        LoginFailedPayload(
+          (b) => b
+            ..cause = emptyCredentials
+            ..username = action.payload.user,
+        ),
       );
-      await api.actions.loginActions.loginFailed(
-        LoginFailedPayload((b) => b..cause = unsupportedMessage),
-      );
-      _showUserTypeNotSupported(url);
       return;
     }
 
-    // We logged in with 'stbuctob', but if it was the debug login,
-    // we want the app state to retain 'debug' as the username
-    final recordedUsername =
-        action.payload.user == 'debug' ? 'debug' : wrapper.user;
+    final rawUrl = action.payload.url.trim();
+    final isDemoLogin = action.payload.user == 'demo' &&
+        action.payload.pass == 'demo' &&
+        rawUrl.isEmpty;
 
-    await api.actions.loginActions.loggedIn(
-      LoggedInPayload(
-        (b) => b
-          ..username =
-              recordedUsername // Use the override instead of wrapper.user
-          ..fromStorage = action.payload.fromStorage
-          ..secondaryOnlineLogin = offlineLogin,
+    final isDebugLogin = action.payload.user == 'debug';
+    final actualUser = isDebugLogin ? 'stbuctob' : action.payload.user;
+    final url = isDemoLogin ? '' : fixupUrl(rawUrl);
+    if (!isDemoLogin && Uri.parse(url).scheme != 'https') {
+      final httpsRequired = await _loginText('login.httpsRequired');
+      await fail(
+        LoginFailedPayload(
+          (b) => b
+            ..cause = httpsRequired
+            ..username = action.payload.user,
+        ),
+      );
+      return;
+    }
+    await api.actions.loginActions.loggingIn();
+
+    // We need to set the url earlier because other parts of the app will try to read it
+    // because we pretend we are logged in earlier than we actually are.
+    wrapper.url = url;
+
+    bool offlineLogin = false;
+    if (action.payload.fromStorage) {
+      // log the user in locally so they don't have to
+      // wait for the network request to finish
+      assert(action.payload.fromStorage);
+      await api.actions.loginActions.loggedIn(
+        LoggedInPayload(
+          (b) => b
+            ..username = action.payload.user // Keep displaying "debug"
+            ..fromStorage = true
+            ..offlineOnly = true
+            ..keepShowingLoadingIndicator = true,
+        ),
+      );
+      await api.actions.setUrl(url);
+      offlineLogin = true;
+    }
+
+    final dynamic result = await wrapper.login(
+      actualUser, // Send 'stbuctob' if it was a debug login
+      action.payload.pass,
+      null,
+      url,
+      logout: () => api.actions.loginActions.logout(
+        LogoutPayload(
+          (b) => b
+            ..hard = api.state.settingsState.noPasswordSaving
+            ..forced = true,
+        ),
       ),
+      configLoaded: () => api.actions.setConfig(wrapper.config),
+      relogin: api.actions.loginActions.automaticallyReloggedIn.call,
+      addProtocolItem: api.actions.addNetworkProtocolItem.call,
     );
-  } else if (result is Map && result["error"] == "password_expired") {
-    await api.actions.savePassActions.delete();
-    await api.actions.loginActions.showChangePass(true);
-  } else {
-    final noInternet = wrapper.noInternet;
-    if (noInternet) {
-      await api.actions.noInternet(true);
-      if (action.payload.fromStorage) {
-        assert(action.payload.fromStorage);
-        await api.actions.loginActions.loggedIn(
-          LoggedInPayload(
-            (b) => b
-              ..username = action.payload.user
-              ..fromStorage = true
-              ..offlineOnly = true,
-          ),
+    if (await wrapper.loggedIn) {
+      if (!wrapper.config.isStudentOrParent) {
+        wrapper.logout(hard: true);
+        final unsupportedMessage = await _loginText(
+          'login.userTypeUnsupported.message',
         );
-        await api.actions.setUrl(url);
+        await fail(
+          LoginFailedPayload((b) => b..cause = unsupportedMessage),
+        );
+        _showUserTypeNotSupported(url);
         return;
       }
+
+      // We logged in with 'stbuctob', but if it was the debug login,
+      // we want the app state to retain 'debug' as the username
+      final recordedUsername =
+          action.payload.user == 'debug' ? 'debug' : wrapper.user;
+
+      await api.actions.loginActions.loggedIn(
+        LoggedInPayload(
+          (b) => b
+            ..username =
+                recordedUsername // Use the override instead of wrapper.user
+            ..fromStorage = action.payload.fromStorage
+            ..secondaryOnlineLogin = offlineLogin,
+        ),
+      );
+    } else if (result is Map && result["error"] == "password_expired") {
+      await api.actions.savePassActions.delete();
+      await api.actions.loginActions.showChangePass(true);
+    } else {
+      final noInternet = wrapper.noInternet;
+      if (noInternet) {
+        await api.actions.noInternet(true);
+        if (action.payload.fromStorage) {
+          assert(action.payload.fromStorage);
+          await api.actions.loginActions.loggedIn(
+            LoggedInPayload(
+              (b) => b
+                ..username = action.payload.user
+                ..fromStorage = true
+                ..offlineOnly = true,
+            ),
+          );
+          await api.actions.setUrl(url);
+          return;
+        }
+      }
+      final failureMessage = (await _loadMiddlewareLocalizations(api.state))
+          .requestError(wrapper.error);
+      await fail(
+        LoginFailedPayload(
+          (b) => b
+            ..cause = failureMessage
+            ..username = action.payload.user,
+        ),
+      );
     }
-    final failureMessage = (await _loadMiddlewareLocalizations(api.state))
-        .requestError(wrapper.error);
-    await api.actions.loginActions.loginFailed(
-      LoginFailedPayload(
-        (b) => b
-          ..cause = failureMessage
-          ..username = action.payload.user,
-      ),
+    await api.actions.setUrl(url);
+  } catch (error, stack) {
+    diagnostics.report(error, stack, DiagnosticError.login);
+    if (failureDispatched) return;
+    wrapper.logout(hard: true);
+    await fail(
+      LoginFailedPayload((b) => b
+        ..cause = tr('error.generic')
+        ..username = action.payload.user),
     );
   }
-  await api.actions.setUrl(url);
 }
 
 Future<void> _changePass(

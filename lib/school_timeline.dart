@@ -2,6 +2,7 @@
 //
 // This file is part of digitales_register.
 
+import 'package:dr/calendar_date.dart';
 import 'package:dr/data.dart';
 
 /// A named interval in which the existing school calendar contains no lessons.
@@ -395,9 +396,7 @@ DateTime _dateOnly(DateTime value) =>
 // UTC is only a coordinate system for date components, not a timezone
 // conversion. Local midnights still differ by 23/25 hours across DST.
 int _calendarDays(DateTime end, DateTime start) =>
-    DateTime.utc(end.year, end.month, end.day)
-        .difference(DateTime.utc(start.year, start.month, start.day))
-        .inDays;
+    calendarDaysBetween(end, start);
 
 DateTime? _earlier(DateTime? current, DateTime candidate) =>
     current == null || candidate.isBefore(current) ? candidate : current;

@@ -98,6 +98,7 @@ dev_dependencies:
   matcher: ^0.12.10-nullsafety.3
   msix: ^3.16.13
   quiver: ^3.2.2
+  timezone: ^0.11.2
 
 flutter_icons:
   android: "launcher_icon"

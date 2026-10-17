@@ -2,6 +2,7 @@ import 'dart:convert';
 
 import 'package:dr/app_clock.dart';
 import 'package:dr/app_state.dart';
+import 'package:dr/calendar_date.dart';
 import 'package:dr/data.dart';
 import 'package:dr/local_reminder_assessments.dart';
 import 'package:dr/utc_date_time.dart';
@@ -26,8 +27,7 @@ class ExamAssessment {
   final String? material;
   final String? type;
 
-  int daysUntil(DateTime today) =>
-      date.stripTime().difference(_date(today)).inDays;
+  int daysUntil(DateTime today) => calendarDaysBetween(date, today);
 }
 
 class StudyPhase {
@@ -54,6 +54,9 @@ class StudyPhase {
 }
 
 DateTime _date(DateTime value) => DateTime(value.year, value.month, value.day);
+
+DateTime _shiftDate(DateTime value, int days) =>
+    _date(calendarDate(value).add(Duration(days: days)));
 
 String countdownLabel(int days) {
   if (days < 0) return 'Vergangen';
@@ -103,15 +106,11 @@ List<ExamAssessment> upcomingExamAssessmentsForSubject(
   Subject subject,
   DateTime today,
 ) {
-  final todayDate = DateTime(today.year, today.month, today.day);
+  final todayDate = calendarDate(today);
   final seenIds = <String>{};
   return examAssessments(state).where((assessment) {
     final assessmentSubject = assessment.subject;
-    final assessmentDate = DateTime(
-      assessment.date.year,
-      assessment.date.month,
-      assessment.date.day,
-    );
+    final assessmentDate = calendarDate(assessment.date);
     return assessmentSubject != null &&
         equalsIgnoreCase(assessmentSubject, subject.name) &&
         assessmentDate.isAfter(todayDate) &&
@@ -133,7 +132,7 @@ List<StudyPhase> studyPhases(
   if (customPhases != null) return savedPhases;
   final examDate = _date(assessment.date);
   final now = _date(today);
-  final remaining = examDate.difference(now).inDays;
+  final remaining = calendarDaysBetween(examDate, now);
   if (remaining <= 0) {
     return [StudyPhase('final', 'Letzte Wiederholung', now)];
   }
@@ -143,28 +142,23 @@ List<StudyPhase> studyPhases(
   if (remaining <= 3) {
     return [
       StudyPhase('start', 'Stoff vorbereiten', now),
-      StudyPhase('final', 'Finale Wiederholung',
-          examDate.subtract(const Duration(days: 1))),
+      StudyPhase('final', 'Finale Wiederholung', _shiftDate(examDate, -1)),
     ];
   }
   if (remaining <= 9) {
     return [
       StudyPhase('start', 'Vorbereitung starten', now),
-      StudyPhase('deepen', 'Stoff vertiefen',
-          examDate.subtract(const Duration(days: 2))),
-      StudyPhase('final', 'Finale Wiederholung',
-          examDate.subtract(const Duration(days: 1))),
+      StudyPhase('deepen', 'Stoff vertiefen', _shiftDate(examDate, -2)),
+      StudyPhase('final', 'Finale Wiederholung', _shiftDate(examDate, -1)),
     ];
   }
-  final start = now.add(Duration(days: (remaining * .35).floor()));
+  final start = _shiftDate(now, (remaining * .35).floor());
   return [
     StudyPhase('start', 'Vorbereitung starten', start),
-    StudyPhase('deepen', 'Stoff vertiefen',
-        examDate.subtract(const Duration(days: 7))),
+    StudyPhase('deepen', 'Stoff vertiefen', _shiftDate(examDate, -7)),
     StudyPhase('practice', 'Üben und Wissenslücken schließen',
-        examDate.subtract(const Duration(days: 3))),
-    StudyPhase('final', 'Finale Wiederholung',
-        examDate.subtract(const Duration(days: 1))),
+        _shiftDate(examDate, -3)),
+    StudyPhase('final', 'Finale Wiederholung', _shiftDate(examDate, -1)),
   ];
 }
 

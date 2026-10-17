@@ -157,7 +157,8 @@ class Wrapper {
   Future<bool> get loggedIn => _loggedIn;
   // This future will be not completed if a login is in progress
   Future<bool> _loggedIn = Future.value(false);
-  VoidCallback? onLogout, onConfigLoaded, onRelogin;
+  VoidCallback? onLogout, onRelogin;
+  Future<void>? Function()? onConfigLoaded;
   AddNetworkProtocolItem? onAddProtocolItem;
   late bool safeMode;
 
@@ -186,7 +187,7 @@ class Wrapper {
     String? tfaCode,
     String? url, {
     VoidCallback? logout,
-    VoidCallback? configLoaded,
+    Future<void>? Function()? configLoaded,
     VoidCallback? relogin,
     AddNetworkProtocolItem? addProtocolItem,
   }) async {
@@ -207,7 +208,7 @@ class Wrapper {
           ..isStudentOrParent = true
           ..userId = 1,
       );
-      configLoaded?.call();
+      await configLoaded?.call();
       return;
     } else {
       demoMode = false;
@@ -247,6 +248,9 @@ class Wrapper {
     final loggedInCompleter = Completer<bool>();
     _loggedIn = loggedInCompleter.future;
     Map response;
+    _sessionRefreshTimer?.cancel();
+    _sessionRefreshTimer = null;
+    _serverLogoutTime = null;
     _clearCookies();
     try {
       response = getMap(
@@ -263,7 +267,9 @@ class Wrapper {
         ))
             .data,
       )!;
-    } catch (e) {
+    } catch (e, stack) {
+      diagnostics.report(e, stack, DiagnosticError.login);
+      _clearCookies();
       loggedInCompleter.complete(false);
       privacyLog('technical_operation');
       if (_mapRequestError(e).isConnectionIssue || await refreshNoInternet()) {
@@ -280,6 +286,10 @@ class Wrapper {
       error = null;
       try {
         await _loadConfig();
+        await onConfigLoaded?.call();
+        _serverLogoutTime =
+            DateTime.now().add(Duration(seconds: config.autoLogoutSeconds));
+        _scheduleSessionRefresh();
       } on UnexpectedLogoutException {
         if (!loggedInCompleter.isCompleted) {
           loggedInCompleter.complete(false);
@@ -291,17 +301,20 @@ class Wrapper {
         _sessionRefreshTimer?.cancel();
         _clearCookies();
         return null;
-      } catch (_) {
+      } catch (failure, stack) {
+        diagnostics.report(failure, stack, DiagnosticError.login);
+        error = _mapRequestError(failure).message;
+        noInternet = _mapRequestError(failure).isConnectionIssue;
+        _serverLogoutTime = null;
+        _sessionRefreshTimer?.cancel();
+        _sessionRefreshTimer = null;
+        _clearCookies();
         if (!loggedInCompleter.isCompleted) {
           loggedInCompleter.complete(false);
         }
-        rethrow;
+        return null;
       }
       loggedInCompleter.complete(true);
-      _serverLogoutTime =
-          DateTime.now().add(Duration(seconds: config.autoLogoutSeconds));
-      _scheduleSessionRefresh();
-      onConfigLoaded!();
     } else {
       privacyLog('technical_operation');
       loggedInCompleter.complete(false);

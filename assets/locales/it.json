@@ -389,6 +389,7 @@
   "messages.archive": "Archivia",
   "messages.unarchive": "Annulla archiviazione",
   "messages.unarchiveFailed": "Impossibile annullare l'archiviazione. Riprova.",
+  "messages.replyFailed": "Impossibile inviare la risposta. Riprova.",
   "messages.archiveFailed": "Impossibile archiviare la comunicazione. Riprova.",
   "messages.none": "Ancora nessuna comunicazione",
   "messages.new": "nuova",

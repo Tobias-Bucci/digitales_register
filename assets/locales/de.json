@@ -389,6 +389,7 @@
   "messages.archive": "Archivieren",
   "messages.unarchive": "Archivierung aufheben",
   "messages.unarchiveFailed": "Archivierung konnte nicht aufgehoben werden. Bitte erneut versuchen.",
+  "messages.replyFailed": "Antwort konnte nicht gesendet werden. Bitte erneut versuchen.",
   "messages.archiveFailed": "Mitteilung konnte nicht archiviert werden. Bitte erneut versuchen.",
   "messages.none": "Noch keine Mitteilungen",
   "messages.new": "neu",

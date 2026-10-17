@@ -1,5 +1,6 @@
 import 'package:dr/app_clock.dart';
 import 'package:dr/app_state.dart';
+import 'package:dr/calendar_date.dart';
 import 'package:dr/data.dart';
 
 class SubjectStatistic {
@@ -19,7 +20,7 @@ GradeStatistics calculateGradeStatistics({
   required Iterable<String> ignoredSubjects,
   DateTime? now,
 }) {
-  final asOf = now ?? appClock.now;
+  final asOf = calendarDate(now ?? appClock.now);
   final ignored = ignoredSubjects.map((s) => s.toLowerCase()).toSet();
   final averages = <SubjectStatistic>[];
   for (final subject in subjects) {
@@ -29,7 +30,9 @@ GradeStatistics calculateGradeStatistics({
     var sum = 0;
     var weight = 0;
     for (final grade in subject.basicGrades(semester) ?? const <GradeAll>[]) {
-      if (grade.grade == null || grade.cancelled || grade.date.isAfter(asOf)) {
+      if (grade.grade == null ||
+          grade.cancelled ||
+          calendarDate(grade.date).isAfter(asOf)) {
         continue;
       }
       final gradeWeight =
