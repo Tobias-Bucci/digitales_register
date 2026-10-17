@@ -503,8 +503,8 @@ abstract class Competence implements Built<Competence, CompetenceBuilder> {
   static Serializer<Competence> get serializer => _$competenceSerializer;
 
   String get typeName;
-  // The grade from 0 to 5.
-  int get grade;
+  // Null for malformed, negative or fractional star ratings.
+  int? get grade;
 }
 
 abstract class AbsenceGroup

@@ -234,6 +234,7 @@ class _SortedGradesWidgetState extends State<SortedGradesWidget> {
               child: SubjectWidget(
                 key: ValueKey(_subjectExpansionKey(s)),
                 subject: s,
+                competenceStarsScale: widget.vm.competenceStarsScale,
                 sortByType: widget.vm.sortByType,
                 viewSubjectDetail: () => widget.viewSubjectDetail(s),
                 showCancelled: widget.vm.showCancelled!,
@@ -318,6 +319,7 @@ class _SortedGradesWidgetState extends State<SortedGradesWidget> {
 }
 
 class SubjectWidget extends StatefulWidget {
+  final int? competenceStarsScale;
   final bool sortByType;
   final bool showCancelled;
   final bool noInternet;
@@ -331,6 +333,7 @@ class SubjectWidget extends StatefulWidget {
 
   const SubjectWidget(
       {super.key,
+      this.competenceStarsScale,
       required this.sortByType,
       required this.subject,
       required this.viewSubjectDetail,
@@ -503,6 +506,8 @@ class _SubjectWidgetState extends State<SubjectWidget> {
                               .map(
                                 (entry) => GradeTypeWidget(
                                   typeName: entry.key,
+                                  competenceStarsScale:
+                                      widget.competenceStarsScale,
                                   colorGrades: widget.colorGrades,
                                   entries: entry.value
                                       .where((g) =>
@@ -518,6 +523,8 @@ class _SubjectWidgetState extends State<SubjectWidget> {
                                 (g) => g is GradeDetail
                                     ? GradeWidget(
                                         grade: g,
+                                        competenceStarsScale:
+                                            widget.competenceStarsScale,
                                         colorGrades: widget.colorGrades,
                                       )
                                     : ObservationWidget(
@@ -536,11 +543,13 @@ class _SubjectWidgetState extends State<SubjectWidget> {
 }
 
 class GradeWidget extends StatelessWidget {
+  final int? competenceStarsScale;
   final GradeDetail grade;
   final bool colorGrades;
 
   const GradeWidget({
     super.key,
+    this.competenceStarsScale,
     required this.grade,
     this.colorGrades = false,
   });
@@ -599,6 +608,7 @@ class GradeWidget extends StatelessWidget {
           for (final c in grade.competences)
             CompetenceWidget(
               competence: c,
+              competenceStarsScale: competenceStarsScale,
               cancelled: grade.cancelled,
             ),
       ],
@@ -627,11 +637,15 @@ class ObservationWidget extends StatelessWidget {
 }
 
 class CompetenceWidget extends StatelessWidget {
+  final int? competenceStarsScale;
   final Competence competence;
   final bool cancelled;
 
   const CompetenceWidget(
-      {super.key, required this.competence, required this.cancelled});
+      {super.key,
+      this.competenceStarsScale,
+      required this.competence,
+      required this.cancelled});
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context).textTheme;
@@ -643,15 +657,25 @@ class CompetenceWidget extends StatelessWidget {
             context.l10n.translateSchoolTerm(competence.typeName),
             style: _cancelledStyle(theme.bodyMedium, cancelled),
           ),
-          Row(
-            children: List.generate(
-              5,
-              (n) => Star(
-                filled: n < competence.grade,
-              ),
-            ),
-          ),
+          _rating(),
         ],
+      ),
+    );
+  }
+
+  Widget _rating() {
+    final value = competence.grade;
+    final scale = competenceStarsScale;
+    if (value == null || value < 0) return const Text('—');
+    if (scale == null || scale <= 0) return Text('$value ★ / ?');
+    if (value > scale) return Text('$value / $scale ?');
+    // Bound widget allocation, not the school's scale. Large scales retain
+    // their exact values in a compact representation.
+    if (scale > 100) return Text('$value / $scale ★');
+    return SizedBox(
+      width: double.infinity,
+      child: Wrap(
+        children: List.generate(scale, (n) => Star(filled: n < value)),
       ),
     );
   }
@@ -668,12 +692,14 @@ class Star extends StatelessWidget {
 }
 
 class GradeTypeWidget extends StatelessWidget {
+  final int? competenceStarsScale;
   final String typeName;
   final List<DetailEntry> entries;
   final bool colorGrades;
 
   const GradeTypeWidget(
       {super.key,
+      this.competenceStarsScale,
       required this.typeName,
       required this.entries,
       required this.colorGrades});
@@ -682,7 +708,10 @@ class GradeTypeWidget extends StatelessWidget {
     final displayGrades = entries
         .map(
           (g) => g is GradeDetail
-              ? GradeWidget(grade: g, colorGrades: colorGrades)
+              ? GradeWidget(
+                  grade: g,
+                  colorGrades: colorGrades,
+                  competenceStarsScale: competenceStarsScale)
               : ObservationWidget(
                   observation: g as Observation,
                 ),

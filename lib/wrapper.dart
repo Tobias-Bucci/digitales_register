@@ -31,6 +31,7 @@ import 'package:dr/diagnostics_service.dart';
 import 'package:dr/i18n/app_localizations.dart';
 import 'package:dr/main.dart';
 import 'package:dr/privacy_log.dart';
+import 'package:dr/star_rating.dart';
 import 'package:dr/ui/dialog.dart';
 import 'package:dr/util.dart';
 import 'package:flutter/material.dart';
@@ -505,10 +506,27 @@ class Wrapper {
           ..autoLogoutSeconds = autoLogout
           ..fullName = fullName
           ..imgSource = imgSource
+          ..competenceStarsScale = _readCompetenceStarsScale(source)
           ..currentSemesterMaybe = currentSemesterMaybe
           ..isStudentOrParent = isStudentOrParent,
       );
     });
+  }
+
+  static int? _readCompetenceStarsScale(String source) {
+    // This key is present in the existing register webpage fixture. Do not
+    // infer a maximum from observed grades or carry a previous school's scale.
+    final matches = RegExp(
+      r'''(?:["']?competence_stars_scale["']?)\s*:\s*([^,}\r\n]+)''',
+    ).allMatches(source).toList();
+    if (matches.length != 1) return null;
+    var raw = matches.single.group(1)!.trim();
+    if (raw.length >= 2 &&
+        ((raw.startsWith('"') && raw.endsWith('"')) ||
+            (raw.startsWith("'") && raw.endsWith("'")))) {
+      raw = raw.substring(1, raw.length - 1);
+    }
+    return parseStarScale(raw);
   }
 
   static bool _isLoginRedirectPage(String source) {
