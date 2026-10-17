@@ -22,6 +22,7 @@ import 'package:dr/actions/app_actions.dart';
 import 'package:dr/analytics_service.dart';
 import 'package:dr/app_state.dart';
 import 'package:dr/data.dart';
+import 'package:dr/grade_average.dart';
 import 'package:dr/i18n/app_localizations.dart';
 import 'package:dr/tutorial/tutorial_target.dart';
 import 'package:dr/ui/dialog.dart';
@@ -122,7 +123,7 @@ String _calculateAverage(List<_Grade> grades) {
   if (weights == 0) {
     return "/";
   }
-  final average = sum ~/ weights;
+  final average = roundedGradeAverage(sum, weights)!;
   return gradeAverageFormat.format(average / 100);
 }
 
@@ -211,7 +212,7 @@ class _GradeCalculatorState extends State<GradeCalculator> {
         );
       },
     );
-    if (grade != null) {
+    if (grade != null && mounted) {
       setState(() {
         grades.add(_Grade(grade: grade.item1, weightPercentage: grade.item2));
       });
@@ -229,7 +230,7 @@ class _GradeCalculatorState extends State<GradeCalculator> {
         fullscreenDialog: true,
       ),
     );
-    if (result == null) {
+    if (result == null || !mounted) {
       return;
     }
     assert(grades.isEmpty);
@@ -242,6 +243,7 @@ class _GradeCalculatorState extends State<GradeCalculator> {
   }
 
   void updateGrade(_Grade previous, _Grade? updated) {
+    if (!mounted) return;
     setState(() {
       if (updated == null) {
         grades.remove(previous);
@@ -691,11 +693,17 @@ class _InputState extends State<_Input> {
   void initState() {
     super.initState();
     controller = TextEditingController(text: widget.initial);
-    focusNode.addListener(() {
-      setState(() {
-        // update error text
-      });
-    });
+    focusNode.addListener(_onFocusChanged);
+  }
+
+  void _onFocusChanged() => setState(() {});
+
+  @override
+  void dispose() {
+    focusNode.removeListener(_onFocusChanged);
+    focusNode.dispose();
+    controller.dispose();
+    super.dispose();
   }
 
   bool isValid() => getValue() != null;

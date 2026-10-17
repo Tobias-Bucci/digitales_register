@@ -17,7 +17,6 @@
 // along with digitales_register.  If not, see <http://www.gnu.org/licenses/>.
 
 import 'package:built_collection/built_collection.dart';
-import 'package:deleteable_tile/deleteable_tile.dart';
 import 'package:dr/analytics_service.dart';
 import 'package:dr/app_clock.dart';
 import 'package:dr/app_state.dart';
@@ -32,6 +31,7 @@ import 'package:dr/theme_controller.dart';
 import 'package:dr/tutorial/tutorial_page.dart';
 import 'package:dr/ui/about_app_dialog.dart';
 import 'package:dr/ui/autocomplete_options.dart';
+import 'package:dr/ui/committed_deleteable.dart';
 import 'package:dr/ui/dialog.dart';
 import 'package:dr/ui/network_protocol_page.dart';
 import 'package:dr/ui/privacy_data_details_page.dart';
@@ -1458,7 +1458,7 @@ class _GradesSettingsPageState extends State<_GradesSettingsPage> {
                         title: l10n.text('settings.addSubject'),
                       ),
                     );
-                    if (newSubject == null) {
+                    if (newSubject == null || !mounted) {
                       return;
                     }
                     setState(() {
@@ -1487,7 +1487,13 @@ class _GradesSettingsPageState extends State<_GradesSettingsPage> {
               : Column(
                   children: [
                     for (final subject in _ignoreForGradesAverage)
-                      Deleteable(
+                      CommittedDeleteable(
+                        onDeleted: () {
+                          _ignoreForGradesAverage.remove(subject);
+                          widget.onSetIgnoreForGradesAverage(
+                              List.of(_ignoreForGradesAverage));
+                          if (mounted) setState(() {});
+                        },
                         showExitAnimation: _ignoreForGradesAverage.length != 1,
                         showEntryAnimation: _ignoreForGradesAverage.length != 1,
                         key: ValueKey(subject),
@@ -1495,15 +1501,7 @@ class _GradesSettingsPageState extends State<_GradesSettingsPage> {
                           title: Text(subject),
                           trailing: IconButton(
                             icon: const Icon(Icons.close),
-                            onPressed: () async {
-                              await delete();
-                              setState(() {
-                                _ignoreForGradesAverage.remove(subject);
-                              });
-                              widget.onSetIgnoreForGradesAverage(
-                                _ignoreForGradesAverage,
-                              );
-                            },
+                            onPressed: delete,
                           ),
                         ),
                       ),
@@ -1983,6 +1981,7 @@ class _FavoriteSubjectsSettingsPageState
                         ),
                       );
                       if (newSubject == null ||
+                          !mounted ||
                           containsSubjectIgnoreCase(
                             _favoriteSubjects,
                             newSubject,
@@ -2010,7 +2009,13 @@ class _FavoriteSubjectsSettingsPageState
               : Column(
                   children: [
                     for (final subject in _favoriteSubjects)
-                      Deleteable(
+                      CommittedDeleteable(
+                        onDeleted: () {
+                          _favoriteSubjects.remove(subject);
+                          widget.onSetFavoriteSubjects(
+                              List.of(_favoriteSubjects));
+                          if (mounted) setState(() {});
+                        },
                         showExitAnimation: _favoriteSubjects.length != 1,
                         showEntryAnimation: _favoriteSubjects.length != 1,
                         key: ValueKey(subject),
@@ -2018,13 +2023,7 @@ class _FavoriteSubjectsSettingsPageState
                           title: Text(subject),
                           trailing: IconButton(
                             icon: const Icon(Icons.close),
-                            onPressed: () async {
-                              await delete();
-                              setState(() {
-                                _favoriteSubjects.remove(subject);
-                              });
-                              widget.onSetFavoriteSubjects(_favoriteSubjects);
-                            },
+                            onPressed: delete,
                           ),
                         ),
                       ),
@@ -2149,16 +2148,14 @@ class _EditSubjectsNicksState extends State<EditSubjectsNicks> {
   late FocusNode nickFocusNode, nameFocusNode;
   late bool forNewNick;
 
+  void _onSubjectChanged() => setState(() {});
+
   @override
   void initState() {
     forNewNick = widget.subjectName!.isEmpty;
     nickController = TextEditingController(text: widget.subjectNick);
     subjectNameController = TextEditingController(text: widget.subjectName)
-      ..addListener(
-        () {
-          setState(() {});
-        },
-      );
+      ..addListener(_onSubjectChanged);
     nickFocusNode = FocusNode();
     nameFocusNode = FocusNode();
     super.initState();
@@ -2166,6 +2163,7 @@ class _EditSubjectsNicksState extends State<EditSubjectsNicks> {
 
   @override
   void dispose() {
+    subjectNameController.removeListener(_onSubjectChanged);
     nickController.dispose();
     subjectNameController.dispose();
     nickFocusNode.dispose();
@@ -2318,20 +2316,19 @@ class _AddSubjectState extends State<AddSubject> {
     return trimmed;
   }
 
+  void _onSubjectChanged() => setState(() {});
+
   @override
   void initState() {
     super.initState();
     focusNode = FocusNode();
     subjectNameController = TextEditingController()
-      ..addListener(
-        () {
-          setState(() {});
-        },
-      );
+      ..addListener(_onSubjectChanged);
   }
 
   @override
   void dispose() {
+    subjectNameController.removeListener(_onSubjectChanged);
     subjectNameController.dispose();
     focusNode.dispose();
     super.dispose();

@@ -32,6 +32,7 @@ import 'package:dr/i18n/app_localizations.dart';
 import 'package:dr/main.dart';
 import 'package:dr/privacy_log.dart';
 import 'package:dr/star_rating.dart';
+import 'package:dr/ui/controlled_text_builder.dart';
 import 'package:dr/ui/dialog.dart';
 import 'package:dr/util.dart';
 import 'package:flutter/material.dart';
@@ -302,9 +303,8 @@ class Wrapper {
     return showDialog(
       context: navigatorKey!.currentContext!,
       builder: (context) {
-        final textInputController = TextEditingController();
-        return StatefulBuilder(
-          builder: (context, setState) => InfoDialog(
+        return ControlledTextBuilder(
+          builder: (context, textInputController) => InfoDialog(
             title: Text(context.l10n
                 .text(wasWrong ? 'login.invalid2FA' : 'login.require2FA')),
             content: TextField(

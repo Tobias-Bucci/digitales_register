@@ -21,7 +21,6 @@ import 'dart:convert';
 
 import 'package:badges/badges.dart' as badge;
 import 'package:built_collection/built_collection.dart';
-import 'package:deleteable_tile/deleteable_tile.dart';
 import 'package:dr/actions/app_actions.dart';
 import 'package:dr/app_clock.dart';
 import 'package:dr/app_state.dart';
@@ -40,6 +39,8 @@ import 'package:dr/school_timeline.dart';
 import 'package:dr/tutorial/tutorial_service.dart';
 import 'package:dr/tutorial/tutorial_target.dart';
 import 'package:dr/ui/animated_linear_progress_indicator.dart';
+import 'package:dr/ui/committed_deleteable.dart';
+import 'package:dr/ui/controlled_text_builder.dart';
 import 'package:dr/ui/dialog.dart';
 import 'package:dr/ui/favorite_subject_filter.dart';
 import 'package:dr/ui/last_fetched_overlay.dart';
@@ -231,7 +232,7 @@ class _DaysWidgetState extends State<DaysWidget> {
                     lastDate:
                         DateTime(appClock.now.year + 2, DateTime.december, 31),
                   );
-                  if (selected != null) {
+                  if (selected != null && context.mounted) {
                     setDialogState(() => dates[index] = selected);
                   }
                 },
@@ -424,14 +425,21 @@ class _DaysWidgetState extends State<DaysWidget> {
     super.initState();
     unawaited(_loadGradeDeadlineOverrides());
     updateValues(widget.vm.days.toList());
-    controller.addListener(() {
-      update();
-    });
+    controller.addListener(update);
     WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return;
       update();
       _afterFirstFrame = true;
       setState(() {});
     });
+  }
+
+  @override
+  void dispose() {
+    controller.removeListener(update);
+    controller.dispose();
+    _showScrollUp.dispose();
+    super.dispose();
   }
 
   @override
@@ -790,119 +798,118 @@ Future<String?> showEnterReminderDialog(
     context: context,
     builder: (context) {
       final l10n = context.l10n;
-      final controller = TextEditingController(text: initialMessage);
-      String message = initialMessage;
-      return StatefulBuilder(
-        builder: (context, setState) => InfoDialog(
-          title: Text(l10n.text('dashboard.reminder')),
-          content: ConstrainedBox(
-            constraints: const BoxConstraints(maxHeight: 320),
-            child: SingleChildScrollView(
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  if (showAssessmentHint)
-                    Container(
-                      width: double.infinity,
-                      margin: const EdgeInsets.only(bottom: 12),
-                      padding: const EdgeInsets.all(12),
-                      decoration: BoxDecoration(
-                        color: Theme.of(context)
-                            .colorScheme
-                            .secondaryContainer
-                            .withValues(alpha: 0.55),
-                        borderRadius: BorderRadius.circular(12),
+      return ControlledTextBuilder(
+        initialText: initialMessage,
+        builder: (context, controller) {
+          final message = controller.text;
+          return InfoDialog(
+            title: Text(l10n.text('dashboard.reminder')),
+            content: ConstrainedBox(
+              constraints: const BoxConstraints(maxHeight: 320),
+              child: SingleChildScrollView(
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    if (showAssessmentHint)
+                      Container(
+                        width: double.infinity,
+                        margin: const EdgeInsets.only(bottom: 12),
+                        padding: const EdgeInsets.all(12),
+                        decoration: BoxDecoration(
+                          color: Theme.of(context)
+                              .colorScheme
+                              .secondaryContainer
+                              .withValues(alpha: 0.55),
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              l10n.text(
+                                  'dashboard.assessmentShortcutHintTitle'),
+                              style: Theme.of(context).textTheme.titleSmall,
+                            ),
+                            const SizedBox(height: 6),
+                            Text(
+                              l10n.text(
+                                'dashboard.assessmentShortcutHintBody',
+                                args: {
+                                  'test': '/test',
+                                  'classwork': '/cw',
+                                  'exam': '/exam',
+                                },
+                              ),
+                            ),
+                          ],
+                        ),
                       ),
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
+                    TextField(
+                      controller: controller,
+                      autofocus: true,
+                      maxLines: null,
+                      decoration: InputDecoration(
+                        hintText: l10n.text('dashboard.reminderHint'),
+                      ),
+                    ),
+                    if (localReminderAssessmentSuggestions(message)
+                        .isNotEmpty) ...[
+                      const SizedBox(height: 12),
+                      Text(
+                        l10n.text('dashboard.assessmentShortcutSuggestions'),
+                        style: Theme.of(context).textTheme.labelLarge,
+                      ),
+                      const SizedBox(height: 8),
+                      Wrap(
+                        spacing: 8,
+                        runSpacing: 8,
                         children: [
-                          Text(
-                            l10n.text('dashboard.assessmentShortcutHintTitle'),
-                            style: Theme.of(context).textTheme.titleSmall,
-                          ),
-                          const SizedBox(height: 6),
-                          Text(
-                            l10n.text(
-                              'dashboard.assessmentShortcutHintBody',
-                              args: {
-                                'test': '/test',
-                                'classwork': '/cw',
-                                'exam': '/exam',
+                          for (final suggestion
+                              in localReminderAssessmentSuggestions(message))
+                            ActionChip(
+                              label: Text(
+                                '/${suggestion.command} - ${_localizedAssessmentSuggestionLabel(l10n, suggestion.type)}',
+                              ),
+                              onPressed: () {
+                                final replaced =
+                                    applyLocalReminderAssessmentSuggestion(
+                                  controller.text,
+                                  suggestion,
+                                );
+                                controller.value = controller.value.copyWith(
+                                  text: replaced,
+                                  selection: TextSelection.collapsed(
+                                    offset: replaced.length,
+                                  ),
+                                );
                               },
                             ),
-                          ),
                         ],
                       ),
-                    ),
-                  TextField(
-                    controller: controller,
-                    autofocus: true,
-                    maxLines: null,
-                    onChanged: (msg) {
-                      setState(() => message = msg);
-                    },
-                    decoration: InputDecoration(
-                      hintText: l10n.text('dashboard.reminderHint'),
-                    ),
-                  ),
-                  if (localReminderAssessmentSuggestions(message)
-                      .isNotEmpty) ...[
-                    const SizedBox(height: 12),
-                    Text(
-                      l10n.text('dashboard.assessmentShortcutSuggestions'),
-                      style: Theme.of(context).textTheme.labelLarge,
-                    ),
-                    const SizedBox(height: 8),
-                    Wrap(
-                      spacing: 8,
-                      runSpacing: 8,
-                      children: [
-                        for (final suggestion
-                            in localReminderAssessmentSuggestions(message))
-                          ActionChip(
-                            label: Text(
-                              '/${suggestion.command} - ${_localizedAssessmentSuggestionLabel(l10n, suggestion.type)}',
-                            ),
-                            onPressed: () {
-                              final replaced =
-                                  applyLocalReminderAssessmentSuggestion(
-                                controller.text,
-                                suggestion,
-                              );
-                              controller.value = controller.value.copyWith(
-                                text: replaced,
-                                selection: TextSelection.collapsed(
-                                  offset: replaced.length,
-                                ),
-                              );
-                              setState(() => message = replaced);
-                            },
-                          ),
-                      ],
-                    ),
+                    ],
                   ],
-                ],
+                ),
               ),
             ),
-          ),
-          actions: <Widget>[
-            TextButton(
-              onPressed: () {
-                Navigator.pop(context);
-              },
-              child: Text(l10n.text('common.cancel')),
-            ),
-            ElevatedButton(
-              onPressed: message.isNullOrEmpty
-                  ? null
-                  : () {
-                      Navigator.pop(context, message);
-                    },
-              child: Text(l10n.text('button.save')),
-            ),
-          ],
-        ),
+            actions: <Widget>[
+              TextButton(
+                onPressed: () {
+                  Navigator.pop(context);
+                },
+                child: Text(l10n.text('common.cancel')),
+              ),
+              ElevatedButton(
+                onPressed: message.isNullOrEmpty
+                    ? null
+                    : () {
+                        Navigator.pop(context, controller.text);
+                      },
+                child: Text(l10n.text('button.save')),
+              ),
+            ],
+          );
+        },
       );
     },
   );
@@ -1422,17 +1429,18 @@ class ItemWidget extends StatelessWidget {
             setDoNotAskWhenDelete!();
           }
           await delete();
-          removeThis!();
-          if (tutorialCreatedReminder) tutorialService.reminderDeleted(item.id);
         }
       } else {
         await delete();
-        removeThis!();
-        if (tutorialCreatedReminder) tutorialService.reminderDeleted(item.id);
       }
     }
 
-    Widget child = Deleteable(
+    Widget child = CommittedDeleteable(
+      key: ValueKey(item.id),
+      onDeleted: () {
+        removeThis!();
+        if (tutorialCreatedReminder) tutorialService.reminderDeleted(item.id);
+      },
       // this is a new entry or a reminder the user has just entered
       showEntryAnimation:
           realNow.difference(item.firstSeen) < const Duration(seconds: 1),

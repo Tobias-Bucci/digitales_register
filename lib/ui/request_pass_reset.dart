@@ -40,6 +40,13 @@ class _RequestPassResetState extends State<RequestPassReset> {
   final _usernameController = TextEditingController(),
       _emailController = TextEditingController();
 
+  @override
+  void dispose() {
+    _usernameController.dispose();
+    _emailController.dispose();
+    super.dispose();
+  }
+
   InputDecoration _fieldDecoration(
     BuildContext context,
     String label,
@@ -81,9 +88,8 @@ class _RequestPassResetState extends State<RequestPassReset> {
       accent.withValues(alpha: isDark ? 0.24 : 0.14),
       theme.colorScheme.surface,
     );
-    final pageBackground = isDark
-        ? const Color(0xFF1B2026)
-        : theme.colorScheme.surface;
+    final pageBackground =
+        isDark ? const Color(0xFF1B2026) : theme.colorScheme.surface;
 
     final pageTheme = theme.copyWith(
       colorScheme: theme.colorScheme.copyWith(

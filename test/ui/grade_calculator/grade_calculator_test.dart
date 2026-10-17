@@ -12,6 +12,28 @@ void main() {
 
   tearDown(resetTestState);
 
+  testWidgets('weighted calculator rounds 6.9375 to 6.94', (tester) async {
+    await pumpApp(tester, store: createStore(), home: const GradeCalculator());
+    for (final values in [('6', '1'), ('7', '15')]) {
+      await tester.tap(find.descendant(
+        of: find.byType(values.$1 == '6' ? Greeting : FloatingActionButton),
+        matching: find.text('Note hinzufügen'),
+      ));
+      await tester.pumpAndSettle();
+      final fields = find.descendant(
+        of: find.byType(InfoDialog),
+        matching: find.byType(TextField),
+      );
+      await tester.enterText(fields.first, values.$1);
+      await tester.enterText(fields.last, values.$2);
+      await tester.pump();
+      await tester.tap(find.text('Hinzufügen'));
+      await tester.pumpAndSettle();
+    }
+    expect(find.text('6,94'), findsOneWidget);
+    expect(find.text('6,93'), findsNothing);
+  });
+
   testWidgets('shows the welcome screen before any grade is entered',
       (tester) async {
     final store = createStore();

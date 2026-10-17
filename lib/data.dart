@@ -22,6 +22,7 @@ import 'package:built_value/serializer.dart';
 import 'package:collection/collection.dart';
 
 import 'package:dr/app_state.dart';
+import 'package:dr/grade_average.dart';
 import 'package:dr/utc_date_time.dart';
 import 'package:dr/util.dart';
 
@@ -359,7 +360,7 @@ abstract class Subject implements Built<Subject, SubjectBuilder> {
       cache[semester] = null;
       return null;
     }
-    final result = (sum / n).round();
+    final result = roundedGradeAverage(sum, n);
     cache[semester] = result;
     return result;
   }
