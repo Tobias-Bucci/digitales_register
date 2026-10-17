@@ -24,6 +24,7 @@ import 'package:dr/actions/grades_actions.dart';
 import 'package:dr/actions/login_actions.dart';
 import 'package:dr/app_state.dart';
 import 'package:dr/data.dart';
+import 'package:dr/star_rating.dart';
 import 'package:dr/utc_date_time.dart';
 import 'package:dr/util.dart';
 
@@ -218,8 +219,8 @@ GradeDetail _parseGrade(Map data) {
       ..description = getString(data["description"])
       ..id = getInt(data["id"])
       ..competences = ListBuilder(
-        getList(data["competences"])!.map<Competence>(
-          (dynamic c) => tryParse(getMap(c)!, _parseCompetence),
+        parseCompetenceList(data["competences"]).map<Competence>(
+          (c) => _parseCompetence(parseCompetenceMap(c)),
         ),
       ),
   );
@@ -233,8 +234,8 @@ GradeDetail _addCancelledDescription(GradeDetail grade, dynamic data) {
 
 Competence _parseCompetence(Map data) {
   return Competence((b) => b
-    ..typeName = getString(data["typeName"])
-    ..grade = double.parse(getString(data["grade"])!).toInt());
+    ..typeName = data["typeName"] is String ? data["typeName"] as String : "—"
+    ..grade = parseStarCount(data["grade"]));
 }
 
 void _setSemester(

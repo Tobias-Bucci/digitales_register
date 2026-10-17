@@ -67,6 +67,7 @@ abstract class SortedGradesViewModel
   Semester get semester;
   bool get sortByType;
   bool? get showCancelled;
+  int? get competenceStarsScale;
   bool get colorGrades;
   bool get noInternet;
   BuiltMap<String, SubjectTheme> get subjectThemes;
@@ -83,6 +84,7 @@ abstract class SortedGradesViewModel
         ..sortByType = state.settingsState.typeSorted
         ..semester = state.gradesState.semester.toBuilder()
         ..showCancelled = state.settingsState.showCancelled
+        ..competenceStarsScale = state.config?.competenceStarsScale
         ..colorGrades = state.settingsState.colorGrades
         ..noInternet = state.noInternet
         ..favoriteSubjects = state.settingsState.favoriteSubjects.toBuilder()

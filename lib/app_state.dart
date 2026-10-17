@@ -253,6 +253,9 @@ abstract class Config implements Built<Config, ConfigBuilder> {
   String get fullName;
   String get imgSource;
 
+  /// School-provided competence_stars_scale; null means unknown.
+  int? get competenceStarsScale;
+
   int? get currentSemesterMaybe;
   bool get isStudentOrParent;
   static Serializer<Config> get serializer => _$configSerializer;
