@@ -1,6 +1,7 @@
 import 'dart:math' as math;
 
 import 'package:dr/assessment_attachments.dart';
+import 'package:dr/calendar_date.dart';
 import 'package:dr/exam_study_plan.dart';
 import 'package:dr/i18n/app_localizations.dart';
 import 'package:dr/tutorial/tutorial_target.dart';
@@ -507,7 +508,8 @@ class _ExamWeekCalendarState extends State<_ExamWeekCalendar> {
     final phases = <({ExamAssessment assessment, StudyPhase phase})>[];
     for (final assessment in widget.assessments) {
       for (final phase in _phasesForAssessment(assessment)) {
-        final end = phase.date.add(Duration(days: phase.durationDays));
+        final end =
+            calendarDate(phase.date).add(Duration(days: phase.durationDays));
         if (!date.isBefore(_dateOnly(phase.date)) && date.isBefore(end)) {
           phases.add((assessment: assessment, phase: phase));
         }
@@ -802,7 +804,7 @@ class _StudyPhaseEditorState extends State<_StudyPhaseEditor> {
 bool _sameDay(DateTime a, DateTime b) =>
     a.year == b.year && a.month == b.month && a.day == b.day;
 
-DateTime _dateOnly(DateTime date) => DateTime(date.year, date.month, date.day);
+DateTime _dateOnly(DateTime date) => calendarDate(date);
 
 DateTime _mondayOf(DateTime date) =>
     _dateOnly(date).subtract(Duration(days: date.weekday - 1));

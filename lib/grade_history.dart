@@ -1,5 +1,6 @@
 import 'package:dr/app_clock.dart';
 import 'package:dr/app_state.dart';
+import 'package:dr/calendar_date.dart';
 import 'package:dr/data.dart';
 
 class GradeHistorySubjectComparison {
@@ -41,7 +42,7 @@ GradeHistoryComparison? compareGradeSemesters({
   required Iterable<String> ignoredSubjects,
   DateTime? now,
 }) {
-  final asOf = _dateOnly(now ?? appClock.now);
+  final asOf = calendarDate(now ?? appClock.now);
   final ignored = ignoredSubjects.map((s) => s.toLowerCase()).toSet();
   final current = _averagesBySubject(subjects, currentSemester, asOf, ignored);
   final previous =
@@ -78,7 +79,9 @@ Map<String, double> _averagesBySubject(
     var sum = 0;
     var weight = 0;
     for (final grade in subject.basicGrades(semester) ?? const <GradeAll>[]) {
-      if (grade.grade == null || grade.cancelled || grade.date.isAfter(asOf)) {
+      if (grade.grade == null ||
+          grade.cancelled ||
+          calendarDate(grade.date).isAfter(asOf)) {
         continue;
       }
       final gradeWeight =
@@ -95,5 +98,3 @@ double? _mean(Iterable<double> values) {
   if (values.isEmpty) return null;
   return values.reduce((a, b) => a + b) / values.length;
 }
-
-DateTime _dateOnly(DateTime date) => DateTime(date.year, date.month, date.day);
