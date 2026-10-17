@@ -42,6 +42,25 @@ typedef AddNetworkProtocolItem = void Function(NetworkProtocolItem item);
 
 class UnexpectedLogoutException implements Exception {}
 
+/// The API returns Unix seconds as a JSON number. Integral doubles carry the
+/// same meaning as integers; strings and fractional/expired values do not.
+@visibleForTesting
+DateTime parseSessionExpiration(Object? value, DateTime now) {
+  if (value is! num ||
+      !value.isFinite ||
+      value != value.truncateToDouble() ||
+      value <= 0 ||
+      value > 8640000000000) {
+    throw const FormatException('Invalid session expiration');
+  }
+  final expiration = DateTime.fromMillisecondsSinceEpoch(value.toInt() * 1000);
+  // Refreshing less than 25 seconds later would create an immediate timer loop.
+  if (!expiration.isAfter(now.add(const Duration(seconds: 25)))) {
+    throw const FormatException('Session expiration does not renew session');
+  }
+  return expiration;
+}
+
 class AppRequestException implements Exception {
   const AppRequestException({
     required this.message,
@@ -154,6 +173,12 @@ class Wrapper {
   DateTime lastInteraction = DateTime.now();
   DateTime? _serverLogoutTime;
   Timer? _sessionRefreshTimer;
+
+  @visibleForTesting
+  bool get sessionRefreshScheduled => _sessionRefreshTimer?.isActive ?? false;
+
+  @visibleForTesting
+  Future<void> refreshSessionNow() => _refreshSession();
   late Config config;
   Future<dynamic> login(
     String? user,
@@ -900,14 +925,14 @@ class Wrapper {
   }
 
   Future<void> _refreshSession() async {
-    if (!_appInForeground) return;
-    if (!await _loggedIn) return;
-    if (demoMode) return;
-    if (_serverLogoutTime == null) return;
-
-    Map? result;
     try {
-      result = getMap(
+      if (!_appInForeground ||
+          !await _loggedIn ||
+          demoMode ||
+          _serverLogoutTime == null) {
+        return;
+      }
+      final result = getMap(
         await send(
           "api/auth/extendSession",
           args: <String, Object?>{
@@ -915,7 +940,23 @@ class Wrapper {
           },
         ),
       );
-    } catch (error) {
+      // A request finishing after logout/backgrounding must not revive a timer.
+      if (!_appInForeground || !await _loggedIn || _serverLogoutTime == null) {
+        return;
+      }
+      if (result == null) {
+        throw const FormatException('Missing session refresh response');
+      }
+      if (result['forceLogout'] == true) {
+        logPerformanceEvent('session_refresh_forced_logout');
+        logout(hard: safeMode, logoutForcedByServer: true);
+        return;
+      }
+      _serverLogoutTime =
+          parseSessionExpiration(result['newExpiration'], DateTime.now());
+      _scheduleSessionRefresh();
+    } catch (error, stack) {
+      diagnostics.report(error, stack, DiagnosticError.login);
       privacyLog('technical_operation');
       logPerformanceEvent("session_refresh_failed", <String, Object?>{
         "reason": error.runtimeType.toString(),
@@ -924,25 +965,6 @@ class Wrapper {
       logout(hard: safeMode, logoutForcedByServer: true);
       return;
     }
-    if (result == null) {
-      logPerformanceEvent(
-        "session_refresh_failed",
-        <String, Object?>{"forcedLogout": true},
-      );
-      logout(hard: safeMode, logoutForcedByServer: true);
-      return;
-    }
-    if (result["forceLogout"] == true) {
-      logPerformanceEvent(
-        "session_refresh_forced_logout",
-      );
-      logout(hard: safeMode, logoutForcedByServer: true);
-      return;
-    }
-    _serverLogoutTime = DateTime.fromMillisecondsSinceEpoch(
-      (result["newExpiration"] as int) * 1000,
-    );
-    _scheduleSessionRefresh();
   }
 
   void interaction() {
@@ -953,11 +975,20 @@ class Wrapper {
     _sessionRefreshTimer?.cancel();
     _sessionRefreshTimer = null;
     if (_appInForeground && !logoutForcedByServer && _url != null) {
-      unawaited(dio.get<dynamic>("${baseAddress}logout"));
+      unawaited(dio.get<dynamic>("${baseAddress}logout").then<void>((_) {},
+          onError: (Object error, StackTrace stack) {
+        diagnostics.report(error, stack, DiagnosticError.login);
+        privacyLog('technical_operation');
+      }));
     }
     if (hard) {
       if (logoutForcedByServer) {
-        onLogout!();
+        try {
+          onLogout?.call();
+        } catch (error, stack) {
+          diagnostics.report(error, stack, DiagnosticError.login);
+          privacyLog('technical_operation');
+        }
       }
       _url = user = pass = null;
       _serverLogoutTime = null;

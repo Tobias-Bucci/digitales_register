@@ -183,22 +183,10 @@ Observation _parseObservation(Map data) {
   );
 }
 
-int? _parseGradeValue(String? grade) {
-  if (grade == null || grade == "" || grade == "0") return null;
-  final gradeSplitted = grade
-      .split(".")
-      .map(
-        (s) => int.parse(s),
-      )
-      .toList();
-  final gradeValue = gradeSplitted[0] * 100 + gradeSplitted[1];
-  return gradeValue;
-}
-
 GradeAll _parseGradeAll(Map data) {
   return GradeAll(
     (b) => b
-      ..grade = tryParse(getString(data["grade"]), _parseGradeValue)
+      ..grade = parseBackendGradeHundredths(getString(data["grade"]))
       ..weightPercentage = getInt(data["weight"])
       ..date = UtcDateTime.parse(getString(data["date"])!)
       ..cancelled = data["cancelled"] != 0
@@ -209,7 +197,7 @@ GradeAll _parseGradeAll(Map data) {
 GradeDetail _parseGrade(Map data) {
   return GradeDetail(
     (b) => b
-      ..grade = tryParse(getString(data["grade"]), _parseGradeValue)
+      ..grade = parseBackendGradeHundredths(getString(data["grade"]))
       ..date = UtcDateTime.parse(getString(data["date"])!)
       ..weightPercentage = getInt(data["weight"])
       ..cancelled = getBool(data["cancelled"])

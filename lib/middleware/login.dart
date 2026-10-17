@@ -47,31 +47,47 @@ Future<void> _logout(
   ActionHandler next,
   Action<LogoutPayload> action,
 ) async {
+  Future<bool> bestEffort(Future<void> Function() operation) async {
+    try {
+      await operation();
+      return true;
+    } catch (error, stack) {
+      diagnostics.report(error, stack, DiagnosticError.storage);
+      return false;
+    }
+  }
+
   if (action.payload.hard &&
       api.state.loginState.loggedIn &&
       api.state.loginState.username != null) {
-    await statePersistenceService.flush(
-      state: api.state,
-      deletedData: deletedData,
-      server: wrapper.loginAddress,
-      writer: _writeToStorage,
-      keyFactory: getStorageKey,
-    );
+    await bestEffort(() => statePersistenceService.flush(
+          state: api.state,
+          deletedData: deletedData,
+          server: wrapper.loginAddress,
+          writer: _writeToStorage,
+          keyFactory: getStorageKey,
+        ));
   }
+  var savedLogin = <String, dynamic>{};
   if (!api.state.settingsState.noPasswordSaving && action.payload.hard) {
-    await secureStorage.write(
-      key: "login",
-      value: json.encode(<String, Object?>{
-        "url": wrapper.url,
-        if (await secureStorage.containsKey(key: "login"))
-          "otherAccounts": json.decode(
-            (await secureStorage.read(key: "login"))!,
-          )["otherAccounts"],
-      }),
-    );
+    await bestEffort(() async {
+      savedLogin = decodeStoredLogin(await secureStorage.read(key: 'login'));
+    });
+    final saved = await bestEffort(() => secureStorage.write(
+          key: "login",
+          value: json.encode(<String, Object?>{
+            "url": wrapper.url,
+            'otherAccounts': savedLogin['otherAccounts'] ?? <Object?>[],
+          }),
+        ));
+    if (!saved && await bestEffort(() => secureStorage.delete(key: 'login'))) {
+      // If rewriting credentials fails but deletion works, prioritize logout
+      // over retaining the secondary account list in a damaged store.
+      savedLogin = <String, dynamic>{};
+    }
   }
   if (api.state.settingsState.deleteDataOnLogout && action.payload.hard) {
-    await api.actions.deleteData();
+    await bestEffort(() => api.actions.deleteData());
   }
   if (!action.payload.forced) {
     assert(action.payload.hard);
@@ -82,12 +98,21 @@ Future<void> _logout(
   }
   await next(action);
   if (action.payload.hard) {
+    _cancelNoInternetRetry();
+    _noInternetRetryInFlight = false;
     statePersistenceService.clear();
     _clearRuntimeCaches();
-    await androidWidgetSnapshotService.clear();
+    await bestEffort(androidWidgetSnapshotService.clear);
     wrapper = Wrapper();
     await api.actions.mountAppState(_emptyAppStateKeepingSettings(api.state));
-    await api.actions.load();
+    // Do not reload credentials after a failed storage write: it would log the
+    // user straight back in. The explicit logout owns the in-memory state.
+    await api.actions.loginActions.setAvailableAccounts(
+      (savedLogin['otherAccounts'] as List? ?? <Object?>[])
+          .map((dynamic account) => account['user'] as String)
+          .toList(),
+    );
+    await api.actions.routingActions.showLogin();
   }
 }
 

@@ -5,7 +5,9 @@ import 'dart:math';
 import 'package:dr/analytics_schema.dart';
 import 'package:dr/analytics_school_ids.dart';
 import 'package:dr/desktop.dart';
+import 'package:dr/diagnostics_service.dart';
 import 'package:dr/privacy_consent.dart';
+import 'package:dr/privacy_log.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -103,7 +105,11 @@ class ProductAnalytics {
   }
 
   Future<void> _serialize(Future<void> Function() work) {
-    final next = _tail.then((_) => work()).catchError((Object _) {});
+    final next =
+        _tail.then((_) => work()).catchError((Object error, StackTrace stack) {
+      privacyLog('technical_operation');
+      diagnostics.report(error, stack, DiagnosticError.caught);
+    });
     _tail = next;
     return next;
   }
@@ -171,15 +177,40 @@ class ProductAnalytics {
     return _accepted(() async {
       if (_identity == null) {
         final raw = await store.read('analyticsIdentityMapV4');
-        final map = raw == null
-            ? <String, dynamic>{}
-            : jsonDecode(raw) as Map<String, dynamic>;
-        var id = map[localAccountKey] as String?;
-        if (id == null ||
-            !RegExp(r'^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$')
-                .hasMatch(id)) {
+        final map = <String, String>{};
+        var repaired = false;
+        final uuid = RegExp(
+            r'^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$');
+        if (raw != null) {
+          try {
+            final decoded = jsonDecode(raw);
+            if (decoded is! Map<String, dynamic>) {
+              throw const FormatException('Invalid analytics identity map');
+            }
+            for (final entry in decoded.entries) {
+              if (entry.value is String &&
+                  uuid.hasMatch(entry.value as String)) {
+                map[entry.key] = entry.value as String;
+              } else {
+                repaired = true;
+              }
+            }
+            if (repaired) {
+              throw const FormatException('Invalid analytics identity entry');
+            }
+          } catch (error, stack) {
+            repaired = true;
+            privacyLog('technical_operation');
+            diagnostics.report(error, stack, DiagnosticError.storage);
+          }
+        }
+        var id = map[localAccountKey];
+        if (id == null) {
           id = newUuid();
           map[localAccountKey] = id;
+          repaired = true;
+        }
+        if (repaired) {
           await store.write('analyticsIdentityMapV4', jsonEncode(map));
         }
         if (epoch != _epoch || !enabled || !_accountOpen) return;

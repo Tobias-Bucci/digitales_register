@@ -22,6 +22,7 @@ import 'dart:io';
 import 'package:dr/actions/app_actions.dart';
 import 'package:dr/android_widget_snapshot.dart';
 import 'package:dr/app_state.dart';
+import 'package:dr/diagnostics_service.dart';
 import 'package:dr/main.dart';
 import 'package:flutter/services.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -106,11 +107,25 @@ class AndroidWidgetPlatformBridge {
 class AndroidWidgetSnapshotService {
   AndroidWidgetSnapshotService({
     AndroidWidgetPlatformBridge? bridge,
+    Future<SharedPreferences> Function()? preferences,
     this.debounce = const Duration(seconds: 2),
-  }) : _bridge = bridge ?? AndroidWidgetPlatformBridge();
+  })  : _bridge = bridge ?? AndroidWidgetPlatformBridge(),
+        _preferences = preferences ?? SharedPreferences.getInstance;
 
   final AndroidWidgetPlatformBridge _bridge;
   final Duration debounce;
+  final Future<SharedPreferences> Function() _preferences;
+  Future<void> _tail = Future.value();
+
+  // Each operation includes its native refresh. A clear is a barrier after all
+  // older writes and before all newer writes, even if an older write failed.
+  Future<void> _enqueue(Future<void> Function() work) {
+    final operation = _tail.then((_) => work());
+    _tail = operation.catchError((Object error, StackTrace stack) {
+      diagnostics.report(error, stack, DiagnosticError.storage);
+    });
+    return operation;
+  }
 
   Timer? _pendingSave;
   AppState? _pendingState;
@@ -119,7 +134,11 @@ class AndroidWidgetSnapshotService {
   void scheduleSync(AppState state) {
     _pendingState = state;
     _pendingSave?.cancel();
-    _pendingSave = Timer(debounce, () => unawaited(flush()));
+    _pendingSave = Timer(debounce, () {
+      unawaited(flush().catchError((Object error, StackTrace stack) {
+        diagnostics.report(error, stack, DiagnosticError.storage);
+      }));
+    });
   }
 
   Future<void> flush({AppState? state}) async {
@@ -133,24 +152,29 @@ class AndroidWidgetSnapshotService {
 
     final payload =
         json.encode(buildAndroidWidgetSnapshot(resolvedState).toJson());
-    if (_lastPayload == payload) {
-      return;
-    }
-
-    final prefs = await SharedPreferences.getInstance();
-    await prefs.setString(androidWidgetSnapshotStorageKey, payload);
-    _lastPayload = payload;
-    await _bridge.refreshWidgets();
+    await _enqueue(() async {
+      if (_lastPayload == payload) return;
+      final prefs = await _preferences();
+      if (!await prefs.setString(androidWidgetSnapshotStorageKey, payload)) {
+        throw StateError('Widget snapshot could not be saved');
+      }
+      _lastPayload = payload;
+      await _bridge.refreshWidgets();
+    });
   }
 
   Future<void> clear() async {
     _pendingSave?.cancel();
     _pendingSave = null;
     _pendingState = null;
-    _lastPayload = null;
-    final prefs = await SharedPreferences.getInstance();
-    await prefs.remove(androidWidgetSnapshotStorageKey);
-    await _bridge.refreshWidgets();
+    await _enqueue(() async {
+      _lastPayload = null;
+      final prefs = await _preferences();
+      if (!await prefs.remove(androidWidgetSnapshotStorageKey)) {
+        throw StateError('Widget snapshot could not be cleared');
+      }
+      await _bridge.refreshWidgets();
+    });
   }
 }
 

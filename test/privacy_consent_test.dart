@@ -25,15 +25,22 @@ class FakeCollection extends TelemetryCollection {
   final List<String> calls;
   bool failDelete = false;
   bool failAnalytics = false;
+  bool failStopAnalytics = false;
+  bool failStartAnalytics = false;
+  bool failStopCrash = false;
   @override
   Future<void> crashCollection(bool enabled) async {
     calls.add('crash:$enabled');
+    if (!enabled && failStopCrash) throw StateError('crash stop');
   }
 
   @override
   Future<void> analyticsCollection(bool enabled) async {
     calls.add('analytics:$enabled');
     if (failAnalytics) throw StateError('test');
+    if ((!enabled && failStopAnalytics) || (enabled && failStartAnalytics)) {
+      throw StateError('analytics collection');
+    }
   }
 
   @override
@@ -76,6 +83,67 @@ void main() {
     expect(PrivacyDecision.deserialize('malformed').isCurrent, false);
     expect(PrivacyDecision.deserialize(null).allowsTelemetry, false);
   });
+  test(
+      'successful purge is independent of partial stop failure, also on restart',
+      () async {
+    sdk.failStopAnalytics = true;
+    await controller.choose(TelemetryConsentState.allAllowed);
+    expect(controller.decision.reportsPurged, true);
+    expect(store.value.reportsPurged, true);
+    expect(controller.sdkReady, true);
+    expect(calls.last, 'gate:true');
+    calls.clear();
+    await controller.initialize();
+    expect(controller.sdkReady, true);
+    expect(calls, contains('analytics:true'));
+    expect(calls, isNot(contains('delete')));
+  });
+  test('SDK start failure closes gates and stops both SDKs', () async {
+    sdk.failStartAnalytics = true;
+    await controller.choose(TelemetryConsentState.allAllowed);
+    expect(controller.decision.reportsPurged, true);
+    expect(controller.sdkReady, false);
+    expect(calls.last, 'crash:false');
+    expect(calls.where((e) => e == 'gate:true'), isEmpty);
+  });
+  test('denied SDK stop failure cannot open a granted sibling gate', () async {
+    sdk.failStopCrash = true;
+    await controller.chooseGranular(
+        diagnostics: ConsentChoice.denied,
+        usage: ConsentChoice.granted,
+        academic: ConsentChoice.denied);
+    expect(controller.decision.analyticsAllowed, true);
+    expect(controller.decision.reportsPurged, true);
+    expect(controller.sdkReady, false);
+    expect(calls, isNot(contains('analytics:true')));
+  });
+  for (final from in [
+    TelemetryConsentState.requiredOnly,
+    TelemetryConsentState.allAllowed
+  ]) {
+    for (final to in [
+      TelemetryConsentState.requiredOnly,
+      TelemetryConsentState.allAllowed
+    ]) {
+      test(
+          'consent transition ${from.name} to ${to.name} reconciles both gates',
+          () async {
+        final gates = <bool>[];
+        final analyticsGates = <bool>[];
+        final local = PrivacyController(
+            store: store,
+            collection: sdk,
+            gate: gates.add,
+            analyticsGate: analyticsGates.add);
+        await local.choose(from);
+        await local.choose(to);
+        final enabled = to == TelemetryConsentState.allAllowed;
+        expect(gates.last, enabled);
+        expect(analyticsGates.last, enabled);
+        expect(local.decision.reportsPurged, true);
+      });
+    }
+  }
   test('fresh install pending disables both SDKs and deletes reports',
       () async {
     await controller.initialize();
@@ -172,6 +240,8 @@ void main() {
     calls.clear();
     await controller.initialize();
     expect(calls.indexOf('delete'), lessThan(calls.indexOf('crash:true')));
+    expect(controller.decision.reportsPurged, true);
+    expect(store.value.reportsPurged, true);
   });
   test('analytics failure still disables Crashlytics', () async {
     sdk.failAnalytics = true;

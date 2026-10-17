@@ -18,7 +18,7 @@ class SchoolHoliday {
 
   bool contains(DateTime date) {
     final day = _dateOnly(date);
-    return !day.isBefore(start) && !day.isAfter(end);
+    return !day.isBefore(_dateOnly(start)) && !day.isAfter(_dateOnly(end));
   }
 }
 
@@ -87,6 +87,7 @@ class SchoolTimeline {
   }) {
     final normalizedReference = _dateOnly(reference);
     final scheduled = <GradeDeadline>[];
+    final matchedCalendarDates = <DateTime>{};
 
     for (var schoolYear = normalizedReference.year - 1;
         schoolYear <= normalizedReference.year + 1;
@@ -95,15 +96,23 @@ class SchoolTimeline {
         final key = gradeDeadlinePreferenceKey(schoolYear, period);
         GradeDeadline? calendarDeadline;
         for (final deadline in gradeDeadlines) {
-          if (_gradeDeadlineSchoolYear(deadline.date) == schoolYear &&
+          // Summer and autumn entries may be interim/supplemental deadlines.
+          // Keep them as independent events; they cannot replace Jan/June.
+          if (deadline.date.month <= DateTime.june &&
+              _gradeDeadlineSchoolYear(deadline.date) == schoolYear &&
               _gradeDeadlinePeriod(deadline.date) == period) {
-            calendarDeadline = deadline;
-            break;
+            if (calendarDeadline == null ||
+                deadline.date.isAfter(calendarDeadline.date)) {
+              calendarDeadline = deadline;
+            }
           }
         }
         final defaultDate = period == 1
             ? DateTime(schoolYear + 1, DateTime.january, 31)
             : DateTime(schoolYear + 1, DateTime.june, 5);
+        if (calendarDeadline != null) {
+          matchedCalendarDates.add(_dateOnly(calendarDeadline.date));
+        }
         scheduled.add(
           GradeDeadline(
             name: calendarDeadline?.name ?? '$period. Notenschluss',
@@ -116,6 +125,13 @@ class SchoolTimeline {
       }
     }
 
+    for (final deadline in gradeDeadlines) {
+      if (!matchedCalendarDates.contains(_dateOnly(deadline.date)) &&
+          !scheduled.any(
+              (entry) => _dateOnly(entry.date) == _dateOnly(deadline.date))) {
+        scheduled.add(deadline);
+      }
+    }
     scheduled.sort((a, b) => a.date.compareTo(b.date));
     return SchoolTimeline(
       holidays: holidays,
@@ -199,9 +215,9 @@ class SchoolTimeline {
         current = holiday;
         break;
       }
-      if (holiday.end.isBefore(today)) {
+      if (_dateOnly(holiday.end).isBefore(today)) {
         previous = holiday;
-      } else if (holiday.start.isAfter(today)) {
+      } else if (_dateOnly(holiday.start).isAfter(today)) {
         next = holiday;
         break;
       }
@@ -211,7 +227,7 @@ class SchoolTimeline {
       return HolidayCountdown(
         holiday: current,
         isOnHoliday: true,
-        remainingDays: current.end.difference(today).inDays + 1,
+        remainingDays: _calendarDays(current.end, today) + 1,
         progress: _progress(today, current.start, current.end),
         periodStart: current.start,
       );
@@ -220,15 +236,20 @@ class SchoolTimeline {
       return null;
     }
 
-    var periodStart =
-        previous?.end.add(const Duration(days: 1)) ?? schoolYearStart ?? today;
+    var periodStart = (previous == null
+            ? null
+            : DateTime(
+                previous.end.year, previous.end.month, previous.end.day + 1)) ??
+        schoolYearStart ??
+        today;
+    periodStart = _dateOnly(periodStart);
     if (periodStart.isAfter(today)) {
       periodStart = today;
     }
     return HolidayCountdown(
       holiday: next,
       isOnHoliday: false,
-      remainingDays: next.start.difference(today).inDays,
+      remainingDays: _calendarDays(next.start, today),
       progress: _progress(today, periodStart, next.start),
       periodStart: periodStart,
     );
@@ -238,7 +259,7 @@ class SchoolTimeline {
     final today = _dateOnly(value);
     GradeDeadline? next;
     for (final deadline in gradeDeadlines) {
-      if (deadline.date.isBefore(today)) {
+      if (_dateOnly(deadline.date).isBefore(today)) {
         continue;
       } else {
         next = deadline;
@@ -252,7 +273,7 @@ class SchoolTimeline {
     final periodStart = _gradeDeadlinePeriodStart(next);
     return GradeDeadlineCountdown(
       deadline: next,
-      remainingDays: next.date.difference(today).inDays,
+      remainingDays: _calendarDays(next.date, today),
       progress: _progress(today, periodStart, next.date),
       periodStart: periodStart,
     );
@@ -263,13 +284,22 @@ String gradeDeadlinePreferenceKey(int schoolYear, int period) =>
     '$schoolYear:$period';
 
 int _gradeDeadlineSchoolYear(DateTime date) =>
-    date.month >= DateTime.july ? date.year : date.year - 1;
+    date.month >= DateTime.september ? date.year : date.year - 1;
 
-int _gradeDeadlinePeriod(DateTime date) => date.month <= DateTime.march ? 1 : 2;
+// Sept–March covers the first period including delayed first-term closures;
+// April–August covers the second and its supplemental summer deadlines.
+int _gradeDeadlinePeriod(DateTime date) =>
+    date.month >= DateTime.september || date.month <= DateTime.march ? 1 : 2;
 
 DateTime _gradeDeadlinePeriodStart(GradeDeadline deadline) {
-  final schoolYear = _gradeDeadlineSchoolYear(deadline.date);
-  return _gradeDeadlinePeriod(deadline.date) == 1
+  // Overrides retain their slot even when moved across a month/year boundary.
+  final slot = deadline.preferenceKey?.split(':');
+  final schoolYear = slot == null
+      ? _gradeDeadlineSchoolYear(deadline.date)
+      : int.parse(slot.first);
+  final period =
+      slot == null ? _gradeDeadlinePeriod(deadline.date) : int.parse(slot.last);
+  return period == 1
       ? DateTime(schoolYear, DateTime.september, 7)
       : DateTime(schoolYear + 1, DateTime.february);
 }
@@ -281,7 +311,7 @@ List<SchoolHoliday> _groupNamedHolidayDays(Map<DateTime, String> values) {
     final name = values[date]!;
     if (result.isNotEmpty &&
         result.last.name == name &&
-        date.difference(result.last.end).inDays == 1) {
+        _calendarDays(date, result.last.end) == 1) {
       final previous = result.removeLast();
       result.add(SchoolHoliday(name: name, start: previous.start, end: date));
     } else {
@@ -296,7 +326,7 @@ List<SchoolHoliday> _groupInferredFreeDays(Set<DateTime> values) {
   final result = <SchoolHoliday>[];
   for (final date in dates) {
     if (result.isNotEmpty) {
-      final gap = date.difference(result.last.end).inDays;
+      final gap = _calendarDays(date, result.last.end);
       final bridgesWeekend = result.last.end.weekday == DateTime.friday &&
           date.weekday == DateTime.monday &&
           gap == 3;
@@ -362,14 +392,19 @@ String _normalize(String value) => value.trim().toLowerCase();
 DateTime _dateOnly(DateTime value) =>
     DateTime(value.year, value.month, value.day);
 
+// UTC is only a coordinate system for date components, not a timezone
+// conversion. Local midnights still differ by 23/25 hours across DST.
+int _calendarDays(DateTime end, DateTime start) =>
+    DateTime.utc(end.year, end.month, end.day)
+        .difference(DateTime.utc(start.year, start.month, start.day))
+        .inDays;
+
 DateTime? _earlier(DateTime? current, DateTime candidate) =>
     current == null || candidate.isBefore(current) ? candidate : current;
 
 double _progress(DateTime value, DateTime start, DateTime end) {
-  if (!end.isAfter(start)) {
-    return value.isBefore(start) ? 0 : 1;
-  }
-  final total = end.difference(start).inDays;
-  final elapsed = value.difference(start).inDays;
+  final total = _calendarDays(end, start);
+  if (total <= 0) return _calendarDays(value, start) < 0 ? 0 : 1;
+  final elapsed = _calendarDays(value, start);
   return (elapsed / total).clamp(0.0, 1.0);
 }

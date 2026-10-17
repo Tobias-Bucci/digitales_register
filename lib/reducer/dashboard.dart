@@ -236,9 +236,10 @@ Homework _parseHomework(Map data) {
     b.type = type;
 
     if (type == HomeworkType.grade) {
+      final grade = validateBackendGrade(getString(data["grade"]));
       b
-        ..gradeFormatted = formatGradeFromString(getString(data["grade"]))
-        ..grade = getString(data["grade"]);
+        ..gradeFormatted = formatGradeFromString(grade)
+        ..grade = grade;
     }
   });
 }
