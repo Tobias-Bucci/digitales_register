@@ -129,3 +129,5 @@ macos/Flutter/GeneratedPluginRegistrant.swift
 .flatpak-builder/
 build-dir/
 repo/
+
+/AUDIT_REPORT/
