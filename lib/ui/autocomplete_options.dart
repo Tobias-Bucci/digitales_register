@@ -12,6 +12,7 @@ class AutocompleteOptions<T extends Object> extends StatelessWidget {
     required this.options,
     required this.maxOptionsHeight,
     required this.width,
+    this.borderRadius = BorderRadius.zero,
   });
 
   final AutocompleteOptionToString<T> displayStringForOption;
@@ -21,6 +22,7 @@ class AutocompleteOptions<T extends Object> extends StatelessWidget {
   final Iterable<T> options;
   final double maxOptionsHeight;
   final double width;
+  final BorderRadius borderRadius;
 
   @override
   Widget build(BuildContext context) {
@@ -28,6 +30,8 @@ class AutocompleteOptions<T extends Object> extends StatelessWidget {
       alignment: Alignment.topLeft,
       child: Material(
         elevation: 4.0,
+        borderRadius: borderRadius,
+        clipBehavior: Clip.antiAlias,
         child: ConstrainedBox(
           constraints:
               BoxConstraints(maxHeight: maxOptionsHeight, maxWidth: width),
