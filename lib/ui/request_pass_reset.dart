@@ -17,6 +17,7 @@
 // along with digitales_register.  If not, see <http://www.gnu.org/licenses/>.
 
 import 'package:dr/i18n/app_localizations.dart';
+import 'package:dr/ui/auth_layout.dart';
 import 'package:flutter/material.dart';
 
 class RequestPassReset extends StatefulWidget {
@@ -47,189 +48,45 @@ class _RequestPassResetState extends State<RequestPassReset> {
     super.dispose();
   }
 
-  InputDecoration _fieldDecoration(
-    BuildContext context,
-    String label,
-    IconData icon,
-    Color accent,
-  ) {
-    final theme = Theme.of(context);
-    return InputDecoration(
-      labelText: label,
-      prefixIcon: Icon(icon, color: accent),
-      filled: true,
-      fillColor: theme.colorScheme.surface,
-      border: OutlineInputBorder(
-        borderRadius: BorderRadius.circular(14),
-        borderSide: BorderSide(
-          color: theme.dividerColor.withValues(alpha: 0.25),
-        ),
-      ),
-      enabledBorder: OutlineInputBorder(
-        borderRadius: BorderRadius.circular(14),
-        borderSide: BorderSide(
-          color: theme.dividerColor.withValues(alpha: 0.25),
-        ),
-      ),
-      focusedBorder: OutlineInputBorder(
-        borderRadius: BorderRadius.circular(14),
-        borderSide: BorderSide(color: accent, width: 1.6),
-      ),
-    );
-  }
+  void _submit() =>
+      widget.resetPass(_usernameController.text, _emailController.text);
 
   @override
   Widget build(BuildContext context) {
     final l10n = context.l10n;
-    final theme = Theme.of(context);
-    final isDark = theme.brightness == Brightness.dark;
-    final accent = theme.colorScheme.primary;
-    final accentBg = Color.alphaBlend(
-      accent.withValues(alpha: isDark ? 0.24 : 0.14),
-      theme.colorScheme.surface,
-    );
-    final pageBackground =
-        isDark ? const Color(0xFF1B2026) : theme.colorScheme.surface;
-
-    final pageTheme = theme.copyWith(
-      colorScheme: theme.colorScheme.copyWith(
-        primary: accent,
-        secondary: accent,
-        tertiary: accent,
-        error: accent,
-        errorContainer: accentBg,
-        onErrorContainer: theme.colorScheme.onSurface,
-      ),
-    );
-
-    return Theme(
-      data: pageTheme,
-      child: Scaffold(
-        backgroundColor: pageBackground,
-        appBar: AppBar(
-          title: Text(l10n.text('login.forgotPassword')),
-          elevation: 0,
-          backgroundColor: Colors.transparent,
-          foregroundColor: theme.colorScheme.onSurface,
+    return AuthLayout(
+      title: l10n.text('login.forgotPassword'),
+      showAppBar: true,
+      children: [
+        TextField(
+          autofillHints: const [AutofillHints.username],
+          controller: _usernameController,
+          autocorrect: false,
+          textInputAction: TextInputAction.next,
+          decoration: InputDecoration(labelText: l10n.text('login.username')),
         ),
-        body: SafeArea(
-          child: Center(
-            child: ConstrainedBox(
-              constraints: const BoxConstraints(maxWidth: 560),
-              child: ListView(
-                padding: const EdgeInsets.fromLTRB(16, 36, 16, 24),
-                children: [
-                  Padding(
-                    padding: const EdgeInsets.only(bottom: 18),
-                    child: Column(
-                      children: [
-                        Text(
-                          l10n.text('login.appTitle'),
-                          textAlign: TextAlign.center,
-                          style: theme.textTheme.headlineSmall?.copyWith(
-                            fontWeight: FontWeight.w700,
-                            letterSpacing: 0.2,
-                            color: isDark
-                                ? const Color(0xFFE7EDF3)
-                                : const Color(0xFF1A2733),
-                          ),
-                        ),
-                        const SizedBox(height: 8),
-                        Container(
-                          width: 68,
-                          height: 3,
-                          decoration: BoxDecoration(
-                            color: accent.withValues(alpha: 0.85),
-                            borderRadius: BorderRadius.circular(12),
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                  Card(
-                    elevation: isDark ? 0 : 1,
-                    color: theme.colorScheme.surface,
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(22),
-                      side: BorderSide(
-                        color: accent.withValues(alpha: isDark ? 0.28 : 0.16),
-                      ),
-                    ),
-                    child: Padding(
-                      padding: const EdgeInsets.fromLTRB(16, 16, 16, 16),
-                      child: AutofillGroup(
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.stretch,
-                          children: <Widget>[
-                            TextField(
-                              autofillHints: const [AutofillHints.username],
-                              controller: _usernameController,
-                              decoration: _fieldDecoration(
-                                context,
-                                l10n.text('login.username'),
-                                Icons.person_outline_rounded,
-                                accent,
-                              ),
-                            ),
-                            const SizedBox(height: 12),
-                            TextField(
-                              autofillHints: const [AutofillHints.email],
-                              keyboardType: TextInputType.emailAddress,
-                              controller: _emailController,
-                              decoration: _fieldDecoration(
-                                context,
-                                l10n.text('login.newEmail'),
-                                Icons.alternate_email_rounded,
-                                accent,
-                              ),
-                            ),
-                            const SizedBox(height: 16),
-                            ElevatedButton.icon(
-                              style: ElevatedButton.styleFrom(
-                                backgroundColor: accent,
-                                foregroundColor: Colors.white,
-                                padding: const EdgeInsets.symmetric(
-                                  vertical: 14,
-                                ),
-                                shape: RoundedRectangleBorder(
-                                  borderRadius: BorderRadius.circular(14),
-                                ),
-                              ),
-                              onPressed: () => widget.resetPass(
-                                _usernameController.text,
-                                _emailController.text,
-                              ),
-                              icon: const Icon(Icons.send_rounded),
-                              label: Text(
-                                l10n.text('login.requestPasswordReset'),
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
-                    ),
-                  ),
-                  if (widget.message != null)
-                    Container(
-                      margin: const EdgeInsets.only(top: 14),
-                      decoration: BoxDecoration(
-                        color: accentBg.withValues(alpha: isDark ? 0.5 : 0.7),
-                        borderRadius: BorderRadius.circular(12),
-                      ),
-                      padding: const EdgeInsets.all(12),
-                      child: Text(
-                        l10n.translateAuthServerText(widget.message!),
-                        style: theme.textTheme.bodyMedium?.copyWith(
-                          color: theme.colorScheme.onErrorContainer,
-                        ),
-                      ),
-                    ),
-                ],
-              ),
-            ),
-          ),
+        AuthLayout.fieldGap,
+        TextField(
+          autofillHints: const [AutofillHints.email],
+          keyboardType: TextInputType.emailAddress,
+          controller: _emailController,
+          autocorrect: false,
+          textInputAction: TextInputAction.done,
+          onSubmitted: (_) => _submit(),
+          decoration: InputDecoration(labelText: l10n.text('login.newEmail')),
         ),
-      ),
+        AuthLayout.sectionGap,
+        if (widget.message != null) ...[
+          AuthMessage(l10n.translateAuthServerText(widget.message!),
+              isError: widget.failure, isStatus: !widget.failure),
+          AuthLayout.fieldGap,
+        ],
+        ElevatedButton.icon(
+          onPressed: _submit,
+          icon: const Icon(Icons.mail_outline_rounded),
+          label: Text(l10n.text('login.requestPasswordReset')),
+        ),
+      ],
     );
   }
 }

@@ -1,4 +1,4 @@
-﻿// Copyright (C) 2021 Michael Debertol
+// Copyright (C) 2021 Michael Debertol
 // Copyright (C) 2026 Tobias Bucci
 //
 // This file is part of digitales_register.
@@ -17,6 +17,7 @@
 // along with digitales_register.  If not, see <http://www.gnu.org/licenses/>.
 
 import 'package:dr/i18n/app_localizations.dart';
+import 'package:dr/ui/auth_layout.dart';
 import 'package:flutter/material.dart';
 
 class PassReset extends StatefulWidget {
@@ -58,89 +59,60 @@ class _PassResetState extends State<PassReset> {
     super.dispose();
   }
 
+  bool get _passwordsMatch =>
+      _newPass1Controller.text == _newPass2Controller.text;
+
+  void _submit() {
+    if (_passwordsMatch && (widget.message == null || widget.failure)) {
+      widget.resetPass(_newPass1Controller.text);
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     final l10n = context.l10n;
     return PopScope<void>(
       onPopInvokedWithResult: (didPop, result) {
-        if (!didPop) {
-          widget.onClose();
-        }
+        if (!didPop) widget.onClose();
       },
-      child: Scaffold(
-        appBar: AppBar(
-          title: Text(l10n.text('login.passResetTitle')),
-        ),
-        body: Padding(
-          padding: const EdgeInsets.all(8.0),
-          child: Center(
-            child: AutofillGroup(
-              child: ListView(
-                shrinkWrap: true,
-                children: <Widget>[
-                  Container(
-                    decoration: BoxDecoration(
-                      borderRadius: BorderRadius.circular(16),
-                      border: Border.all(
-                        color: Colors.grey,
-                        width: 0,
-                      ),
-                    ),
-                    padding: const EdgeInsets.all(8),
-                    child: Text(
-                      l10n.text('login.newPasswordRequirements'),
-                    ),
-                  ),
-                  TextField(
-                    autofillHints: const [AutofillHints.newPassword],
-                    controller: _newPass1Controller,
-                    decoration: InputDecoration(
-                      labelText: l10n.text('login.newPassword'),
-                    ),
-                    obscureText: true,
-                  ),
-                  TextField(
-                    autofillHints: const [AutofillHints.newPassword],
-                    controller: _newPass2Controller,
-                    decoration: InputDecoration(
-                      labelText: l10n.text('login.repeatPassword'),
-                      errorText:
-                          _newPass1Controller.text == _newPass2Controller.text
-                              ? null
-                              : l10n.text('login.passwordsDoNotMatch'),
-                    ),
-                    obscureText: true,
-                  ),
-                  const SizedBox(
-                    height: 16,
-                  ),
-                  if (widget.message == null || widget.failure)
-                    ElevatedButton(
-                      onPressed: _newPass1Controller.text !=
-                              _newPass2Controller.text
-                          ? null
-                          : () => widget.resetPass(_newPass1Controller.text),
-                      child: Text(l10n.text('login.passResetAction')),
-                    ),
-                  const SizedBox(height: 16),
-                  if (widget.message != null)
-                    Center(
-                      child: Text(
-                        l10n.translateAuthServerText(widget.message!),
-                        style: Theme.of(context).textTheme.bodyMedium!.copyWith(
-                            color: widget.failure ? Colors.red : Colors.green),
-                      ),
-                    ),
-                  if (widget.message != null && !widget.failure)
-                    ElevatedButton(
-                      onPressed: widget.onClose,
-                      child: Text(l10n.text('common.done')),
-                    )
-                ],
-              ),
-            ),
+      child: AuthLayout(
+        title: l10n.text('login.passResetTitle'),
+        showAppBar: true,
+        children: [
+          AuthMessage(l10n.text('login.newPasswordRequirements')),
+          AuthLayout.sectionGap,
+          AuthPasswordField(
+            controller: _newPass1Controller,
+            label: l10n.text('login.newPassword'),
+            isNewPassword: true,
           ),
-        ),
+          AuthLayout.fieldGap,
+          AuthPasswordField(
+            controller: _newPass2Controller,
+            label: l10n.text('login.repeatPassword'),
+            isNewPassword: true,
+            errorText:
+                _passwordsMatch ? null : l10n.text('login.passwordsDoNotMatch'),
+            textInputAction: TextInputAction.done,
+            onSubmitted: (_) => _submit(),
+          ),
+          AuthLayout.sectionGap,
+          if (widget.message != null) ...[
+            AuthMessage(l10n.translateAuthServerText(widget.message!),
+                isError: widget.failure, isStatus: !widget.failure),
+            AuthLayout.fieldGap,
+          ],
+          if (widget.message == null || widget.failure)
+            ElevatedButton(
+              onPressed: _passwordsMatch ? _submit : null,
+              child: Text(l10n.text('login.passResetAction')),
+            ),
+          if (widget.message != null && !widget.failure)
+            ElevatedButton(
+              onPressed: widget.onClose,
+              child: Text(l10n.text('common.done')),
+            ),
+        ],
       ),
     );
   }
