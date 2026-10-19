@@ -345,6 +345,8 @@ void main() {
   const layouts = [
     (name: 'small', size: Size(320, 640), scale: 1.0, inset: 0.0),
     (name: 'phone', size: Size(390, 844), scale: 1.0, inset: 0.0),
+    (name: 'tablet', size: Size(768, 1024), scale: 1.0, inset: 0.0),
+    (name: 'desktop', size: Size(1440, 1000), scale: 1.0, inset: 0.0),
     (
       name: 'landscape-keyboard',
       size: Size(740, 360),
@@ -420,6 +422,8 @@ void main() {
   testWidgets('export representative rendered previews when requested',
       (tester) async {
     if (Platform.environment['UPDATE_AUTH_PREVIEWS'] != '1') return;
+    final previousShadows = debugDisableShadows;
+    debugDisableShadows = false;
     await tester.runAsync(() async {
       final flutterRoot = Platform.environment['FLUTTER_ROOT'];
       if (flutterRoot != null) {
@@ -450,10 +454,16 @@ void main() {
         'request',
         'reset',
         'success',
-        'desktop'
+        'desktop',
+        'tablet_portrait',
+        'tablet_landscape',
       ]) {
-        final size =
-            page == 'desktop' ? const Size(1440, 1000) : const Size(390, 844);
+        final size = switch (page) {
+          'desktop' => const Size(1440, 1000),
+          'tablet_portrait' => const Size(768, 1024),
+          'tablet_landscape' => const Size(1024, 768),
+          _ => const Size(390, 844),
+        };
         tester.view.devicePixelRatio = 1;
         tester.view.physicalSize = size;
         addTearDown(tester.view.reset);
@@ -516,5 +526,6 @@ void main() {
       }
     }
     await tester.pumpWidget(const SizedBox());
+    debugDisableShadows = previousShadows;
   });
 }
