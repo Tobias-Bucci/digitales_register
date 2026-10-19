@@ -24,6 +24,7 @@ import 'package:dr/app_state.dart';
 import 'package:dr/data.dart';
 import 'package:dr/grade_average.dart';
 import 'package:dr/i18n/app_localizations.dart';
+import 'package:dr/tutorial/tutorial_service.dart';
 import 'package:dr/tutorial/tutorial_target.dart';
 import 'package:dr/ui/dialog.dart';
 import 'package:dr/ui/target_grade_calculator.dart';
@@ -153,7 +154,8 @@ class _GradeCalculatorState extends State<GradeCalculator> {
   void showTargetCalculator() {
     Navigator.of(context).push(
       MaterialPageRoute<void>(
-        builder: (_) => const TargetGradeCalculator(),
+        builder: (_) => TargetGradeCalculator(
+            tutorialExample: TutorialService.of(context).active),
         fullscreenDialog: true,
       ),
     );
@@ -290,13 +292,11 @@ class _GradeCalculatorState extends State<GradeCalculator> {
       ),
       floatingActionButton: showGreeting
           ? null
-          : TutorialTarget(
-              id: 'calculator-add',
-              child: FloatingActionButton.extended(
-                onPressed: addGrade,
-                label: Text(context.t('gradeCalculator.addGrade')),
-                icon: const Icon(Icons.add),
-              )),
+          : FloatingActionButton.extended(
+              onPressed: addGrade,
+              label: Text(context.t('gradeCalculator.addGrade')),
+              icon: const Icon(Icons.add),
+            ),
     );
   }
 }
@@ -451,18 +451,15 @@ class Greeting extends StatelessWidget {
           Center(
             child: Padding(
               padding: const EdgeInsets.all(16),
-              child: TutorialTarget(
-                id: 'calculator-import',
-                child: ElevatedButton(
-                  onPressed: import,
-                  child: Row(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      const Icon(Icons.save_alt),
-                      const SizedBox(width: 8),
-                      Text(context.t('gradeCalculator.importGrades')),
-                    ],
-                  ),
+              child: ElevatedButton(
+                onPressed: import,
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    const Icon(Icons.save_alt),
+                    const SizedBox(width: 8),
+                    Text(context.t('gradeCalculator.importGrades')),
+                  ],
                 ),
               ),
             ),
@@ -470,18 +467,15 @@ class Greeting extends StatelessWidget {
           Center(
             child: Padding(
               padding: const EdgeInsets.all(16),
-              child: TutorialTarget(
-                id: 'calculator-add',
-                child: ElevatedButton(
-                  onPressed: add,
-                  child: Row(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      const Icon(Icons.add),
-                      const SizedBox(width: 8),
-                      Text(context.t('gradeCalculator.addGrade')),
-                    ],
-                  ),
+              child: ElevatedButton(
+                onPressed: add,
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    const Icon(Icons.add),
+                    const SizedBox(width: 8),
+                    Text(context.t('gradeCalculator.addGrade')),
+                  ],
                 ),
               ),
             ),

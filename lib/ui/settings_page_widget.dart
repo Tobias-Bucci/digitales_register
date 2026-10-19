@@ -29,6 +29,8 @@ import 'package:dr/i18n/app_localizations.dart';
 import 'package:dr/platform_adapter.dart';
 import 'package:dr/theme_controller.dart';
 import 'package:dr/tutorial/tutorial_page.dart';
+import 'package:dr/tutorial/tutorial_service.dart';
+import 'package:dr/tutorial/tutorial_target.dart';
 import 'package:dr/ui/about_app_dialog.dart';
 import 'package:dr/ui/autocomplete_options.dart';
 import 'package:dr/ui/committed_deleteable.dart';
@@ -37,6 +39,7 @@ import 'package:dr/ui/network_protocol_page.dart';
 import 'package:dr/ui/privacy_data_details_page.dart';
 import 'package:dr/util.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/rendering.dart' show ScrollCacheExtent;
 import 'package:flutter_colorpicker/flutter_colorpicker.dart';
 import 'package:responsive_scaffold/responsive_scaffold.dart';
 import 'package:url_launcher/url_launcher.dart';
@@ -1074,15 +1077,17 @@ class _SettingsPageWidgetState extends State<SettingsPageWidget> {
   Widget _buildTutorialSection(AppLocalizations l10n) => _SettingsSectionCard(
         title: l10n.text('tutorial.settings.title'),
         children: [
-          ListTile(
-            leading: const Icon(Icons.explore_outlined),
-            title: Text(l10n.text('tutorial.settings.open')),
-            subtitle: Text(l10n.text('tutorial.settings.openBody')),
-            trailing: const Icon(Icons.chevron_right),
-            onTap: () => Navigator.of(context).push(
-              MaterialPageRoute<void>(builder: (_) => const TutorialPage()),
-            ),
-          ),
+          TutorialTarget(
+              id: 'settings-tutorial',
+              child: ListTile(
+                leading: const Icon(Icons.explore_outlined),
+                title: Text(l10n.text('tutorial.settings.open')),
+                subtitle: Text(l10n.text('tutorial.settings.openBody')),
+                trailing: const Icon(Icons.chevron_right),
+                onTap: () => Navigator.of(context).push(
+                  MaterialPageRoute<void>(builder: (_) => const TutorialPage()),
+                ),
+              )),
         ],
       );
 
@@ -1095,41 +1100,46 @@ class _SettingsPageWidgetState extends State<SettingsPageWidget> {
         widget.vm.amoledMode ? _Theme.amoled : _Theme.dark,
       AppThemePreference.system => _Theme.followDevice,
     };
-    return Scaffold(
-      appBar: ResponsiveAppBar(
-        title: Text(l10n.text('settings.title')),
-      ),
-      body: ListView(
-        padding: const EdgeInsets.fromLTRB(16, 16, 16, 24),
-        children: <Widget>[
-          if (widget.vm.demoMode) ...[
-            _buildDemoSection(l10n),
-            const SizedBox(height: 16),
-          ],
-          _buildAccountSection(l10n),
-          const SizedBox(height: 16),
-          _buildAppearanceSection(l10n, currentTheme),
-          const SizedBox(height: 16),
-          _buildDashboardSection(l10n),
-          const SizedBox(height: 16),
-          _buildCalendarSection(l10n),
-          const SizedBox(height: 16),
-          _buildTutorialSection(l10n),
-          const SizedBox(height: 16),
-          _buildPrivacySection(l10n),
-          const SizedBox(height: 16),
-          _buildAdvancedSection(l10n),
-          if (widget.vm.username == 'debug')
-            Padding(
-              padding: const EdgeInsets.only(top: 16),
-              child: ElevatedButton(
-                onPressed: widget.onShowDebug,
-                child: Text(context.l10n.text('ui.debug')),
-              ),
-            ),
-        ],
-      ),
-    );
+    return TutorialTarget(
+        id: 'settings-page',
+        child: Scaffold(
+          appBar: ResponsiveAppBar(
+            title: Text(l10n.text('settings.title')),
+          ),
+          body: ListView(
+            scrollCacheExtent: TutorialService.of(context).active
+                ? const ScrollCacheExtent.pixels(10000)
+                : null,
+            padding: const EdgeInsets.fromLTRB(16, 16, 16, 24),
+            children: <Widget>[
+              if (widget.vm.demoMode) ...[
+                _buildDemoSection(l10n),
+                const SizedBox(height: 16),
+              ],
+              _buildAccountSection(l10n),
+              const SizedBox(height: 16),
+              _buildAppearanceSection(l10n, currentTheme),
+              const SizedBox(height: 16),
+              _buildDashboardSection(l10n),
+              const SizedBox(height: 16),
+              _buildCalendarSection(l10n),
+              const SizedBox(height: 16),
+              _buildTutorialSection(l10n),
+              const SizedBox(height: 16),
+              _buildPrivacySection(l10n),
+              const SizedBox(height: 16),
+              _buildAdvancedSection(l10n),
+              if (widget.vm.username == 'debug')
+                Padding(
+                  padding: const EdgeInsets.only(top: 16),
+                  child: ElevatedButton(
+                    onPressed: widget.onShowDebug,
+                    child: Text(context.l10n.text('ui.debug')),
+                  ),
+                ),
+            ],
+          ),
+        ));
   }
 
   Future<void> _showAboutAppDialog(BuildContext context) => showDialog<void>(

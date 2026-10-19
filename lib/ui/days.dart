@@ -176,6 +176,9 @@ class _DaysWidgetState extends State<DaysWidget> {
 
   Future<void> _editGradeDeadline(GradeDeadline deadline) async {
     var count = _gradeDeadlineCount;
+    final tour = TutorialService.of(context);
+    final requireSelection = tour.active && tour.step.key == 'deadlines';
+    final confirmedDates = <int>{};
     final candidates = SchoolTimeline.fromCalendarData(
       dashboardDays: widget.vm.schoolTimelineDays,
       calendarDays: widget.vm.schoolTimelineCalendarDays,
@@ -200,53 +203,67 @@ class _DaysWidgetState extends State<DaysWidget> {
     final save = await showDialog<bool>(
       context: context,
       builder: (dialogContext) => StatefulBuilder(
-        builder: (context, setDialogState) => AlertDialog(
-          title: Text(context.t('tutorial.deadlineDialog.title')),
-          content: Column(mainAxisSize: MainAxisSize.min, children: [
-            SegmentedButton<int>(
-              segments: [
-                ButtonSegment(
-                    value: 1,
-                    label: Text(context.t('tutorial.deadlineDialog.one'))),
-                ButtonSegment(
-                    value: 2,
-                    label: Text(context.t('tutorial.deadlineDialog.two'))),
+        builder: (context, setDialogState) => TutorialTarget(
+            id: 'deadline-dialog',
+            child: AlertDialog(
+              title: Text(context.t('schoolCountdown.deadlineDialog.title')),
+              content: SingleChildScrollView(
+                  child: Column(mainAxisSize: MainAxisSize.min, children: [
+                if (requireSelection)
+                  Text(context.t('tutorial.deadline.select')),
+                SegmentedButton<int>(
+                  segments: [
+                    ButtonSegment(
+                        value: 1,
+                        label: Text(
+                            context.t('schoolCountdown.deadlineDialog.one'))),
+                    ButtonSegment(
+                        value: 2,
+                        label: Text(
+                            context.t('schoolCountdown.deadlineDialog.two'))),
+                  ],
+                  selected: {count},
+                  onSelectionChanged: (value) =>
+                      setDialogState(() => count = value.first),
+                ),
+                const SizedBox(height: 12),
+                for (var index = 0; index < count; index++)
+                  ListTile(
+                    leading: const Icon(Icons.event_outlined),
+                    title: Text(context.t('schoolCountdown.deadlineDialog.date',
+                        args: {'number': '${index + 1}'})),
+                    subtitle: Text(MaterialLocalizations.of(context)
+                        .formatMediumDate(dates[index])),
+                    onTap: () async {
+                      final selected = await showDatePicker(
+                        context: context,
+                        initialDate: dates[index],
+                        firstDate: DateTime(appClock.now.year - 1),
+                        lastDate: DateTime(
+                            appClock.now.year + 2, DateTime.december, 31),
+                      );
+                      if (selected != null && context.mounted) {
+                        setDialogState(() {
+                          dates[index] = selected;
+                          confirmedDates.add(index);
+                        });
+                      }
+                    },
+                  ),
+              ])),
+              actions: [
+                TextButton(
+                    onPressed: () => Navigator.pop(dialogContext, false),
+                    child: Text(context.t('common.cancel'))),
+                FilledButton(
+                    onPressed: requireSelection &&
+                            List.generate(count, (i) => i)
+                                .any((i) => !confirmedDates.contains(i))
+                        ? null
+                        : () => Navigator.pop(dialogContext, true),
+                    child: Text(context.t('button.save'))),
               ],
-              selected: {count},
-              onSelectionChanged: (value) =>
-                  setDialogState(() => count = value.first),
-            ),
-            const SizedBox(height: 12),
-            for (var index = 0; index < count; index++)
-              ListTile(
-                leading: const Icon(Icons.event_outlined),
-                title: Text(context.t('tutorial.deadlineDialog.date',
-                    args: {'number': '${index + 1}'})),
-                subtitle: Text(MaterialLocalizations.of(context)
-                    .formatMediumDate(dates[index])),
-                onTap: () async {
-                  final selected = await showDatePicker(
-                    context: context,
-                    initialDate: dates[index],
-                    firstDate: DateTime(appClock.now.year - 1),
-                    lastDate:
-                        DateTime(appClock.now.year + 2, DateTime.december, 31),
-                  );
-                  if (selected != null && context.mounted) {
-                    setDialogState(() => dates[index] = selected);
-                  }
-                },
-              ),
-          ]),
-          actions: [
-            TextButton(
-                onPressed: () => Navigator.pop(dialogContext, false),
-                child: Text(context.t('common.cancel'))),
-            FilledButton(
-                onPressed: () => Navigator.pop(dialogContext, true),
-                child: Text(context.t('button.save'))),
-          ],
-        ),
+            )),
       ),
     );
     if (save != true || !mounted) return;
@@ -269,6 +286,7 @@ class _DaysWidgetState extends State<DaysWidget> {
         ...updated.map((key, value) => MapEntry(key, value.toIso8601String())),
       }),
     );
+    if (mounted) TutorialService.of(context).completeAction('deadlines');
   }
 
   void _updateShowScrollUp() {
@@ -444,24 +462,6 @@ class _DaysWidgetState extends State<DaysWidget> {
 
   @override
   void didUpdateWidget(DaysWidget oldWidget) {
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      if (mounted && tutorialService.observeDashboardDays(widget.vm.days)) {
-        setState(() {});
-        WidgetsBinding.instance.addPostFrameCallback((_) {
-          if (!mounted || !controller.hasClients) return;
-          for (final entry in _homeworkIndexes.entries) {
-            final day = widget.vm.days.where((value) =>
-                value.homework.any((item) => item.id == entry.value.id));
-            if (day.isNotEmpty &&
-                tutorialService.isCreatedReminder(day.first, entry.value)) {
-              unawaited(controller.scrollToIndex(entry.key,
-                  preferPosition: AutoScrollPosition.middle));
-              break;
-            }
-          }
-        });
-      }
-    });
     final availableFavoriteSubjects = _availableFavoriteSubjects();
     updateValues(
         _filteredDays(_resolvedFavoriteSubject(availableFavoriteSubjects)));
@@ -557,7 +557,6 @@ class _DaysWidgetState extends State<DaysWidget> {
 
   @override
   Widget build(BuildContext context) {
-    tutorialService.dashboardFuture = widget.vm.future;
     final l10n = context.l10n;
     final availableFavoriteSubjects = _availableFavoriteSubjects();
     final activeFavoriteSubject =
@@ -734,6 +733,15 @@ class _DaysWidgetState extends State<DaysWidget> {
         ],
       ),
       homeAppBar: ResponsiveAppBar(
+        leading: TutorialTarget(
+            id: 'navigation-menu',
+            child: Builder(
+              builder: (context) => IconButton(
+                tooltip: MaterialLocalizations.of(context).openAppDrawerTooltip,
+                icon: const Icon(Icons.menu),
+                onPressed: () => Scaffold.of(context).openDrawer(),
+              ),
+            )),
         title: Row(
           mainAxisSize: MainAxisSize.min,
           children: [
@@ -783,12 +791,11 @@ class _DaysWidgetState extends State<DaysWidget> {
 Future<String?> showEnterReminderDialog(
   BuildContext context, {
   String initialMessage = "",
-  bool tutorial = false,
 }) async {
   final prefs = await SharedPreferences.getInstance();
   final showAssessmentHint =
       !(prefs.getBool(_localReminderAssessmentHintKey) ?? false);
-  if (showAssessmentHint && !tutorial) {
+  if (showAssessmentHint) {
     await prefs.setBool(_localReminderAssessmentHintKey, true);
   }
   if (!context.mounted) {
@@ -1014,44 +1021,36 @@ class DashboardHeader extends StatelessWidget {
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       LayoutBuilder(builder: (context, constraints) {
-                        final filter = TutorialTarget(
-                          id: 'dashboard-filter',
-                          action: true,
-                          child: HomeworkFilterContainer(
-                            showEmptyDays: showEmptyDays,
-                            onShowEmptyDaysChanged: onShowEmptyDaysChanged,
-                          ),
+                        final filter = HomeworkFilterContainer(
+                          showEmptyDays: showEmptyDays,
+                          onShowEmptyDaysChanged: onShowEmptyDaysChanged,
                         );
-                        final past = TutorialTarget(
-                          id: 'dashboard-past',
-                          action: true,
-                          child: AnimatedSwitcher(
-                            duration: const Duration(milliseconds: 220),
-                            transitionBuilder: (child, animation) {
-                              return FadeTransition(
-                                opacity: animation,
-                                child: ScaleTransition(
-                                    scale: animation, child: child),
-                              );
-                            },
-                            child: FilledButton.tonalIcon(
-                              key: ValueKey(future),
-                              onPressed: onSwitchFuture,
-                              icon: Icon(
-                                future
-                                    ? Icons.history_toggle_off
-                                    : Icons.upcoming_rounded,
-                              ),
-                              label: Text(future
-                                  ? l10n.text('dashboard.past')
-                                  : l10n.text('dashboard.future')),
-                              style: FilledButton.styleFrom(
-                                shape: const StadiumBorder(),
-                                visualDensity: VisualDensity.compact,
-                                padding: const EdgeInsets.symmetric(
-                                  horizontal: 14,
-                                  vertical: 12,
-                                ),
+                        final past = AnimatedSwitcher(
+                          duration: const Duration(milliseconds: 220),
+                          transitionBuilder: (child, animation) {
+                            return FadeTransition(
+                              opacity: animation,
+                              child: ScaleTransition(
+                                  scale: animation, child: child),
+                            );
+                          },
+                          child: FilledButton.tonalIcon(
+                            key: ValueKey(future),
+                            onPressed: onSwitchFuture,
+                            icon: Icon(
+                              future
+                                  ? Icons.history_toggle_off
+                                  : Icons.upcoming_rounded,
+                            ),
+                            label: Text(future
+                                ? l10n.text('dashboard.past')
+                                : l10n.text('dashboard.future')),
+                            style: FilledButton.styleFrom(
+                              shape: const StadiumBorder(),
+                              visualDensity: VisualDensity.compact,
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 14,
+                                vertical: 12,
                               ),
                             ),
                           ),
@@ -1217,27 +1216,18 @@ class DayWidget extends StatelessWidget {
                 ),
               const Spacer(),
               if (vm.showAddReminder)
-                TutorialTarget(
-                  id: 'dashboard-reminder',
-                  child: IconButton(
-                    icon: const Icon(Icons.add),
-                    onPressed: vm.noInternet
-                        ? null
-                        : () async {
-                            final message = await showEnterReminderDialog(
-                              context,
-                              initialMessage: tutorialService.active &&
-                                      tutorialService.step.key ==
-                                          'assessmentShortcuts'
-                                  ? '/cw '
-                                  : '',
-                            );
-                            if (message != null) {
-                              tutorialService.reminderSubmitted(day, message);
-                              addReminderCallback(day, message);
-                            }
-                          },
-                  ),
+                IconButton(
+                  icon: const Icon(Icons.add),
+                  onPressed: vm.noInternet
+                      ? null
+                      : () async {
+                          final message = await showEnterReminderDialog(
+                            context,
+                          );
+                          if (message != null) {
+                            addReminderCallback(day, message);
+                          }
+                        },
                 ),
             ],
           ),
@@ -1245,7 +1235,6 @@ class DayWidget extends StatelessWidget {
         for (final hw in day.homework)
           ItemWidget(
             item: hw,
-            tutorialCreatedReminder: tutorialService.isCreatedReminder(day, hw),
             toggleDone: () => toggleDoneCallback(hw, !hw.checked),
             editReminder: () async {
               final message = await showEnterReminderDialog(
@@ -1275,7 +1264,6 @@ class DayWidget extends StatelessWidget {
 
 class ItemWidget extends StatelessWidget {
   final Homework item;
-  final bool tutorialCreatedReminder;
   final BuiltList<String> allSubjects;
   final Future<void> Function()? editReminder;
   final VoidCallback? removeThis;
@@ -1297,7 +1285,6 @@ class ItemWidget extends StatelessWidget {
   const ItemWidget({
     super.key,
     required this.item,
-    this.tutorialCreatedReminder = false,
     required this.allSubjects,
     this.editReminder,
     this.removeThis,
@@ -1439,7 +1426,6 @@ class ItemWidget extends StatelessWidget {
       key: ValueKey(item.id),
       onDeleted: () {
         removeThis!();
-        if (tutorialCreatedReminder) tutorialService.reminderDeleted(item.id);
       },
       // this is a new entry or a reminder the user has just entered
       showEntryAnimation:
@@ -1530,21 +1516,16 @@ class ItemWidget extends StatelessWidget {
                                           : null,
                                     ),
                                   ),
-                            leading: !isHistory &&
-                                    !isDeletedView &&
-                                    item.deleteable
-                                ? TutorialTarget(
-                                    id: tutorialCreatedReminder
-                                        ? 'dashboard-created-reminder'
-                                        : 'dashboard-item-delete-${item.id}',
-                                    child: IconButton(
-                                      icon: const Icon(Icons.close),
-                                      onPressed: noInternet
-                                          ? null
-                                          : () => handleDelete(delete),
-                                      padding: EdgeInsets.zero,
-                                    ))
-                                : null,
+                            leading:
+                                !isHistory && !isDeletedView && item.deleteable
+                                    ? IconButton(
+                                        icon: const Icon(Icons.close),
+                                        onPressed: noInternet
+                                            ? null
+                                            : () => handleDelete(delete),
+                                        padding: EdgeInsets.zero,
+                                      )
+                                    : null,
                           ),
                         ],
                       ),

@@ -21,7 +21,6 @@ import 'package:dr/container/calendar_detail_container.dart';
 import 'package:dr/data.dart';
 import 'package:dr/i18n/app_localizations.dart';
 import 'package:dr/main.dart';
-import 'package:dr/tutorial/tutorial_target.dart';
 import 'package:dr/ui/calendar_week.dart';
 import 'package:dr/ui/last_fetched_overlay.dart';
 import 'package:dr/ui/no_internet.dart';
@@ -240,19 +239,17 @@ class _CalendarDetailPageState extends State<CalendarDetailPage> {
             ),
           ],
         ),
-        body: TutorialTarget(
-            id: 'calendar-detail',
-            child: PageView.builder(
-              itemBuilder: (BuildContext context, int index) {
-                final date = _dateForPageViewIndex(index);
-                return CalendarDetailItemContainer(
-                  date: date,
-                  isSidebar: widget.isSidebar,
-                );
-              },
-              controller: _controller,
-              onPageChanged: _handlePageChanged,
-            )),
+        body: PageView.builder(
+          itemBuilder: (BuildContext context, int index) {
+            final date = _dateForPageViewIndex(index);
+            return CalendarDetailItemContainer(
+              date: date,
+              isSidebar: widget.isSidebar,
+            );
+          },
+          controller: _controller,
+          onPageChanged: _handlePageChanged,
+        ),
       ),
       (scaffold) => RightSidebar(
         show: widget.selectedDay != null && widget.show,

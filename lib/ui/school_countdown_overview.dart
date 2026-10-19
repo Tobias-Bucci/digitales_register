@@ -42,18 +42,14 @@ class SchoolCountdownOverview extends StatelessWidget {
         final cards = <Widget>[
           for (final item in items)
             switch (item) {
-              DashboardItem.holidays => TutorialTarget(
-                  id: 'dashboard-holidays',
-                  child: loading && holiday == null
-                      ? DashboardLoadingCard(title: context.t(item.titleKey))
-                      : _HolidayCountdownCard(
-                          countdown: holiday,
-                          today: today,
-                          onOpenCalendarAt: onOpenCalendarAt),
-                ),
+              DashboardItem.holidays => loading && holiday == null
+                  ? DashboardLoadingCard(title: context.t(item.titleKey))
+                  : _HolidayCountdownCard(
+                      countdown: holiday,
+                      today: today,
+                      onOpenCalendarAt: onOpenCalendarAt),
               DashboardItem.gradingDeadline => TutorialTarget(
                   id: 'dashboard-deadline',
-                  action: true,
                   child: loading && deadline == null
                       ? DashboardLoadingCard(title: context.t(item.titleKey))
                       : _GradeDeadlineCountdownCard(

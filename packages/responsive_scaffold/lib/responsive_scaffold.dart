@@ -401,14 +401,17 @@ typedef DrawerBuilder<T> = Widget Function(
 class ResponsiveAppBar extends StatelessWidget implements PreferredSizeWidget {
   final Widget title;
   final List<Widget>? actions;
+  final Widget? leading;
 
-  const ResponsiveAppBar({Key? key, required this.title, this.actions})
+  const ResponsiveAppBar(
+      {Key? key, required this.title, this.actions, this.leading})
       : super(key: key);
   @override
   Widget build(BuildContext context) {
     final tabletMode = _InheritedTabletMode.of(context)?.tabletMode ?? false;
     return AppBar(
       actions: actions,
+      leading: tabletMode ? null : leading,
       title: title,
       automaticallyImplyLeading: !tabletMode,
     );

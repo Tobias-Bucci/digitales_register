@@ -18,7 +18,6 @@
 
 import 'package:dr/container/certificate_container.dart';
 import 'package:dr/i18n/app_localizations.dart';
-import 'package:dr/tutorial/tutorial_target.dart';
 import 'package:dr/ui/certificate_image_factory.dart';
 import 'package:dr/ui/last_fetched_overlay.dart';
 import 'package:dr/ui/no_internet.dart';
@@ -40,10 +39,7 @@ class Certificate extends StatelessWidget {
         ? parsedBaseUrl
         : null;
     return Scaffold(
-      appBar: ResponsiveAppBar(
-          title: TutorialTarget(
-              id: 'certificate-page',
-              child: Text(context.t('certificate.title')))),
+      appBar: ResponsiveAppBar(title: Text(context.t('certificate.title'))),
       body: vm.html == null
           ? Center(
               child: vm.noInternet

@@ -22,7 +22,6 @@ import 'package:dr/i18n/app_localizations.dart';
 import 'package:dr/main.dart';
 import 'package:dr/middleware/middleware.dart';
 import 'package:dr/page_payload_cache.dart';
-import 'package:dr/tutorial/tutorial_target.dart';
 import 'package:dr/ui/animated_linear_progress_indicator.dart';
 import 'package:dr/ui/no_internet.dart';
 import 'package:flutter/material.dart';
@@ -231,23 +230,21 @@ class _CourseMaterialsPageState extends State<CourseMaterialsPage> {
     final l10n = context.l10n;
     return Scaffold(
       appBar: ResponsiveAppBar(
-        title: TutorialTarget(
-            id: 'materials-page',
-            child: Row(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                const Icon(Icons.folder_copy_outlined),
-                const SizedBox(width: 8),
-                Flexible(
-                  child: Text(
-                    l10n.text('courseMaterials.title'),
-                    maxLines: 1,
-                    softWrap: false,
-                    overflow: TextOverflow.ellipsis,
-                  ),
-                ),
-              ],
-            )),
+        title: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            const Icon(Icons.folder_copy_outlined),
+            const SizedBox(width: 8),
+            Flexible(
+              child: Text(
+                l10n.text('courseMaterials.title'),
+                maxLines: 1,
+                softWrap: false,
+                overflow: TextOverflow.ellipsis,
+              ),
+            ),
+          ],
+        ),
       ),
       body: Stack(
         children: [

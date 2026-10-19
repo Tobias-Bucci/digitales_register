@@ -286,7 +286,7 @@ class _CollapsibleSidebarState extends State<CollapsibleSidebar>
         iconColor = widget.selectedIconColor;
         textColor = widget.selectedTextColor;
       }
-      return CollapsibleItemWidget(
+      final tile = CollapsibleItemWidget(
         tooltip: item.text,
         curve: widget.curve,
         hasDivider: item.hasDivider,
@@ -311,6 +311,7 @@ class _CollapsibleSidebarState extends State<CollapsibleSidebar>
           setState(() => _selectedItemIndex = index);
         },
       );
+      return item.builder?.call(tile) ?? tile;
     });
   }
 

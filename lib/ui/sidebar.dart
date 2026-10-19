@@ -20,6 +20,7 @@ import 'package:collapsible_sidebar/collapsible_sidebar.dart';
 import 'package:dr/i18n/app_localizations.dart';
 import 'package:dr/main.dart';
 import 'package:dr/middleware/middleware.dart';
+import 'package:dr/tutorial/tutorial_target.dart';
 import 'package:dr/ui/app_popup_button.dart';
 import 'package:dr/ui/profile_avatar.dart';
 import 'package:flutter/material.dart';
@@ -173,6 +174,8 @@ class Sidebar extends StatelessWidget {
             onPressed: goHome,
           ),
         CollapsibleItem(
+          builder: (child) =>
+              TutorialTarget(id: 'navigation-grades', child: child),
           onPressed: showGrades,
           isSelected: currentSelected == Pages.grades,
           text: l10n.text('sidebar.grades'),
@@ -230,6 +233,8 @@ class Sidebar extends StatelessWidget {
           text: l10n.text('sidebar.settings'),
           icon: Icons.tune,
           isSelected: currentSelected == Pages.settings,
+          builder: (child) =>
+              TutorialTarget(id: 'navigation-settings', child: child),
           onPressed: showSettings,
         ),
         CollapsibleItem(

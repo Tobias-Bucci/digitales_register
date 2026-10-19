@@ -8,18 +8,31 @@ class TutorialTarget extends StatefulWidget {
     super.key,
     required this.id,
     required this.child,
-    this.action = false,
   });
 
   final String id;
   final Widget child;
-  final bool action;
 
   @override
   State<TutorialTarget> createState() => _TutorialTargetState();
 }
 
 class _TutorialTargetState extends State<TutorialTarget> {
+  bool _inTree = true;
+  @override
+  void deactivate() {
+    _inTree = false;
+    tutorialTargets.remove(widget.id, context);
+    super.deactivate();
+  }
+
+  @override
+  void activate() {
+    super.activate();
+    _inTree = true;
+    WidgetsBinding.instance.addPostFrameCallback((_) => _register());
+  }
+
   @override
   void initState() {
     super.initState();
@@ -36,7 +49,7 @@ class _TutorialTargetState extends State<TutorialTarget> {
   }
 
   void _register() {
-    if (mounted) tutorialTargets.register(widget.id, context);
+    if (mounted && _inTree) tutorialTargets.register(widget.id, context);
   }
 
   @override
@@ -46,11 +59,5 @@ class _TutorialTargetState extends State<TutorialTarget> {
   }
 
   @override
-  Widget build(BuildContext context) => Listener(
-        behavior: HitTestBehavior.translucent,
-        onPointerDown: widget.action
-            ? (_) => tutorialService.completeRequiredAction(widget.id)
-            : null,
-        child: widget.child,
-      );
+  Widget build(BuildContext context) => widget.child;
 }

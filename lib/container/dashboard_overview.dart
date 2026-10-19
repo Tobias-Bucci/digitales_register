@@ -6,6 +6,7 @@ import 'package:dr/app_state.dart';
 import 'package:dr/dashboard_items.dart';
 import 'package:dr/i18n/app_localizations.dart';
 import 'package:dr/school_timeline.dart';
+import 'package:dr/tutorial/tutorial_service.dart';
 import 'package:dr/ui/dashboard_customize_dialog.dart';
 import 'package:dr/ui/school_countdown_overview.dart';
 import 'package:flutter/material.dart';
@@ -68,34 +69,47 @@ class DashboardOverview extends StatelessWidget {
           state.loginState.loggedIn,
           state.settingsState.dashboardItemSpans,
         ),
-        builder: (context, vm, actions) {
-          final items = resolveDashboardItems(vm.$1);
-          final overview = SchoolCountdownOverview(
-            timeline: timeline,
-            items: items,
-            spans: vm.$6.toMap(),
-            loading: vm.$4,
-            onOpenCalendarAt: onOpenCalendarAt,
-            onEditGradeDeadline: onEditGradeDeadline,
-            additionalCards: {
-              DashboardItem.absences: DashboardAbsencesCard(
-                state: vm.$2,
-                noInternet: vm.$3,
-                load: vm.$5 ? actions.absencesActions.load.call : null,
-                open: actions.routingActions.showAbsences.call,
-              ),
-            },
-          );
-          final controls = footer;
-          if (controls == null) return overview;
-          return Column(
-              mainAxisSize: MainAxisSize.min,
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                if (items.isNotEmpty) ...[overview, const SizedBox(height: 10)],
-                controls,
-              ]);
-        },
+        builder: (context, vm, actions) => AnimatedBuilder(
+            animation: TutorialService.of(context),
+            builder: (context, _) {
+              final tour = TutorialService.of(context);
+              final configured = resolveDashboardItems(vm.$1);
+              final items = [
+                ...configured,
+                if (tour.active &&
+                    tour.step.key == 'deadlines' &&
+                    !configured.contains(DashboardItem.gradingDeadline))
+                  DashboardItem.gradingDeadline,
+              ];
+              final overview = SchoolCountdownOverview(
+                timeline: timeline,
+                items: items,
+                spans: vm.$6.toMap(),
+                loading: vm.$4,
+                onOpenCalendarAt: onOpenCalendarAt,
+                onEditGradeDeadline: onEditGradeDeadline,
+                additionalCards: {
+                  DashboardItem.absences: DashboardAbsencesCard(
+                    state: vm.$2,
+                    noInternet: vm.$3,
+                    load: vm.$5 ? actions.absencesActions.load.call : null,
+                    open: actions.routingActions.showAbsences.call,
+                  ),
+                },
+              );
+              final controls = footer;
+              if (controls == null) return overview;
+              return Column(
+                  mainAxisSize: MainAxisSize.min,
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    if (items.isNotEmpty) ...[
+                      overview,
+                      const SizedBox(height: 10)
+                    ],
+                    controls,
+                  ]);
+            }),
       );
 }
 

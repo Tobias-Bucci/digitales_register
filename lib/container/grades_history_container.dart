@@ -18,7 +18,7 @@ class GradesHistoryContainer extends StatelessWidget {
         animation: appClock,
         builder: (context, _) => IconButton(
           icon: const Icon(Icons.history),
-          tooltip: context.l10n.text('tutorial.step.gradeHistory.title'),
+          tooltip: context.l10n.text('grades.history.title'),
           onPressed: () => _showHistory(context, state),
         ),
       ),
@@ -51,7 +51,7 @@ class _HistoryDialog extends StatelessWidget {
   Widget build(BuildContext context) {
     final data = comparison;
     return AlertDialog(
-      title: Text(context.l10n.text('tutorial.step.gradeHistory.title')),
+      title: Text(context.l10n.text('grades.history.title')),
       content: SizedBox(
         width: 520,
         child: data == null
