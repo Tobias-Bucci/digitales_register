@@ -126,92 +126,88 @@ class _GradesPageState extends State<GradesPage> {
 
     final l10n = context.l10n;
     final averageStyle = Theme.of(context).textTheme.titleMedium;
-    return Scaffold(
-      appBar: ResponsiveAppBar(
-        title: Text(l10n.text('sidebar.grades')),
-        actions: <Widget>[
-          const TutorialTarget(
-              id: 'grades-history',
-              action: true,
-              child: GradesHistoryContainer()),
-          Padding(
-            padding: const EdgeInsets.only(right: 12),
-            child: TutorialTarget(
-              id: 'grades-semester',
-              child: _SemesterSwitcher(
-                selectedSemester: vm.showSemester,
-                onChanged: widget.changeSemester,
+    return TutorialTarget(
+        id: 'grades-page',
+        child: Scaffold(
+          appBar: ResponsiveAppBar(
+            title: Text(l10n.text('sidebar.grades')),
+            actions: <Widget>[
+              const GradesHistoryContainer(),
+              Padding(
+                padding: const EdgeInsets.only(right: 12),
+                child: _SemesterSwitcher(
+                  selectedSemester: vm.showSemester,
+                  onChanged: widget.changeSemester,
+                ),
               ),
-            ),
+            ],
           ),
-        ],
-      ),
-      body: !vm.hasData && vm.noInternet
-          ? const NoInternet()
-          : vm.loading && !vm.hasData
-              ? const Center(
-                  child: CircularProgressIndicator(),
-                )
-              : Stack(
-                  children: [
-                    AnimatedLinearProgressIndicator(show: vm.loading),
-                    RawLastFetchedOverlay(
-                      message: vm.lastFetchedMessage,
-                      child: ListView(
-                        children: <Widget>[
-                          if (vm.showGradesDiagram)
-                            Padding(
-                              padding: const EdgeInsets.fromLTRB(12, 12, 12, 4),
-                              child: Card(
-                                margin: EdgeInsets.zero,
-                                clipBehavior: Clip.antiAlias,
-                                child: SizedBox(
-                                  height: 220,
-                                  child: Column(
-                                    children: [
-                                      Padding(
-                                        padding: const EdgeInsets.fromLTRB(
-                                          16,
-                                          10,
-                                          10,
-                                          0,
-                                        ),
-                                        child: Row(
-                                          children: [
-                                            Icon(
-                                              Icons.show_chart_rounded,
-                                              color: Theme.of(context)
-                                                  .colorScheme
-                                                  .primary,
+          body: !vm.hasData && vm.noInternet
+              ? const NoInternet()
+              : vm.loading && !vm.hasData
+                  ? const Center(
+                      child: CircularProgressIndicator(),
+                    )
+                  : Stack(
+                      children: [
+                        AnimatedLinearProgressIndicator(show: vm.loading),
+                        RawLastFetchedOverlay(
+                          message: vm.lastFetchedMessage,
+                          child: ListView(
+                            children: <Widget>[
+                              if (vm.showGradesDiagram)
+                                Padding(
+                                  padding:
+                                      const EdgeInsets.fromLTRB(12, 12, 12, 4),
+                                  child: Card(
+                                    margin: EdgeInsets.zero,
+                                    clipBehavior: Clip.antiAlias,
+                                    child: SizedBox(
+                                      height: 220,
+                                      child: Column(
+                                        children: [
+                                          Padding(
+                                            padding: const EdgeInsets.fromLTRB(
+                                              16,
+                                              10,
+                                              10,
+                                              0,
                                             ),
-                                            const SizedBox(width: 8),
-                                            Expanded(
-                                              child: Text(
-                                                l10n.text('grades.chart.title'),
-                                                style: Theme.of(context)
-                                                    .textTheme
-                                                    .titleMedium,
-                                              ),
+                                            child: Row(
+                                              children: [
+                                                Icon(
+                                                  Icons.show_chart_rounded,
+                                                  color: Theme.of(context)
+                                                      .colorScheme
+                                                      .primary,
+                                                ),
+                                                const SizedBox(width: 8),
+                                                Expanded(
+                                                  child: Text(
+                                                    l10n.text(
+                                                        'grades.chart.title'),
+                                                    style: Theme.of(context)
+                                                        .textTheme
+                                                        .titleMedium,
+                                                  ),
+                                                ),
+                                                const Icon(
+                                                    Icons.open_in_full_rounded),
+                                              ],
                                             ),
-                                            const Icon(
-                                                Icons.open_in_full_rounded),
-                                          ],
-                                        ),
+                                          ),
+                                          const Expanded(
+                                            child: GradesChartContainer(
+                                              isFullscreen: false,
+                                            ),
+                                          ),
+                                        ],
                                       ),
-                                      const Expanded(
-                                        child: GradesChartContainer(
-                                          isFullscreen: false,
-                                        ),
-                                      ),
-                                    ],
+                                    ),
                                   ),
                                 ),
-                              ),
-                            ),
-                          if (vm.showAllSubjectsAverage) ...[
-                            TutorialTarget(
-                                id: 'grades-averages',
-                                child: Column(children: [
+                              if (vm.showAllSubjectsAverage) ...[
+                                Column(children: [
                                   _AverageRow(
                                     label: l10n.text('grades.average'),
                                     icon: Icons.settings,
@@ -237,22 +233,20 @@ class _GradesPageState extends State<GradesPage> {
                                     ),
                                   ),
                                   const GradesForecastContainer(),
-                                ])),
-                            const Divider(
-                              height: 0,
-                            ),
-                          ],
-                          TutorialTarget(
-                              id: 'grades-list',
-                              child: SortedGradesContainer()),
-                          const GradesStatisticsContainer(),
-                          const SizedBox(height: 50),
-                        ],
-                      ),
+                                ]),
+                                const Divider(
+                                  height: 0,
+                                ),
+                              ],
+                              SortedGradesContainer(),
+                              const GradesStatisticsContainer(),
+                              const SizedBox(height: 50),
+                            ],
+                          ),
+                        ),
+                      ],
                     ),
-                  ],
-                ),
-    );
+        ));
   }
 }
 

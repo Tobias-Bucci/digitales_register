@@ -206,55 +206,51 @@ class _SortedGradesWidgetState extends State<SortedGradesWidget> {
             subjectThemes: widget.vm.subjectThemes,
             padding: const EdgeInsets.fromLTRB(16, 12, 16, 4),
           ),
-        TutorialTarget(
-            id: 'grades-filters',
-            child: Column(children: [
-              SwitchListTile.adaptive(
-                title: Text(context.t('grades.sortByType')),
-                onChanged: widget.sortByTypeCallback,
-                value: widget.vm.sortByType,
-              ),
-              SwitchListTile.adaptive(
-                title: Text(context.t('grades.showDeleted')),
-                onChanged: widget.showCancelledCallback,
-                value: widget.vm.showCancelled!,
-              ),
-              SwitchListTile.adaptive(
-                title: Text(context.t('grades.colorGrades')),
-                onChanged: widget.colorGradesCallback,
-                value: widget.vm.colorGrades,
-              ),
-            ])),
+        Column(children: [
+          SwitchListTile.adaptive(
+            title: Text(context.t('grades.sortByType')),
+            onChanged: widget.sortByTypeCallback,
+            value: widget.vm.sortByType,
+          ),
+          SwitchListTile.adaptive(
+            title: Text(context.t('grades.showDeleted')),
+            onChanged: widget.showCancelledCallback,
+            value: widget.vm.showCancelled!,
+          ),
+          SwitchListTile.adaptive(
+            title: Text(context.t('grades.colorGrades')),
+            onChanged: widget.colorGradesCallback,
+            value: widget.vm.colorGrades,
+          ),
+        ]),
         const Divider(
           height: 0,
         ),
         for (final s in visibleSubjects)
-          TutorialTarget(
-              id: 'grades-subject',
-              child: SubjectWidget(
-                key: ValueKey(_subjectExpansionKey(s)),
-                subject: s,
-                competenceStarsScale: widget.vm.competenceStarsScale,
-                sortByType: widget.vm.sortByType,
-                viewSubjectDetail: () => widget.viewSubjectDetail(s),
-                showCancelled: widget.vm.showCancelled!,
-                semester: widget.vm.semester,
-                noInternet: widget.vm.noInternet,
-                ignoredForAverage: widget.vm.ignoredSubjectsForAverage.any(
-                  (element) => element.toLowerCase() == s.name.toLowerCase(),
-                ),
-                colorGrades: widget.vm.colorGrades,
-                expanded: _expandedSubjectKey == _subjectExpansionKey(s),
-                onExpansionChanged: (expanded) {
-                  setState(() {
-                    if (expanded) {
-                      _expandedSubjectKey = _subjectExpansionKey(s);
-                    } else if (_expandedSubjectKey == _subjectExpansionKey(s)) {
-                      _expandedSubjectKey = null;
-                    }
-                  });
-                },
-              )),
+          SubjectWidget(
+            key: ValueKey(_subjectExpansionKey(s)),
+            subject: s,
+            competenceStarsScale: widget.vm.competenceStarsScale,
+            sortByType: widget.vm.sortByType,
+            viewSubjectDetail: () => widget.viewSubjectDetail(s),
+            showCancelled: widget.vm.showCancelled!,
+            semester: widget.vm.semester,
+            noInternet: widget.vm.noInternet,
+            ignoredForAverage: widget.vm.ignoredSubjectsForAverage.any(
+              (element) => element.toLowerCase() == s.name.toLowerCase(),
+            ),
+            colorGrades: widget.vm.colorGrades,
+            expanded: _expandedSubjectKey == _subjectExpansionKey(s),
+            onExpansionChanged: (expanded) {
+              setState(() {
+                if (expanded) {
+                  _expandedSubjectKey = _subjectExpansionKey(s);
+                } else if (_expandedSubjectKey == _subjectExpansionKey(s)) {
+                  _expandedSubjectKey = null;
+                }
+              });
+            },
+          ),
         if (widget.vm.subjects.any(
           (s) => widget.vm.ignoredSubjectsForAverage.any(
             (element) => element.toLowerCase() == s.name.toLowerCase(),
@@ -267,21 +263,19 @@ class _SortedGradesWidgetState extends State<SortedGradesWidget> {
             ),
           ),
         TutorialTarget(
-          id: 'grades-calculator',
-          action: true,
-          child: Padding(
-            padding: const EdgeInsets.symmetric(vertical: 16),
-            child: ListTile(
-              title: Row(
-                children: [
-                  Text(context.t('grades.calculator')),
-                ],
+            id: 'grades-calculator',
+            child: Padding(
+              padding: const EdgeInsets.symmetric(vertical: 16),
+              child: ListTile(
+                title: Row(
+                  children: [
+                    Text(context.t('grades.calculator')),
+                  ],
+                ),
+                subtitle: Text(context.t('grades.calculator.subtitle')),
+                onTap: widget.showGradeCalculator,
               ),
-              subtitle: Text(context.t('grades.calculator.subtitle')),
-              onTap: widget.showGradeCalculator,
-            ),
-          ),
-        ),
+            )),
       ],
     );
   }
@@ -429,10 +423,7 @@ class _SubjectWidgetState extends State<SubjectWidget> {
               ),
             ),
             const SizedBox(width: 8),
-            TutorialTarget(
-                id: 'grades-absence',
-                child: _AbsencesBadge(
-                    count: widget.subject.absencesFor(widget.semester))),
+            _AbsencesBadge(count: widget.subject.absencesFor(widget.semester)),
           ],
         ),
         subtitle: _lastFetchedMessage(),

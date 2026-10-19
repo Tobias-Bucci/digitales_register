@@ -1,21 +1,23 @@
-import 'package:dr/data.dart';
 import 'package:dr/i18n/app_localizations.dart';
 import 'package:dr/tutorial/tutorial_overlay.dart';
 import 'package:dr/tutorial/tutorial_service.dart';
 import 'package:dr/tutorial/tutorial_target.dart';
 import 'package:dr/ui/days.dart';
-import 'package:dr/utc_date_time.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
-import 'support/fixtures.dart';
-
 class _Tour extends TutorialService {
   bool running = true;
-  bool completed = false;
   int advances = 0;
+  int backwards = 0;
+  int position = 0;
+  Map<String, String> labels = {};
+  String? body;
+  @override
+  int get index => position;
   TutorialStep current =
       const TutorialStep(TutorialChapter.dashboard, 'test', target: 'test');
   @override
@@ -25,22 +27,27 @@ class _Tour extends TutorialService {
   @override
   int get length => 2;
   @override
-  bool get canContinue => !step.requiresAction || completed;
+  bool get canContinue => true;
   @override
   String stepTitle() => 'Test';
   @override
-  String stepBody() => 'Tap the highlighted button.';
+  String stepBody() => body ?? 'Tap the highlighted button.';
   @override
-  String text(String suffix) => suffix;
-  @override
-  void completeRequiredAction(String target) {
-    if (target == step.target) completed = true;
-    refresh();
-  }
-
+  String text(String suffix) => labels[suffix] ?? suffix;
   @override
   Future<void> next() async {
     advances++;
+  }
+
+  @override
+  Future<void> previous() async {
+    backwards++;
+  }
+
+  @override
+  Future<void> cancel() async {
+    running = false;
+    refresh();
   }
 
   void refresh() => notifyListeners();
@@ -191,45 +198,80 @@ void main() {
     expect(tester.takeException(), isNull);
   });
 
-  for (final assessment in [false, true]) {
-    test(
-        'tour waits for saved ${assessment ? 'classwork' : 'reminder'} and its deletion',
-        () {
-      final tour = _Tour()
-        ..current = TutorialStep(TutorialChapter.dashboard,
-            assessment ? 'assessmentShortcuts' : 'reminders',
-            target: 'dashboard-reminder', requiresAction: true);
-      final text = assessment ? '/cw Mathematics' : 'Bring books';
-      final existing =
-          buildHomework(id: 1, type: HomeworkType.homework, subtitle: text);
-      final day = buildDay(date: fixtureNow, homework: [existing]);
-      expect(tour.canContinue, isFalse);
-      tour.reminderSubmitted(day, text);
-      expect(tour.observeDashboardDays([day]), isFalse);
-      expect(tour.canContinue, isFalse);
-      final saved = buildHomework(
-          id: 2, type: HomeworkType.homework, subtitle: text, deleteable: true);
-      final wrongDay =
-          buildDay(date: UtcDateTime(2026, 3, 29), homework: [saved]);
-      expect(tour.observeDashboardDays([wrongDay]), isFalse);
-      expect(
-          tour.observeDashboardDays([
-            buildDay(date: fixtureNow, homework: [existing, saved])
-          ]),
-          isTrue);
-      expect(tour.canContinue, isTrue);
-      expect(tour.advances, 1);
-      expect(tour.isCreatedReminder(day, saved), isTrue);
-      tour.completed = false;
-      tour.current = TutorialStep(TutorialChapter.dashboard,
-          assessment ? 'deleteAssessment' : 'deleteReminder',
-          target: 'dashboard-created-reminder', requiresAction: true);
-      tour.reminderDeleted(existing.id);
-      expect(tour.canContinue, isFalse);
-      tour.reminderDeleted(saved.id);
-      expect(tour.canContinue, isTrue);
-      expect(tour.advances, 2);
-      expect(tour.isCreatedReminder(day, saved), isFalse);
-    });
+  testWidgets('keyboard shortcuts navigate and Escape skips', (tester) async {
+    final tour = _Tour()..position = 1;
+    await tester.pumpWidget(app(tour, const TextField()));
+    await tester.pumpAndSettle();
+    await tester.tap(find.byType(TextField));
+    await tester.sendKeyDownEvent(LogicalKeyboardKey.altLeft);
+    await tester.sendKeyEvent(LogicalKeyboardKey.arrowLeft);
+    await tester.sendKeyEvent(LogicalKeyboardKey.arrowRight);
+    await tester.sendKeyUpEvent(LogicalKeyboardKey.altLeft);
+    expect(tour.backwards, 1);
+    expect(tour.advances, 1);
+    await tester.sendKeyEvent(LogicalKeyboardKey.escape);
+    await tester.pumpAndSettle();
+    expect(tour.active, isFalse);
+    expect(find.text('next'), findsNothing);
+  });
+
+  for (final language in ['de', 'it', 'en', 'lld']) {
+    for (final brightness in Brightness.values) {
+      for (final size in [const Size(320, 480), const Size(700, 280)]) {
+        testWidgets(
+            'large text controls remain usable at $size in $brightness ($language)',
+            (tester) async {
+          tester.view.physicalSize = size;
+          tester.view.devicePixelRatio = 1;
+          addTearDown(tester.view.resetPhysicalSize);
+          addTearDown(tester.view.resetDevicePixelRatio);
+          final l10n = await AppLocalizations.load(Locale(language));
+          final tour = _Tour()
+            ..position = 1
+            ..body = l10n.text('tutorial.step.calculatorTarget.body')
+            ..labels = {
+              for (final key in ['cancel', 'back', 'finish'])
+                key: l10n.text('tutorial.$key')
+            };
+          final semantics = tester.ensureSemantics();
+          await tester.pumpWidget(MaterialApp(
+            theme: ThemeData(brightness: brightness),
+            builder: (context, child) => MediaQuery(
+              data: MediaQuery.of(context)
+                  .copyWith(textScaler: TextScaler.linear(2)),
+              child: TutorialHost(service: tour, child: child!),
+            ),
+            home: const Scaffold(body: Text('Content')),
+          ));
+          await tester.pumpAndSettle();
+          for (final label in tour.labels.values) {
+            expect(find.text(label).hitTestable(), findsOneWidget);
+            final button = find.ancestor(
+                of: find.text(label),
+                matching: find.bySubtype<ButtonStyleButton>());
+            expect(tester.getSize(button).height, greaterThanOrEqualTo(48));
+            expect(find.bySemanticsLabel(label), findsOneWidget);
+          }
+          await tester.tap(find.text(tour.text('back')));
+          expect(tour.backwards, 1);
+          await tester.drag(
+              find.byType(SingleChildScrollView), const Offset(0, -300));
+          await tester.pumpAndSettle();
+          tour.current = const TutorialStep(
+              TutorialChapter.dashboard, 'new-step',
+              target: 'test');
+          tour.refresh();
+          await tester.pumpAndSettle();
+          expect(
+              tester
+                  .state<ScrollableState>(find.byType(Scrollable))
+                  .position
+                  .pixels,
+              0);
+          expect(tester.takeException(), isNull);
+          semantics.dispose();
+        });
+      }
+    }
   }
 }

@@ -23,7 +23,6 @@ import 'package:badges/badges.dart' as badge;
 import 'package:dr/app_state.dart';
 import 'package:dr/data.dart';
 import 'package:dr/i18n/app_localizations.dart';
-import 'package:dr/tutorial/tutorial_target.dart';
 import 'package:dr/ui/animated_linear_progress_indicator.dart';
 import 'package:dr/ui/last_fetched_overlay.dart';
 import 'package:dr/ui/no_internet.dart';
@@ -128,8 +127,7 @@ class _MessagesPageState extends State<MessagesPage>
     final visibleMessages = _visibleMessages(widget.state);
     return Scaffold(
       appBar: ResponsiveAppBar(
-        title: TutorialTarget(
-            id: 'messages-page', child: Text(context.t('messages.title'))),
+        title: Text(context.t('messages.title')),
       ),
       body: Column(
         children: [
@@ -177,7 +175,7 @@ class _MessagesPageState extends State<MessagesPage>
                     ),
                   ),
                 ListView.builder(
-                    key: ValueKey('messages-folder-${_tabs.index}'),
+                  key: ValueKey('messages-folder-${_tabs.index}'),
                   itemCount: visibleMessages.length,
                   itemBuilder: (context, i) {
                     return MessageWidget(

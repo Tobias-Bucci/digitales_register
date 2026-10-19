@@ -23,7 +23,6 @@ import 'package:dr/app_state.dart';
 import 'package:dr/container/absence_group_container.dart';
 import 'package:dr/data.dart';
 import 'package:dr/i18n/app_localizations.dart';
-import 'package:dr/tutorial/tutorial_target.dart';
 import 'package:dr/ui/absence.dart';
 import 'package:dr/ui/last_fetched_overlay.dart';
 import 'package:dr/ui/no_internet.dart';
@@ -55,17 +54,14 @@ class AbsencesPage extends StatelessWidget {
       appBar: ResponsiveAppBar(
         title: Text(context.t('absences.title')),
       ),
-      body: TutorialTarget(
-        id: 'absences-page',
-        child: LastFetchedOverlay(
-          lastFetched: state.lastFetched,
+      body: LastFetchedOverlay(
+        lastFetched: state.lastFetched,
+        noInternet: noInternet,
+        child: AbsencesBody(
+          state: state,
           noInternet: noInternet,
-          child: AbsencesBody(
-            state: state,
-            noInternet: noInternet,
-            onAddFutureAbsence: onAddFutureAbsence,
-            onRemoveFutureAbsence: onRemoveFutureAbsence,
-          ),
+          onAddFutureAbsence: onAddFutureAbsence,
+          onRemoveFutureAbsence: onRemoveFutureAbsence,
         ),
       ),
     );
@@ -106,31 +102,26 @@ class AbsencesBody extends StatelessWidget {
                       padding: const EdgeInsets.all(8.0),
                       child: Align(
                         alignment: Alignment.centerLeft,
-                        child: TutorialTarget(
-                          id: 'absences-add',
-                          child: FilledButton.icon(
-                            onPressed: noInternet
-                                ? null
-                                : () async {
-                                    final payload =
-                                        await showDialog<Map<String, dynamic>>(
-                                      context: context,
-                                      builder: (_) =>
-                                          const _FutureAbsenceDialogContainer(),
-                                    );
-                                    if (payload != null) {
-                                      onAddFutureAbsence(payload);
-                                    }
-                                  },
-                            icon: const Icon(Icons.event_available_outlined),
-                            label: Text(context.t('absences.addFutureAbsence')),
-                          ),
+                        child: FilledButton.icon(
+                          onPressed: noInternet
+                              ? null
+                              : () async {
+                                  final payload =
+                                      await showDialog<Map<String, dynamic>>(
+                                    context: context,
+                                    builder: (_) =>
+                                        const _FutureAbsenceDialogContainer(),
+                                  );
+                                  if (payload != null) {
+                                    onAddFutureAbsence(payload);
+                                  }
+                                },
+                          icon: const Icon(Icons.event_available_outlined),
+                          label: Text(context.t('absences.addFutureAbsence')),
                         ),
                       ),
                     ),
-                  TutorialTarget(
-                      id: 'absences-statistics',
-                      child: AbsencesStatisticWidget(vm: statsVm!)),
+                  AbsencesStatisticWidget(vm: statsVm!),
                   const Divider(height: 0),
                   if (state.futureAbsences.isNotEmpty)
                     Padding(
@@ -159,9 +150,7 @@ class AbsencesBody extends StatelessWidget {
                     ),
                   ...List.generate(
                     state.absences.length,
-                    (n) => TutorialTarget(
-                        id: 'absences-history',
-                        child: AbsenceGroupContainer(group: n)),
+                    (n) => AbsenceGroupContainer(group: n),
                   ),
                 ],
               )

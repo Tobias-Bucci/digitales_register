@@ -4,7 +4,6 @@ import 'package:dr/assessment_attachments.dart';
 import 'package:dr/calendar_date.dart';
 import 'package:dr/exam_study_plan.dart';
 import 'package:dr/i18n/app_localizations.dart';
-import 'package:dr/tutorial/tutorial_target.dart';
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 
@@ -46,85 +45,75 @@ class ExamCalendarPage extends StatelessWidget {
         .toList();
     return Scaffold(
       appBar: AppBar(
-        title: Text(context.l10n.text('tutorial.step.examOverview.title')),
+        title: Text(context.l10n.text('exam.title')),
         actions: [
-          TutorialTarget(
-            id: 'exams-week',
-            child: IconButton(
-              key: const Key('exam-calendar-week-view'),
-              tooltip: context.l10n.text('exam.calendarView'),
-              icon: const Icon(Icons.calendar_month_outlined),
-              onPressed: () =>
-                  Navigator.of(context).push(MaterialPageRoute<void>(
-                builder: (_) => _ExamWeekCalendar(
-                  assessments: upcoming,
-                  now: now,
-                  completedFor: completedFor,
-                  phasesFor: phasesFor,
-                  noteFor: noteFor,
-                  attachmentsFor: attachmentsFor,
-                  onProgressChanged: onProgressChanged,
-                  onPhasesChanged: onPhasesChanged,
-                  onNoteChanged: onNoteChanged,
-                  onAttachmentsChanged: onAttachmentsChanged,
-                ),
-              )),
-            ),
+          IconButton(
+            key: const Key('exam-calendar-week-view'),
+            tooltip: context.l10n.text('exam.calendarView'),
+            icon: const Icon(Icons.calendar_month_outlined),
+            onPressed: () => Navigator.of(context).push(MaterialPageRoute<void>(
+              builder: (_) => _ExamWeekCalendar(
+                assessments: upcoming,
+                now: now,
+                completedFor: completedFor,
+                phasesFor: phasesFor,
+                noteFor: noteFor,
+                attachmentsFor: attachmentsFor,
+                onProgressChanged: onProgressChanged,
+                onPhasesChanged: onPhasesChanged,
+                onNoteChanged: onNoteChanged,
+                onAttachmentsChanged: onAttachmentsChanged,
+              ),
+            )),
           ),
         ],
       ),
-      body: TutorialTarget(
-        id: 'exams-page',
-        child: upcoming.isEmpty && past.isEmpty
-            ? const _EmptyExamCalendar()
-            : ListView(
-                padding: const EdgeInsets.fromLTRB(12, 16, 12, 32),
-                children: [
-                  if (upcoming.isNotEmpty) ...[
-                    Text(context.l10n.text('exam.upcoming'),
-                        style: Theme.of(context).textTheme.titleLarge),
-                    const SizedBox(height: 8),
-                    for (final assessment in upcoming)
-                      TutorialTarget(
-                          id: 'exams-card',
-                          action: true,
-                          child: _AssessmentCard(
-                            assessment: assessment,
-                            now: now,
-                            completed: completedFor(assessment.id),
-                            customPhases: phasesFor(assessment.id),
-                            note: noteFor(assessment.id),
-                            attachments: attachmentsFor(assessment.id),
-                            onProgressChanged: (value) =>
-                                onProgressChanged(assessment.id, value),
-                            onPhasesChanged: (value) =>
-                                onPhasesChanged(assessment.id, value),
-                            onNoteChanged: (value) =>
-                                onNoteChanged(assessment.id, value),
-                            onAttachmentsChanged: (value) =>
-                                onAttachmentsChanged(assessment.id, value),
-                          )),
-                  ],
-                  if (past.isNotEmpty) ...[
-                    const SizedBox(height: 16),
-                    ExpansionTile(
-                      title: Text(context.l10n.text('exam.past',
-                          args: {'count': '${past.length}'})),
-                      children: [
-                        for (final assessment in past)
-                          ListTile(
-                            leading: const Icon(Icons.history_rounded),
-                            title: Text(assessment.title),
-                            subtitle: Text(_subtitle(context, assessment)),
-                            trailing: Text(DateFormat('dd.MM.yyyy')
-                                .format(assessment.date)),
-                          ),
-                      ],
+      body: upcoming.isEmpty && past.isEmpty
+          ? const _EmptyExamCalendar()
+          : ListView(
+              padding: const EdgeInsets.fromLTRB(12, 16, 12, 32),
+              children: [
+                if (upcoming.isNotEmpty) ...[
+                  Text(context.l10n.text('exam.upcoming'),
+                      style: Theme.of(context).textTheme.titleLarge),
+                  const SizedBox(height: 8),
+                  for (final assessment in upcoming)
+                    _AssessmentCard(
+                      assessment: assessment,
+                      now: now,
+                      completed: completedFor(assessment.id),
+                      customPhases: phasesFor(assessment.id),
+                      note: noteFor(assessment.id),
+                      attachments: attachmentsFor(assessment.id),
+                      onProgressChanged: (value) =>
+                          onProgressChanged(assessment.id, value),
+                      onPhasesChanged: (value) =>
+                          onPhasesChanged(assessment.id, value),
+                      onNoteChanged: (value) =>
+                          onNoteChanged(assessment.id, value),
+                      onAttachmentsChanged: (value) =>
+                          onAttachmentsChanged(assessment.id, value),
                     ),
-                  ],
                 ],
-              ),
-      ),
+                if (past.isNotEmpty) ...[
+                  const SizedBox(height: 16),
+                  ExpansionTile(
+                    title: Text(context.l10n
+                        .text('exam.past', args: {'count': '${past.length}'})),
+                    children: [
+                      for (final assessment in past)
+                        ListTile(
+                          leading: const Icon(Icons.history_rounded),
+                          title: Text(assessment.title),
+                          subtitle: Text(_subtitle(context, assessment)),
+                          trailing: Text(
+                              DateFormat('dd.MM.yyyy').format(assessment.date)),
+                        ),
+                    ],
+                  ),
+                ],
+              ],
+            ),
     );
   }
 }
@@ -133,7 +122,8 @@ class _EmptyExamCalendar extends StatelessWidget {
   const _EmptyExamCalendar();
   @override
   Widget build(BuildContext context) => Center(
-        child: Padding(
+        child: SingleChildScrollView(
+            child: Padding(
           padding: const EdgeInsets.all(32),
           child: Column(mainAxisSize: MainAxisSize.min, children: [
             Icon(Icons.event_available_rounded,
@@ -145,7 +135,7 @@ class _EmptyExamCalendar extends StatelessWidget {
             Text(context.l10n.text('exam.emptyHint'),
                 textAlign: TextAlign.center),
           ]),
-        ),
+        )),
       );
 }
 
@@ -278,18 +268,16 @@ class _ExamDetailPageState extends State<_ExamDetailPage> {
         const SizedBox(height: 10),
         _CountdownChip(days: days),
         const SizedBox(height: 24),
-        TutorialTarget(
-            id: 'exams-plan',
-            child: Row(children: [
-              Expanded(
-                  child: Text(context.l10n.text('exam.plan'),
-                      style: Theme.of(context).textTheme.titleLarge)),
-              TextButton.icon(
-                onPressed: () => _editPhases(_phases),
-                icon: const Icon(Icons.edit_outlined),
-                label: Text(context.l10n.text('exam.edit')),
-              ),
-            ])),
+        Row(children: [
+          Expanded(
+              child: Text(context.l10n.text('exam.plan'),
+                  style: Theme.of(context).textTheme.titleLarge)),
+          TextButton.icon(
+            onPressed: () => _editPhases(_phases),
+            icon: const Icon(Icons.edit_outlined),
+            label: Text(context.l10n.text('exam.edit')),
+          ),
+        ]),
         Text(context.l10n.text('exam.progress', args: {
           'done':
               '${completed.where((id) => _phases.any((phase) => phase.id == id)).length}',
@@ -317,30 +305,26 @@ class _ExamDetailPageState extends State<_ExamDetailPage> {
               padding: const EdgeInsets.only(top: 8),
               child: Text(widget.assessment.material!)),
         const SizedBox(height: 8),
-        TutorialTarget(
-            id: 'exams-notes',
-            child: TextField(
-              controller: noteController,
-              minLines: 2,
-              maxLines: 5,
-              decoration: InputDecoration(
-                  border: const OutlineInputBorder(),
-                  labelText: context.l10n.text('exam.notes')),
-              onChanged: widget.onNoteChanged,
-            )),
+        TextField(
+          controller: noteController,
+          minLines: 2,
+          maxLines: 5,
+          decoration: InputDecoration(
+              border: const OutlineInputBorder(),
+              labelText: context.l10n.text('exam.notes')),
+          onChanged: widget.onNoteChanged,
+        ),
         const SizedBox(height: 24),
-        TutorialTarget(
-            id: 'exams-files',
-            child: Row(children: [
-              Expanded(
-                  child: Text(context.l10n.text('exam.files'),
-                      style: Theme.of(context).textTheme.titleLarge)),
-              OutlinedButton.icon(
-                onPressed: _addAttachment,
-                icon: const Icon(Icons.attach_file_rounded),
-                label: Text(context.l10n.text('exam.addFile')),
-              ),
-            ])),
+        Row(children: [
+          Expanded(
+              child: Text(context.l10n.text('exam.files'),
+                  style: Theme.of(context).textTheme.titleLarge)),
+          OutlinedButton.icon(
+            onPressed: _addAttachment,
+            icon: const Icon(Icons.attach_file_rounded),
+            label: Text(context.l10n.text('exam.addFile')),
+          ),
+        ]),
         const SizedBox(height: 4),
         Text(context.l10n.text('exam.localFilesHint')),
         if (attachments.isEmpty)
@@ -438,42 +422,38 @@ class _ExamWeekCalendarState extends State<_ExamWeekCalendar> {
   Widget build(BuildContext context) {
     final sunday = _monday.add(const Duration(days: 6));
     return Scaffold(
-      appBar: AppBar(
-          title: Text(context.l10n.text('tutorial.step.examOverview.title'))),
+      appBar: AppBar(title: Text(context.l10n.text('exam.title'))),
       body: Column(children: [
-        TutorialTarget(
-            id: 'exams-week-navigation',
-            child: Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
-              child: Row(children: [
-                IconButton(
-                  tooltip: context.l10n.text('exam.previousWeek'),
-                  onPressed: () => setState(
-                    () => _monday = _monday.subtract(const Duration(days: 7)),
-                  ),
-                  icon: const Icon(Icons.chevron_left_rounded),
-                ),
-                Expanded(
-                  child: Text(
-                    '${DateFormat('dd.MM.').format(_monday)} – ${DateFormat('dd.MM.yyyy').format(sunday)}',
-                    textAlign: TextAlign.center,
-                    style: Theme.of(context).textTheme.titleMedium,
-                  ),
-                ),
-                TextButton(
-                  onPressed: () =>
-                      setState(() => _monday = _mondayOf(widget.now)),
-                  child: Text(context.l10n.text('day.today')),
-                ),
-                IconButton(
-                  tooltip: context.l10n.text('exam.nextWeek'),
-                  onPressed: () => setState(
-                    () => _monday = _monday.add(const Duration(days: 7)),
-                  ),
-                  icon: const Icon(Icons.chevron_right_rounded),
-                ),
-              ]),
-            )),
+        Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
+          child: Row(children: [
+            IconButton(
+              tooltip: context.l10n.text('exam.previousWeek'),
+              onPressed: () => setState(
+                () => _monday = _monday.subtract(const Duration(days: 7)),
+              ),
+              icon: const Icon(Icons.chevron_left_rounded),
+            ),
+            Expanded(
+              child: Text(
+                '${DateFormat('dd.MM.').format(_monday)} – ${DateFormat('dd.MM.yyyy').format(sunday)}',
+                textAlign: TextAlign.center,
+                style: Theme.of(context).textTheme.titleMedium,
+              ),
+            ),
+            TextButton(
+              onPressed: () => setState(() => _monday = _mondayOf(widget.now)),
+              child: Text(context.l10n.text('day.today')),
+            ),
+            IconButton(
+              tooltip: context.l10n.text('exam.nextWeek'),
+              onPressed: () => setState(
+                () => _monday = _monday.add(const Duration(days: 7)),
+              ),
+              icon: const Icon(Icons.chevron_right_rounded),
+            ),
+          ]),
+        ),
         Expanded(
           child: LayoutBuilder(
             builder: (context, constraints) {
@@ -783,7 +763,7 @@ class _StudyPhaseEditorState extends State<_StudyPhaseEditor> {
                       durationDays: durationDays),
                 );
               },
-              child: Text(context.l10n.text('tutorial.finish')),
+              child: Text(context.l10n.text('exam.done')),
             ),
           ],
         ),
