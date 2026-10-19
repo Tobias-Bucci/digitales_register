@@ -208,15 +208,22 @@ class _LoginPageContentState extends State<LoginPageContent> {
           Padding(
             padding: const EdgeInsets.only(bottom: 8),
             child: Material(
-              color: theme.colorScheme.surfaceContainerLow,
-              borderRadius: AuthLayout.radius,
+              color: Colors.transparent,
+              shape: const RoundedSuperellipseBorder(
+                  borderRadius: AuthLayout.radius),
               clipBehavior: Clip.antiAlias,
               child: ListTile(
                 contentPadding: const EdgeInsets.only(left: 16, right: 4),
                 minVerticalPadding: 12,
-                leading: Icon(Icons.account_circle_outlined,
-                    color: theme.colorScheme.onSurfaceVariant),
-                title: Text(widget.vm.otherAccounts[index]),
+                leading: CircleAvatar(
+                  backgroundColor:
+                      theme.colorScheme.primary.withValues(alpha: 0.08),
+                  foregroundColor: theme.colorScheme.primary,
+                  child: const Icon(Icons.person_outline_rounded, size: 22),
+                ),
+                title: Text(widget.vm.otherAccounts[index],
+                    style: theme.textTheme.bodyMedium
+                        ?.copyWith(fontWeight: FontWeight.w500)),
                 onTap: () => widget.onSelectAccount(index),
                 trailing: IconButton(
                   tooltip: l10n.text('login.removeAccount'),
@@ -243,8 +250,10 @@ class _LoginPageContentState extends State<LoginPageContent> {
         await SystemNavigator.pop();
       },
       child: AuthLayout(
-        title: l10n.text(
-            widget.vm.changePass ? 'login.changePasswordTitle' : 'login.login'),
+        title: l10n.text(widget.vm.changePass
+            ? 'login.changePasswordTitle'
+            : 'login.welcome'),
+        subtitle: widget.vm.changePass ? null : l10n.text('login.signInHint'),
         showAppBar: widget.vm.changePass,
         allowBack: !widget.vm.mustChangePass,
         loading: widget.vm.loading,
@@ -298,6 +307,7 @@ class _LoginPageContentState extends State<LoginPageContent> {
                       },
                       decoration: InputDecoration(
                         labelText: l10n.text('login.school'),
+                        hintText: l10n.text('login.schoolHint'),
                         suffixIcon: const Icon(Icons.search_rounded),
                         errorText: !_schoolFocusNode.hasFocus &&
                                 !_customSchoolSelected &&
@@ -381,7 +391,10 @@ class _LoginPageContentState extends State<LoginPageContent> {
           ],
           TextField(
             autofillHints: widget.vm.loading ? null : [AutofillHints.username],
-            decoration: InputDecoration(labelText: l10n.text('login.username')),
+            decoration: InputDecoration(
+              labelText: l10n.text('login.username'),
+              hintText: l10n.text('login.usernameHint'),
+            ),
             controller: _usernameController,
             enabled: !widget.vm.loading,
             textInputAction: TextInputAction.next,
@@ -436,8 +449,10 @@ class _LoginPageContentState extends State<LoginPageContent> {
           ],
           SwitchListTile.adaptive(
             title: Text(l10n.text('login.stayLoggedIn'),
-                style: theme.textTheme.bodyLarge),
-            subtitle: Text(l10n.text('settings.keepLoggedIn.subtitle')),
+                style: theme.textTheme.bodyMedium),
+            subtitle: Text(l10n.text('settings.keepLoggedIn.subtitle'),
+                style: theme.textTheme.bodySmall?.copyWith(
+                    color: theme.colorScheme.onSurfaceVariant, height: 1.4)),
             contentPadding: EdgeInsets.zero,
             value: !safeMode,
             onChanged: widget.vm.loading
@@ -458,6 +473,7 @@ class _LoginPageContentState extends State<LoginPageContent> {
             AuthLayout.fieldGap,
           ],
           ElevatedButton.icon(
+            iconAlignment: IconAlignment.end,
             onPressed: widget.vm.loading || !newPasswordsMatch ? null : _submit,
             icon: widget.vm.loading
                 ? const SizedBox.square(
@@ -479,11 +495,14 @@ class _LoginPageContentState extends State<LoginPageContent> {
             ],
             AuthLayout.sectionGap,
             Text(l10n.text('login.demoHint'),
-                style: theme.textTheme.bodySmall
-                    ?.copyWith(color: theme.colorScheme.onSurfaceVariant)),
+                textAlign: TextAlign.center,
+                style: theme.textTheme.bodySmall?.copyWith(
+                    color: theme.colorScheme.onSurfaceVariant, height: 1.5)),
             const SizedBox(height: 8),
             Center(
-              child: TextButton.icon(
+              child: TextButton(
+                style: TextButton.styleFrom(
+                    foregroundColor: theme.colorScheme.onSurfaceVariant),
                 onPressed: () async {
                   await launchUrl(Uri.https(
                     'docs.google.com',
@@ -494,8 +513,7 @@ class _LoginPageContentState extends State<LoginPageContent> {
                     },
                   ));
                 },
-                icon: const Icon(Icons.feedback_outlined, size: 18),
-                label: Text(l10n.text('login.feedback')),
+                child: Text(l10n.text('login.feedback')),
               ),
             ),
           ],

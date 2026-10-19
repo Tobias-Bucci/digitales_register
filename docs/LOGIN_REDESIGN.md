@@ -43,25 +43,32 @@ bestehende Auth-Tests und Layout-Matrix absichern; gerenderte Ansichten prüfen.
 
 ## Ergebnis und Designentscheidungen
 
-Die umrandete Hauptkarte und Kontenkarte entfallen. Ein maximal 448 logische
-Pixel breites Formular bildet die gemeinsame Mitte aller Auth-Seiten. Auf großen
-Fenstern ist der Inhalt zentriert; bei wenig Platz kann die ganze Seite scrollen.
-SafeArea und Scaffold-Tastaturanpassung halten die Aktionen erreichbar. Unter
-360 Pixel Breite sinkt der seitliche Abstand von 24 auf 16 Pixel. Feld- und
-Abschnittsabstände folgen einem 16/24-Pixel-Rhythmus.
+Wiederhergestellt ist die Variante aus den gezeigten Tablet-Ansichten: dauerhaft
+sichtbares Adressfeld, zentrierte Begrüßung und weichere Konturen. Mobil und auf
+Tablets im Hochformat steht das maximal 448 logische Pixel breite Formular frei
+auf der Seite. Ab 1000 Pixel Breite stehen Markenbereich und Anmeldefläche
+nebeneinander. Die Desktop-/Tablet-Fläche erhält eine weiche 36-Pixel-Kontur und
+einen dezenten Schatten. Bei starker Textvergrößerung bleibt das Layout einspaltig.
+Alle Inhalte können scrollen; SafeArea und Scaffold-Tastaturanpassung halten die
+Aktionen erreichbar. Mobil beträgt der seitliche Abstand 28 Pixel, unter 360 Pixel
+Breite 20 Pixel. Felder und Abschnitte verwenden 18/28 Pixel Abstand.
 
 Das bestehende Logo ergänzt die kompakte Markenkennung. Seitenüberschriften
 stehen im scrollbaren Inhalt und können bei großer Schrift umbrechen. Bestehende
-Typografie und Theme-Palette bleiben erhalten. Tonale Felder ersetzen permanente
-Umrandungen; Fokus und Fehler erhalten sichtbare Konturen. 14-Pixel-Radien
-verbinden Felder, Hauptaktion und Kontenzeilen. Der lokale Dialogradius beträgt
-24 Pixel. Suchvorschläge übernehmen optional die Auth-Geometrie.
+Typografie und Akzentpalette bleiben erhalten. Helle Auth-Seiten verwenden einen
+neutralen weißen Untergrund. Eingaben besitzen dezente Umrisse, dauerhaft
+sichtbare Beschriftungen und Such-/Benutzerhinweise. 20-Pixel-Radien ersetzen die
+kleineren Rundungen; Button, Logo und Desktop-Fläche verwenden Flutter-
+Superellipsen für weich auslaufende Konturen. Der lokale Dialogradius beträgt
+28 Pixel. Suchvorschläge übernehmen optional die Auth-Geometrie.
 
-Die Anmeldung bleibt die dominante Aktion, mindestens 52 Pixel hoch. Recovery
+Die Anmeldung bleibt die dominante Aktion, mindestens 56 Pixel hoch. Recovery
 und Feedback erscheinen als Textaktionen. „Angemeldet bleiben“ steht vor dem
 Absenden. Konten sind unmittelbar auswählbar, mit separater Löschaktion und
 unverändertem Bestätigungsdialog. Vorhandene Benutzernamen bleiben vollständig
-sichtbar und dürfen umbrechen.
+sichtbar und dürfen umbrechen. Kontenzeilen verwenden runde Profilzeichen und
+keine eigenen Hintergrundblöcke. Demo-Hinweis und Feedback bilden einen ruhigen
+Footer. Feedback führt weiterhin zum gleichen Formular wie in den Einstellungen.
 
 Fehler stehen unmittelbar vor der Hauptaktion, mit Fehlerfarbpaar, Icon und
 Live-Region. Erfolgsmeldungen haben ein Bestätigungssymbol. Ladende Anmeldungen
@@ -84,7 +91,7 @@ Deutsch, Italienisch, Englisch und Ladinisch ergänzt.
 | `lib/ui/request_pass_reset.dart` | Einheitliches Recovery-Formular, Ergebnisdarstellung und Tastatur-Submit |
 | `lib/ui/pass_reset.dart` | Einheitliches Link-Reset-Formular mit Passwortabgleich und Abschlussaktion |
 | `lib/ui/autocomplete_options.dart` | Optionaler Radius, Standard weiterhin ohne Rundung |
-| `assets/locales/{de,it,en,lld}.json` | Drei neue Texte pro Sprache |
+| `assets/locales/{de,it,en,lld}.json` | Texte für Sichtbarkeit, Laden, Begrüßung, Markenbereich und Eingabehinweise; Demo-Hinweis ohne sichtbare Markdown-Zeichen |
 | `test/ui/auth_redesign_test.dart` | Interaktions-, Layout-, Accessibility- und Preview-Prüfungen |
 
 Keine neuen Abhängigkeiten. Auth-Dienste, Container, Middleware, Credentials-/
@@ -97,11 +104,11 @@ Umgebung: Windows, Flutter 3.47.7 / Dart 3.13.5.
 
 | Prüfung | Ergebnis |
 | --- | --- |
-| `flutter test` | **963 bestanden, 1 bestehender Test übersprungen**, keine Fehler |
+| `flutter test` | **1027 bestanden, 1 bestehender Test übersprungen**, keine Fehler |
 | `flutter analyze lib` | **Keine Befunde** |
 | `flutter analyze` | **166 bestehende Befunde ausschließlich in `AUDIT_REPORT/`**, insbesondere Repro-Dateien mit nicht auflösbaren relativen Test-Imports; dieser Ordner wurde nicht verändert |
 | `git diff --check` | Erfolgreich |
-| Zusätzlicher Preview-Export | Erfolgreich, 18 PNG-Ansichten gerendert |
+| Zusätzlicher Preview-Export | Erfolgreich, 22 PNG-Ansichten gerendert, einschließlich Tablet im Hoch- und Querformat |
 
 Die vollständige Suite enthält die bestehenden Auth-, Persistenz-, Session-,
 Demo- und Kontoentfernungstests. Neue Interaktionstests prüfen unveränderte
@@ -111,22 +118,22 @@ Tab-Reihenfolge, Kontenauswahl und bestätigte Löschung einschließlich Abbruch
 Ladesperre, Netzwerkfehler/Retry, erzwungenen Passwortwechsel, Link-Reset und
 freiwillige Zurücknavigation.
 
-128 Layoutkombinationen prüfen Deutsch/Italienisch/Englisch/Ladinisch ×
-hell/dunkel × Login/Passwortwechsel/Recovery/Link-Reset × vier Formate:
-320×640, 390×844, 740×360 mit 1,6-facher Schrift und 140 Pixel simuliertem
-Tastatureinzug, 1440×1000 mit zweifacher Schrift. Ergebnis: keine Flutter-
+192 Layoutkombinationen prüfen Deutsch/Italienisch/Englisch/Ladinisch ×
+hell/dunkel × Login/Passwortwechsel/Recovery/Link-Reset × sechs Formate:
+320×640, 390×844, 768×1024, 1440×1000, 740×360 mit 1,6-facher Schrift und 140 Pixel
+simuliertem Tastatureinzug, 1440×1000 mit zweifacher Schrift. Ergebnis: keine Flutter-
 Layoutfehler; Hauptaktionen durch Scrollen erreichbar und mindestens 48 Pixel hoch.
 
 Flutter-Guidelines für Android-/iOS-Touchziele, beschriftete Aktionen und
 Textkontrast bestehen für Login in beiden Themes. Fehler-Live-Region und
 Tastaturbedienung sind separat geprüft.
 
-18 PNG-Ansichten mit Roboto-/Material-Schriften wurden gerendert. Visuell geprüft:
+22 PNG-Ansichten mit Roboto-/Material-Schriften wurden gerendert. Visuell geprüft:
 beide Login-Themes, Konten, Fehler, Laden, Passwortwechsel, Recovery,
 Link-Reset/Erfolg und Desktop-Komposition. Ausgewählte Ansichten liegen in
 `screenshots/login-redesign-76/`. Logs und vollständige Preview-Ausgabe liegen
-unter `build/`: `login_full_tests.log`, `login_full_analyze.log`,
-`login_scoped_analyze.log`, `auth_accessibility_tests.log`, `auth_previews/`.
+unter `build/`: `auth_restored_full_tests.log`, `login_full_analyze.log`,
+`auth_restore_analyze.log`, `auth_restore_tests.log`, `auth_previews/`.
 
 Preview-Export reproduzieren (PowerShell; SDK-Pfad anpassen):
 
