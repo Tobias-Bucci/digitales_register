@@ -13,7 +13,6 @@ finish-args:
   - --socket=wayland
   - --device=dri
   - --share=network
-  - --talk-name=org.freedesktop.secrets
 
 modules:
   - name: digitales_register
@@ -46,7 +45,7 @@ modules:
     sources:
       - type: git
         url: https://github.com/Tobias-Bucci/digitales_register.git
-        commit: 9f029917388b147790bc3876e49abb28923fbec4
+        commit: b2d9f367c7f525751de0d591d6cce20bbe422e78
 
       - type: git
         url: https://github.com/flutter/flutter.git
