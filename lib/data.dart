@@ -641,6 +641,29 @@ class AbsenceJustified extends EnumClass {
   static const AbsenceJustified forSchool = _$forSchool;
   static const AbsenceJustified notYetJustified = _$notYetJustified;
 
+  /// Accept API status codes and serialized enum names without guessing an
+  /// unknown lesson's status. Callers can then fall back to its group status.
+  static AbsenceJustified? tryParse(Object? value) {
+    Object? code = value;
+    if (value is String) {
+      final normalized = value.trim();
+      for (final status in values) {
+        if (status.name.toLowerCase() == normalized.toLowerCase()) {
+          return status;
+        }
+      }
+      code = num.tryParse(normalized);
+    }
+    if (code is num &&
+        code.isFinite &&
+        code == code.truncateToDouble() &&
+        code >= 0 &&
+        code <= 4) {
+      return fromInt(code.toInt());
+    }
+    return null;
+  }
+
   static AbsenceJustified fromInt(int i) {
     if (i == 2) return justified;
     if (i == 3) return notJustified;

@@ -108,7 +108,8 @@ AbsenceGroup _parseAbsence(dynamic g) {
       ..date = getString(g["date"]) != null
           ? UtcDateTime.parse(getString(g["date"])!.replaceFirst(" ", "T"))
           : null
-      ..justified = AbsenceJustified.fromInt(getInt(g["justified"])!)
+      ..justified = AbsenceJustified.tryParse(g["justified"]) ??
+          AbsenceJustified.notYetJustified
       ..reasonSignature = getString(g["reason_signature"])
       ..reasonTimestamp = g["reason_timestamp"] is String
           ? UtcDateTime.tryParse(
@@ -133,9 +134,7 @@ AbsenceGroup _parseAbsence(dynamic g) {
                 ..hour = getInt(a["hour"])
                 ..minutesCameTooLate = getInt(a["minutes_begin"])
                 ..minutesLeftTooEarly = getInt(a["minutes_end"])
-                ..justified = getInt(a["justified"]) != null
-                    ? AbsenceJustified.fromInt(getInt(a["justified"])!)
-                    : null
+                ..justified = AbsenceJustified.tryParse(a["justified"])
                 ..note = getString(a["note"])
                 ..reason = getString(a["reason"])
                 ..reasonSignature = getString(a["reason_signature"])
@@ -182,7 +181,8 @@ FutureAbsence _parseFutureAbsence(dynamic absence) {
       )
       ..startHour = getInt(absence["startTime"])
       ..endHour = getInt(absence["endTime"])
-      ..justified = AbsenceJustified.fromInt(getInt(absence["justified"])!)
+      ..justified = AbsenceJustified.tryParse(absence["justified"]) ??
+          AbsenceJustified.notYetJustified
       ..reason = getString(absence["reason"])
       ..reasonSignature = getString(absence["reason_signature"])
       ..reasonTimestamp = absence["reason_timestamp"] is String
