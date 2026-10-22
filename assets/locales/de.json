@@ -46,7 +46,7 @@
   "settings.subjectTranslation.title": "Fächer automatisch übersetzen",
   "settings.subjectTranslation.subtitle": "Wenn aktiviert, werden alle Fächerkürzel gelöscht.",
   "settings.keepLoggedIn.title": "Angemeldet bleiben",
-  "settings.keepLoggedIn.subtitle": "Deine Zugangsdaten werden lokal gespeichert",
+  "settings.keepLoggedIn.subtitle": "Beim App-Start automatisch anmelden. Gespeicherte Konten bleiben auch ausgeschaltet erhalten.",
   "settings.storeData.title": "Daten lokal speichern",
   "settings.storeData.subtitle": "Sehen, wann etwas eingetragen wurde",
   "settings.deleteDataOnLogout.title": "Daten beim Ausloggen löschen",

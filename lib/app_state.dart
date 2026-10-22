@@ -322,6 +322,8 @@ abstract class Semester implements Built<Semester, SemesterBuilder> {
 abstract class SettingsState
     implements Built<SettingsState, SettingsStateBuilder> {
   String get languageCode;
+
+  /// Disables automatic startup sign-in; kept under its legacy storage name.
   bool get noPasswordSaving;
   bool get noDataSaving;
 

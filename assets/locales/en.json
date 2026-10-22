@@ -46,7 +46,7 @@
   "settings.subjectTranslation.title": "Translate subjects automatically",
   "settings.subjectTranslation.subtitle": "If enabled, all subject abbreviations will be removed.",
   "settings.keepLoggedIn.title": "Stay signed in",
-  "settings.keepLoggedIn.subtitle": "Your credentials are stored locally",
+  "settings.keepLoggedIn.subtitle": "Sign in automatically when the app starts. Saved accounts are kept even when this is off.",
   "settings.storeData.title": "Store data locally",
   "settings.storeData.subtitle": "See when something was entered",
   "settings.deleteDataOnLogout.title": "Delete data on logout",
