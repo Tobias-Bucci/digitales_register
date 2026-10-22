@@ -2,6 +2,7 @@ import 'dart:async';
 
 import 'package:built_collection/built_collection.dart';
 import 'package:dr/actions/app_actions.dart';
+import 'package:dr/app_selectors.dart';
 import 'package:dr/app_state.dart';
 import 'package:dr/dashboard_items.dart';
 import 'package:dr/i18n/app_localizations.dart';
@@ -158,6 +159,12 @@ class _DashboardAbsencesCardState extends State<DashboardAbsencesCard> {
   Widget build(BuildContext context) {
     final state = widget.state;
     final statistic = state.statistic;
+    // Use the page's lesson-level classification when entries are available.
+    // Retain the server counter for cached responses containing only statistics.
+    final notJustified =
+        state.absences.any((group) => group.absences.isNotEmpty)
+            ? appSelectors.absenceStatistics(state).statistic.notJustified
+            : statistic?.notJustified;
     final title = context.t('absences.title');
     if (state.loading && statistic == null && state.absences.isEmpty) {
       return DashboardLoadingCard(title: title);
@@ -165,7 +172,7 @@ class _DashboardAbsencesCardState extends State<DashboardAbsencesCard> {
     final hasData = statistic != null ||
         state.lastFetched != null ||
         state.absences.isNotEmpty;
-    // Keep the statistics page's server-provided counter and its meaning.
+    // Preserve the existing server-provided total and its meaning.
     // Missing values are not converted to an invented zero.
     return DashboardSummaryCard(
       icon: Icons.event_busy_outlined,
@@ -180,10 +187,10 @@ class _DashboardAbsencesCardState extends State<DashboardAbsencesCard> {
           ? context.t('dashboard.customize.offline')
           : state.loadFailed
               ? context.t('dashboard.customize.unavailable')
-              : statistic?.notJustified == null
+              : notJustified == null
                   ? context.t('absences.status.none')
                   : context.t('dashboard.customize.unjustifiedCount',
-                      args: {'count': '${statistic?.notJustified}'}),
+                      args: {'count': '$notJustified'}),
       onTap: state.loadFailed && !widget.noInternet ? widget.load : widget.open,
     );
   }

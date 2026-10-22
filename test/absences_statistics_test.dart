@@ -18,6 +18,56 @@ void main() {
 
   tearDown(() => store.dispose());
 
+  for (final statuses in [
+    <Object>[1, 2, 3, 4],
+    <Object>['1', '2', '3', '4'],
+    <Object>[' 1 ', ' 2 ', ' 3 ', ' 4 '],
+    <Object>[1.0, 2.0, 3.0, 4.0],
+    <Object>['notYetJustified', 'justified', 'notJustified', 'forSchool'],
+  ]) {
+    for (final lessonStatuses in [false, true]) {
+      test('counts status variants $statuses at lesson level: $lessonStatuses',
+          () {
+        store.actions.absencesActions.loaded(_payload([
+          if (lessonStatuses)
+            _group(2, [
+              for (var i = 0; i < statuses.length; i++)
+                _lesson(i + 1, status: statuses[i]),
+            ])
+          else
+            for (var i = 0; i < statuses.length; i++)
+              _group(statuses[i], [_lesson(i + 1)]),
+        ]));
+
+        expect(store.state.absencesState.loadFailed, isFalse);
+        final stats =
+            appSelectors.absenceStatistics(store.state.absencesState).statistic;
+        expect(stats.counter, 4);
+        expect(stats.justified, 1);
+        expect(stats.notJustified, 2);
+        expect(stats.counterForSchool, 1);
+      });
+    }
+  }
+
+  test('unknown lesson statuses fall back to the group without losing data',
+      () {
+    store.actions.absencesActions.loaded(_payload([
+      _group(3, [
+        for (final status in <Object?>[null, '', 'unknown', 99, 2.5, false])
+          _lesson(1, status: status),
+      ]),
+      _group(null, [_lesson(2)]),
+    ]));
+
+    expect(store.state.absencesState.loadFailed, isFalse);
+    final stats =
+        appSelectors.absenceStatistics(store.state.absencesState).statistic;
+    expect(stats.counter, 7);
+    expect(stats.notJustified, 7);
+    expect(stats.justified, 0);
+  });
+
   test('four lessons override stale server counts and use each lesson status',
       () {
     store.actions.absencesActions.loaded(_payload([
@@ -136,14 +186,16 @@ Map<String, Object?> _payload(List<Map<String, Object?>> groups) => {
       ],
     };
 
-Map<String, Object?> _group(int status, List<Map<String, Object?>> lessons) => {
+Map<String, Object?> _group(
+        Object? status, List<Map<String, Object?>> lessons) =>
+    {
       'date': '2026-10-01',
       'justified': status,
       'group': lessons,
     };
 
 Map<String, Object?> _lesson(int id,
-        {int? status, int minutes = 50, int late = 0, int early = 0}) =>
+        {Object? status, int minutes = 50, int late = 0, int early = 0}) =>
     {
       'id': id,
       'date': '2026-10-01',
