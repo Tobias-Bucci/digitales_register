@@ -98,13 +98,8 @@ class Sidebar extends StatelessWidget {
         ),
       AppPopupButtonEntry<int>(
         value: otherAccounts.length + 1,
-        label: passwordSavingEnabled
-            ? l10n.text('sidebar.addAccount')
-            : l10n.text('sidebar.switchAccount'),
-        leading: Icon(
-          passwordSavingEnabled ? Icons.person_add_alt_1 : Icons.login_rounded,
-          size: 20,
-        ),
+        label: l10n.text('sidebar.addAccount'),
+        leading: const Icon(Icons.person_add_alt_1, size: 20),
       ),
     ];
 

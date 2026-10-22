@@ -1037,6 +1037,14 @@ Future<void> _load(
   ActionHandler next,
   Action<void> action,
 ) async {
+  await _loadAccounts(api, beforeLoad: () => next(action));
+}
+
+Future<void> _loadAccounts(
+  MiddlewareApi<AppState, AppStateBuilder, AppActions> api, {
+  FutureOr<void> Function()? beforeLoad,
+  bool explicitSelection = false,
+}) async {
   // By resetting the wrapper we clear all cookies.
   // However we don't want to reset the wrapper in tests
   if (wrapper is! Mock) {
@@ -1048,7 +1056,7 @@ Future<void> _load(
   statePersistenceService.clear();
   await androidWidgetSnapshotService.clear();
   wrapper.noInternet = api.state.noInternet;
-  await next(action);
+  await beforeLoad?.call();
   if (!api.state.noInternet) _popAll();
   Map<String, dynamic> login = <String, dynamic>{};
   try {
@@ -1066,12 +1074,18 @@ Future<void> _load(
   final user = getString(login["user"]);
   final pass = getString(login["pass"]);
   final url = getString(login["url"]);
+  final hasPrimaryAccount = user != null && pass != null && url != null;
+  final shouldSignIn =
+      explicitSelection || !api.state.settingsState.noPasswordSaving;
   final List<String> otherAccounts = List.from(
     (login["otherAccounts"] as List?)?.map<String>(
           (dynamic login) => login["user"] as String,
         ) ??
         <String>[],
   );
+  if (hasPrimaryAccount && !shouldSignIn) {
+    otherAccounts.insert(0, user);
+  }
   await api.actions.loginActions.setAvailableAccounts(otherAccounts);
   if ((api.state.url != null && api.state.url != url) ||
       (api.state.loginState.username != null &&
@@ -1080,7 +1094,7 @@ Future<void> _load(
     await api.actions.savePassActions.delete();
     await api.actions.routingActions.showLogin();
   } else {
-    if (user != null && pass != null && url != null) {
+    if (hasPrimaryAccount && shouldSignIn) {
       await api.actions.loginActions.login(
         LoginPayload(
           (b) => b
@@ -1131,12 +1145,7 @@ Future<void> _loggedIn(
   if (!api.state.loginState.loggedIn && !action.payload.secondaryOnlineLogin) {
     statePersistenceService.clear();
   }
-  if (action.payload.fromStorage) {
-    // If we logged in with saved credentials password saving must be enabled.
-    wrapper.safeMode = false;
-  }
-  if (!api.state.settingsState.noPasswordSaving &&
-      !action.payload.fromStorage) {
+  if (!action.payload.fromStorage) {
     await api.actions.savePassActions.save();
   }
   deletedData = false;
@@ -1182,10 +1191,6 @@ Future<void> _loggedIn(
 
         // next not at the beginning: bug fix (serialization)
         await next(action);
-
-        await api.actions.settingsActions.saveNoPass(
-          api.state.settingsState.noPasswordSaving,
-        );
       } catch (e) {
         showSnackBar(tr('error.savedDataLoadFailed'));
         privacyLog('technical_operation');
@@ -1200,6 +1205,9 @@ Future<void> _loggedIn(
     await next(action);
   }
 
+  // Restoring settings applies the session policy without removing accounts or
+  // rewriting their credentials as a side effect of signing in.
+  wrapper.safeMode = api.state.settingsState.noPasswordSaving;
   for (final callback in api.state.loginState.callAfterLogin) {
     callback();
   }

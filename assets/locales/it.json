@@ -46,7 +46,7 @@
   "settings.subjectTranslation.title": "Traduci materie automaticamente",
   "settings.subjectTranslation.subtitle": "Se attivato, tutte le abbreviazioni delle materie verranno eliminate.",
   "settings.keepLoggedIn.title": "Resta connesso",
-  "settings.keepLoggedIn.subtitle": "I tuoi dati di accesso verranno salvati localmente",
+  "settings.keepLoggedIn.subtitle": "Accedi automaticamente all'avvio dell'app. Gli account salvati restano disponibili anche se disattivato.",
   "settings.storeData.title": "Salva dati localmente",
   "settings.storeData.subtitle": "Vedi quando è stato inserito un elemento",
   "settings.deleteDataOnLogout.title": "Elimina dati al logout",

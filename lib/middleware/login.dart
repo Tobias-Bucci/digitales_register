@@ -69,7 +69,7 @@ Future<void> _logout(
         ));
   }
   var savedLogin = <String, dynamic>{};
-  if (!api.state.settingsState.noPasswordSaving && action.payload.hard) {
+  if (action.payload.hard) {
     await bestEffort(() async {
       savedLogin = decodeStoredLogin(await secureStorage.read(key: 'login'));
     });
@@ -184,18 +184,23 @@ Future<void> _login(
       offlineLogin = true;
     }
 
-    final dynamic result = await wrapper.login(
+    final loginWrapper = wrapper;
+    final dynamic result = await loginWrapper.login(
       actualUser, // Send 'stbuctob' if it was a debug login
       action.payload.pass,
       null,
       url,
-      logout: () => api.actions.loginActions.logout(
-        LogoutPayload(
-          (b) => b
-            ..hard = api.state.settingsState.noPasswordSaving
-            ..forced = true,
-        ),
-      ),
+      logout: () {
+        // A response from an account we have left must not log out the new one.
+        if (!identical(wrapper, loginWrapper)) return;
+        unawaited(api.actions.loginActions.logout(
+          LogoutPayload(
+            (b) => b
+              ..hard = api.state.settingsState.noPasswordSaving
+              ..forced = true,
+          ),
+        ));
+      },
       configLoaded: () => api.actions.setConfig(wrapper.config),
       relogin: api.actions.loginActions.automaticallyReloggedIn.call,
       addProtocolItem: api.actions.addNetworkProtocolItem.call,
@@ -407,7 +412,7 @@ Future<void> _addAccount(
   Action<void> action,
 ) async {
   await next(action);
-  // There might be no loginStorage if "stay logged in" is not enabled.
+  // Keep configured accounts independently of automatic sign-in.
   final loginStorage = await secureStorage.read(key: "login");
   if (loginStorage != null) {
     // Move the current default user credentials into `otherAccounts`
@@ -430,8 +435,7 @@ Future<void> _addAccount(
       }),
     );
   }
-  await api.actions.mountAppState(_emptyAppStateKeepingSettings(api.state));
-  await api.actions.load();
+  await _switchAccountSession(api);
 }
 
 Future<void> _selectAccount(
@@ -440,7 +444,7 @@ Future<void> _selectAccount(
   Action<int> action,
 ) async {
   await next(action);
-  final dynamic login = json.decode((await secureStorage.read(key: "login"))!);
+  final login = decodeStoredLogin(await secureStorage.read(key: 'login'));
   login["otherAccounts"] ??= <Object?>[];
   final otherAccounts = login["otherAccounts"] as List<Object?>;
   var selectedIndex = action.payload;
@@ -450,15 +454,43 @@ Future<void> _selectAccount(
       "pass": login["pass"],
       "url": login["url"],
     });
-    selectedIndex += 1;
+    // On the sign-in screen the primary account is part of the visible list.
+    // While signed in, that list contains only the other accounts.
+    if (api.state.loginState.loggedIn ||
+        !api.state.settingsState.noPasswordSaving) {
+      selectedIndex += 1;
+    }
   }
+  if (selectedIndex < 0 || selectedIndex >= otherAccounts.length) return;
   final dynamic selected = otherAccounts.removeAt(selectedIndex);
   login["user"] = selected["user"];
   login["pass"] = selected["pass"];
   login["url"] = selected["url"];
   await secureStorage.write(key: "login", value: json.encode(login));
+  await _switchAccountSession(api, explicitSelection: true);
+}
+
+Future<void> _switchAccountSession(
+    MiddlewareApi<AppState, AppStateBuilder, AppActions> api,
+    {bool explicitSelection = false}) async {
+  // Save the outgoing account before clearing its state. This is a session
+  // transition, so the explicit logout's credential/data deletion does not apply.
+  await statePersistenceService.flush(
+    state: api.state,
+    deletedData: deletedData,
+    server: wrapper.loginAddress,
+    writer: _writeToStorage,
+    keyFactory: getStorageKey,
+  );
+  wrapper.onLogout = null;
+  wrapper.logout(hard: true);
+  appClock.setDemoMode(false);
   await api.actions.mountAppState(_emptyAppStateKeepingSettings(api.state));
-  await api.actions.load();
+  if (explicitSelection) {
+    await _loadAccounts(api, explicitSelection: true);
+  } else {
+    await api.actions.load();
+  }
 }
 
 Future<void> _removeAccount(
@@ -469,26 +501,36 @@ Future<void> _removeAccount(
   await next(action);
   final rawLogin = await secureStorage.read(key: 'login');
   if (rawLogin == null) return;
-  final login = getMap(rawLogin);
-  final rawAccounts = login?['otherAccounts'];
-  if (rawAccounts is! List ||
-      action.payload < 0 ||
-      action.payload >= rawAccounts.length) {
-    return;
+  final login = decodeStoredLogin(rawLogin);
+  final rawAccounts = login['otherAccounts'] as List? ?? <Object?>[];
+  final includesPrimary = !api.state.loginState.loggedIn &&
+      api.state.settingsState.noPasswordSaving &&
+      login['user'] != null &&
+      login['pass'] != null;
+  final index = action.payload - (includesPrimary ? 1 : 0);
+  Map? removed;
+  if (includesPrimary && action.payload == 0) {
+    removed = Map<String, dynamic>.from(login);
+    login.remove('user');
+    login.remove('pass');
+  } else {
+    if (index < 0 || index >= rawAccounts.length) return;
+    removed = getMap(rawAccounts.removeAt(index));
   }
-  final removed = getMap(rawAccounts.removeAt(action.payload));
   final user = getString(removed?['user']);
   final url = getString(removed?['url']);
   if (user != null && url != null) {
     await _deleteLocalAccountData(user: user, url: url);
   }
-  login!['otherAccounts'] = rawAccounts;
+  login['otherAccounts'] = rawAccounts;
   await secureStorage.write(key: 'login', value: json.encode(login));
   await api.actions.loginActions.setAvailableAccounts(
-    rawAccounts
-        .map((account) => getString(getMap(account)?['user']))
-        .whereType<String>()
-        .toList(),
+    [
+      if (includesPrimary && action.payload != 0) login['user'] as String,
+      ...rawAccounts
+          .map((account) => getString(getMap(account)?['user']))
+          .whereType<String>(),
+    ],
   );
 }
 

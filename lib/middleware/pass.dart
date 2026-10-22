@@ -31,22 +31,36 @@ Future<void> _setSavePass(
   await next(action);
   wrapper.safeMode = action.payload;
   if (!api.state.loginState.loggedIn) return;
-  if (!action.payload) {
-    await api.actions.savePassActions.save();
-  } else {
-    await api.actions.savePassActions.delete();
-  }
+  // This setting controls automatic sign-in, not removal from the account list.
+  await api.actions.savePassActions.save();
 }
 
 Future<void> _savePass(MiddlewareApi<AppState, AppStateBuilder, AppActions> api,
     ActionHandler next, Action<void> action) async {
   await next(action);
-  if (wrapper.user == null || wrapper.pass == null || wrapper.safeMode) {
+  if (wrapper.user == null || wrapper.pass == null) {
     return;
   }
-  
+
   // If the user is logged in as 'debug', save 'debug' instead of the mapped username ('stbuctob').
-  final userToSave = api.state.loginState.username == 'debug' ? 'debug' : wrapper.user;
+  final userToSave =
+      api.state.loginState.username == 'debug' ? 'debug' : wrapper.user;
+  final login = decodeStoredLogin(await secureStorage.read(key: 'login'));
+  final otherAccounts = (login['otherAccounts'] as List? ?? <Object?>[])
+      .where((dynamic account) =>
+          account['user'] != userToSave || account['url'] != wrapper.url)
+      .toList();
+  if (login['user'] != null &&
+      login['pass'] != null &&
+      (login['user'] != userToSave || login['url'] != wrapper.url) &&
+      !otherAccounts.any((dynamic account) =>
+          account['user'] == login['user'] && account['url'] == login['url'])) {
+    otherAccounts.insert(0, <String, Object?>{
+      'user': login['user'],
+      'pass': login['pass'],
+      'url': login['url'],
+    });
+  }
 
   await secureStorage.write(
     key: "login",
@@ -55,10 +69,12 @@ Future<void> _savePass(MiddlewareApi<AppState, AppStateBuilder, AppActions> api,
         "user": userToSave,
         "pass": wrapper.pass,
         "url": wrapper.url,
-        "otherAccounts": json.decode(
-            await secureStorage.read(key: "login") ?? "{}")["otherAccounts"],
+        "otherAccounts": otherAccounts,
       },
     ),
+  );
+  await api.actions.loginActions.setAvailableAccounts(
+    otherAccounts.map((dynamic account) => account['user'] as String).toList(),
   );
 }
 
