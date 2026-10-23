@@ -789,13 +789,14 @@ class _SettingsPageWidgetState extends State<SettingsPageWidget> {
           },
         ),
         ListTile(
+          key: const Key('settings-contrast-color-tile'),
           title: Text(l10n.text('settings.contrastColor.title')),
           subtitle: Text(l10n.text('settings.contrastColor.subtitle')),
           trailing: Container(
             width: 28,
             height: 28,
             decoration: BoxDecoration(
-              color: Theme.of(context).colorScheme.primary,
+              color: themeController.contrastColor,
               borderRadius: BorderRadius.circular(8),
               border: Border.all(
                 color: Theme.of(context).dividerColor.withValues(alpha: 0.4),
@@ -806,7 +807,7 @@ class _SettingsPageWidgetState extends State<SettingsPageWidget> {
             final color = await showDialog<Color>(
               context: context,
               builder: (context) => _ColorPicker(
-                initialColor: Theme.of(context).colorScheme.primary,
+                initialColor: themeController.contrastColor,
               ),
             );
             if (color != null) {

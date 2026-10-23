@@ -95,8 +95,27 @@ class AppThemeController extends ChangeNotifier with WidgetsBindingObserver {
     required Brightness brightness,
     required bool amoledMode,
   }) {
+    // A seed generates a tonal palette; it does not preserve the selected
+    // color, especially in dark mode. Keep the palette for surfaces, but use
+    // the saved color itself for the app's primary and secondary accents.
+    final luminance = _contrastColor.computeLuminance();
+    final onAccent = (luminance + 0.05) / 0.05 >= 1.05 / (luminance + 0.05)
+        ? Colors.black
+        : Colors.white;
+    final colorScheme = ColorScheme.fromSeed(
+      seedColor: _contrastColor,
+      brightness: brightness,
+    ).copyWith(
+      primary: _contrastColor,
+      onPrimary: onAccent,
+      secondary: _contrastColor,
+      onSecondary: onAccent,
+      surfaceTint: _contrastColor,
+    );
     final baseTheme = ThemeData(
-      colorSchemeSeed: _contrastColor,
+      colorScheme: colorScheme,
+      primaryColor: _contrastColor,
+      tabBarTheme: TabBarThemeData(indicatorColor: _contrastColor),
       brightness: brightness,
     );
     final scheme = baseTheme.colorScheme;
