@@ -3,7 +3,8 @@
 enum DashboardItem {
   holidays('holidays', 'schoolCountdown.holidays.title'),
   gradingDeadline('gradingDeadline', 'schoolCountdown.grades.title'),
-  absences('absences', 'absences.title');
+  absences('absences', 'absences.title'),
+  studyPlan('studyPlan', 'exam.plan');
 
   const DashboardItem(this.id, this.titleKey);
   final String id;

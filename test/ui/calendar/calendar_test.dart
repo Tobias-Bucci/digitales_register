@@ -1,6 +1,7 @@
 import 'package:built_collection/built_collection.dart';
 import 'package:built_redux/built_redux.dart';
 import 'package:dr/actions/app_actions.dart';
+import 'package:dr/app_clock.dart';
 import 'package:dr/app_state.dart';
 import 'package:dr/container/calendar_container.dart';
 import 'package:dr/container/calendar_detail_container.dart';
@@ -12,6 +13,7 @@ import 'package:dr/reducer/reducer.dart';
 import 'package:dr/ui/calendar.dart';
 import 'package:dr/ui/calendar_week.dart';
 import 'package:dr/ui/dialog.dart';
+import 'package:dr/ui/exam_calendar_page.dart';
 import 'package:dr/utc_date_time.dart';
 import 'package:dr/util.dart';
 import 'package:flutter/material.dart';
@@ -26,6 +28,44 @@ void main() {
   });
 
   tearDown(resetTestState);
+
+  for (final width in [320.0, 1000.0]) {
+    testWidgets('opens exam week view directly and returns at width $width',
+        (tester) async {
+      tester.view.physicalSize = Size(width, 800);
+      tester.view.devicePixelRatio = 1;
+      addTearDown(tester.view.resetPhysicalSize);
+      addTearDown(tester.view.resetDevicePixelRatio);
+      appClock.setDemoMode(true);
+      await appClock.setSimulatedDate(DateTime(2026, 4, 20));
+      final store = createStore(initialState: AppState((b) {
+        b.settingsState.showCalendarSubstituteBar = false;
+        b.calendarState.currentMonday = UtcDateTime(2026, 4, 20);
+        b.dashboardState.allDays = ListBuilder([
+          buildDay(date: UtcDateTime(2026, 4, 20), homework: [
+            buildHomework(
+              id: 7,
+              title: 'Test',
+              subtitle: 'Textanalyse',
+              type: HomeworkType.gradeGroup,
+            ),
+          ]),
+        ]);
+      }));
+      await pumpApp(tester, store: store, home: CalendarContainer());
+      await tester.tap(find.byKey(const Key('calendar-open-exam-calendar')));
+      await settleFor(tester, duration: const Duration(milliseconds: 500));
+      expect(find.byType(ExamCalendarPage), findsOneWidget);
+      expect(find.byKey(const Key('exam-calendar-week-view')), findsNothing);
+      expect(find.byKey(const Key('week-exam-assessment-7')), findsOneWidget);
+      expect(find.text('Heute'), findsOneWidget);
+      await tester.tap(find.byType(BackButton));
+      await settleFor(tester, duration: const Duration(milliseconds: 500));
+      expect(find.byType(CalendarContainer), findsOneWidget);
+      expect(find.byType(ExamCalendarPage), findsNothing);
+      expect(tester.takeException(), isNull);
+    });
+  }
 
   testWidgets('shows the nick helper bar when enabled and a nick is missing',
       (tester) async {

@@ -340,7 +340,8 @@ void main() {
           ));
       await settleFor(tester);
       expect(tester.takeException(), isNull);
-      expect(find.byType(DashboardSummaryCard), findsNWidgets(3));
+      expect(find.byType(DashboardSummaryCard),
+          findsNWidgets(DashboardItem.values.length));
     });
   }
 }

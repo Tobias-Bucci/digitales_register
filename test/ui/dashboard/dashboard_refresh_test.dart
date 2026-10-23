@@ -63,6 +63,7 @@ void main() {
             .getSize(find.widgetWithText(FilledButton, 'Vergangenheit'))
             .width,
         lessThanOrEqualTo(280));
+    expect(find.text('Lernplan'), findsNothing);
     expect(tester.getSize(find.byType(DashboardHeader)).height, lessThan(150));
     expect(tester.takeException(), isNull);
   });

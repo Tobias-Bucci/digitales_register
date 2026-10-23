@@ -20,6 +20,7 @@ import 'package:dr/analytics_service.dart';
 import 'package:dr/container/calendar_container.dart';
 import 'package:dr/container/calendar_detail_container.dart';
 import 'package:dr/container/calendar_week_container.dart';
+import 'package:dr/container/exam_calendar_container.dart';
 import 'package:dr/data.dart';
 import 'package:dr/i18n/app_localizations.dart';
 import 'package:dr/ui/favorite_subject_filter.dart';
@@ -263,6 +264,21 @@ class _CalendarState extends State<Calendar> with TickerProviderStateMixin {
                   ),
                   body: Column(
                     children: <Widget>[
+                      Align(
+                        alignment: Alignment.centerRight,
+                        child: TextButton.icon(
+                          key: const Key('calendar-open-exam-calendar'),
+                          onPressed: () => Navigator.of(context).push<void>(
+                            MaterialPageRoute(
+                              builder: (_) => const ExamCalendarContainer(
+                                calendarView: true,
+                              ),
+                            ),
+                          ),
+                          icon: const Icon(Icons.school_outlined),
+                          label: Text(context.t('exam.title')),
+                        ),
+                      ),
                       Material(
                         clipBehavior: Clip.antiAlias,
                         elevation: 4,
