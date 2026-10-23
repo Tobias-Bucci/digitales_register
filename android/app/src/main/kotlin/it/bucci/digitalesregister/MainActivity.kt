@@ -21,6 +21,7 @@ class MainActivity: FlutterFragmentActivity() {
     private var pendingCalendarPermissionResult: MethodChannel.Result? = null
     private var pendingLaunchDestination: String? = null
     private var widgetMethodChannel: MethodChannel? = null
+    private var biometricAppLockChannel: BiometricAppLockChannel? = null
 
     override fun onCreate(savedInstanceState: Bundle?) {
         enableEdgeToEdge()
@@ -32,6 +33,9 @@ class MainActivity: FlutterFragmentActivity() {
 
     override fun configureFlutterEngine(flutterEngine: FlutterEngine) {
         super.configureFlutterEngine(flutterEngine)
+        biometricAppLockChannel = BiometricAppLockChannel(this).also { channel ->
+            channel.register(flutterEngine.dartExecutor.binaryMessenger)
+        }
         MethodChannel(flutterEngine.dartExecutor.binaryMessenger, "dr/privacy_bootstrap")
             .setMethodCallHandler { call, result ->
                 when (call.method) {
@@ -87,6 +91,12 @@ class MainActivity: FlutterFragmentActivity() {
                 }
             }
         }
+    }
+
+    override fun onDestroy() {
+        biometricAppLockChannel?.dispose()
+        biometricAppLockChannel = null
+        super.onDestroy()
     }
 
     override fun onNewIntent(intent: Intent) {

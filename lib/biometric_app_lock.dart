@@ -19,10 +19,21 @@ import 'dart:async';
 
 import 'package:biometric_storage/biometric_storage.dart';
 import 'package:dr/main.dart';
+import 'package:flutter/foundation.dart' show defaultTargetPlatform, kIsWeb;
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 
 const _appLockStorageName = 'biometric_app_lock';
 const _appLockEnabledMarker = 'enabled';
+
+/// Android app lock prompt implemented by [BiometricAppLockChannel].
+const _androidAppLockChannel = MethodChannel('dr/biometric_app_lock');
+
+/// Android face recognition is a weak (Class 2) biometric, which cannot unlock
+/// the keystore key used by `biometric_storage`. Android therefore authenticates
+/// through its own prompt, which accepts fingerprint and face alike.
+bool get _usesAndroidAppLock =>
+    !kIsWeb && defaultTargetPlatform == TargetPlatform.android;
 
 const _appLockPromptInfo = PromptInfo(
   androidPromptInfo: AndroidPromptInfo(
@@ -81,6 +92,18 @@ class BiometricAppLockController extends ChangeNotifier {
   bool get isAuthenticating => _pendingAuthentication != null;
 
   Future<CanAuthenticateResponse> checkAvailability() async {
+    if (_usesAndroidAppLock) {
+      try {
+        final response = await _androidAppLockChannel
+            .invokeMethod<String>('canAuthenticate');
+        return CanAuthenticateResponse.values.firstWhere(
+          (value) => value.name == response,
+          orElse: () => CanAuthenticateResponse.unsupported,
+        );
+      } catch (_) {
+        return CanAuthenticateResponse.unsupported;
+      }
+    }
     try {
       return await BiometricStorage().canAuthenticate();
     } catch (_) {
@@ -110,6 +133,23 @@ class BiometricAppLockController extends ChangeNotifier {
       throw BiometricAppLockSetupException(
         biometricAvailabilityMessage(availability),
       );
+    }
+
+    if (_usesAndroidAppLock) {
+      try {
+        await _authenticateOnAndroid();
+      } on PlatformException catch (error) {
+        throw BiometricAppLockSetupException(
+          error.code == 'canceled'
+              ? tr('profile.biometricSetupCancelled')
+              : tr('profile.biometricSetupFailed'),
+        );
+      }
+      _hasSyncedSettings = true;
+      _enabled = true;
+      _locked = false;
+      notifyListeners();
+      return;
     }
 
     try {
@@ -177,6 +217,17 @@ class BiometricAppLockController extends ChangeNotifier {
   }
 
   Future<bool> _authenticate() async {
+    if (_usesAndroidAppLock) {
+      try {
+        await _authenticateOnAndroid();
+      } catch (_) {
+        return false;
+      }
+      _locked = false;
+      notifyListeners();
+      return true;
+    }
+
     try {
       final storage = await _getStorage();
       final value = await storage.read();
@@ -191,6 +242,20 @@ class BiometricAppLockController extends ChangeNotifier {
       return false;
     }
     return false;
+  }
+
+  Future<void> _authenticateOnAndroid() async {
+    final promptInfo = _appLockPromptInfo.androidPromptInfo;
+    await _androidAppLockChannel.invokeMethod<bool>(
+      'authenticate',
+      <String, dynamic>{
+        'title': promptInfo.title,
+        'subtitle': promptInfo.subtitle,
+        'description': promptInfo.description,
+        'negativeButton': promptInfo.negativeButton,
+        'confirmationRequired': promptInfo.confirmationRequired,
+      },
+    );
   }
 
   Future<BiometricStorageFile> _getStorage() {
