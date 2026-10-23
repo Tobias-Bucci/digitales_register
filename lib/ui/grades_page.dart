@@ -29,64 +29,25 @@ import 'package:dr/i18n/app_localizations.dart';
 import 'package:dr/tutorial/tutorial_target.dart';
 import 'package:dr/ui/animated_linear_progress_indicator.dart';
 import 'package:dr/ui/app_popup_button.dart';
+import 'package:dr/ui/grade_colors.dart';
 import 'package:dr/ui/last_fetched_overlay.dart';
 import 'package:dr/ui/no_internet.dart';
 import 'package:flutter/material.dart';
 import 'package:responsive_scaffold/responsive_scaffold.dart';
-
-bool _isFailingAverage(String gradeText) {
-  final parsed = double.tryParse(gradeText.replaceAll(',', '.'));
-  return parsed != null && parsed < 6;
-}
-
-bool _isPassingAverage(String gradeText) {
-  final parsed = double.tryParse(gradeText.replaceAll(',', '.'));
-  return parsed != null && parsed >= 6;
-}
 
 Widget _buildAverageValue(
   BuildContext context,
   String value,
   TextStyle? style,
   bool colorGrades,
-) {
-  if (!colorGrades) {
-    return Text(value, style: style);
-  }
-  final failing = _isFailingAverage(value);
-  final passing = _isPassingAverage(value);
-  final foreground = failing
-      ? Theme.of(context).colorScheme.onErrorContainer
-      : Colors.green.shade900;
-  final text = Text(
-    value,
-    style: (failing || passing)
-        ? style?.copyWith(
-              color: foreground,
-              fontWeight: FontWeight.w700,
-            ) ??
-            TextStyle(
-              color: foreground,
-              fontWeight: FontWeight.w700,
-            )
-        : style,
-  );
-  if (!failing && !passing) {
-    return text;
-  }
-  return DecoratedBox(
-    decoration: ShapeDecoration(
-      color: failing
-          ? Theme.of(context).colorScheme.errorContainer
-          : Colors.green.shade100,
-      shape: const StadiumBorder(),
-    ),
-    child: Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-      child: text,
-    ),
-  );
-}
+) =>
+    GradeBadge(
+      text: value,
+      hundredths:
+          (double.tryParse(value.replaceAll(',', '.')) ?? double.nan) * 100,
+      style: style,
+      colorized: colorGrades,
+    );
 
 class GradesPage extends StatefulWidget {
   final GradesPageViewModel vm;

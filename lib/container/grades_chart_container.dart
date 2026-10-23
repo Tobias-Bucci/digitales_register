@@ -1,4 +1,4 @@
-﻿// Copyright (C) 2021 Michael Debertol
+// Copyright (C) 2021 Michael Debertol
 // Copyright (C) 2026 Tobias Bucci
 //
 // This file is part of digitales_register.
@@ -31,11 +31,13 @@ class GradesChartContainer extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return StoreConnection<AppState, AppActions,
-        Map<SubjectGrades, SubjectTheme>>(
-      connect: appSelectors.chartGraphs,
+        (Map<SubjectGrades, SubjectTheme>, bool)>(
+      connect: (state) =>
+          (appSelectors.chartGraphs(state), state.settingsState.colorGrades),
       builder: (context, vm, actions) {
         return GradesChart(
-          graphs: vm,
+          graphs: vm.$1,
+          colorGrades: vm.$2,
           isFullscreen: isFullscreen,
           goFullscreen: actions.routingActions.showGradesChart.call,
         );
