@@ -52,7 +52,7 @@ class _RightSidebarState extends State<RightSidebar>
   late final _animationController = AnimationController(
     vsync: this,
     duration: _sidebarAnimationDuration,
-    value: 0,
+    value: widget.show ? 1 : 0,
   );
   @override
   void didUpdateWidget(RightSidebar oldWidget) {

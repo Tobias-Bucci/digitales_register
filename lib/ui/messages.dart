@@ -28,6 +28,7 @@ import 'package:dr/i18n/app_localizations.dart';
 import 'package:dr/ui/animated_linear_progress_indicator.dart';
 import 'package:dr/ui/last_fetched_overlay.dart';
 import 'package:dr/ui/no_internet.dart';
+import 'package:dr/ui/readable_content.dart';
 import 'package:dr/util.dart';
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
@@ -152,7 +153,9 @@ class _MessagesPageState extends State<MessagesPage>
               Tab(text: context.t('messages.all')),
             ],
           ),
-          Expanded(child: _buildMessageList(context, visibleMessages)),
+          Expanded(
+              child: ReadableContent(
+                  child: _buildMessageList(context, visibleMessages))),
         ],
       ),
     );

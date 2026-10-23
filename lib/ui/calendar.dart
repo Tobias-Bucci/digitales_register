@@ -284,7 +284,8 @@ class _CalendarState extends State<Calendar> with TickerProviderStateMixin {
                         elevation: 4,
                         child: Row(
                           children: <Widget>[
-                            Expanded(
+                            SizedBox(
+                              width: 48,
                               child: FadeTransition(
                                 opacity: _chevronOpacityAnimation,
                                 child: TextButton(
@@ -298,7 +299,8 @@ class _CalendarState extends State<Calendar> with TickerProviderStateMixin {
                                 ),
                               ),
                             ),
-                            FadeTransition(
+                            Expanded(
+                                child: FadeTransition(
                               opacity: _dateRangeOpacityAnimation,
                               child: TextButton(
                                 style: ButtonStyle(
@@ -330,13 +332,15 @@ class _CalendarState extends State<Calendar> with TickerProviderStateMixin {
                                         widget.vm.last != null
                                     ? Text(
                                         "${_dateFormat.format(widget.vm.first!)} - ${_dateFormat.format(widget.vm.last!)}",
+                                        textAlign: TextAlign.center,
                                       )
                                     : widget.vm.noInternet
                                         ? Text(context.t('calendar.chooseDate'))
                                         : const CircularProgressIndicator(),
                               ),
-                            ),
-                            Expanded(
+                            )),
+                            SizedBox(
+                              width: 48,
                               child: FadeTransition(
                                 opacity: _chevronOpacityAnimation,
                                 child: TextButton(

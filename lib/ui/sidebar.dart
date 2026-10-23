@@ -107,14 +107,12 @@ class Sidebar extends StatelessWidget {
       onExpansionChange: onDrawerExpansionChange,
       alwaysExpanded: !tabletMode,
       expanded: drawerExpanded,
-      iconSize: 26,
+      iconSize: 32,
       textStyle: theme.textTheme.titleMedium,
       fitItemsToBottom: true,
       borderRadius: 0,
-      // 62 - 20 px container padding leaves a 42 px item. With the item's
-      // 8 px padding and 26 px icon this makes the collapsed selection box
-      // exactly square while keeping the rail compact.
-      minWidth: 62,
+      // 68 - 20 px container padding leaves a square 48 px touch target.
+      minWidth: 68,
       screenPadding: 0,
       title: showExpandedHeader
           ? Padding(
