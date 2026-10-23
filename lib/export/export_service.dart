@@ -63,8 +63,11 @@ class ExportService {
       final regular =
           await rootBundle.load('assets/fonts/NotoSans-Regular.ttf');
       final bold = await rootBundle.load('assets/fonts/NotoSans-Bold.ttf');
-      final bytes = await compute(createExportPdf,
-          ExportPdfRequest(sections, l10n, timestamp, scope, regular, bold));
+      final emoji = await rootBundle.load('assets/fonts/NotoEmoji.ttf');
+      final bytes = await compute(
+          createExportPdf,
+          ExportPdfRequest(sections.where((s) => s.records.isNotEmpty).toList(),
+              l10n, timestamp, scope, regular, bold, emoji));
       return ExportFile('$stem.pdf', bytes);
     }
     return compute(_csvFiles, (sections, l10n, stem));

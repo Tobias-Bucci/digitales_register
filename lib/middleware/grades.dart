@@ -63,7 +63,7 @@ Future<void> _loadGrades(
   }
 
   await next(action);
-  _doForSemester(staleSemesters, (s) async {
+  await _doForSemester(staleSemesters, (s) async {
     final product = AnalyticsService.product;
     final localOwner = jsonEncode([wrapper.url, api.state.loginState.username]);
     final epoch = product.sessionEpoch;
@@ -131,7 +131,7 @@ Future<void> _loadGradesDetails(
 
   await next(action);
 
-  _doForSemester(staleSemesters, (s) async {
+  await _doForSemester(staleSemesters, (s) async {
     dynamic data = await wrapper.send(
       _subjectsDetail,
       args: {
@@ -224,7 +224,7 @@ Future<void> _loadCancelledDescription(
   if (api.state.noInternet) return;
 
   await next(action);
-  _doForSemester([action.payload.semester], (s) async {
+  await _doForSemester([action.payload.semester], (s) async {
     final dynamic data = await wrapper.send(
       _grade,
       args: {"gradeId": action.payload.grade.id},
@@ -243,17 +243,26 @@ Future<void> _loadCancelledDescription(
   });
 }
 
-void _doForSemester(
-  List<Semester> semester,
+Future<void> _doForSemester(
+  List<Semester> semesters,
   Future<void> Function(Semester s) f,
-) {
-  final currentSemester = _gradesLock.current;
-  if (semester.contains(currentSemester)) {
-    semester.remove(currentSemester);
-    _gradesLock.synchronized(currentSemester!, () => f(currentSemester));
-  }
-  for (final s in semester) {
-    _gradesLock.synchronized(s, () => f(s));
+) async {
+  final ordered = [...semesters];
+  final current = _gradesLock.current;
+  if (ordered.remove(current)) ordered.insert(0, current!);
+  for (final semester in ordered) {
+    final completed = Completer<void>();
+    unawaited(_gradesLock.synchronized(semester, () async {
+      try {
+        await f(semester);
+        completed.complete();
+      } catch (error, stack) {
+        completed.completeError(error, stack);
+      }
+    }).catchError((Object error, StackTrace stack) {
+      if (!completed.isCompleted) completed.completeError(error, stack);
+    }));
+    await completed.future;
   }
 }
 

@@ -2,7 +2,9 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 
 import 'dart:convert';
+
 import 'package:built_collection/built_collection.dart';
+import 'package:dr/app_clock.dart';
 import 'package:dr/app_selectors.dart';
 import 'package:dr/app_state.dart';
 import 'package:dr/calendar_date.dart';
@@ -117,7 +119,11 @@ class ExportDataSource {
           table.remove();
         }
         final text = readableHtml(certificate.outerHtml);
-        if (text.isNotEmpty || tables.isNotEmpty) {
+        final unavailable = RegExp(
+                'report card not available|zeugnis (ist )?nicht verfügbar|pagella non disponibile',
+                caseSensitive: false)
+            .hasMatch(text);
+        if (!unavailable && (text.isNotEmpty || tables.isNotEmpty)) {
           rows.add(ExportRecord(
               id: 'certificate',
               title: '',
@@ -201,7 +207,10 @@ class ExportDataSource {
       case ExportCategory.tasks:
       case ExportCategory.lessons:
         final seen = <int>{};
-        for (final day in state.calendarState.days.values) {
+        final days = category == ExportCategory.timetable
+            ? representativeTimetableWeek(state.calendarState.days.values)
+            : state.calendarState.days.values;
+        for (final day in days) {
           for (var i = 0; i < day.hours.length; i++) {
             final hour = day.hours[i];
             final id = '${day.date.toIso8601String()}:$i';
@@ -213,6 +222,7 @@ class ExportDataSource {
                   date: day.date,
                   fields: {
                     'hour': '${hour.fromHour}-${hour.toHour}',
+                    'weekday': '${day.date.weekday}',
                     'time': hour.timeSpans
                         .map((t) => '${_time(t.from)}-${_time(t.to)}')
                         .join(', '),
@@ -372,4 +382,47 @@ String readableMessage(String input) {
     // Not Delta JSON; use the legacy HTML/plain-text representation.
   }
   return readableHtml(input);
+}
+
+/// Prefer a complete teaching week with the fewest detected substitutions or
+/// cancellations. Never synthesize a regular timetable from different weeks.
+List<CalendarDay> representativeTimetableWeek(Iterable<CalendarDay> days) {
+  final weeks = <DateTime, List<CalendarDay>>{};
+  for (final day in days.where((d) => d.hours.isNotEmpty)) {
+    final date = calendarDate(day.date);
+    final monday = date.subtract(Duration(days: date.weekday - 1));
+    (weeks[monday] ??= []).add(day);
+  }
+  int score(List<CalendarDay> week) {
+    final weekdays = week
+        .where((d) => d.date.weekday <= 5)
+        .map((d) => d.date.weekday)
+        .toSet()
+        .length;
+    final hours = week.expand((d) => d.hours).toList();
+    final irregular = hours
+        .where((h) =>
+            h.isDetectedSubstitute ||
+            RegExp('suppl|ausfall|entfällt|sostit|cancel|lehrausgang|ausflug|messe',
+                    caseSensitive: false)
+                .hasMatch('${h.subject} ${h.rooms.join(' ')}'))
+        .length;
+    return (5 - weekdays) * 10000 + irregular * 100;
+  }
+
+  final candidates = weeks.entries.toList()
+    ..sort((a, b) {
+      final rank = score(a.value).compareTo(score(b.value));
+      if (rank != 0) return rank;
+      final reference = calendarDate(appClock.now);
+      final nearby = a.key
+          .difference(reference)
+          .inDays
+          .abs()
+          .compareTo(b.key.difference(reference).inDays.abs());
+      return nearby != 0 ? nearby : b.key.compareTo(a.key);
+    });
+  return candidates.isEmpty
+      ? []
+      : (candidates.first.value..sort((a, b) => a.date.compareTo(b.date)));
 }

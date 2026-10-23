@@ -827,10 +827,10 @@
   "export.creating": "Datei wird erstellt …",
   "export.success": "Die Datei wurde gespeichert.",
   "export.cancelled": "Speichern abgebrochen. Du kannst es erneut versuchen.",
-  "export.empty": "Keine passenden Einträge. Lade zuerst den jeweiligen Bereich in der App oder passe die Filter an.",
+  "export.empty": "Keine passenden Einträge. Ändere die Filter oder aktualisiere die Daten. Ein Zeugnis ist möglicherweise noch nicht von der Schule bereitgestellt.",
   "export.failed": "Die Datei konnte nicht erstellt oder gespeichert werden. Prüfe den freien Speicherplatz und wähle einen beschreibbaren Speicherort. Versuche es danach erneut.",
   "export.tooLarge": "Zu viele Daten für einen Export. Wähle einen kürzeren Zeitraum oder weniger Einträge.",
-  "export.scopeNotice": "Enthält ausschließlich die aktuell in der App geladenen Daten. Historische und noch nicht geladene Daten werden nicht automatisch abgerufen. Filter gelten nur für passende Kategorien.",
+  "export.scopeNotice": "Enthält die verfügbaren Registerdaten. Beim Öffnen werden die Bereiche aktualisiert; offline werden vorhandene Daten genutzt. Filter gelten für passende Kategorien.",
   "export.offlineNotice": "Du bist offline. Der Export nutzt ausschließlich bereits geladene Daten, die unvollständig oder veraltet sein können.",
   "export.privacyNotice": "Die Erstellung erfolgt lokal. Die Datei enthält persönliche Daten. Bewahre sie sicher auf und teile sie bewusst.",
   "export.certificateNotice": "Persönliche Zeugnisübersicht, kein offizielles Schulzeugnis. Grundlage ist das geladene Zeugnis-HTML. Schuljahr und Semester werden unverändert aus dem Inhalt übernommen; die Filter gelten hier nicht. Bilder, Stempel und Unterschriften werden nicht übernommen.",
@@ -858,7 +858,7 @@
   "export.description.certificates": "Übersicht aus dem geladenen Zeugnis",
   "export.description.grades": "Bewertungen, Gewichtung und Durchschnitte",
   "export.description.messages": "Absender, Inhalt und Anhangsnamen",
-  "export.description.timetable": "Geladene Unterrichtsstunden und Räume",
+  "export.description.timetable": "Eine Woche mit möglichst wenigen Supplenzen",
   "export.description.exams": "Prüfungen aus dem geladenen Kalender",
   "export.description.tasks": "Aufgaben und Abgabetermine im Kalender",
   "export.description.absences": "Fehlzeiten, Begründungen und Status",
@@ -888,5 +888,10 @@
   "export.field.room": "Raum",
   "export.field.class": "Klasse",
   "export.field.average": "Fachdurchschnitt",
-  "export.field.overallAverage": "Gesamtdurchschnitt"
+  "export.field.overallAverage": "Gesamtdurchschnitt",
+  "export.loading": "Exportdaten werden geladen …",
+  "export.loadFailed": "Einige Daten konnten nicht aktualisiert werden. Prüfe die Verbindung und lade erneut. Vorhandene Daten bleiben verfügbar.",
+  "export.reload": "Daten aktualisieren",
+  "export.field.weekday": "Wochentag",
+  "export.field.period": "Stunde"
 }

@@ -811,10 +811,10 @@
   "export.creating": "Creazione del file …",
   "export.success": "Il file è stato salvato.",
   "export.cancelled": "Salvataggio annullato. Puoi riprovare.",
-  "export.empty": "Nessuna voce corrispondente. Apri prima la sezione nell’app o modifica i filtri.",
+  "export.empty": "Nessuna voce corrispondente. Modifica i filtri o aggiorna i dati. La pagella potrebbe non essere ancora disponibile.",
   "export.failed": "Impossibile creare o salvare il file. Controlla lo spazio libero e scegli una posizione scrivibile, poi riprova.",
   "export.tooLarge": "Troppi dati per una sola esportazione. Scegli un periodo più breve o meno voci.",
-  "export.scopeNotice": "Include solo i dati attualmente caricati nell’app. I dati storici o non ancora caricati non vengono scaricati automaticamente. I filtri si applicano alle categorie pertinenti.",
+  "export.scopeNotice": "Include i dati disponibili del registro. Le sezioni vengono aggiornate all’apertura; offline si usano i dati salvati. I filtri si applicano alle categorie pertinenti.",
   "export.offlineNotice": "Sei offline. L’esportazione usa solo dati già caricati, che potrebbero essere incompleti o non aggiornati.",
   "export.privacyNotice": "Il file viene creato localmente e contiene dati personali. Conservalo al sicuro e condividilo con attenzione.",
   "export.certificateNotice": "Riepilogo personale, non una pagella ufficiale. Basato sull’HTML caricato. Anno e semestre restano quelli del contenuto; i filtri non si applicano. Immagini, timbri e firme non sono inclusi.",
@@ -842,7 +842,7 @@
   "export.description.certificates": "Riepilogo della pagella caricata",
   "export.description.grades": "Valutazioni, pesi e medie",
   "export.description.messages": "Mittente, contenuto e nomi degli allegati",
-  "export.description.timetable": "Lezioni e aule caricate",
+  "export.description.timetable": "Una settimana con meno supplenze possibili",
   "export.description.exams": "Verifiche del calendario caricato",
   "export.description.tasks": "Compiti e scadenze nel calendario",
   "export.description.absences": "Assenze, motivazioni e stato",
@@ -872,5 +872,10 @@
   "export.field.room": "Aula",
   "export.field.class": "Classe",
   "export.field.average": "Media della materia",
-  "export.field.overallAverage": "Media complessiva"
+  "export.field.overallAverage": "Media complessiva",
+  "export.loading": "Caricamento dei dati …",
+  "export.loadFailed": "Impossibile aggiornare alcuni dati. Controlla la connessione e riprova.",
+  "export.reload": "Aggiorna dati",
+  "export.field.weekday": "Giorno",
+  "export.field.period": "Ora"
 }

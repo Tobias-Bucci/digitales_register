@@ -811,10 +811,10 @@
   "export.creating": "Creaziun dl file …",
   "export.success": "L file é gnü salvé.",
   "export.cancelled": "Salvatage anulé. Te pos indô porvé.",
-  "export.empty": "Degüna anotaziun adatèda. Ciaria impröma la seziun tl’app o muda i filtri.",
+  "export.empty": "Degüna anotaziun adatèda. Muda i filtri o atualisea i dac. La scora ne á forsciö ciamó nia publiché la pagela.",
   "export.failed": "L file ne pó nia gnì crié o salvé. Controlea l post lëde y chir fora n post olache an pó scrì, spo porva indô.",
   "export.tooLarge": "Massa dac por n’esportaziun. Chir fora n period plü cürt o manco anotaziuns.",
-  "export.scopeNotice": "Contëgn ma i dac atualmënter ciariés tl’app. Dac storics o nia ciamó ciariés ne vëgn nia ciariés automaticamënter. I filtri vel por les categories adatèdes.",
+  "export.scopeNotice": "Contëgn i dac disponibli dl register. Les seziuns vëgn atualisades canche an les davër; offline vëgn adorá i dac salvés. I filtri vel por les categories adatèdes.",
   "export.offlineNotice": "Te ies offline. L’esportaziun adora ma dac bele ciariés, che pó ester incomplec o vedli.",
   "export.privacyNotice": "L file vën crié localmënter y contëgn dac personai. Tëgnel al sigü y partëscel cun atenziun.",
   "export.certificateNotice": "Resumé personal dl zertificat, nia na pagela ofiziala. Basé söl HTML ciarié. Ann y semester resta chës dl contegnü; i filtri ne vel nia. Imagnes, timbri y sot-scrizî ne vëgn nia tuti ite.",
@@ -842,7 +842,7 @@
   "export.description.certificates": "Resumé dla pagela ciariada",
   "export.description.grades": "Proi, pëis y medies",
   "export.description.messages": "Mitënt, contegnü y inoms di injuntes",
-  "export.description.timetable": "Leziuns y sales ciariades",
+  "export.description.timetable": "N’edema cun manco suplënzes possibli",
   "export.description.exams": "Verifiches dl calënder ciarié",
   "export.description.tasks": "Compic y scadënzes tl calënder",
   "export.description.absences": "Assënzes, rajuns y stat",
@@ -872,5 +872,10 @@
   "export.field.room": "Sala",
   "export.field.class": "Tlassa",
   "export.field.average": "Media dla diciplina",
-  "export.field.overallAverage": "Media generala"
+  "export.field.overallAverage": "Media generala",
+  "export.loading": "Ciariamënt di dac …",
+  "export.loadFailed": "Cun n valgügn dac ne n’é nia jü. Controlea la conescion y porva indô.",
+  "export.reload": "Atualisé i dac",
+  "export.field.weekday": "De dla edema",
+  "export.field.period": "Ora"
 }
