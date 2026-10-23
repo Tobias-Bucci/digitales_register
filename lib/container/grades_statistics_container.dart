@@ -3,6 +3,7 @@ import 'package:dr/app_clock.dart';
 import 'package:dr/app_state.dart';
 import 'package:dr/grade_statistics.dart';
 import 'package:dr/i18n/app_localizations.dart';
+import 'package:dr/ui/grade_colors.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_built_redux/flutter_built_redux.dart';
 
@@ -20,8 +21,7 @@ class GradesStatisticsContainer extends StatelessWidget {
           child: Card(
             clipBehavior: Clip.antiAlias,
             child: ListTile(
-              leading: const CircleAvatar(
-                  child: Icon(Icons.bar_chart_rounded)),
+              leading: const CircleAvatar(child: Icon(Icons.bar_chart_rounded)),
               title: Text(context.l10n.text('grades.statistics')),
               subtitle: Text(context.l10n.text('grades.statistics.subtitle')),
               trailing: const Icon(Icons.chevron_right),
@@ -166,7 +166,7 @@ class _SubjectBars extends StatelessWidget {
                     child: LinearProgressIndicator(
                       value: value.average / 1000,
                       minHeight: 12,
-                      color: _gradeColor(value.average),
+                      color: gradeColor(value.average),
                       backgroundColor: Theme.of(context).colorScheme.surface,
                     ),
                   ),
@@ -191,12 +191,6 @@ class _EmptyStatistics extends StatelessWidget {
           Text(context.l10n.text('grades.statistics.empty')),
         ]),
       );
-}
-
-Color _gradeColor(double value) {
-  if (value >= 800) return Colors.green;
-  if (value >= 600) return Colors.amber.shade800;
-  return Colors.red;
 }
 
 String _format(double value) =>

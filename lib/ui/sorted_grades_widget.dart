@@ -24,6 +24,7 @@ import 'package:dr/i18n/app_localizations.dart';
 import 'package:dr/tutorial/tutorial_target.dart';
 import 'package:dr/ui/animated_linear_progress_indicator.dart';
 import 'package:dr/ui/favorite_subject_filter.dart';
+import 'package:dr/ui/grade_colors.dart';
 import 'package:dr/util.dart';
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
@@ -31,79 +32,12 @@ import 'package:intl/intl.dart';
 typedef ViewSubjectDetailCallback = void Function(Subject s);
 typedef SetBoolCallback = void Function(bool byType);
 
-bool _isFailingGrade(int? grade) => grade != null && grade < 600;
-bool _isPassingGrade(int? grade) => grade != null && grade >= 600;
-
 TextStyle? _cancelledStyle(TextStyle? baseStyle, bool cancelled) {
   if (!cancelled) {
     return baseStyle;
   }
   return baseStyle?.copyWith(decoration: TextDecoration.lineThrough) ??
       const TextStyle(decoration: TextDecoration.lineThrough);
-}
-
-TextStyle? _gradeTextStyle(
-  BuildContext context,
-  TextStyle? baseStyle, {
-  required bool cancelled,
-  required bool failing,
-  required bool passing,
-  required bool colorized,
-}) {
-  final style = _cancelledStyle(baseStyle, cancelled);
-  if (!colorized || (!failing && !passing)) {
-    return style;
-  }
-  final foreground = failing
-      ? Theme.of(context).colorScheme.onErrorContainer
-      : Colors.green.shade900;
-  return style?.copyWith(
-        color: foreground,
-        fontWeight: FontWeight.w700,
-      ) ??
-      TextStyle(
-        color: foreground,
-        fontWeight: FontWeight.w700,
-        decoration:
-            cancelled ? TextDecoration.lineThrough : TextDecoration.none,
-      );
-}
-
-class _GradeBadge extends StatelessWidget {
-  const _GradeBadge({
-    required this.text,
-    required this.textStyle,
-    required this.failing,
-    required this.passing,
-    required this.colorized,
-  });
-
-  final String text;
-  final TextStyle? textStyle;
-  final bool failing;
-  final bool passing;
-  final bool colorized;
-
-  @override
-  Widget build(BuildContext context) {
-    final content = Text(text, style: textStyle);
-    if (!colorized || (!failing && !passing)) {
-      return content;
-    }
-
-    return DecoratedBox(
-      decoration: ShapeDecoration(
-        color: failing
-            ? Theme.of(context).colorScheme.errorContainer
-            : Colors.green.shade100,
-        shape: const StadiumBorder(),
-      ),
-      child: Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-        child: content,
-      ),
-    );
-  }
 }
 
 class _AbsencesBadge extends StatelessWidget {
@@ -397,8 +331,6 @@ class _SubjectWidgetState extends State<SubjectWidget> {
     final entries = widget.subject.detailEntries(widget.semester);
     final averageStyle = Theme.of(context).textTheme.titleMedium;
     final average = widget.subject.average(widget.semester);
-    final failingAverage = _isFailingGrade(average);
-    final passingAverage = _isPassingGrade(average);
     return AbsorbPointer(
       absorbing: widget.noInternet && entries == null,
       child: ExpansionTile(
@@ -431,19 +363,11 @@ class _SubjectWidgetState extends State<SubjectWidget> {
           mainAxisSize: MainAxisSize.min,
           children: [
             Text('Ø ', style: averageStyle),
-            _GradeBadge(
+            GradeBadge(
               text: widget.subject.averageFormatted(widget.semester),
-              failing: failingAverage,
-              passing: passingAverage,
+              hundredths: average,
               colorized: widget.colorGrades,
-              textStyle: _gradeTextStyle(
-                context,
-                averageStyle,
-                cancelled: false,
-                failing: failingAverage,
-                passing: passingAverage,
-                colorized: widget.colorGrades,
-              ),
+              style: averageStyle,
             ),
           ],
         ),
@@ -547,8 +471,6 @@ class GradeWidget extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context).textTheme;
-    final failing = _isFailingGrade(grade.grade);
-    final passing = _isPassingGrade(grade.grade);
     return Column(
       children: <Widget>[
         ListTile(
@@ -579,19 +501,12 @@ class GradeWidget extends StatelessWidget {
                 ),
             ],
           ),
-          trailing: _GradeBadge(
+          trailing: GradeBadge(
             text: grade.gradeFormatted,
-            failing: failing,
-            passing: passing,
+            hundredths: grade.grade,
             colorized: colorGrades,
-            textStyle: _gradeTextStyle(
-              context,
-              theme.titleMedium,
-              cancelled: grade.cancelled,
-              failing: failing,
-              passing: passing,
-              colorized: colorGrades,
-            ),
+            style: theme.titleMedium,
+            cancelled: grade.cancelled,
           ),
           isThreeLine: true,
         ),
