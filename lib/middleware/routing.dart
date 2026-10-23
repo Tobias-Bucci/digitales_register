@@ -222,6 +222,10 @@ Future<void> _showGrades(
     MiddlewareApi<AppState, AppStateBuilder, AppActions> api,
     ActionHandler next,
     Action<void> action) async {
+  await _rememberViewedSchoolNotifications(api
+          .state.notificationState.notifications
+          ?.where((n) => n.type == 'grade') ??
+      <Notification>[]);
   scaffoldKey!.currentState!
       .selectContentWidget(const GradesPageContainer(), Pages.grades);
   await api.actions.gradesActions.load(api.state.gradesState.semester);
@@ -262,7 +266,8 @@ Future<void> _showMessage(
     MiddlewareApi<AppState, AppStateBuilder, AppActions> api,
     ActionHandler next,
     Action<int> action) async {
-  navigatorKey!.currentState!.pop();
+  navigatorKey?.currentState
+      ?.popUntil((route) => route.settings.name != '/notifications');
   await api.actions.routingActions.showMessages();
   await next(action);
 }

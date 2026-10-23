@@ -2,6 +2,7 @@ import UIKit
 import Flutter
 import FirebaseAnalytics
 import UserNotifications
+import workmanager_apple
 
 @main
 @objc class AppDelegate: FlutterAppDelegate {
@@ -10,10 +11,21 @@ import UserNotifications
     didFinishLaunchingWithOptions launchOptions: [UIApplication.LaunchOptionsKey: Any]?
   ) -> Bool {
     let privacyReady = resetPrivacySDKDefaults()
-    UNUserNotificationCenter.current().removeAllPendingNotificationRequests()
-    UNUserNotificationCenter.current().removeAllDeliveredNotifications()
+    UNUserNotificationCenter.current().delegate = self
+    WorkmanagerPlugin.setPluginRegistrantCallback { registry in
+      GeneratedPluginRegistrant.register(with: registry)
+    }
+    WorkmanagerPlugin.registerPeriodicTask(
+      withIdentifier: "it.bucci.digitalesregister.schoolRefresh",
+      frequency: NSNumber(value: 15 * 60))
     GeneratedPluginRegistrant.register(with: self)
     if let controller = window?.rootViewController as? FlutterViewController {
+      FlutterMethodChannel(name: "dr/school_notifications", binaryMessenger: controller.binaryMessenger)
+        .setMethodCallHandler { call, result in
+          if call.method == "backgroundRefreshAvailable" {
+            result(application.backgroundRefreshStatus == .available)
+          } else { result(FlutterMethodNotImplemented) }
+        }
       FlutterMethodChannel(name: "dr/privacy_bootstrap", binaryMessenger: controller.binaryMessenger)
         .setMethodCallHandler { call, result in
           if call.method == "ready" { result(privacyReady) }

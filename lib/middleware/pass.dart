@@ -33,6 +33,11 @@ Future<void> _setSavePass(
   if (!api.state.loginState.loggedIn) return;
   // This setting controls automatic sign-in, not removal from the account list.
   await api.actions.savePassActions.save();
+  if (wrapper.url != null && wrapper.user != null && !wrapper.demoMode) {
+    await schoolNotificationOperation(() => schoolNotifications.activate(
+        wrapper.url!, wrapper.user!,
+        backgroundAllowed: !action.payload));
+  }
 }
 
 Future<void> _savePass(MiddlewareApi<AppState, AppStateBuilder, AppActions> api,

@@ -62,6 +62,7 @@ import 'package:dr/main.dart';
 import 'package:dr/page_payload_cache.dart';
 import 'package:dr/platform_adapter.dart';
 import 'package:dr/privacy_log.dart';
+import 'package:dr/school_notification_service.dart';
 import 'package:dr/serializers.dart';
 import 'package:dr/settings_persistence_service.dart';
 import 'package:dr/state_persistence_service.dart';
@@ -1208,6 +1209,15 @@ Future<void> _loggedIn(
   // Restoring settings applies the session policy without removing accounts or
   // rewriting their credentials as a side effect of signing in.
   wrapper.safeMode = api.state.settingsState.noPasswordSaving;
+  if (!action.payload.offlineOnly &&
+      !wrapper.demoMode &&
+      wrapper.user != null) {
+    await schoolNotificationOperation(() => schoolNotifications.activate(
+          wrapper.url!,
+          wrapper.user!,
+          backgroundAllowed: !api.state.settingsState.noPasswordSaving,
+        ));
+  }
   for (final callback in api.state.loginState.callAfterLogin) {
     callback();
   }
@@ -1220,7 +1230,13 @@ Future<void> _loggedIn(
     // Full-year teacher-history hydration is deferred until calendar use.
     // Fetching every school week here overloaded startup and cache rebuilds.
   }
+  await schoolNotificationOperation(() async {
+    await schoolNotifications.onTap?.call();
+  });
   WidgetsBinding.instance.addPostFrameCallback((_) {
+    unawaited(schoolNotificationOperation(() async {
+      await schoolNotifications.onTap?.call();
+    }));
     final context = navigatorKey?.currentContext;
     if (context != null && api.state.loginState.loggedIn) {
       unawaited(tutorialService.maybeOffer(context));
@@ -1344,6 +1360,14 @@ Future<void> _restarted(
   Action<void> action,
 ) async {
   await next(action);
+  await schoolNotificationOperation(() async {
+    await schoolNotifications.reload();
+    if (api.state.loginState.loggedIn) {
+      await api.actions.notificationsActions.load();
+      await schoolNotifications.schedule();
+      await schoolNotifications.onTap?.call();
+    }
+  });
   if (api.state.loginState.loggedIn &&
       DateTime.now().difference(wrapper.lastInteraction).inMinutes > 3) {
     wrapper.interaction();

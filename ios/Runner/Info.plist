@@ -54,6 +54,10 @@
 		<key>UIApplicationSupportsIndirectInputEvents</key>
 		<true/>
 <key>FirebaseAutomaticScreenReportingEnabled</key><false/>
+<key>UIBackgroundModes</key>
+<array><string>fetch</string></array>
+<key>BGTaskSchedulerPermittedIdentifiers</key>
+<array><string>it.bucci.digitalesregister.schoolRefresh</string></array>
 <key>FirebaseCrashlyticsCollectionEnabled</key><false/>
 <key>FIREBASE_ANALYTICS_COLLECTION_ENABLED</key><false/>
 <key>GOOGLE_ANALYTICS_IDFA_COLLECTION_ENABLED</key><false/>

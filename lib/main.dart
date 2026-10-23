@@ -20,6 +20,7 @@
 
 import 'dart:async';
 import 'dart:io';
+
 import 'package:built_redux/built_redux.dart';
 import 'package:dr/actions/app_actions.dart';
 import 'package:dr/analytics_service.dart';
@@ -43,6 +44,8 @@ import 'package:dr/i18n/app_language.dart';
 import 'package:dr/i18n/app_localizations.dart';
 import 'package:dr/middleware/middleware.dart';
 import 'package:dr/reducer/reducer.dart';
+import 'package:dr/school_notification_engine.dart';
+import 'package:dr/school_notification_service.dart';
 import 'package:dr/settings_persistence_service.dart';
 import 'package:dr/theme_controller.dart';
 import 'package:dr/tutorial/tutorial_overlay.dart';
@@ -157,6 +160,36 @@ Future<void> _initializeAfterFirstFrame({
     });
   }
 
+  schoolNotifications.refresh = () async {
+    if (store.state.loginState.loggedIn && !store.state.noInternet) {
+      await refreshSchoolNotificationFeed(store.actions);
+    }
+  };
+  schoolNotifications.onTap = () async {
+    final destination = schoolNotifications.pendingDestination;
+    if (destination == null ||
+        !store.state.loginState.loggedIn ||
+        scaffoldKey?.currentState == null) {
+      return;
+    }
+    schoolNotifications.pendingDestination = null;
+    final user = store.state.loginState.username;
+    final server = store.state.url;
+    if (user == null ||
+        server == null ||
+        destination.account != schoolNotifications.accountKey(server, user)) {
+      return;
+    }
+    navigatorKey?.currentState?.popUntil((route) => route.isFirst);
+    if (destination.category == SchoolNotificationCategory.grade) {
+      await store.actions.routingActions.showGrades();
+    } else if (destination.objectId != null) {
+      await store.actions.routingActions.showMessage(destination.objectId!);
+    } else {
+      await store.actions.routingActions.showMessages();
+    }
+  };
+  await schoolNotificationOperation(() => schoolNotifications.initialize());
   await store.actions.start(uri);
 
   WidgetsBinding.instance.addObserver(
