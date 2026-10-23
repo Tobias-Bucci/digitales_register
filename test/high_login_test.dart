@@ -40,12 +40,14 @@ class LoginAdapter implements HttpClientAdapter {
   bool malformedCredentials = false;
   Exception? credentialFailure;
   int loginRequests = 0;
+  int calendarRequests = 0;
   final configGate = Completer<void>();
   final configRequested = Completer<void>();
 
   @override
   Future<ResponseBody> fetch(RequestOptions options,
       Stream<List<int>>? requestStream, Future<void>? cancelFuture) async {
+    if (options.path.contains('api/calendar/student')) calendarRequests++;
     if (options.path.endsWith('api/auth/login')) {
       loginRequests++;
       if (credentialFailure != null) throw credentialFailure!;
@@ -80,6 +82,23 @@ class LoginAdapter implements HttpClientAdapter {
 void main() {
   setUp(bootstrapTestEnvironment);
   tearDown(resetTestState);
+
+  test('login does not start a full-year calendar download', () async {
+    final session = TestLoginWrapper()..safeMode = false;
+    final adapter = LoginAdapter()..configGate.complete();
+    session.dio.httpClientAdapter = adapter;
+    middleware.wrapper = session;
+    addTearDown(() => session.logout(hard: true));
+    final store = createStore(withMiddleware: true);
+    await store.actions.loginActions.login(LoginPayload((b) => b
+      ..user = 'user'
+      ..pass = 'password'
+      ..url = testServerUrl
+      ..fromStorage = false));
+    await Future<void>.delayed(Duration.zero);
+    expect(store.state.loginState.loggedIn, isTrue);
+    expect(adapter.calendarRequests, 0);
+  });
 
   test('middleware catches unexpected initialization errors exactly once',
       () async {

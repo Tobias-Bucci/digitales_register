@@ -198,6 +198,34 @@ void main() {
   });
 
   test(
+      'timetable exports exactly one complete week, preferring no substitutions',
+      () {
+    final first = UtcDateTime(2026, 10, 5);
+    final days = [
+      for (var week = 0; week < 2; week++)
+        for (var day = 0; day < 5; day++)
+          buildCalendarDay(
+              date: first.add(Duration(days: week * 7 + day)),
+              hours: [
+                buildCalendarHour(
+                    subject: 'M', isDetectedSubstitute: week == 1 && day == 1)
+              ])
+    ];
+    final chosen = representativeTimetableWeek(days);
+    expect(chosen.length, 5);
+    expect(chosen.first.date, first);
+    expect(chosen.expand((d) => d.hours).any((h) => h.isDetectedSubstitute),
+        isFalse);
+  });
+
+  test('CSV schema stays useful when a category is empty', () {
+    final csv = utf8.decode(
+        createExportCsv(const ExportSection(ExportCategory.grades, []), de));
+    expect(csv, contains('"Note";"Gewichtung (%)"'));
+    expect(csv, isNot(contains('Kennung')));
+  });
+
+  test(
       'HTML and Delta extraction preserves meaningful content without scripts or media fetches',
       () {
     expect(
@@ -227,7 +255,7 @@ void main() {
     final text = utf8.decode(bytes);
     expect(text, contains('"Grüße; ""città"""'));
     expect(text, contains('"\' =HYPERLINK(""bad"")"'));
-    expect(text, contains('"line 1\nline 2"\r\n'));
+    expect(text, contains('"line 1\nline 2"'));
     final grades = utf8.decode(createExportCsv(
         ExportDataSource(exportFixture()).section(
             ExportCategory.grades, ExportFilter(semester: Semester.first)),

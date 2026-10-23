@@ -29,59 +29,69 @@ final _calendarMiddleware =
 Future<void> _ensureSchoolYearCalendarLoaded(
   MiddlewareApi<AppState, AppStateBuilder, AppActions> api,
 ) async {
-  if (wrapper.demoMode || api.state.noInternet) return;
+  await loadExportCalendarYear(
+      state: () => api.state,
+      onLoaded: api.actions.calendarActions.loaded.call);
+}
 
-  final schoolYear = schoolYearForDate(now);
-  if (api.state.calendarState.prefetchedSchoolYears.contains(schoolYear)) {
-    return;
-  }
-  final sessionKey =
-      '${api.state.url ?? ''}|${api.state.loginState.username ?? ''}';
-
-  await _runCoalescedLoad('calendar-school-year:$sessionKey:$schoolYear',
+/// Explicit calendar/export hydration, never invoked by login. Aggregate week
+/// responses before reducing them so the growing year is rebuilt only once.
+Future<bool> loadExportCalendarYear(
+    {required AppState Function() state,
+    required Future<void> Function(CalendarLoadedPayload) onLoaded,
+    bool Function()? isActive}) async {
+  final initial = state();
+  if (wrapper.demoMode) return true;
+  if (initial.noInternet) return false;
+  final year = schoolYearForDate(now);
+  if (initial.calendarState.prefetchedSchoolYears.contains(year)) return true;
+  final session = wrapper;
+  final owner = (initial.url, initial.loginState.username);
+  bool active() =>
+      (isActive?.call() ?? true) &&
+      identical(wrapper, session) &&
+      state().loginState.loggedIn &&
+      (state().url, state().loginState.username) == owner;
+  var complete = true;
+  await _runCoalescedLoad('calendar-school-year:${owner.$1}|${owner.$2}:$year',
       () async {
-    if (api.state.calendarState.prefetchedSchoolYears.contains(schoolYear)) {
-      return;
-    }
-
-    final loadedMondays = {
-      for (final date in api.state.calendarState.days.keys) toMonday(date),
-    };
-    var complete = true;
-    for (final monday in schoolYearCalendarMondays(schoolYear)) {
-      final currentSessionKey =
-          '${api.state.url ?? ''}|${api.state.loginState.username ?? ''}';
-      if (!api.state.loginState.loggedIn || currentSessionKey != sessionKey) {
+    final loaded = state().calendarState.days.keys.map(toMonday).toSet();
+    final merged = <String, dynamic>{};
+    for (final monday in schoolYearCalendarMondays(year)) {
+      if (!active()) {
+        complete = false;
         return;
       }
-      if (loadedMondays.contains(monday)) continue;
-      final dynamic data = await wrapper.send(
-        'api/calendar/student',
-        args: {'startDate': DateFormat('yyyy-MM-dd').format(monday)},
-      );
-      if (data is! Map<String, dynamic>) {
+      if (loaded.contains(monday)) continue;
+      final dynamic data = await session.send('api/calendar/student',
+          args: {'startDate': DateFormat('yyyy-MM-dd').format(monday)});
+      if (!active()) {
         complete = false;
-        continue;
+        return;
       }
-      await api.actions.calendarActions.loaded(
-        CalendarLoadedPayload(
-          data: data,
-          config: _currentSubstituteDetectionConfig(api.state),
-        ),
-      );
-      loadedMondays.add(monday);
+      if (data is Map<String, dynamic>) {
+        merged.addAll(data);
+      } else {
+        complete = false;
+        // Stop on a provider/network failure rather than repeating it for
+        // every remaining week; keep the successfully collected partial data.
+        break;
+      }
+      if (state().noInternet) {
+        complete = false;
+        break;
+      }
     }
-
-    if (!complete) return;
-    await api.actions.calendarActions.loaded(
-      CalendarLoadedPayload(
-        data: const <String, dynamic>{},
-        config: _currentSubstituteDetectionConfig(api.state),
-        completedSchoolYear: schoolYear,
-      ),
-    );
-    await api.actions.saveState();
+    if (!active()) {
+      complete = false;
+      return;
+    }
+    await onLoaded(CalendarLoadedPayload(
+        data: merged,
+        config: _currentSubstituteDetectionConfig(state()),
+        completedSchoolYear: complete ? year : null));
   });
+  return complete;
 }
 
 SubstituteDetectionConfig _currentSubstituteDetectionConfig(AppState state) =>

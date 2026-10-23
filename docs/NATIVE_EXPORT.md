@@ -19,12 +19,18 @@ certificate content is not assigned an inferred year or semester.
 
 ## Data contract and limits
 
-Exports use one immutable **currently loaded account snapshot**, including cached
-data offline. They do not assert that this is a complete server archive. Load the
-relevant app sections first. The UI and PDF explicitly disclose this scope; the
-page shows category and filtered entry counts, plus available last-fetch dates.
-Historical years are offered only when dated entries for them are loaded. There
-is no server-side historical-year endpoint in the existing models.
+Opening the export page refreshes grades (both semesters), messages, certificate,
+absences, dashboard and calendar data through the existing middleware,
+without navigating those pages. A progress state blocks saving until hydration
+finishes; failed/offline loads allow explicit retry and retain cached data. Refresh
+requests are scoped to the mounted account. Grades loading now awaits semester
+requests instead of returning before they complete.
+
+Exports freeze one immutable account snapshot. Historical years are offered only
+when dated entries for them exist. Export explicitly hydrates missing weeks of the
+current school year for assessments/tasks, combining responses into one reducer
+update. It does not hydrate other historical years. The timetable selects only
+one representative week from these actual data. There is no new historical API.
 
 The grade projection rebuilds filtered Subject models and calls `Subject.average`
 and the canonical `overallGradeAverage`; it does not implement another weighting
@@ -32,6 +38,13 @@ rule. Cancelled and missing grades remain visible but follow the existing averag
 rules. Configured exclusions still apply to the overall average. Both semester
 and date/entry selection constrain the averages. Refreshing source data resets
 index-based selections to prevent a newly inserted grade being selected by mistake.
+
+The timetable is one actual, complete teaching week chosen from cached/refreshed
+weeks, preferring the fewest detected substitutions/cancellations/special events.
+It is rendered as a landscape day-by-period grid. Other calendar and attendance
+categories use compact tables. Messages retain full text. CSV uses a fixed useful
+schema per category (no internal IDs or empty duplicate title/content columns),
+ISO dates, full timestamps for messages/deadlines and localized headers/numbers.
 
 Calendar tasks/assessments are deduplicated by their register ID; timetable lessons
 retain their actual dates, periods, available times, teachers and rooms. Absences
@@ -76,6 +89,7 @@ a save dialog for an export still being generated.
 - `lib/export/export_data.dart`: pure model projection, filters, HTML/Delta text.
 - `lib/export/export_pdf.dart`: typography, tables and pagination.
 - `lib/export/export_csv.dart`: localized CSV and spreadsheet safety.
+- `lib/export/export_font.dart`: UTF-16BE character maps, including supplementary emoji; remove the isolated workaround when upstream pdf fixes its Unicode map.
 - `lib/export/export_service.dart`: worker dispatch, limits, ZIP and native save.
 - `lib/container/export_container.dart`: account-scoped Redux connection/navigation.
 - `lib/ui/export_page.dart`: category selection, options, preview counts and status.
@@ -114,3 +128,35 @@ claim that those native dialogs have been manually tested.
   file-picker interface test, not a manually exercised OS dialog.
 - iOS, Linux and macOS builds/device dialogs were not run on this Windows host;
   native release QA remains required on those platforms before release.
+
+## Local revision after user review
+
+The initially supplied PDF contained 368 pages, dominated by 1,150 timetable
+records. Re-rendering its local CSV data through the revised layout produces 29
+pages (30 in Ladin), with a single timetable page, preserving all message text.
+All four translated PDF/CSV outputs were generated from the review input. Personal review
+inputs/outputs remain under ignored build/export_review, never committed. The
+optional export_review_test accepts a local JSON input only when explicitly set.
+
+The startup path no longer launches full-year teacher-history hydration after
+login (dozens of week requests and repeated growing cache rebuilds). Teacher
+history remains available when the calendar is deliberately opened. A login
+regression test verifies zero calendar requests during login. This addresses a
+proven load source; a native Windows process disconnect cannot be diagnosed from
+technical_operation lines alone. No matching Application Error event was found
+in the inspected Windows event log. No rendering-backend change was made.
+
+The previous pull request was closed at the user's request. Further work is local;
+no replacement pull request is to be created without a new explicit instruction.
+
+The explicit year hydration now batches calendar responses and reduces them once,
+rather than rebuilding and redetecting the growing year after every response.
+Regression coverage verifies this single reduction and incomplete-data handling,
+as well as awaiting both grade-semester responses before completing hydration.
+
+Revision validation: flutter analyze passed; 1,090 tests passed with two opt-in/
+platform skips, followed by four focused hydration tests after the final
+provider-failure short-circuit. Windows debug build succeeded. Review PDF/CSV
+files exist locally in de/it/en/lld; extracted German text stays within page
+margins and supplementary emoji survives PDF text extraction. No new PR or push
+was made for this revision.

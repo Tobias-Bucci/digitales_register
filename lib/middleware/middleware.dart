@@ -1217,7 +1217,8 @@ Future<void> _loggedIn(
       api.actions.notificationsActions.load(),
       api.actions.profileActions.load(),
     ]);
-    unawaited(_ensureSubstituteTeacherHistoryLoaded(api));
+    // Full-year teacher-history hydration is deferred until calendar use.
+    // Fetching every school week here overloaded startup and cache rebuilds.
   }
   WidgetsBinding.instance.addPostFrameCallback((_) {
     final context = navigatorKey?.currentContext;

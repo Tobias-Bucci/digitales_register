@@ -811,10 +811,10 @@
   "export.creating": "Creating file …",
   "export.success": "The file was saved.",
   "export.cancelled": "Saving cancelled. You can try again.",
-  "export.empty": "No matching entries. Load the relevant section in the app first or adjust your filters.",
+  "export.empty": "No matching entries. Adjust the filters or refresh the data. The school may not have published a certificate yet.",
   "export.failed": "Could not create or save the file. Check free space and choose a writable location, then try again.",
   "export.tooLarge": "Too much data for one export. Choose a shorter date range or fewer entries.",
-  "export.scopeNotice": "Includes only data currently loaded in the app. Historical and unloaded data is not fetched automatically. Filters apply to relevant categories only.",
+  "export.scopeNotice": "Includes available register data. Sections refresh on opening; offline, cached data is used. Filters apply to relevant categories.",
   "export.offlineNotice": "You are offline. Export uses previously loaded data, which may be incomplete or outdated.",
   "export.privacyNotice": "Created locally. The file contains personal data. Store it securely and share it thoughtfully.",
   "export.certificateNotice": "Personal certificate overview, not an official school report. Based on loaded certificate HTML. Year and semester are retained from its content; filters do not apply. Images, stamps and signatures are not included.",
@@ -842,7 +842,7 @@
   "export.description.certificates": "Overview of the loaded certificate",
   "export.description.grades": "Grades, weights and averages",
   "export.description.messages": "Sender, content and attachment names",
-  "export.description.timetable": "Loaded lessons and rooms",
+  "export.description.timetable": "One week with as few substitutions as possible",
   "export.description.exams": "Assessments from the loaded calendar",
   "export.description.tasks": "Tasks and deadlines in the calendar",
   "export.description.absences": "Absences, reasons and status",
@@ -872,5 +872,10 @@
   "export.field.room": "Room",
   "export.field.class": "Class",
   "export.field.average": "Subject average",
-  "export.field.overallAverage": "Overall average"
+  "export.field.overallAverage": "Overall average",
+  "export.loading": "Loading export data …",
+  "export.loadFailed": "Some data could not be refreshed. Check your connection and retry. Cached data remains available.",
+  "export.reload": "Refresh data",
+  "export.field.weekday": "Weekday",
+  "export.field.period": "Period"
 }

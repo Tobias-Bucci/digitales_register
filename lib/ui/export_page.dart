@@ -14,7 +14,13 @@ class ExportPage extends StatefulWidget {
       {super.key,
       required this.state,
       this.initialCategory,
+      this.loading = false,
+      this.loadFailed = false,
+      this.onReload,
       this.service = const ExportService()});
+  final bool loading;
+  final bool loadFailed;
+  final Future<void> Function()? onReload;
   final AppState state;
   final ExportCategory? initialCategory;
   final ExportService service;
@@ -297,6 +303,9 @@ class _ExportPageState extends State<ExportPage> {
                   child: ListView(
                       padding: const EdgeInsets.fromLTRB(16, 20, 16, 32),
                       children: [
+                        if (widget.loading) const LinearProgressIndicator(),
+                        if (widget.loading) Text(t('loading')),
+                        if (widget.loadFailed) Text(t('loadFailed')),
                         Container(
                             padding: const EdgeInsets.all(24),
                             decoration: BoxDecoration(
@@ -493,6 +502,13 @@ class _ExportPageState extends State<ExportPage> {
                           ]),
                           const SizedBox(height: 16),
                         ],
+                        if (widget.onReload != null)
+                          TextButton.icon(
+                              onPressed: widget.loading || _busy
+                                  ? null
+                                  : widget.onReload,
+                              icon: const Icon(Icons.refresh),
+                              label: Text(t('reload'))),
                         Text(
                             t(widget.state.noInternet
                                 ? 'offlineNotice'
@@ -517,7 +533,9 @@ class _ExportPageState extends State<ExportPage> {
                                               : colors.primary)))),
                         const SizedBox(height: 20),
                         FilledButton.icon(
-                            onPressed: _busy || count == 0 ? null : _export,
+                            onPressed: _busy || widget.loading || count == 0
+                                ? null
+                                : _export,
                             style: FilledButton.styleFrom(
                                 padding: const EdgeInsets.all(18)),
                             icon: _busy
