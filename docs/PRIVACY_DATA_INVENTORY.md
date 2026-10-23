@@ -1,4 +1,10 @@
-# Privacy data inventory — version 4
+> 2026-10-24 correction: current notice version is **5**. References below to
+> v4 and atLeast14 describe the previous policy. Current authorization requires
+> a completed v5 decision and the corresponding purpose consent, without an age
+> gate. New decisions do not store age. Platform exclusions and data boundaries
+> remain. For current iOS provisioning, see [iOS setup](IOS_FIREBASE_SETUP.md).
+
+# Privacy data inventory — version 4 (historical audit)
 
 Audited 2026-10-01 against this repository. Controller for this app fork, confirmed by the owner: **Tobias Bucci, Mühlenweg 51, St. Sigmund, Italy (Bolzano)**; privacy contact **buccitobias774@gmail.com**. The school/register provider's roles and necessary-processing legal bases require legal review. This is an implementation inventory, not a legal compliance guarantee.
 

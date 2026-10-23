@@ -7,6 +7,7 @@ import re
 import struct
 import sys
 import xml.etree.ElementTree as ET
+from ios_firebase import configuration_errors, privacy_errors
 
 ROOT = Path(__file__).resolve().parents[1]
 parser = argparse.ArgumentParser(description=__doc__)
@@ -34,8 +35,14 @@ pubspec = (ROOT / 'pubspec.yaml').read_text(encoding='utf-8')
 version = re.search(r'^version: (\d+\.\d+\.\d+)\+([1-9]\d*)$', pubspec, re.M)
 check(version is not None, 'Version must be major.minor.patch+positive build number')
 info = plist('ios/Runner/Info.plist')
-check(info['CFBundleDisplayName'] == 'Digitales Register', 'Unexpected display name')
-check(info['CFBundleName'] == 'Digitales Register', 'Unexpected bundle name')
+check(info['CFBundleDisplayName'] == 'Register', 'Unexpected display name')
+check(info['CFBundleName'] == 'Register', 'Unexpected bundle name')
+errors.extend(privacy_errors(info))
+firebase_path = ROOT / 'ios/Runner/GoogleService-Info.plist'
+if firebase_path.is_file():
+    errors.extend(configuration_errors(firebase_path.read_bytes()))
+else:
+    errors.append('Missing Runner Firebase plist; run tool/prepare_ios_firebase.py')
 check(info['CFBundleShortVersionString'] == '$(FLUTTER_BUILD_NAME)', 'Stale app version source')
 check(info['CFBundleVersion'] == '$(FLUTTER_BUILD_NUMBER)', 'Stale build number source')
 project = (ROOT / 'ios/Runner.xcodeproj/project.pbxproj').read_text(encoding='utf-8')
@@ -63,6 +70,7 @@ check("s.ios.deployment_target = '14.0'" in picker_spec, 'PHPicker requires iOS 
 check(not (picker_root / 'Package.resolved').exists(), 'Stale file_picker SPM resolution')
 if args.app_plist and version:
     built_info = plistlib.loads(args.app_plist.read_bytes())
+    errors.extend(privacy_errors(built_info))
     for key, expected in [
         ('CFBundleShortVersionString', version[1]),
         ('CFBundleVersion', version[2]),
@@ -121,10 +129,8 @@ if errors:
     sys.exit(1)
 print(f'PASS: iOS configuration, {icon_count} icon slots, launch assets, permissions and plugin manifests.')
 if version:
-    print(f'Version {version[1]}, build {version[2]}; Digitales Register; iOS 15+.')
+    print(f'Version {version[1]}, build {version[2]}; Register; iOS 15+.')
 print('Manual: confirm unused build number and signing in App Store Connect; resolve CocoaPods on macOS.')
-if not (ROOT / 'ios/Runner/GoogleService-Info.plist').is_file():
-    print('Optional Firebase is unconfigured; telemetry stays disabled. See docs/IOS_FIREBASE_SETUP.md.')
 if args.app_plist:
     print(f'Built app identity checked: {args.app_plist}')
 print('Xcode/archive validation and device testing remain separate checks.')
