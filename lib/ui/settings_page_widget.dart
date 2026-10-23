@@ -38,6 +38,7 @@ import 'package:dr/ui/committed_deleteable.dart';
 import 'package:dr/ui/dialog.dart';
 import 'package:dr/ui/network_protocol_page.dart';
 import 'package:dr/ui/privacy_data_details_page.dart';
+import 'package:dr/ui/school_notification_settings.dart';
 import 'package:dr/util.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/rendering.dart' show ScrollCacheExtent;
@@ -1128,6 +1129,8 @@ class _SettingsPageWidgetState extends State<SettingsPageWidget> {
               _buildTutorialSection(l10n),
               const SizedBox(height: 16),
               _buildPrivacySection(l10n),
+              const SizedBox(height: 16),
+              const SchoolNotificationSettings(),
               const SizedBox(height: 16),
               _SettingsSectionCard(
                 title: l10n.text('export.title'),

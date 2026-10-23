@@ -57,6 +57,9 @@ Future<void> _logout(
     }
   }
 
+  if (action.payload.hard) {
+    await schoolNotificationOperation(schoolNotifications.deactivate);
+  }
   if (action.payload.hard &&
       api.state.loginState.loggedIn &&
       api.state.loginState.username != null) {
@@ -473,6 +476,7 @@ Future<void> _selectAccount(
 Future<void> _switchAccountSession(
     MiddlewareApi<AppState, AppStateBuilder, AppActions> api,
     {bool explicitSelection = false}) async {
+  await schoolNotificationOperation(schoolNotifications.deactivate);
   // Save the outgoing account before clearing its state. This is a session
   // transition, so the explicit logout's credential/data deletion does not apply.
   await statePersistenceService.flush(

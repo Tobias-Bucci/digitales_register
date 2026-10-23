@@ -113,9 +113,10 @@ Future<void> _loadGradesDetails(
   ActionHandler next,
   Action<LoadSubjectDetailsPayload> action,
 ) async {
-  if (api.state.noInternet) return;
-
   final semesters = _semestersFor(action.payload.semester);
+  await _rememberViewedGradeDetails(
+      api.state, action.payload.subject.id, semesters);
+  if (api.state.noInternet) return;
   final staleSemesters = semesters
       .where(
         (semester) => !_hasFreshDetailedGrades(
@@ -153,6 +154,8 @@ Future<void> _loadGradesDetails(
           ..subject = action.payload.subject.toBuilder(),
       ),
     );
+    await _rememberViewedGradeDetails(
+        api.state, action.payload.subject.id, [s]);
     for (final grade in api.state.gradesState.subjects
         .firstWhere((s) => s.id == action.payload.subject.id)
         .grades[s]!
@@ -166,6 +169,25 @@ Future<void> _loadGradesDetails(
       );
     }
   });
+}
+
+Future<void> _rememberViewedGradeDetails(
+    AppState state, int? subjectId, Iterable<Semester> semesters) async {
+  if (wrapper.url == null || wrapper.user == null || wrapper.demoMode) return;
+  final subject =
+      state.gradesState.subjects.where((s) => s.id == subjectId).firstOrNull;
+  if (subject == null) return;
+  final items = semesters
+      .expand((semester) => subject.grades[semester] ?? <GradeDetail>[])
+      .map((grade) => <String, Object?>{
+            'type': 'grade',
+            'objectId': grade.id,
+            'timeSent': DateTime.now().toIso8601String()
+          })
+      .toList();
+  if (items.isEmpty) return;
+  await schoolNotificationOperation(
+      () => schoolNotifications.markViewed(wrapper.url!, wrapper.user!, items));
 }
 
 List<Semester> _semestersFor(Semester semester) {

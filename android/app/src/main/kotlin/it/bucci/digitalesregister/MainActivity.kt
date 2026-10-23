@@ -5,13 +5,11 @@ import android.content.ContentUris
 import android.content.Context
 import android.content.Intent
 import android.content.pm.PackageManager
-import android.app.job.JobScheduler
 import android.os.Build
 import android.os.Bundle
 import android.provider.CalendarContract
 import androidx.activity.enableEdgeToEdge
 import androidx.core.app.ActivityCompat
-import androidx.core.app.NotificationManagerCompat
 import androidx.core.content.ContextCompat
 import io.flutter.embedding.android.FlutterFragmentActivity
 import io.flutter.embedding.engine.FlutterEngine
@@ -26,8 +24,6 @@ class MainActivity: FlutterFragmentActivity() {
         enableEdgeToEdge()
         super.onCreate(savedInstanceState)
         pendingLaunchDestination = extractLaunchDestination(intent)
-        (getSystemService(Context.JOB_SCHEDULER_SERVICE) as JobScheduler).cancelAll()
-        NotificationManagerCompat.from(this).cancelAll()
     }
 
     override fun configureFlutterEngine(flutterEngine: FlutterEngine) {
