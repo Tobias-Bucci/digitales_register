@@ -32,6 +32,7 @@ import 'package:dr/ui/app_popup_button.dart';
 import 'package:dr/ui/grade_colors.dart';
 import 'package:dr/ui/last_fetched_overlay.dart';
 import 'package:dr/ui/no_internet.dart';
+import 'package:dr/ui/readable_content.dart';
 import 'package:flutter/material.dart';
 import 'package:responsive_scaffold/responsive_scaffold.dart';
 
@@ -98,9 +99,12 @@ class _GradesPageState extends State<GradesPage> {
               const GradesHistoryContainer(),
               Padding(
                 padding: const EdgeInsets.only(right: 12),
-                child: _SemesterSwitcher(
-                  selectedSemester: vm.showSemester,
-                  onChanged: widget.changeSemester,
+                child: ConstrainedBox(
+                  constraints: const BoxConstraints(maxWidth: 180),
+                  child: _SemesterSwitcher(
+                    selectedSemester: vm.showSemester,
+                    onChanged: widget.changeSemester,
+                  ),
                 ),
               ),
             ],
@@ -116,7 +120,8 @@ class _GradesPageState extends State<GradesPage> {
                         AnimatedLinearProgressIndicator(show: vm.loading),
                         RawLastFetchedOverlay(
                           message: vm.lastFetchedMessage,
-                          child: ListView(
+                          child: ReadableContent(
+                              child: ListView(
                             children: <Widget>[
                               Padding(
                                 padding:
@@ -217,7 +222,7 @@ class _GradesPageState extends State<GradesPage> {
                               const GradesStatisticsContainer(),
                               const SizedBox(height: 50),
                             ],
-                          ),
+                          )),
                         ),
                       ],
                     ),
@@ -244,8 +249,8 @@ class _AverageRow extends StatelessWidget {
         Theme.of(context).textTheme.titleMedium;
     return Padding(
       padding: const EdgeInsetsDirectional.fromSTEB(16, 2, 16, 2),
-      child: SizedBox(
-        height: 44,
+      child: ConstrainedBox(
+        constraints: const BoxConstraints(minHeight: 48),
         child: Row(
           children: [
             Expanded(child: Text(label, style: labelStyle)),

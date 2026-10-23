@@ -201,11 +201,7 @@ class _SortedGradesWidgetState extends State<SortedGradesWidget> {
             child: Padding(
               padding: const EdgeInsets.symmetric(vertical: 16),
               child: ListTile(
-                title: Row(
-                  children: [
-                    Text(context.t('grades.calculator')),
-                  ],
-                ),
+                title: Text(context.t('grades.calculator')),
                 subtitle: Text(context.t('grades.calculator.subtitle')),
                 onTap: widget.showGradeCalculator,
               ),
