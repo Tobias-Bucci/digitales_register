@@ -8,7 +8,9 @@ import 'package:flutter/material.dart';
 import 'package:flutter_built_redux/flutter_built_redux.dart';
 
 class ExamCalendarContainer extends StatelessWidget {
-  const ExamCalendarContainer({super.key});
+  const ExamCalendarContainer({super.key, this.calendarView = false});
+
+  final bool calendarView;
 
   @override
   Widget build(BuildContext context) =>
@@ -17,6 +19,7 @@ class ExamCalendarContainer extends StatelessWidget {
         builder: (context, state, actions) => AnimatedBuilder(
           animation: appClock,
           builder: (context, _) => ExamCalendarPage(
+            calendarView: calendarView,
             assessments: examAssessments(state),
             now: studyPlanNow,
             completedFor: (id) => completedPhaseIds(state, id),

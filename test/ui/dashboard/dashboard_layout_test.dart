@@ -197,8 +197,14 @@ void main() {
         DashboardItemWidth.half => 395.0,
         DashboardItemWidth.automatic => 260.0,
       };
-      for (final size in sizes) {
-        expect(size.width, expectedWidth);
+      for (var index = 0; index < sizes.length; index++) {
+        final size = sizes[index];
+        // The fourth automatic card fills the remaining row.
+        expect(
+            size.width,
+            mode == DashboardItemWidth.automatic && index == 3
+                ? 800.0
+                : expectedWidth);
         previousHeight ??= size.height;
         expect(size.height, previousHeight);
       }

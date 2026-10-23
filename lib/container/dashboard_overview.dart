@@ -4,6 +4,7 @@ import 'package:built_collection/built_collection.dart';
 import 'package:dr/actions/app_actions.dart';
 import 'package:dr/app_selectors.dart';
 import 'package:dr/app_state.dart';
+import 'package:dr/container/dashboard_study_plan.dart';
 import 'package:dr/dashboard_items.dart';
 import 'package:dr/i18n/app_localizations.dart';
 import 'package:dr/school_timeline.dart';
@@ -90,6 +91,7 @@ class DashboardOverview extends StatelessWidget {
                 onOpenCalendarAt: onOpenCalendarAt,
                 onEditGradeDeadline: onEditGradeDeadline,
                 additionalCards: {
+                  DashboardItem.studyPlan: const DashboardStudyPlanCard(),
                   DashboardItem.absences: DashboardAbsencesCard(
                     state: vm.$2,
                     noInternet: vm.$3,

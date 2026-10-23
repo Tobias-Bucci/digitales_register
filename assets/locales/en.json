@@ -1,4 +1,6 @@
 {
+  "dashboard.studyPlan.empty": "No upcoming assessments",
+  "dashboard.studyPlan.open": "Open assessments and study phases",
   "dashboard.customize.widthAutomatic": "Automatic",
   "dashboard.customize.widthHalf": "Half width",
   "dashboard.customize.widthFull": "Full width",

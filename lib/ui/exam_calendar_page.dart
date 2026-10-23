@@ -10,6 +10,7 @@ import 'package:intl/intl.dart';
 class ExamCalendarPage extends StatelessWidget {
   const ExamCalendarPage({
     super.key,
+    this.calendarView = false,
     required this.assessments,
     required this.now,
     required this.completedFor,
@@ -22,6 +23,7 @@ class ExamCalendarPage extends StatelessWidget {
     required this.onAttachmentsChanged,
   });
 
+  final bool calendarView;
   final List<ExamAssessment> assessments;
   final DateTime now;
   final Set<String> Function(String id) completedFor;
@@ -38,6 +40,19 @@ class ExamCalendarPage extends StatelessWidget {
   Widget build(BuildContext context) {
     final upcoming =
         assessments.where((item) => item.daysUntil(now) >= 0).toList();
+    final weekCalendar = _ExamWeekCalendar(
+      assessments: upcoming,
+      now: now,
+      completedFor: completedFor,
+      phasesFor: phasesFor,
+      noteFor: noteFor,
+      attachmentsFor: attachmentsFor,
+      onProgressChanged: onProgressChanged,
+      onPhasesChanged: onPhasesChanged,
+      onNoteChanged: onNoteChanged,
+      onAttachmentsChanged: onAttachmentsChanged,
+    );
+    if (calendarView) return weekCalendar;
     final past = assessments
         .where((item) => item.daysUntil(now) < 0)
         .toList()
@@ -52,18 +67,7 @@ class ExamCalendarPage extends StatelessWidget {
             tooltip: context.l10n.text('exam.calendarView'),
             icon: const Icon(Icons.calendar_month_outlined),
             onPressed: () => Navigator.of(context).push(MaterialPageRoute<void>(
-              builder: (_) => _ExamWeekCalendar(
-                assessments: upcoming,
-                now: now,
-                completedFor: completedFor,
-                phasesFor: phasesFor,
-                noteFor: noteFor,
-                attachmentsFor: attachmentsFor,
-                onProgressChanged: onProgressChanged,
-                onPhasesChanged: onPhasesChanged,
-                onNoteChanged: onNoteChanged,
-                onAttachmentsChanged: onAttachmentsChanged,
-              ),
+              builder: (_) => weekCalendar,
             )),
           ),
         ],

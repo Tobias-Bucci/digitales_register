@@ -1,4 +1,6 @@
 {
+  "dashboard.studyPlan.empty": "Keine anstehenden Prüfungen",
+  "dashboard.studyPlan.open": "Prüfungen und Lernphasen öffnen",
   "dashboard.customize.widthAutomatic": "Automatisch",
   "dashboard.customize.widthHalf": "Halbe Breite",
   "dashboard.customize.widthFull": "Volle Breite",

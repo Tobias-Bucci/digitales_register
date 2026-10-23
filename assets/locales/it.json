@@ -1,4 +1,6 @@
 {
+  "dashboard.studyPlan.empty": "Nessuna verifica in programma",
+  "dashboard.studyPlan.open": "Apri verifiche e fasi di studio",
   "dashboard.customize.widthAutomatic": "Automatica",
   "dashboard.customize.widthHalf": "Metà larghezza",
   "dashboard.customize.widthFull": "Larghezza intera",
