@@ -17,12 +17,14 @@
 // along with digitales_register.  If not, see <http://www.gnu.org/licenses/>.
 
 import 'package:dr/app_state.dart';
+import 'package:dr/container/export_container.dart';
 import 'package:dr/container/grades_chart_container.dart';
 import 'package:dr/container/grades_forecast_container.dart';
 import 'package:dr/container/grades_history_container.dart';
 import 'package:dr/container/grades_page_container.dart';
 import 'package:dr/container/grades_statistics_container.dart';
 import 'package:dr/container/sorted_grades_container.dart';
+import 'package:dr/export/export_data.dart';
 import 'package:dr/i18n/app_localizations.dart';
 import 'package:dr/tutorial/tutorial_target.dart';
 import 'package:dr/ui/animated_linear_progress_indicator.dart';
@@ -155,6 +157,18 @@ class _GradesPageState extends State<GradesPage> {
                           message: vm.lastFetchedMessage,
                           child: ListView(
                             children: <Widget>[
+                              Padding(
+                                padding:
+                                    const EdgeInsets.symmetric(horizontal: 12),
+                                child: Align(
+                                    alignment: Alignment.centerRight,
+                                    child: TextButton.icon(
+                                        icon: const Icon(
+                                            Icons.file_download_outlined),
+                                        label: Text(l10n.text('export.title')),
+                                        onPressed: () => openExportPage(context,
+                                            category: ExportCategory.grades))),
+                              ),
                               if (vm.showGradesDiagram)
                                 Padding(
                                   padding:

@@ -24,6 +24,7 @@ Noten, Termine und Mitteilungen an einem Ort – auf dem Smartphone, Tablet oder
 - **Informiert bleiben:** Mitteilungen des Registers lesen.
 - **Persönlich einrichten:** Helles oder dunkles Design wählen.
 - **Mehrsprachig nutzen:** Deutsch, Italienisch, Englisch und Ladinisch.
+- **Unterlagen mitnehmen:** Unter Einstellungen → Daten exportieren geladene Zeugnisse, Noten, Nachrichten, Stundenplan, Prüfungen, Aufgaben, Abwesenheiten und Unterrichtsinhalte als PDF oder CSV speichern. Mehrere Kategorien ergeben ein gemeinsames PDF oder ein ZIP mit CSV-Dateien.
 
 ## Ausprobieren
 
