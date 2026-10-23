@@ -16,6 +16,7 @@ environment:
   flutter: ">=3.47.0"
 
 dependencies:
+  archive: ^4.0.7
   badges: ^3.1.1
   biometric_storage:
     path: packages/biometric_storage
@@ -59,6 +60,7 @@ dependencies:
     path: packages/open_file
   package_info_plus: ^9.0.1
   path_provider: ^2.1.5
+  pdf: ^3.13.1
   quill_delta: ^3.0.0-nullsafety.2
   quill_delta_viewer:
     path: packages/quill_delta_viewer/
@@ -125,6 +127,7 @@ flutter:
   assets:
     - assets/
     - assets/locales/
+    - assets/fonts/
   #  - images/a_dot_ham.jpeg
   # An image asset can refer to one or more resolution-specific "variants", see
   # https://flutter.io/assets-and-images/#resolution-aware.

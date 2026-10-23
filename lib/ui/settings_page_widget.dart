@@ -22,6 +22,7 @@ import 'package:dr/app_clock.dart';
 import 'package:dr/app_state.dart';
 import 'package:dr/app_subject_translation_controller.dart';
 import 'package:dr/calendar_sync_service.dart';
+import 'package:dr/container/export_container.dart';
 import 'package:dr/container/settings_page.dart';
 import 'package:dr/demo.dart';
 import 'package:dr/i18n/app_language.dart';
@@ -1127,6 +1128,19 @@ class _SettingsPageWidgetState extends State<SettingsPageWidget> {
               _buildTutorialSection(l10n),
               const SizedBox(height: 16),
               _buildPrivacySection(l10n),
+              const SizedBox(height: 16),
+              _SettingsSectionCard(
+                title: l10n.text('export.title'),
+                children: [
+                  ListTile(
+                    leading: const Icon(Icons.file_download_outlined),
+                    title: Text(l10n.text('export.title')),
+                    subtitle: Text(l10n.text('export.settingsHint')),
+                    trailing: const Icon(Icons.chevron_right),
+                    onTap: () => openExportPage(context),
+                  )
+                ],
+              ),
               const SizedBox(height: 16),
               _buildAdvancedSection(l10n),
               if (widget.vm.username == 'debug')

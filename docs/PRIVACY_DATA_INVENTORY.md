@@ -36,3 +36,14 @@ The app uses the selected school's existing API, not a newly introduced first-pa
 - Secure local account ID lookup and normalized fingerprints are not sent to Firebase. A person on multiple devices can count as multiple pseudonymous users.
 
 References: [Firebase privacy](https://firebase.google.com/support/privacy), [BigQuery retention](BIGQUERY_RETENTION.md), [Store checklist](STORE_PRIVACY_CHECKLIST.md). App notice exists in de/it/en/lld catalogs and includes the confirmed contact.
+
+## Native exports (Issue #12)
+
+The user can explicitly create local PDF/CSV/ZIP copies of currently loaded
+register data under Settings → Data export. These may contain grades, messages,
+certificate text/tables, calendar entries, lesson content and absences. No export
+data is sent to an additional service or included in analytics/logs. Bytes are
+created in memory and saved to a user-selected native destination; these copies
+are controlled by the user and are not removed when clearing app data or logging
+out. iOS requires a temporary native staging copy, cleaned on completion/cancel
+(OS-managed if the process terminates). See [Native export](NATIVE_EXPORT.md).
