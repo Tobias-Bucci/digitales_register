@@ -19,10 +19,43 @@ import 'dart:async';
 
 import 'package:biometric_storage/biometric_storage.dart';
 import 'package:dr/main.dart';
+import 'package:flutter/foundation.dart' show defaultTargetPlatform, kIsWeb;
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 
 const _appLockStorageName = 'biometric_app_lock';
 const _appLockEnabledMarker = 'enabled';
+
+/// Android app lock prompt implemented by [BiometricAppLockChannel].
+const _androidAppLockChannel = MethodChannel('dr/biometric_app_lock');
+
+/// Android authenticates the app lock through its own prompt instead of the
+/// encrypted marker that `biometric_storage` stores.
+///
+/// The plugin protects its storage file with a keystore key created for strong
+/// (Class 3) biometrics, and androidx refuses crypto-based authentication with
+/// weak (Class 2) biometrics. Android reports most face unlock implementations
+/// as Class 2, so a device that only offers face unlock could not use the app
+/// lock through the plugin at all.
+///
+/// `BiometricManager.Authenticators.BIOMETRIC_WEAK` accepts Class 2 and Class 3
+/// biometrics: fingerprint, iris, and face unlock when the OEM classifies it as
+/// Class 2 or stronger. It does *not* accept Class 1 (convenience) face
+/// recognition, which some devices allow for screen unlock only, so not every
+/// device with face unlock can use this lock.
+///
+/// Security tradeoff: this path never touches the keystore. The lock succeeds
+/// when the platform prompt reports a successful authentication, and no secret
+/// is protected by the biometric. A modified build, or a hook that answers
+/// [_androidAppLockChannel] with `true`, therefore unlocks the app without any
+/// biometric; the enabled flag is likewise a plain `SharedPreferences` value.
+/// This matches what the lock already is on every platform: a UI gate in front
+/// of an already unlocked device, not an encryption boundary. It is still
+/// weaker than the marker read on iOS and macOS, where the biometric is bound to
+/// the keystore entry that holds the marker, so keep that in mind before adding
+/// secrets behind the lock on Android.
+bool get _usesAndroidAppLock =>
+    !kIsWeb && defaultTargetPlatform == TargetPlatform.android;
 
 const _appLockPromptInfo = PromptInfo(
   androidPromptInfo: AndroidPromptInfo(
@@ -81,6 +114,18 @@ class BiometricAppLockController extends ChangeNotifier {
   bool get isAuthenticating => _pendingAuthentication != null;
 
   Future<CanAuthenticateResponse> checkAvailability() async {
+    if (_usesAndroidAppLock) {
+      try {
+        final response = await _androidAppLockChannel
+            .invokeMethod<String>('canAuthenticate');
+        return CanAuthenticateResponse.values.firstWhere(
+          (value) => value.name == response,
+          orElse: () => CanAuthenticateResponse.unsupported,
+        );
+      } catch (_) {
+        return CanAuthenticateResponse.unsupported;
+      }
+    }
     try {
       return await BiometricStorage().canAuthenticate();
     } catch (_) {
@@ -110,6 +155,30 @@ class BiometricAppLockController extends ChangeNotifier {
       throw BiometricAppLockSetupException(
         biometricAvailabilityMessage(availability),
       );
+    }
+
+    if (_usesAndroidAppLock) {
+      final bool authenticated;
+      try {
+        authenticated = await _authenticateOnAndroid();
+      } on PlatformException catch (error) {
+        throw BiometricAppLockSetupException(
+          error.code == 'canceled'
+              ? tr('profile.biometricSetupCancelled')
+              : tr('profile.biometricSetupFailed'),
+        );
+      }
+      if (!authenticated) {
+        // Without an explicit success the lock must not be enabled.
+        throw BiometricAppLockSetupException(
+          tr('profile.biometricSetupFailed'),
+        );
+      }
+      _hasSyncedSettings = true;
+      _enabled = true;
+      _locked = false;
+      notifyListeners();
+      return;
     }
 
     try {
@@ -177,6 +246,19 @@ class BiometricAppLockController extends ChangeNotifier {
   }
 
   Future<bool> _authenticate() async {
+    if (_usesAndroidAppLock) {
+      try {
+        if (!await _authenticateOnAndroid()) {
+          return false;
+        }
+      } catch (_) {
+        return false;
+      }
+      _locked = false;
+      notifyListeners();
+      return true;
+    }
+
     try {
       final storage = await _getStorage();
       final value = await storage.read();
@@ -191,6 +273,26 @@ class BiometricAppLockController extends ChangeNotifier {
       return false;
     }
     return false;
+  }
+
+  /// Shows the Android prompt and reports whether it explicitly succeeded.
+  ///
+  /// Only `true` counts as success: `false`, `null` and a missing result all mean
+  /// the user did not authenticate, so the app stays locked and enabling the
+  /// lock fails.
+  Future<bool> _authenticateOnAndroid() async {
+    final promptInfo = _appLockPromptInfo.androidPromptInfo;
+    final authenticated = await _androidAppLockChannel.invokeMethod<bool>(
+      'authenticate',
+      <String, dynamic>{
+        'title': promptInfo.title,
+        'subtitle': promptInfo.subtitle,
+        'description': promptInfo.description,
+        'negativeButton': promptInfo.negativeButton,
+        'confirmationRequired': promptInfo.confirmationRequired,
+      },
+    );
+    return authenticated == true;
   }
 
   Future<BiometricStorageFile> _getStorage() {

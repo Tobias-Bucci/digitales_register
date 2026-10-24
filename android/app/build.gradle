@@ -139,6 +139,8 @@ kotlin {
 
 dependencies {
     coreLibraryDesugaring "com.android.tools:desugar_jdk_libs:2.1.5"
+    // Biometric app lock prompt; keep in sync with packages/biometric_storage.
+    implementation "androidx.biometric:biometric:1.2.0-alpha05"
     // Required by Tink via androidx.security:security-crypto during R8 shrinking.
     implementation "com.google.errorprone:error_prone_annotations:2.28.0"
     implementation "com.google.code.findbugs:jsr305:3.0.2"
