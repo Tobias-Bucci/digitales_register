@@ -54,8 +54,18 @@ class AndroidWidgetPlatformBridge {
 
   final MethodChannel _channel;
 
+  // The historical Android service also feeds the WidgetKit app group.
+  Future<void> writePlanningSnapshot(String? payload) async {
+    if (!Platform.isIOS) return;
+    try {
+      await _channel.invokeMethod<void>('writePlanningSnapshot', payload);
+    } catch (_) {
+      // Keep the app usable if the optional widget extension is unavailable.
+    }
+  }
+
   Future<void> refreshWidgets() async {
-    if (!Platform.isAndroid) {
+    if (!Platform.isAndroid && !Platform.isIOS) {
       return;
     }
     try {
@@ -66,7 +76,7 @@ class AndroidWidgetPlatformBridge {
   }
 
   Future<AndroidWidgetLaunchDestination?> consumeLaunchDestination() async {
-    if (!Platform.isAndroid) {
+    if (!Platform.isAndroid && !Platform.isIOS) {
       return null;
     }
     try {
@@ -82,7 +92,7 @@ class AndroidWidgetPlatformBridge {
   Future<void> registerLaunchHandler(
     Future<void> Function(AndroidWidgetLaunchDestination destination) handler,
   ) async {
-    if (!Platform.isAndroid) {
+    if (!Platform.isAndroid && !Platform.isIOS) {
       return;
     }
     _channel.setMethodCallHandler((call) async {
@@ -132,6 +142,15 @@ class AndroidWidgetSnapshotService {
   String? _lastPayload;
 
   void scheduleSync(AppState state) {
+    if (!state.loginState.loggedIn ||
+        state.settingsState.noDataSaving ||
+        state.settingsState.biometricAppLockEnabled) {
+      unawaited(
+          flush(state: state).catchError((Object error, StackTrace stack) {
+        diagnostics.report(error, stack, DiagnosticError.storage);
+      }));
+      return;
+    }
     _pendingState = state;
     _pendingSave?.cancel();
     _pendingSave = Timer(debounce, () {
@@ -159,6 +178,7 @@ class AndroidWidgetSnapshotService {
         throw StateError('Widget snapshot could not be saved');
       }
       _lastPayload = payload;
+      await _bridge.writePlanningSnapshot(payload);
       await _bridge.refreshWidgets();
     });
   }
@@ -169,11 +189,17 @@ class AndroidWidgetSnapshotService {
     _pendingState = null;
     await _enqueue(() async {
       _lastPayload = null;
-      final prefs = await _preferences();
-      if (!await prefs.remove(androidWidgetSnapshotStorageKey)) {
-        throw StateError('Widget snapshot could not be cleared');
+      try {
+        final prefs = await _preferences();
+        if (!await prefs.remove(androidWidgetSnapshotStorageKey)) {
+          throw StateError('Widget snapshot could not be cleared');
+        }
+      } finally {
+        // The independent iOS app-group file must also be cleared if deleting
+        // the app's own preferences fails during logout/account switching.
+        await _bridge.writePlanningSnapshot(null);
+        await _bridge.refreshWidgets();
       }
-      await _bridge.refreshWidgets();
     });
   }
 }

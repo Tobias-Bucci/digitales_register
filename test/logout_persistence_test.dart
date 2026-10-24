@@ -1,4 +1,5 @@
 import 'package:dr/actions/login_actions.dart';
+import 'package:dr/android_widget_service.dart';
 import 'package:dr/app_state.dart';
 import 'package:dr/middleware/middleware.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
@@ -13,6 +14,25 @@ class FailingStorage extends Mock implements FlutterSecureStorage {}
 void main() {
   setUp(bootstrapTestEnvironment);
   tearDown(resetTestState);
+
+  test(
+      'data deletion cancels pending widgets and later saves keep them cleared',
+      () async {
+    final store = createStore(
+      withMiddleware: true,
+      initialState: AppState((b) => b
+        ..loginState.loggedIn = true
+        ..loginState.username = 'old'
+        ..url = testServerUrl),
+    );
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setString(androidWidgetSnapshotStorageKey, 'old data');
+    androidWidgetSnapshotService.scheduleSync(store.state);
+    await store.actions.deleteData();
+    await store.actions.saveState();
+    await androidWidgetSnapshotService.flush();
+    expect(prefs.getString(androidWidgetSnapshotStorageKey), isNull);
+  });
 
   for (final failure in ['none', 'state-only', 'write', 'write-and-delete']) {
     test('hard logout completes exactly once with storage failure=$failure',

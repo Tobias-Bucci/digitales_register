@@ -1296,7 +1296,11 @@ NextActionHandler _saveStateMiddleware(
                 writer: _writeToStorage,
                 keyFactory: getStorageKey,
               );
-              await androidWidgetSnapshotService.flush(state: api.state);
+              if (deletedData) {
+                await androidWidgetSnapshotService.clear();
+              } else {
+                await androidWidgetSnapshotService.flush(state: api.state);
+              }
             } else {
               statePersistenceService.schedule(
                 state: api.state,
@@ -1305,7 +1309,11 @@ NextActionHandler _saveStateMiddleware(
                 writer: _writeToStorage,
                 keyFactory: getStorageKey,
               );
-              androidWidgetSnapshotService.scheduleSync(api.state);
+              if (deletedData) {
+                await androidWidgetSnapshotService.clear();
+              } else {
+                androidWidgetSnapshotService.scheduleSync(api.state);
+              }
             }
           }
         };

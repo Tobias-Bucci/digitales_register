@@ -25,6 +25,7 @@ class GradesWidgetProvider : AppWidgetProvider() {
             val snapshot = DigitalesRegisterWidgetSnapshotStore.load(context)
             for (appWidgetId in appWidgetIds) {
                 val views = RemoteViews(context.packageName, R.layout.widget_grades).apply {
+                    setImageViewResource(R.id.widget_icon, R.drawable.ic_widget_grades)
                     setTextViewText(
                         R.id.widget_title,
                         snapshot?.grades?.title ?: context.getString(R.string.widget_grades_title),
@@ -35,8 +36,10 @@ class GradesWidgetProvider : AppWidgetProvider() {
                     )
                     setTextViewText(
                         R.id.widget_average_value,
-                        if (snapshot?.isReady() == true) snapshot.grades.overallAverage else "—",
+                        if (snapshot?.isReady() == true) snapshot.grades.overallAverage.ifEmpty { "—" } else "—",
                     )
+                    setInt(R.id.widget_average_value, "setTextColor",
+                        widgetGradeTextColor(context, if (snapshot?.isReady() == true) snapshot.grades.category else null))
                     setTextViewText(
                         R.id.widget_empty,
                         when {
@@ -68,6 +71,7 @@ class GradesWidgetProvider : AppWidgetProvider() {
                 }
                 appWidgetManager.updateAppWidget(appWidgetId, views)
             }
+            appWidgetManager.notifyAppWidgetViewDataChanged(appWidgetIds, R.id.widget_list)
         }
     }
 }

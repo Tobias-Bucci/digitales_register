@@ -110,6 +110,24 @@
                 android:resource="@xml/grades_widget_info" />
         </receiver>
 
+        <receiver android:name=".SchoolBagWidgetProvider" android:exported="true"
+            android:label="@string/widget_school_bag_title">
+            <intent-filter>
+                <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
+            </intent-filter>
+            <meta-data android:name="android.appwidget.provider"
+                android:resource="@xml/school_bag_widget_info" />
+        </receiver>
+
+        <receiver android:name=".PreparationWidgetProvider" android:exported="true"
+            android:label="@string/widget_preparation_title">
+            <intent-filter>
+                <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
+            </intent-filter>
+            <meta-data android:name="android.appwidget.provider"
+                android:resource="@xml/preparation_widget_info" />
+        </receiver>
+
         <service
             android:name=".WidgetCollectionRemoteViewsService"
             android:exported="false"
