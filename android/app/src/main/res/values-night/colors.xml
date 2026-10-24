@@ -9,4 +9,7 @@
     <color name="widget_done">#7DD181</color>
     <color name="widget_divider">#334055</color>
     <color name="widget_accent">#7FB1FF</color>
+    <color name="widget_grade_failing">#FF938A</color>
+    <color name="widget_grade_satisfactory">#FFC06A</color>
+    <color name="widget_grade_good">#83D9A4</color>
 </resources>
