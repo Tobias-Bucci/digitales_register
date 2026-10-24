@@ -77,13 +77,31 @@ class SchoolNotificationEvent {
   }
 }
 
+enum SchoolNotificationConsent { unknown, accepted, declined }
+
 class SchoolNotificationPreferences {
-  SchoolNotificationPreferences({this.grades = true, this.messages = true});
+  SchoolNotificationPreferences(
+      {this.enabled = false,
+      this.grades = true,
+      this.messages = true,
+      this.consent = SchoolNotificationConsent.unknown,
+      this.showEventCount = false});
+  SchoolNotificationConsent consent;
+  bool enabled;
+  bool showEventCount;
   bool grades;
   bool messages;
-  bool enabled(SchoolNotificationCategory category) =>
-      category == SchoolNotificationCategory.grade ? grades : messages;
-  Map<String, bool> toJson() => {'grades': grades, 'messages': messages};
+  bool allows(SchoolNotificationCategory category) =>
+      consent == SchoolNotificationConsent.accepted &&
+      enabled &&
+      (category == SchoolNotificationCategory.grade ? grades : messages);
+  Map<String, dynamic> toJson() => {
+        'decision': consent.name,
+        'enabled': enabled,
+        'grades': grades,
+        'messages': messages,
+        'showEventCount': showEventCount
+      };
 }
 
 /// The caller holds an inter-isolate transaction lock for every operation.
@@ -118,7 +136,20 @@ class SchoolNotificationEngine {
         final seenBefore = seen.length;
         seen.addAll(identities);
         state['seen'] = seen.toList();
-        if (seen.length != seenBefore) {
+        final observations =
+            Map<String, dynamic>.from(state['observations'] as Map? ?? {});
+        var changed = seen.length != seenBefore;
+        for (final identity in identities) {
+          final record =
+              observations.putIfAbsent(identity, () => <String, dynamic>{});
+          if (record is Map && record['locallyViewedAt'] == null) {
+            record['locallyViewedAt'] =
+                DateTime.now().toUtc().toIso8601String();
+            changed = true;
+          }
+        }
+        state['observations'] = observations;
+        if (changed) {
           await write(key(account), jsonEncode(state));
         }
       });
@@ -129,7 +160,9 @@ class SchoolNotificationEngine {
     required SchoolNotificationPreferences preferences,
     required bool permitted,
     required DateTime now,
-    required Future<void> Function(SchoolNotificationEvent event) deliver,
+    Future<void> Function(SchoolNotificationEvent event)? deliver,
+    Future<void> Function(List<SchoolNotificationEvent> events)? deliverBatch,
+    bool foreground = false,
   }) =>
       _mutex.protect(() async {
         final state = await _load(account);
@@ -138,6 +171,9 @@ class SchoolNotificationEngine {
         final hadBaselines = SchoolNotificationCategory.values.every(
             (category) => state.containsKey('baseline:${category.name}'));
         final deliverable = <SchoolNotificationEvent>[];
+        final observedAt = now.toUtc().toIso8601String();
+        final observations =
+            Map<String, dynamic>.from(state['observations'] as Map? ?? {});
         for (final category in SchoolNotificationCategory.values) {
           final baselineKey = 'baseline:${category.name}';
           final baseline = state[baselineKey] as String?;
@@ -146,25 +182,54 @@ class SchoolNotificationEngine {
             final fresh = !event.identities.any(seen.contains) &&
                 !seen.contains(event.fallbackIdentity);
             seen.addAll(event.identities);
+            if (fresh) {
+              // No content, server address or credentials are stored here.
+              observations[event.identity] = {
+                'serverSentAt': event.sent.toIso8601String(),
+                if (event.viewed) 'serverReadReported': true,
+                'firstDetectedAt': observedAt,
+                'storedAt': observedAt,
+                'presentation': cutoff == null
+                    ? 'baseline'
+                    : event.viewed
+                        ? 'read'
+                        : !preferences.allows(category)
+                            ? 'disabled'
+                            : foreground
+                                ? 'foreground'
+                                : !permitted
+                                    ? 'permissionDenied'
+                                    : !event.sent.isAfter(cutoff)
+                                        ? 'olderThanBaseline'
+                                        : 'claimed',
+              };
+              state['lastDetectedAt'] = observedAt;
+            }
             if (fresh &&
                 cutoff != null &&
                 event.sent.isAfter(cutoff) &&
                 !event.viewed &&
+                !foreground &&
                 permitted &&
-                preferences.enabled(category)) {
+                preferences.allows(category)) {
               deliverable.add(event);
             }
           }
           state[baselineKey] ??= now.toUtc().toIso8601String();
         }
         state['seen'] = seen.toList();
+        state['observations'] = observations;
         if (seen.length != seenBefore || !hadBaselines) {
           await write(key(account), jsonEncode(state));
         }
         // All claims are persisted together; even partial native failures cannot
         // duplicate earlier notifications when the background job is retried.
-        for (final event in deliverable) {
-          await deliver(event);
+        if (deliverable.isNotEmpty && deliverBatch != null) {
+          await deliverBatch(deliverable);
+        } else {
+          for (final event in deliverable) {
+            await deliver?.call(event);
+          }
         }
       });
 }

@@ -18,6 +18,7 @@
 import 'package:built_value/built_value.dart';
 import 'package:dr/actions/app_actions.dart';
 import 'package:dr/app_state.dart';
+import 'package:dr/school_notification_service.dart';
 import 'package:dr/ui/home_page_content.dart';
 import 'package:flutter/material.dart' hide Builder;
 import 'package:flutter_built_redux/flutter_built_redux.dart';
@@ -27,14 +28,22 @@ part 'home_page.g.dart';
 class HomePage extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
-    return StoreConnection<AppState, AppActions, HomePageContentViewModel>(
+    return StoreConnection<AppState, AppActions,
+        (HomePageContentViewModel, String?)>(
       builder: (context, vm, actions) {
         return HomePageContent(
-          vm: vm,
+          vm: vm.$1,
+          account: vm.$2,
         );
       },
       connect: (state) {
-        return HomePageContentViewModel.from(state);
+        return (
+          HomePageContentViewModel.from(state),
+          state.isDemo || state.url == null || state.loginState.username == null
+              ? null
+              : schoolNotifications.accountKey(
+                  state.url!, state.loginState.username!)
+        );
       },
     );
   }

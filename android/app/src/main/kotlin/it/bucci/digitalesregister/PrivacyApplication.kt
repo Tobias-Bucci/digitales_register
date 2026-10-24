@@ -2,6 +2,8 @@ package it.bucci.digitalesregister
 
 import android.app.Application
 import android.content.Context
+import dev.fluttercommunity.workmanager.BackgroundEngineConfigurator
+import io.flutter.embedding.engine.FlutterEngine
 
 /**
  * FlutterFire's runtime overrides survive process death and take precedence over
@@ -12,7 +14,10 @@ import android.content.Context
  * These two SDK storage names are deliberately isolated here. Revalidate this
  * compatibility boundary when upgrading the Firebase BoM (see privacy report).
  */
-class PrivacyApplication : Application() {
+class PrivacyApplication : Application(), BackgroundEngineConfigurator {
+    override fun configureBackgroundEngine(engine: FlutterEngine) {
+        SchoolLocalNotificationsPlugin.install(engine)
+    }
     override fun attachBaseContext(base: Context) {
         super.attachBaseContext(base)
         ready = try {

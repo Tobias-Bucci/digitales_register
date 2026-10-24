@@ -13,6 +13,9 @@ import 'package:flutter_test/flutter_test.dart';
 import '../support/test_harness.dart';
 
 class _SettingsService extends SchoolNotificationService {
+  _SettingsService() {
+    preferences.enabled = true;
+  }
   @override
   bool get supported => true;
   @override
@@ -24,6 +27,18 @@ class _SettingsService extends SchoolNotificationService {
   @override
   Future<void> requestPermission() async {
     granted = true;
+    notifyListeners();
+  }
+
+  @override
+  Future<void> setEnabled(bool value) async {
+    preferences.enabled = value;
+    notifyListeners();
+  }
+
+  @override
+  Future<void> setShowEventCount(bool value) async {
+    preferences.showEventCount = value;
     notifyListeners();
   }
 
@@ -80,7 +95,7 @@ void main() {
                         child: SchoolNotificationSettings(service: service)))));
         await tester.pumpAndSettle();
         expect(tester.takeException(), isNull);
-        expect(find.byType(SwitchListTile), findsNWidgets(2));
+        expect(find.byType(SwitchListTile), findsNWidgets(4));
         await tester.runAsync(() async {
           final image = await (boundary.currentContext!.findRenderObject()!
                   as RenderRepaintBoundary)
@@ -99,14 +114,59 @@ void main() {
         await tester.pumpAndSettle();
         expect(service.granted, isTrue);
         expect(find.byType(FilledButton), findsNothing);
-        await tester.tap(find.byType(SwitchListTile).first);
+        await tester.tap(find.byType(SwitchListTile).at(1));
         await tester.pumpAndSettle();
         expect(service.preferences.grades, isFalse);
         expect(service.preferences.messages, isTrue);
+        await tester.tap(find.byType(SwitchListTile).first);
+        await tester.pumpAndSettle();
+        expect(service.preferences.enabled, isFalse);
+        expect(
+            tester
+                .widget<SwitchListTile>(find.byType(SwitchListTile).at(1))
+                .onChanged,
+            isNull);
         expect(tester.takeException(), isNull);
       });
     }
   }
+
+  testWidgets(
+      'diagnostics expand separately and distinguish request from success',
+      (tester) async {
+    final service = _SettingsService()
+      ..granted = true
+      ..platformStatus = {'scheduled': true, 'channelsBlocked': true}
+      ..diagnostics = {
+        'lastBackgroundStartedAt': '2026-10-24T10:00:00Z',
+        'lastBackgroundSuccessAt': '2026-10-24T09:00:00Z',
+        'lastNotificationRequestedAt': '2026-10-24T08:00:00Z',
+        'backgroundResult': 'networkError',
+      };
+    addTearDown(service.dispose);
+    final store = createStore(
+        initialState: AppState((b) => b.settingsState.languageCode = 'en'));
+    await pumpApp(tester,
+        store: store,
+        home: Scaffold(
+            body: SingleChildScrollView(
+                child: SchoolNotificationSettings(service: service))));
+    await tester.pumpAndSettle();
+    expect(
+        find.textContaining('Last successful background check'), findsNothing);
+    await tester.ensureVisible(find.byType(ExpansionTile));
+    await tester.tap(find.byType(ExpansionTile));
+    await tester.pumpAndSettle();
+    expect(find.text('Background check scheduled'), findsOneWidget);
+    expect(find.textContaining('Last successful background check'),
+        findsOneWidget);
+    expect(find.textContaining('Last system notification requested'),
+        findsOneWidget);
+    expect(find.textContaining('channel is disabled'), findsOneWidget);
+    expect(find.textContaining('unreachable during the last check'),
+        findsOneWidget);
+    expect(tester.takeException(), isNull);
+  });
 
   testWidgets('background unavailable is explained and large text fits',
       (tester) async {

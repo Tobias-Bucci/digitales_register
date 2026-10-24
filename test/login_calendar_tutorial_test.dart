@@ -3,11 +3,12 @@ import 'dart:convert';
 
 import 'package:dr/actions/login_actions.dart';
 import 'package:dr/app_state.dart';
-import 'package:dr/container/days_container.dart';
+import 'package:dr/container/home_page.dart';
 import 'package:dr/middleware/middleware.dart';
 import 'package:dr/serializers.dart';
 import 'package:dr/tutorial/tutorial_service.dart';
 import 'package:dr/utc_date_time.dart';
+import 'package:dr/ui/school_notification_opt_in.dart';
 import 'package:dr/wrapper.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -90,8 +91,10 @@ void main() {
             value: jsonEncode(serializers.serialize(AppState())));
       }
       final store = createStore(withMiddleware: true);
-      await pumpApp(tester,
-          store: store, home: Scaffold(body: DaysContainer()));
+      // Optional onboarding now belongs to the mounted home route and follows
+      // the startup notices instead of being pushed by login middleware.
+      schoolNotificationStartupReady.value = true;
+      await pumpApp(tester, store: store, home: HomePage());
       final pending = store.actions.loginActions.login(LoginPayload((b) => b
         ..user = 'startup-test'
         ..pass = 'test-password'

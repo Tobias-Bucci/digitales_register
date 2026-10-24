@@ -1446,10 +1446,9 @@ packages:
   workmanager_apple:
     dependency: "direct overridden"
     description:
-      name: workmanager_apple
-      sha256: "1cc12ae3cbf5535e72f7ba4fde0c12dd11b757caf493a28e22d684052701f2ca"
-      url: "https://pub.dev"
-    source: hosted
+      path: "packages/workmanager_apple"
+      relative: true
+    source: path
     version: "0.9.1+2"
   workmanager_platform_interface:
     dependency: "direct overridden"

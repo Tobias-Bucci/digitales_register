@@ -1,6 +1,10 @@
 package it.bucci.digitalesregister
 
 import android.Manifest
+import android.app.ActivityManager
+import android.app.NotificationManager
+import android.os.PowerManager
+import android.provider.Settings
 import android.content.ContentUris
 import android.content.Context
 import android.content.Intent
@@ -11,6 +15,7 @@ import android.provider.CalendarContract
 import androidx.activity.enableEdgeToEdge
 import androidx.core.app.ActivityCompat
 import androidx.core.content.ContextCompat
+import androidx.work.WorkManager
 import io.flutter.embedding.android.FlutterFragmentActivity
 import io.flutter.embedding.engine.FlutterEngine
 import io.flutter.plugin.common.MethodChannel
@@ -29,6 +34,46 @@ class MainActivity: FlutterFragmentActivity() {
 
     override fun configureFlutterEngine(flutterEngine: FlutterEngine) {
         super.configureFlutterEngine(flutterEngine)
+        SchoolLocalNotificationsPlugin.install(flutterEngine)
+        MethodChannel(flutterEngine.dartExecutor.binaryMessenger, "dr/school_notifications")
+            .setMethodCallHandler { call, result ->
+                when (call.method) {
+                    "isForeground" -> result.success(true)
+                    "canRequestNotificationPermission" -> result.success(
+                        Build.VERSION.SDK_INT >= 33 &&
+                        !ActivityCompat.shouldShowRequestPermissionRationale(this, Manifest.permission.POST_NOTIFICATIONS))
+                    "diagnostics" -> {
+                        val power = getSystemService(Context.POWER_SERVICE) as PowerManager
+                        val activity = getSystemService(Context.ACTIVITY_SERVICE) as ActivityManager
+                        val manager = getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
+                        val status = mutableMapOf<String, Any>(
+                            "batteryOptimized" to !power.isIgnoringBatteryOptimizations(packageName),
+                            "powerSaveMode" to power.isPowerSaveMode,
+                            "backgroundRestricted" to (Build.VERSION.SDK_INT >= 28 && activity.isBackgroundRestricted)
+                        )
+                        if (Build.VERSION.SDK_INT >= 26) {
+                            status["channelsBlocked"] = listOf("school_grade", "school_message")
+                                .any { manager.getNotificationChannel(it)?.importance == NotificationManager.IMPORTANCE_NONE }
+                        }
+                        val work = WorkManager.getInstance(applicationContext)
+                            .getWorkInfosForUniqueWork("it.bucci.digitalesregister.schoolRefresh")
+                        work.addListener({
+                            try {
+                                status["scheduled"] = work.get().any { !it.state.isFinished }
+                                result.success(status)
+                            } catch (_: Exception) {
+                                result.error("scheduler_unavailable", "Background schedule could not be checked", null)
+                            }
+                        }, ContextCompat.getMainExecutor(this))
+                    }
+                    "openSettings" -> {
+                        startActivity(Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS,
+                            android.net.Uri.parse("package:$packageName")))
+                        result.success(null)
+                    }
+                    else -> result.notImplemented()
+                }
+            }
         biometricAppLockChannel = BiometricAppLockChannel(this).also { channel ->
             channel.register(flutterEngine.dartExecutor.binaryMessenger)
         }
@@ -88,6 +133,20 @@ class MainActivity: FlutterFragmentActivity() {
                     }
                     else -> result.notImplemented()
                 }
+            }
+        }
+    }
+
+    override fun onResume() {
+        super.onResume()
+        // Native cleanup precedes Dart startup and never changes read state.
+        val manager = getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
+        for (alert in manager.activeNotifications) {
+            val channel = if (Build.VERSION.SDK_INT >= 26) alert.notification.channelId else null
+            val group = alert.notification.group
+            if (channel == "school_grade" || channel == "school_message" ||
+                group?.matches(Regex("^school_[a-f0-9]{64}$")) == true) {
+                manager.cancel(alert.tag, alert.id)
             }
         }
     }

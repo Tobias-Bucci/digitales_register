@@ -4,6 +4,7 @@ import Flutter
 import FirebaseAnalytics
 import UserNotifications
 import workmanager_apple
+import BackgroundTasks
 
 @main
 @objc class AppDelegate: FlutterAppDelegate {
@@ -28,6 +29,9 @@ import workmanager_apple
     UNUserNotificationCenter.current().delegate = self
     WorkmanagerPlugin.setPluginRegistrantCallback { registry in
       GeneratedPluginRegistrant.register(with: registry)
+      if let registrar = registry.registrar(forPlugin: "SchoolNotificationLifecycle") {
+        registerSchoolNotificationChannel(registrar.messenger())
+      }
     }
     WorkmanagerPlugin.registerPeriodicTask(
       withIdentifier: "it.bucci.digitalesregister.schoolRefresh",
@@ -54,12 +58,7 @@ import workmanager_apple
         default: result(FlutterMethodNotImplemented)
         }
       }
-      FlutterMethodChannel(name: "dr/school_notifications", binaryMessenger: controller.binaryMessenger)
-        .setMethodCallHandler { call, result in
-          if call.method == "backgroundRefreshAvailable" {
-            result(application.backgroundRefreshStatus == .available)
-          } else { result(FlutterMethodNotImplemented) }
-        }
+      registerSchoolNotificationChannel(controller.binaryMessenger)
       FlutterMethodChannel(name: "dr/privacy_bootstrap", binaryMessenger: controller.binaryMessenger)
         .setMethodCallHandler { call, result in
           if call.method == "ready" { result(privacyReady) }
@@ -68,6 +67,70 @@ import workmanager_apple
     }
     return super.application(application, didFinishLaunchingWithOptions: launchOptions)
   }
+
+  override func applicationDidBecomeActive(_ application: UIApplication) {
+    super.applicationDidBecomeActive(application)
+    UNUserNotificationCenter.current().getDeliveredNotifications { notifications in
+      let identifiers = notifications.filter {
+        SchoolNotificationPayload.isPersonalThread($0.request.content.threadIdentifier) ||
+        SchoolNotificationPayload.isPersonal($0.request.content.userInfo["payload"])
+      }.map { $0.request.identifier }
+      UNUserNotificationCenter.current().removeDeliveredNotifications(withIdentifiers: identifiers)
+    }
+  }
+
+  override func userNotificationCenter(_ center: UNUserNotificationCenter,
+    willPresent notification: UNNotification,
+    withCompletionHandler completionHandler: @escaping (UNNotificationPresentationOptions) -> Void) {
+    if SchoolNotificationPayload.isPersonalThread(notification.request.content.threadIdentifier) ||
+       SchoolNotificationPayload.isPersonal(notification.request.content.userInfo["payload"]) {
+      completionHandler([])
+      return
+    }
+    super.userNotificationCenter(center, willPresent: notification,
+      withCompletionHandler: completionHandler)
+  }
+}
+
+private enum SchoolNotificationPayload {
+  static func isPersonalThread(_ identifier: String) -> Bool {
+    identifier.range(of: "^school_[a-f0-9]{64}$", options: .regularExpression) != nil
+  }
+  static func isPersonal(_ payload: Any?) -> Bool {
+    guard let raw = payload as? String, let data = raw.data(using: .utf8),
+      let value = try? JSONSerialization.jsonObject(with: data) as? [String: Any] else { return false }
+    let account = value["account"] as? String ?? ""
+    return value["v"] as? Int == 1 &&
+      account.range(of: "^[a-f0-9]{64}$", options: .regularExpression) != nil &&
+      ["grade", "message"].contains(value["category"] as? String ?? "")
+  }
+}
+
+private func registerSchoolNotificationChannel(_ messenger: FlutterBinaryMessenger) {
+  FlutterMethodChannel(name: "dr/school_notifications", binaryMessenger: messenger)
+    .setMethodCallHandler { call, result in
+      switch call.method {
+      case "isForeground": result(UIApplication.shared.applicationState != .background)
+      case "canRequestNotificationPermission":
+        UNUserNotificationCenter.current().getNotificationSettings { settings in
+          DispatchQueue.main.async { result(settings.authorizationStatus == .notDetermined) }
+        }
+      case "backgroundRefreshAvailable": result(UIApplication.shared.backgroundRefreshStatus == .available)
+      case "diagnostics":
+        let refresh = UIApplication.shared.backgroundRefreshStatus == .available
+        let powerSave = ProcessInfo.processInfo.isLowPowerModeEnabled
+        BGTaskScheduler.shared.getPendingTaskRequests { requests in
+          DispatchQueue.main.async {
+            result(["backgroundRefreshAvailable": refresh, "powerSaveMode": powerSave,
+                    "scheduled": requests.contains { $0.identifier == "it.bucci.digitalesregister.schoolRefresh" }])
+          }
+        }
+      case "openSettings":
+        if let url = URL(string: UIApplication.openSettingsURLString) { UIApplication.shared.open(url) }
+        result(nil)
+      default: result(FlutterMethodNotImplemented)
+      }
+    }
 }
 
 // Storage compatibility boundary for Firebase Apple Crashlytics.
