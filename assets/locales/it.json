@@ -713,7 +713,7 @@
   "grades.forecast": "Previsione della media",
   "grades.forecast.info": "Informazioni sulla previsione della media",
   "grades.forecast.value": "circa {value}",
-  "grades.forecast.body": "La previsione è una stima statistica. I voti validi e ponderati sono valutati in ordine cronologico. La tendenza lineare delle medie cumulative viene proiettata fino a fine anno scolastico. Servono almeno quattro voti in tre giorni. Nuovi voti possono cambiare il risultato.",
+  "grades.forecast.body": "La previsione è una stima statistica, non un voto ufficiale di pagella. Stima i risultati futuri dai voti ponderati, dando più importanza ai voti recenti (dimezzamento del peso temporale ogni 30 giorni). Ipotizzando la stessa frequenza delle valutazioni, li combina con i voti già ottenuti fino alla fine dell’anno scolastico. Tutte le materie contano allo stesso modo. Non contano voti annullati, voti senza peso e materie escluse. Servono almeno quattro voti in tre giorni. Nuovi voti possono cambiare il risultato.",
   "grades.statistics": "Statistiche dei voti",
   "grades.statistics.subtitle": "Confronta le medie delle materie",
   "grades.statistics.explanation": "Spiegazione",

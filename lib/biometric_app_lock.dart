@@ -19,6 +19,7 @@ import 'dart:async';
 
 import 'package:biometric_storage/biometric_storage.dart';
 import 'package:dr/main.dart';
+import 'package:dr/runtime_trace.dart';
 import 'package:flutter/foundation.dart' show defaultTargetPlatform, kIsWeb;
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
@@ -281,18 +282,25 @@ class BiometricAppLockController extends ChangeNotifier {
   /// the user did not authenticate, so the app stays locked and enabling the
   /// lock fails.
   Future<bool> _authenticateOnAndroid() async {
+    final timer = Stopwatch()..start();
+    runtimeTrace('AppStartup', 'biometric-prompt-start');
     final promptInfo = _appLockPromptInfo.androidPromptInfo;
-    final authenticated = await _androidAppLockChannel.invokeMethod<bool>(
-      'authenticate',
-      <String, dynamic>{
-        'title': promptInfo.title,
-        'subtitle': promptInfo.subtitle,
-        'description': promptInfo.description,
-        'negativeButton': promptInfo.negativeButton,
-        'confirmationRequired': promptInfo.confirmationRequired,
-      },
-    );
-    return authenticated == true;
+    try {
+      final authenticated = await _androidAppLockChannel.invokeMethod<bool>(
+        'authenticate',
+        <String, dynamic>{
+          'title': promptInfo.title,
+          'subtitle': promptInfo.subtitle,
+          'description': promptInfo.description,
+          'negativeButton': promptInfo.negativeButton,
+          'confirmationRequired': promptInfo.confirmationRequired,
+        },
+      );
+      return authenticated == true;
+    } finally {
+      runtimeTrace('AppStartup', 'biometric-prompt-end',
+          durationMs: timer.elapsedMilliseconds);
+    }
   }
 
   Future<BiometricStorageFile> _getStorage() {

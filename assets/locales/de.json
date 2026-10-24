@@ -729,7 +729,7 @@
   "grades.forecast": "Schnitt-Prognose",
   "grades.forecast.info": "Informationen zur Schnitt-Prognose",
   "grades.forecast.value": "ca. {value}",
-  "grades.forecast.body": "Die Prognose ist eine statistische Einschätzung und keine offizielle Zeugnisnote. Gültige gewichtete Noten werden chronologisch ausgewertet. Ein linearer Trend der kumulierten Durchschnitte wird bis zum Schuljahresende fortgeführt. Mindestens vier Noten an drei Tagen sind nötig. Neue Noten können das Ergebnis verändern.",
+  "grades.forecast.body": "Die Prognose ist eine statistische Einschätzung und keine offizielle Zeugnisnote. Sie schätzt künftige Leistungen anhand deiner bisherigen gewichteten Noten; neuere Noten zählen dabei stärker (Halbwertszeit 30 Tage). Bei gleichbleibender Bewertungshäufigkeit werden diese mit den bereits erhaltenen Noten bis zum Schuljahresende verrechnet. Alle Fächer zählen gleich viel. Stornierte Noten, Noten ohne Gewicht und ausgeschlossene Fächer zählen nicht. Mindestens vier Noten an drei Tagen sind nötig. Neue Noten können das Ergebnis verändern.",
   "grades.statistics": "Notenstatistik",
   "grades.statistics.subtitle": "Vergleich deiner Fach-Durchschnitte",
   "grades.statistics.explanation": "Erklärung",
