@@ -94,7 +94,9 @@ dependency_overrides:
   workmanager_android:
     path: packages/workmanager_android
   # Match the vendored Android Pigeon codec; later interfaces change wire tags.
-  workmanager_apple: 0.9.1+2
+  # Preserve the matching codec and fix task expiration/engine cleanup locally.
+  workmanager_apple:
+    path: packages/workmanager_apple
   workmanager_platform_interface: 0.9.1+1
 
 dev_dependencies:

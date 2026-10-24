@@ -1,4 +1,4 @@
-﻿// Copyright (C) 2021 Michael Debertol
+// Copyright (C) 2021 Michael Debertol
 // Copyright (C) 2026 Tobias Bucci
 //
 // This file is part of digitales_register.
@@ -22,6 +22,7 @@ import 'package:dr/container/days_container.dart';
 import 'package:dr/container/home_page.dart';
 import 'package:dr/main.dart';
 import 'package:dr/tutorial/tutorial_service.dart';
+import 'package:dr/ui/school_notification_opt_in.dart';
 import 'package:dr/ui/splash.dart';
 import 'package:flutter/material.dart';
 
@@ -29,10 +30,12 @@ typedef DrawerCallback = void Function(bool isOpened);
 
 class HomePageContent extends StatelessWidget {
   final HomePageContentViewModel vm;
+  final String? account;
 
   const HomePageContent({
     super.key,
     required this.vm,
+    this.account,
   });
   @override
   Widget build(BuildContext context) {
@@ -52,10 +55,13 @@ class HomePageContent extends StatelessWidget {
           navigatorKey!.currentState!.pop();
         }
       },
-      child: SplashScreen(
-        splash: vm.splash,
-        child: DaysContainer(),
-      ),
+      child: SchoolNotificationOptInHost(
+          signedIn: !vm.splash,
+          account: account,
+          child: SplashScreen(
+            splash: vm.splash,
+            child: DaysContainer(),
+          )),
     );
   }
 }

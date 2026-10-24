@@ -166,28 +166,64 @@ Future<void> _initializeAfterFirstFrame({
       await refreshSchoolNotificationFeed(store.actions);
     }
   };
+  var handlingSchoolNotificationTap = false;
   schoolNotifications.onTap = () async {
     final destination = schoolNotifications.pendingDestination;
     if (destination == null ||
         !store.state.loginState.loggedIn ||
-        scaffoldKey?.currentState == null) {
+        scaffoldKey?.currentState == null ||
+        handlingSchoolNotificationTap) {
       return;
     }
-    schoolNotifications.pendingDestination = null;
-    final user = store.state.loginState.username;
-    final server = store.state.url;
-    if (user == null ||
-        server == null ||
-        destination.account != schoolNotifications.accountKey(server, user)) {
-      return;
-    }
-    navigatorKey?.currentState?.popUntil((route) => route.isFirst);
-    if (destination.category == SchoolNotificationCategory.grade) {
-      await store.actions.routingActions.showGrades();
-    } else if (destination.objectId != null) {
-      await store.actions.routingActions.showMessage(destination.objectId!);
-    } else {
-      await store.actions.routingActions.showMessages();
+    handlingSchoolNotificationTap = true;
+    try {
+      var user = store.state.loginState.username;
+      var server = store.state.url;
+      if (user == null || server == null) return;
+      if (destination.account != schoolNotifications.accountKey(server, user)) {
+        final owner = (server, user);
+        final index = await schoolNotifications.savedAccountIndex(
+            destination.account,
+            loggedIn: store.state.loginState.loggedIn,
+            noPasswordSaving: store.state.settingsState.noPasswordSaving);
+        // A manual account change supersedes the tap while storage was read.
+        if ((store.state.url, store.state.loginState.username) != owner) return;
+        if (index == null) {
+          schoolNotifications.pendingDestination = null;
+          final context = scaffoldKey?.currentContext;
+          if (context != null && context.mounted) {
+            showSnackBar(context.l10n
+                .text('schoolNotifications.settings.accountUnavailable'));
+          }
+          return;
+        }
+        schoolNotifications.preserveDestinationForNextAccountSwitch();
+        await store.actions.loginActions.selectAccount(index);
+        // A second manual switch clears the destination and supersedes this tap.
+        if (!identical(schoolNotifications.pendingDestination, destination)) {
+          return;
+        }
+        user = store.state.loginState.username;
+        server = store.state.url;
+        if (!store.state.loginState.loggedIn ||
+            user == null ||
+            server == null ||
+            destination.account !=
+                schoolNotifications.accountKey(server, user)) {
+          return;
+        }
+      }
+      schoolNotifications.pendingDestination = null;
+      navigatorKey?.currentState?.popUntil((route) => route.isFirst);
+      if (destination.category == SchoolNotificationCategory.grade) {
+        await store.actions.routingActions.showGrades();
+      } else if (destination.objectId != null) {
+        await store.actions.routingActions.showMessage(destination.objectId!);
+      } else {
+        await store.actions.routingActions.showMessages();
+      }
+    } finally {
+      handlingSchoolNotificationTap = false;
     }
   };
   // Notification storage/OS scheduling is optional and can be busy in another

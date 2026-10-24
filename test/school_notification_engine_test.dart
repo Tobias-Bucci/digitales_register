@@ -48,7 +48,8 @@ void main() {
   setUp(() {
     disk = {};
     delivered = [];
-    preferences = SchoolNotificationPreferences();
+    preferences = SchoolNotificationPreferences(
+        enabled: true, consent: SchoolNotificationConsent.accepted);
     engine = restart();
   });
 
@@ -56,6 +57,69 @@ void main() {
     await sync([event(1), event(2, type: 'message')]);
     expect(delivered, isEmpty);
     await sync([event(1), event(2, type: 'message')]);
+    expect(delivered, isEmpty);
+  });
+
+  test('enabled category defaults alone cannot authorize a notification',
+      () async {
+    preferences.consent = SchoolNotificationConsent.unknown;
+    await sync([]);
+    await sync([event(1)]);
+    expect(delivered, isEmpty);
+    preferences.consent = SchoolNotificationConsent.accepted;
+    await sync([event(1), event(2)]);
+    expect(delivered, hasLength(1));
+    expect(delivered.single.identity, event(2).identity);
+  });
+
+  test(
+      'foreground detection persists a separate silent state without a read timestamp',
+      () async {
+    await sync([]);
+    await engine.synchronize(
+        account: account,
+        events: [event(1)],
+        preferences: preferences,
+        permitted: true,
+        foreground: true,
+        now: baseline,
+        deliver: (e) async => delivered.add(e));
+    expect(delivered, isEmpty);
+    final state = jsonDecode(disk[engine.key(account)]!) as Map;
+    final record = (state['observations'] as Map)[event(1).identity] as Map;
+    expect(record['presentation'], 'foreground');
+    expect(record['firstDetectedAt'], baseline.toIso8601String());
+    expect(record['locallyViewedAt'], isNull);
+    await sync([event(1)]);
+    expect(delivered, isEmpty);
+    await engine.markViewed(account, event(1).identities);
+    final read =
+        (jsonDecode(disk[engine.key(account)]!) as Map)['observations'] as Map;
+    expect((read[event(1).identity] as Map)['locallyViewedAt'], isNotNull);
+  });
+
+  test(
+      'batch delivery observes durable claims and cannot replay a partially failed batch',
+      () async {
+    await sync([]);
+    var batches = 0;
+    await expectLater(
+        engine.synchronize(
+            account: account,
+            events: [event(1), event(2)],
+            preferences: preferences,
+            permitted: true,
+            now: baseline,
+            deliverBatch: (batch) async {
+              batches++;
+              final state = jsonDecode(disk[engine.key(account)]!) as Map;
+              expect(state['seen'], contains(event(1).identity));
+              expect(state['seen'], contains(event(2).identity));
+              throw StateError('native failure');
+            }),
+        throwsStateError);
+    await sync([event(1), event(2)]);
+    expect(batches, 1);
     expect(delivered, isEmpty);
   });
 

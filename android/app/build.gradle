@@ -138,6 +138,8 @@ kotlin {
 }
 
 dependencies {
+    // Query the real pending schedule in settings; match the existing worker fork.
+    implementation "androidx.work:work-runtime:2.11.0"
     coreLibraryDesugaring "com.android.tools:desugar_jdk_libs:2.1.5"
     // Biometric app lock prompt; keep in sync with packages/biometric_storage.
     implementation "androidx.biometric:biometric:1.2.0-alpha05"

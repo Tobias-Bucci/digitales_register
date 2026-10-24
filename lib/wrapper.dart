@@ -31,6 +31,7 @@ import 'package:dr/diagnostics_service.dart';
 import 'package:dr/i18n/app_localizations.dart';
 import 'package:dr/main.dart';
 import 'package:dr/privacy_log.dart';
+import 'package:dr/school_api_endpoints.dart';
 import 'package:dr/star_rating.dart';
 import 'package:dr/ui/controlled_text_builder.dart';
 import 'package:dr/ui/dialog.dart';
@@ -81,8 +82,8 @@ class Wrapper {
   final cookieJar = DefaultCookieJar();
   late final Dio dio;
   final bool allowInsecureConnections;
-  String get loginAddress => "${baseAddress}api/auth/login";
-  String get baseAddress => "$url/v2/";
+  String get loginAddress => '$baseAddress$schoolLoginEndpoint';
+  String get baseAddress => schoolApiBase(url ?? '');
   String? user, pass, _url;
   bool demoMode = false;
   bool _appInForeground = _networkActivityEnabled;

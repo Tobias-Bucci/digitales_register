@@ -172,6 +172,9 @@ Future<void> bootstrapTestEnvironment({
 }) async {
   TestWidgetsFlutterBinding.ensureInitialized();
   SharedPreferences.setMockInitialValues(sharedPreferences);
+  // Optional notification startup publishes a secure foreground barrier before
+  // initializing native plugins. Widget tests must never access real OS storage.
+  FlutterSecureStorage.setMockInitialValues(<String, String>{});
   appClock.resetForTest();
   secureStorage = TestSecureStorage(storage: storage);
   wrapper = wrapperOverride ?? Wrapper();

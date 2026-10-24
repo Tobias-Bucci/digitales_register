@@ -43,7 +43,8 @@ Future<void> _loadNotifications(
     final source = wrapper;
     final server = source.url;
     final user = source.user;
-    final dynamic data = await source.send("api/notification/unread");
+    final dynamic data =
+        await source.send(schoolUnreadNotificationsEndpoint);
 
     if (data != null &&
         identical(source, wrapper) &&

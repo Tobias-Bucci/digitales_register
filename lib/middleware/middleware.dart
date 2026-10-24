@@ -63,15 +63,16 @@ import 'package:dr/main.dart';
 import 'package:dr/page_payload_cache.dart';
 import 'package:dr/platform_adapter.dart';
 import 'package:dr/privacy_log.dart';
+import 'package:dr/school_api_endpoints.dart';
 import 'package:dr/school_notification_service.dart';
 import 'package:dr/serializers.dart';
 import 'package:dr/settings_persistence_service.dart';
 import 'package:dr/state_persistence_service.dart';
 import 'package:dr/stored_login.dart';
 import 'package:dr/theme_controller.dart';
-import 'package:dr/tutorial/tutorial_service.dart';
 import 'package:dr/ui/debug_page.dart';
 import 'package:dr/ui/dialog.dart';
+import 'package:dr/ui/school_notification_opt_in.dart';
 import 'package:dr/utc_date_time.dart';
 import 'package:dr/util.dart';
 import 'package:dr/wrapper.dart';
@@ -982,6 +983,7 @@ void resetNoInternetRetryForTest() {
 /// from one test must never be allowed to affect the next one.
 @visibleForTesting
 void resetMiddlewareStateForTest() {
+  schoolNotificationStartupReady.value = false;
   resetNoInternetRetryForTest();
   _clearRuntimeCaches();
 }
@@ -1074,6 +1076,16 @@ Future<void> _loadAccounts(
   }
 
   final user = getString(login["user"]);
+  final savedForNotificationMigration = [
+    login,
+    ...(login['otherAccounts'] as List? ?? []).whereType<Map>()
+  ];
+  unawaited(schoolNotificationOperation(
+      () => schoolNotifications.migrateLegacyDecisions([
+            for (final saved in savedForNotificationMigration)
+              if (saved['url'] is String && saved['user'] is String)
+                (saved['url'] as String, saved['user'] as String),
+          ])));
   final pass = getString(login["pass"]);
   final url = getString(login["url"]);
   final hasPrimaryAccount = user != null && pass != null && url != null;
@@ -1119,6 +1131,7 @@ Future<void> _loadAccounts(
   }
   await _checkShowUnmaintainedAlert();
   await _checkShowPrivacyConsentAlert();
+  schoolNotificationStartupReady.value = true;
 }
 
 Future<void> _refresh(
@@ -1239,13 +1252,8 @@ Future<void> _loggedIn(
       await schoolNotifications.onTap?.call();
     }));
   });
-  final context = navigatorKey?.currentContext;
-  final session = wrapper;
-  if (context != null && context.mounted && api.state.loginState.loggedIn) {
-    tutorialService.scheduleOffer(context,
-        isCurrent: () =>
-            identical(wrapper, session) && api.state.loginState.loggedIn);
-  }
+  // Optional account onboarding is offered by the mounted home route after
+  // startup notices finish, followed by the tutorial. Neither blocks login.
   // Registering a post-frame callback does not itself request a frame. With
   // idle startup data the offer would otherwise wait for the user's next tap.
   WidgetsBinding.instance.ensureVisualUpdate();

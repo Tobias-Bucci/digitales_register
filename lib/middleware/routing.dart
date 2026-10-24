@@ -181,10 +181,6 @@ Future<void> _showGrades(
     MiddlewareApi<AppState, AppStateBuilder, AppActions> api,
     ActionHandler next,
     Action<void> action) async {
-  await _rememberViewedSchoolNotifications(api
-          .state.notificationState.notifications
-          ?.where((n) => n.type == 'grade') ??
-      <Notification>[]);
   scaffoldKey!.currentState!
       .selectContentWidget(const GradesPageContainer(), Pages.grades);
   await api.actions.gradesActions.load(api.state.gradesState.semester);

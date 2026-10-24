@@ -1,6 +1,8 @@
 package dev.fluttercommunity.workmanager
 
 import android.content.Context
+import android.app.ActivityManager
+import io.flutter.plugin.common.MethodChannel
 import android.os.Handler
 import android.os.Looper
 import androidx.concurrent.futures.CallbackToFutureAdapter
@@ -14,6 +16,7 @@ import io.flutter.embedding.engine.dart.DartExecutor
 import io.flutter.embedding.engine.loader.FlutterLoader
 import io.flutter.view.FlutterCallbackInformation
 import java.util.Random
+import java.util.concurrent.atomic.AtomicBoolean
 
 /**
  * A simple worker that posts your input back to your Flutter application.
@@ -51,6 +54,7 @@ class BackgroundWorker(
     private val runAttemptCount = workerParams.runAttemptCount
     private val randomThreadIdentifier = Random().nextInt()
     private var engine: FlutterEngine? = null
+    private val finished = AtomicBoolean(false)
 
     private var startTime: Long = 0
 
@@ -63,9 +67,26 @@ class BackgroundWorker(
         }
 
     override fun startWork(): ListenableFuture<Result> {
+        if (isStopped || finished.get()) {
+            completer?.set(Result.failure())
+            return resolvableFuture
+        }
         startTime = System.currentTimeMillis()
 
         engine = FlutterEngine(applicationContext)
+        (applicationContext as? BackgroundEngineConfigurator)?.configureBackgroundEngine(engine!!)
+        MethodChannel(engine!!.dartExecutor.binaryMessenger, "dr/school_notifications")
+            .setMethodCallHandler { call, result ->
+                when (call.method) {
+                    "isForeground" -> {
+                        val state = ActivityManager.RunningAppProcessInfo()
+                        ActivityManager.getMyMemoryState(state)
+                        result.success(state.importance <= ActivityManager.RunningAppProcessInfo.IMPORTANCE_FOREGROUND)
+                    }
+                    "diagnostics" -> result.success(emptyMap<String, Any>())
+                    else -> result.notImplemented()
+                }
+            }
 
         if (!flutterLoader.initialized()) {
             flutterLoader.startInitialization(applicationContext)
@@ -76,13 +97,17 @@ class BackgroundWorker(
             null,
             Handler(Looper.getMainLooper()),
         ) {
+            if (finished.get() || isStopped) {
+                stopEngine(null)
+                return@ensureInitializationCompleteAsync
+            }
             val callbackHandle = SharedPreferenceHelper.getCallbackHandle(applicationContext)
             val callbackInfo = FlutterCallbackInformation.lookupCallbackInformation(callbackHandle)
 
             if (callbackInfo == null) {
                 val exception = IllegalStateException("Failed to resolve Dart callback for handle $callbackHandle")
                 WorkmanagerDebug.onExceptionEncountered(applicationContext, null, exception)
-                completer?.set(Result.failure())
+                stopEngine(Result.failure())
                 return@ensureInitializationCompleteAsync
             }
 
@@ -91,7 +116,7 @@ class BackgroundWorker(
             if (localDartTask == null) {
                 val exception = IllegalStateException("Dart task is null")
                 WorkmanagerDebug.onExceptionEncountered(applicationContext, null, exception)
-                completer?.set(Result.failure())
+                stopEngine(Result.failure())
                 return@ensureInitializationCompleteAsync
             }
 
@@ -139,16 +164,10 @@ class BackgroundWorker(
         result: Result?,
         errorMessage: String? = null,
     ) {
+        if (!finished.compareAndSet(false, true)) return
         val fetchDuration = System.currentTimeMillis() - startTime
 
-        val localDartTask = dartTask
-
-        if (localDartTask == null) {
-            val exception = IllegalStateException("Dart task is null")
-            WorkmanagerDebug.onExceptionEncountered(applicationContext, null, exception)
-            completer?.set(Result.failure())
-            return
-        }
+        val localDartTask = dartTask ?: "unknown"
 
         val taskInfo =
             TaskDebugInfo(
@@ -190,6 +209,7 @@ class BackgroundWorker(
     }
 
     private fun executeBackgroundTask() {
+        if (finished.get() || isStopped) return
         // Convert payload to the format expected by Pigeon (Map<String?, Object?>)
         val pigeonPayload = payload.mapKeys { it.key as String? }.mapValues { it.value as Object? }
 
