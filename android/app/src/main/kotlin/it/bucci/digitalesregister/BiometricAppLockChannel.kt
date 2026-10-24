@@ -13,11 +13,18 @@ import io.flutter.plugin.common.MethodChannel
  *
  * `biometric_storage` protects its storage file with an AndroidKeyStore key created for strong
  * (Class 3) biometrics, and androidx.biometric refuses crypto-based authentication with weak
- * (Class 2) biometrics. Most Android face recognition is Class 2, so devices that only offer
- * face unlock could not use the biometric app lock at all.
+ * (Class 2) biometrics. Android reports most face unlock implementations as Class 2, so devices
+ * that only offer face unlock could not use the biometric app lock through the plugin at all.
  *
  * The app lock only needs to know whether the user authenticated, not to unlock a secret, so it
- * asks [BiometricPrompt] directly and accepts every enrolled biometric.
+ * asks [BiometricPrompt] directly with [BiometricManager.Authenticators.BIOMETRIC_WEAK]. That
+ * authenticator accepts enrolled Class 2 and Class 3 biometrics (fingerprint, iris, and face
+ * unlock when the OEM classifies it as Class 2 or stronger). It does not accept Class 1
+ * (convenience) face recognition, which some devices allow for screen unlock only, so not every
+ * device with face unlock can pass this prompt.
+ *
+ * No keystore key is involved, so the success callback of [BiometricPrompt] is the only proof of
+ * authentication; see `lib/biometric_app_lock.dart` for the security tradeoff that implies.
  */
 class BiometricAppLockChannel(
     private val activity: FragmentActivity,
