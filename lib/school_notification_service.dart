@@ -8,6 +8,7 @@ import 'package:dio_cookie_manager/dio_cookie_manager.dart';
 import 'package:dr/app_language_controller.dart';
 import 'package:dr/desktop.dart';
 import 'package:dr/i18n/app_localizations.dart';
+import 'package:dr/runtime_trace.dart';
 import 'package:dr/school_notification_engine.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter/widgets.dart';
@@ -28,7 +29,9 @@ Future<void> schoolNotificationOperation(
     Future<void> Function() operation) async {
   try {
     await operation();
-  } catch (_) {
+  } catch (error) {
+    runtimeTrace('SchoolNotifications', 'operation-failed',
+        detail: 'type=${error.runtimeType}');
     schoolNotifications.backgroundAvailable = false;
   }
 }
@@ -87,6 +90,10 @@ class SchoolNotificationService extends ChangeNotifier
   Future<Database>? _database;
   LazyBox<String>? _history;
   bool _initialized = false;
+  Future<void>? _initializing;
+  Future<void>? _activation;
+  Future<void>? _backgroundWork;
+  int _sessionGeneration = 0;
   Timer? _timer;
   bool granted = false;
   bool backgroundAvailable = true;
@@ -124,40 +131,57 @@ class SchoolNotificationService extends ChangeNotifier
   /// SQLite is used only as an OS-managed transaction mutex. It contains no
   /// school data. Unlike Dart mutexes/file locks it serializes separate Flutter
   /// engines too, and a killed worker automatically releases its transaction.
-  Future<T> _locked<T>(Future<T> Function() operation) =>
-      _processMutex.protect(() async {
-        if (!mobileBackgroundSupported) return _withHistory(operation);
-        final waiting = Stopwatch()..start();
-        while (true) {
-          var entered = false;
-          try {
-            Database db;
-            try {
-              db = await (_database ??= (_databaseFactory ?? _openDatabase)());
-            } catch (_) {
-              _database = null;
-              rethrow;
-            }
-            return await db.transaction((txn) async {
-              await txn.rawUpdate('UPDATE mutex SET value = value + 1');
-              entered = true;
-              return _withHistory(operation);
-            }, exclusive: true);
-          } on DatabaseException catch (error) {
-            final code = error.getResultCode();
-            final busy =
-                code != null && ((code & 255) == 5 || (code & 255) == 6);
-            if (entered ||
-                !busy ||
-                waiting.elapsed > const Duration(seconds: 20)) {
-              rethrow;
-            }
-            // Yield in Dart, not SQLite's shared native worker thread, so the
-            // other engine can commit and release its lock.
-            await Future<void>.delayed(const Duration(milliseconds: 100));
-          }
+  Future<T> _locked<T>(Future<T> Function() operation,
+      {String label = 'storage', bool history = true}) {
+    final waiting = Stopwatch()..start();
+    return _processMutex.protect(() async {
+      Future<T> run() async {
+        final held = Stopwatch()..start();
+        runtimeTrace('SchoolNotifications', 'lock-acquired',
+            durationMs: waiting.elapsedMilliseconds,
+            detail: 'operation=$label');
+        try {
+          return await (history ? _withHistory(operation) : operation());
+        } finally {
+          runtimeTrace('SchoolNotifications', 'lock-released',
+              durationMs: held.elapsedMilliseconds, detail: 'operation=$label');
         }
-      });
+      }
+
+      if (!mobileBackgroundSupported) return run();
+      while (true) {
+        var entered = false;
+        try {
+          Database db;
+          try {
+            db = await (_database ??= (_databaseFactory ?? _openDatabase)());
+          } catch (_) {
+            _database = null;
+            rethrow;
+          }
+          return await db.transaction((txn) async {
+            await txn.rawUpdate('UPDATE mutex SET value = value + 1');
+            entered = true;
+            return run();
+          }, exclusive: true);
+        } on DatabaseException catch (error) {
+          final code = error.getResultCode();
+          final busy = code != null && ((code & 255) == 5 || (code & 255) == 6);
+          if (entered ||
+              !busy ||
+              waiting.elapsed > const Duration(seconds: 20)) {
+            rethrow;
+          }
+          // Yield in Dart, not SQLite's shared native worker thread, so the
+          // other engine can commit and release its lock.
+          runtimeTrace('SchoolNotifications', 'lock-busy',
+              durationMs: waiting.elapsedMilliseconds,
+              detail: 'operation=$label');
+          await Future<void>.delayed(const Duration(milliseconds: 100));
+        }
+      }
+    });
+  }
 
   Future<T> _withHistory<T>(Future<T> Function() operation) async {
     final directory = await _historyDirectory();
@@ -190,54 +214,78 @@ class SchoolNotificationService extends ChangeNotifier
         },
       );
 
-  Future<void> initialize({bool background = false}) async {
-    if (!supported || _initialized) return;
-    await _native.initialize(
-      settings: const InitializationSettings(
-        android: AndroidInitializationSettings('ic_school_notification'),
-        iOS: DarwinInitializationSettings(
-            requestAlertPermission: false,
-            requestBadgePermission: false,
-            requestSoundPermission: false),
-        macOS: DarwinInitializationSettings(
-            requestAlertPermission: false,
-            requestBadgePermission: false,
-            requestSoundPermission: false),
-        linux: LinuxInitializationSettings(defaultActionName: 'Open Register'),
-        windows: WindowsInitializationSettings(
-            appName: 'Register',
-            appUserModelId: 'it.bucci.digitalesregister',
-            guid: '47d730b5-c496-4a56-a1cd-80f08902cdd4'),
-      ),
-      onDidReceiveNotificationResponse: (response) {
-        pendingDestination =
-            SchoolNotificationDestination.decode(response.payload);
-        unawaited(schoolNotificationOperation(() async {
-          await onTap?.call();
-        }));
-      },
-    );
-    _initialized = true;
-    if (!background) {
-      await _markForeground(true);
-      WidgetsBinding.instance.addObserver(this);
-      _startForegroundChecks();
-      final launch = Platform.isLinux
-          ? null
-          : await _native.getNotificationAppLaunchDetails();
-      if (launch?.didNotificationLaunchApp ?? false) {
-        pendingDestination = SchoolNotificationDestination.decode(
-            launch?.notificationResponse?.payload);
-      }
-      try {
-        if (mobileBackgroundSupported) {
-          await Workmanager().initialize(schoolNotificationDispatcher);
+  Future<void> initialize({bool background = false}) {
+    if (!supported) return Future.value();
+    final pending = _initializing;
+    if (pending != null) return pending;
+    if (_initialized) return Future.value();
+    final future = _initialize(background: background).whenComplete(() {
+      _initializing = null;
+    });
+    _initializing = future;
+    return future;
+  }
+
+  Future<void> _initialize({required bool background}) async {
+    final timer = Stopwatch()..start();
+    runtimeTrace('SchoolNotifications', 'initialize-start',
+        detail: 'background=$background');
+    try {
+      await _native.initialize(
+        settings: const InitializationSettings(
+          android: AndroidInitializationSettings('ic_school_notification'),
+          iOS: DarwinInitializationSettings(
+              requestAlertPermission: false,
+              requestBadgePermission: false,
+              requestSoundPermission: false),
+          macOS: DarwinInitializationSettings(
+              requestAlertPermission: false,
+              requestBadgePermission: false,
+              requestSoundPermission: false),
+          linux:
+              LinuxInitializationSettings(defaultActionName: 'Open Register'),
+          windows: WindowsInitializationSettings(
+              appName: 'Register',
+              appUserModelId: 'it.bucci.digitalesregister',
+              guid: '47d730b5-c496-4a56-a1cd-80f08902cdd4'),
+        ),
+        onDidReceiveNotificationResponse: (response) {
+          pendingDestination =
+              SchoolNotificationDestination.decode(response.payload);
+          unawaited(schoolNotificationOperation(() async {
+            await onTap?.call();
+          }));
+        },
+      );
+      _initialized = true;
+      if (!background) {
+        await _markForeground(true);
+        WidgetsBinding.instance.addObserver(this);
+        _startForegroundChecks();
+        final launch = Platform.isLinux
+            ? null
+            : await _native.getNotificationAppLaunchDetails();
+        if (launch?.didNotificationLaunchApp ?? false) {
+          pendingDestination = SchoolNotificationDestination.decode(
+              launch?.notificationResponse?.payload);
         }
-      } catch (_) {
-        backgroundAvailable = false;
+        try {
+          if (mobileBackgroundSupported) {
+            await Workmanager().initialize(schoolNotificationDispatcher);
+          }
+        } catch (_) {
+          backgroundAvailable = false;
+        }
       }
+      await reload();
+      runtimeTrace('SchoolNotifications', 'initialize-end',
+          durationMs: timer.elapsedMilliseconds);
+    } catch (_) {
+      _initialized = false;
+      _timer?.cancel();
+      WidgetsBinding.instance.removeObserver(this);
+      rethrow;
     }
-    await reload();
   }
 
   void _startForegroundChecks() {
@@ -278,7 +326,7 @@ class SchoolNotificationService extends ChangeNotifier
         } else {
           await _storage.delete(key: 'school-notification-foreground-until');
         }
-      });
+      }, label: 'foreground-heartbeat', history: false);
 
   @override
   void dispose() {
@@ -406,19 +454,34 @@ class SchoolNotificationService extends ChangeNotifier
   }
 
   Future<void> activate(String server, String user,
-      {required bool backgroundAllowed}) async {
+      {required bool backgroundAllowed}) {
+    final generation = ++_sessionGeneration;
+    final future = _activate(server, user,
+        backgroundAllowed: backgroundAllowed, generation: generation);
+    _activation = future;
+    return future;
+  }
+
+  Future<void> _activate(String server, String user,
+      {required bool backgroundAllowed, required int generation}) async {
     if (!supported) return;
     await initialize();
     await _locked(() async {
+      if (generation != _sessionGeneration) return;
       final account = accountKey(server, user);
       final previous = await _storage.read(key: 'school-notification-active');
       if (previous != account) await _native.cancelAll();
       await _storage.write(key: 'school-notification-active', value: account);
+      // A session token also rejects late responses after A -> B -> A or logout
+      // followed by another login to the same account, across Flutter engines.
+      await _storage.write(
+          key: 'school-notification-session',
+          value: notificationDigest(Hive.generateSecureKey()));
       await _storage.write(
           key: 'school-notification-background', value: '$backgroundAllowed');
       await _prepareBackgroundCredentials();
-    });
-    await schedule();
+    }, label: 'activate', history: false);
+    if (generation == _sessionGeneration) await schedule();
   }
 
   /// Caller holds the account lock. Upgrade only after notification consent,
@@ -434,14 +497,24 @@ class SchoolNotificationService extends ChangeNotifier
   }
 
   Future<void> deactivate() async {
-    if (!supported || !_initialized) return;
+    ++_sessionGeneration;
+    if (!supported) return;
     await _locked(() async {
       await _storage.delete(key: 'school-notification-active');
+      await _storage.delete(key: 'school-notification-session');
       await _native.cancelAll();
       pendingDestination = null;
-    });
-    if (mobileBackgroundSupported) {
-      await Workmanager().cancelByUniqueName(schoolNotificationTask);
+    }, label: 'deactivate', history: false);
+    if (mobileBackgroundSupported && _initialized) {
+      try {
+        await Workmanager().cancelByUniqueName(schoolNotificationTask);
+      } catch (error) {
+        // The account is already revoked. An unavailable scheduler must not
+        // undo that barrier or prevent logout; later workers recheck storage.
+        backgroundAvailable = false;
+        runtimeTrace('SchoolNotifications', 'cancel-schedule-failed',
+            detail: 'type=${error.runtimeType}');
+      }
     }
   }
 
@@ -481,14 +554,18 @@ class SchoolNotificationService extends ChangeNotifier
   }
 
   Future<void> ingest(String server, String user, List data) async {
-    if (!supported || !_initialized) return;
+    if (!supported) return;
+    final generation = _sessionGeneration;
+    await _activation;
+    if (!_initialized || generation != _sessionGeneration) return;
     await _locked(() async {
       final account = accountKey(server, user);
-      if (await _storage.read(key: 'school-notification-active') != account) {
+      if (generation != _sessionGeneration ||
+          await _storage.read(key: 'school-notification-active') != account) {
         return;
       }
       await _ingest(account, data);
-    });
+    }, label: 'ingest');
   }
 
   Future<void> _ingest(String account, List data) async {
@@ -558,17 +635,27 @@ class SchoolNotificationService extends ChangeNotifier
   /// Uses the existing encrypted saved-login record, without copying credentials
   /// into task arguments or keeping cookies on disk. This client never opens UI,
   /// refreshes sessions indefinitely, follows redirects or handles 2FA prompts.
-  Future<void> backgroundSync() async {
+  Future<void> backgroundSync() {
+    final pending = _backgroundWork;
+    if (pending != null) return pending;
+    final future = _backgroundSync().whenComplete(() => _backgroundWork = null);
+    _backgroundWork = future;
+    return future;
+  }
+
+  Future<void> _backgroundSync() async {
     if (!mobileBackgroundSupported) return;
-    await _locked(() async {
-      if (!await _hasPermission()) return;
+    // Capture the request under a short storage lock. No network operation may
+    // run inside that lock: a slow worker must never stall a foreground engine.
+    final request = await _locked<_BackgroundNotificationRequest?>(() async {
+      if (!await _hasPermission()) return null;
       await _loadPreferences();
-      if (!preferences.grades && !preferences.messages) return;
+      if (!preferences.grades && !preferences.messages) return null;
       final account = await _storage.read(key: 'school-notification-active');
       if (account == null ||
           await _storage.read(key: 'school-notification-background') !=
               'true') {
-        return;
+        return null;
       }
       final last = DateTime.tryParse(
           await _storage.read(key: 'school-notification-last-sync-$account') ??
@@ -576,65 +663,125 @@ class SchoolNotificationService extends ChangeNotifier
       if (last != null &&
           DateTime.now().toUtc().difference(last) <
               const Duration(minutes: 2)) {
-        return;
+        return null;
       }
       final foregroundUntil = DateTime.tryParse(
           await _storage.read(key: 'school-notification-foreground-until') ??
               '');
       if (foregroundUntil != null &&
           foregroundUntil.isAfter(DateTime.now().toUtc())) {
-        return;
+        return null;
       }
       final raw = await _storage.read(key: 'login');
-      if (raw == null) return;
+      if (raw == null) return null;
       final login = jsonDecode(raw) as Map;
       final server = login['url'] as String?;
       final user = login['user'] as String?;
+      final password = login['pass'];
       if (server == null ||
           user == null ||
-          login['pass'] == null ||
+          password is! String ||
           accountKey(server, user) != account ||
           user == 'demo' ||
           user == 'debug') {
-        return;
+        return null;
       }
       final uri = Uri.tryParse(server);
-      if (uri == null || uri.scheme != 'https' || uri.host.isEmpty) return;
-      final dio = _httpClient(BaseOptions(
-          baseUrl: '${server.replaceAll(RegExp(r'/+$'), '')}/v2/',
-          connectTimeout: const Duration(seconds: 8),
-          receiveTimeout: const Duration(seconds: 8),
-          sendTimeout: const Duration(seconds: 8),
-          followRedirects: false));
-      dio.interceptors.add(CookieManager(CookieJar()));
-      final cancellation = CancelToken();
-      final deadline = Timer(const Duration(seconds: 20),
-          () => cancellation.cancel('Background refresh deadline'));
-      try {
-        final result = (await dio.post<dynamic>('api/auth/login',
-                data: {
-                  'username': user,
-                  'password': login['pass'],
-                },
-                cancelToken: cancellation))
-            .data;
-        final auth = result is String ? jsonDecode(result) : result;
-        if (auth is! Map ||
-            (auth['loggedIn'] != true && auth['loggedIn'] != 1)) {
+      if (uri == null || uri.scheme != 'https' || uri.host.isEmpty) return null;
+      return _BackgroundNotificationRequest(
+          account: account,
+          session: await _storage.read(key: 'school-notification-session'),
+          rawLogin: raw,
+          server: server,
+          user: user,
+          password: password);
+    }, label: 'background-prepare', history: false);
+    if (request == null) {
+      runtimeTrace('SchoolNotifications', 'background-skipped');
+      return;
+    }
+    final networkTimer = Stopwatch()..start();
+    runtimeTrace('SchoolNotifications', 'background-network-start');
+    final dio = _httpClient(BaseOptions(
+        baseUrl: '${request.server.replaceAll(RegExp(r'/+$'), '')}/v2/',
+        connectTimeout: const Duration(seconds: 8),
+        receiveTimeout: const Duration(seconds: 8),
+        sendTimeout: const Duration(seconds: 8),
+        followRedirects: false));
+    dio.interceptors.add(CookieManager(CookieJar()));
+    final cancellation = CancelToken();
+    final deadline = Timer(const Duration(seconds: 20),
+        () => cancellation.cancel('Background refresh deadline'));
+    try {
+      final result = (await dio.post<dynamic>('api/auth/login',
+              data: {
+                'username': request.user,
+                'password': request.password,
+              },
+              cancelToken: cancellation))
+          .data;
+      final auth = result is String ? jsonDecode(result) : result;
+      if (auth is! Map || (auth['loggedIn'] != true && auth['loggedIn'] != 1)) {
+        return;
+      }
+      final response = (await dio.post<dynamic>('api/notification/unread',
+              data: <String, Object?>{}, cancelToken: cancellation))
+          .data;
+      final data = response is String ? jsonDecode(response) : response;
+      if (data is! List) {
+        throw const FormatException('Invalid school notification feed');
+      }
+      runtimeTrace('SchoolNotifications', 'background-response-received',
+          durationMs: networkTimer.elapsedMilliseconds);
+      // Everything mutable is checked again while holding the commit lock.
+      // Another account, foreground refresh, permission change or logout may
+      // have superseded this request while it was waiting for the network.
+      await _locked(() async {
+        final last = DateTime.tryParse(await _storage.read(
+                key: 'school-notification-last-sync-${request.account}') ??
+            '');
+        final foreground = DateTime.tryParse(
+            await _storage.read(key: 'school-notification-foreground-until') ??
+                '');
+        if (await _storage.read(key: 'school-notification-active') !=
+                request.account ||
+            await _storage.read(key: 'school-notification-session') !=
+                request.session ||
+            await _storage.read(key: 'school-notification-background') !=
+                'true' ||
+            await _storage.read(key: 'login') != request.rawLogin ||
+            !await _hasPermission() ||
+            (foreground != null &&
+                foreground.isAfter(DateTime.now().toUtc())) ||
+            (last != null &&
+                DateTime.now().toUtc().difference(last) <
+                    const Duration(minutes: 2))) {
+          runtimeTrace('SchoolNotifications', 'background-response-discarded');
           return;
         }
-        final response = (await dio.post<dynamic>('api/notification/unread',
-                data: <String, Object?>{}, cancelToken: cancellation))
-            .data;
-        final data = response is String ? jsonDecode(response) : response;
-        if (data is! List) {
-          throw const FormatException('Invalid school notification feed');
-        }
-        await _ingest(account, data);
-      } finally {
-        deadline.cancel();
-        dio.close(force: true);
-      }
-    });
+        await _ingest(request.account, data);
+      }, label: 'background-commit');
+    } finally {
+      deadline.cancel();
+      dio.close(force: true);
+      runtimeTrace('SchoolNotifications', 'background-end',
+          durationMs: networkTimer.elapsedMilliseconds);
+    }
   }
+}
+
+class _BackgroundNotificationRequest {
+  const _BackgroundNotificationRequest(
+      {required this.account,
+      required this.session,
+      required this.rawLogin,
+      required this.server,
+      required this.user,
+      required this.password});
+  final String account;
+  final String? session;
+  final String rawLogin;
+  final String server;
+  final String user;
+  final String password;
 }

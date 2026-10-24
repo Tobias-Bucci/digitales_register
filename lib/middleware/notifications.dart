@@ -50,8 +50,10 @@ Future<void> _loadNotifications(
         server == wrapper.url &&
         user == wrapper.user) {
       if (server != null && user != null && !source.demoMode) {
-        await schoolNotificationOperation(
-            () => schoolNotifications.ingest(server, user, data as List));
+        // Persisted claims still serialize inside the service, including any
+        // pending activation. Rendering the feed must not wait for that work.
+        unawaited(schoolNotificationOperation(
+            () => schoolNotifications.ingest(server, user, data as List)));
       }
       await api.actions.notificationsActions.loaded(data as List);
       _markRuntimeCacheFresh(_notificationsCacheKey);

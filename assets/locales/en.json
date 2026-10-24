@@ -713,7 +713,7 @@
   "grades.forecast": "Average forecast",
   "grades.forecast.info": "About the average forecast",
   "grades.forecast.value": "approx. {value}",
-  "grades.forecast.body": "The forecast is a statistical estimate. Valid weighted grades are evaluated chronologically. A linear trend of cumulative averages is extended to the end of the school year. At least four grades on three days are needed. New grades can change the result.",
+  "grades.forecast.body": "The forecast is a statistical estimate, not an official report-card grade. It estimates future performance from your weighted grades, giving more influence to recent grades (30-day half-life). Assuming the same assessment frequency, these are combined with grades already earned through the end of the school year. All subjects count equally. Cancelled grades, grades with no weight and excluded subjects do not count. At least four grades on three days are needed. New grades can change the result.",
   "grades.statistics": "Grade statistics",
   "grades.statistics.subtitle": "Compare your subject averages",
   "grades.statistics.explanation": "Explanation",

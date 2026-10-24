@@ -44,6 +44,7 @@ import 'package:dr/i18n/app_language.dart';
 import 'package:dr/i18n/app_localizations.dart';
 import 'package:dr/middleware/middleware.dart';
 import 'package:dr/reducer/reducer.dart';
+import 'package:dr/runtime_trace.dart';
 import 'package:dr/school_notification_engine.dart';
 import 'package:dr/school_notification_service.dart';
 import 'package:dr/settings_persistence_service.dart';
@@ -189,8 +190,18 @@ Future<void> _initializeAfterFirstFrame({
       await store.actions.routingActions.showMessages();
     }
   };
-  await schoolNotificationOperation(() => schoolNotifications.initialize());
+  // Notification storage/OS scheduling is optional and can be busy in another
+  // Flutter engine. It must not hold the splash screen or automatic login.
+  unawaited(schoolNotificationOperation(() async {
+    await schoolNotifications.initialize();
+    await schoolNotifications.onTap?.call();
+  }));
+  final loginTimer = Stopwatch()..start();
+  runtimeTrace('AppStartup', 'login-start',
+      detail: 'startupMs=${startupStopwatch.elapsedMilliseconds}');
   await store.actions.start(uri);
+  runtimeTrace('AppStartup', 'login-end',
+      durationMs: loginTimer.elapsedMilliseconds);
 
   WidgetsBinding.instance.addObserver(
     LifecycleObserver(
@@ -401,6 +412,8 @@ class RegisterApp extends StatelessWidget {
 class LifecycleObserver with WidgetsBindingObserver {
   final VoidCallback onForeground;
   final VoidCallback onBackground;
+  Future<void>? _resumeInFlight;
+  bool _foreground = false;
 
   LifecycleObserver(this.onForeground, this.onBackground);
   @override
@@ -413,11 +426,14 @@ class LifecycleObserver with WidgetsBindingObserver {
                 ? 'background'
                 : state.name);
     if (state == AppLifecycleState.resumed) {
-      unawaited(_handleResumed());
+      _foreground = true;
+      _resumeInFlight ??=
+          _handleResumed().whenComplete(() => _resumeInFlight = null);
     }
     if (state == AppLifecycleState.hidden ||
         state == AppLifecycleState.paused ||
         state == AppLifecycleState.detached) {
+      _foreground = false;
       biometricAppLockController.lock();
       pauseNetworkRequests();
       onBackground();
@@ -425,10 +441,21 @@ class LifecycleObserver with WidgetsBindingObserver {
   }
 
   Future<void> _handleResumed() async {
+    final timer = Stopwatch()..start();
+    // Resume existing requests even when the user later retries the prompt
+    // using the overlay button (which does not emit a new lifecycle event).
     resumeNetworkRequests();
-    await biometricAppLockController.authenticateIfNeeded();
+    runtimeTrace('AppStartup', 'resume-auth-start');
+    final authenticated =
+        await biometricAppLockController.authenticateIfNeeded();
+    runtimeTrace('AppStartup', 'resume-auth-end',
+        durationMs: timer.elapsedMilliseconds,
+        detail: 'authenticated=$authenticated');
+    if (!authenticated || !_foreground) return;
     await AnalyticsService.logCustomEvent("app_opened");
     onForeground();
+    runtimeTrace('AppStartup', 'resume-refresh-dispatched',
+        durationMs: timer.elapsedMilliseconds);
   }
 }
 

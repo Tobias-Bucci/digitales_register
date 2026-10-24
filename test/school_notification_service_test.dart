@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:convert';
 import 'dart:io';
 import 'dart:typed_data';
@@ -56,14 +57,24 @@ class _MobileService extends SchoolNotificationService {
 }
 
 class _SchoolApi implements HttpClientAdapter {
-  _SchoolApi(this.events, {this.authenticated = true});
+  _SchoolApi(this.events,
+      {this.authenticated = true,
+      this.responseGate,
+      this.blockedPath = 'api/notification/unread'});
   final List<Map<String, Object?>> events;
   final bool authenticated;
+  final Completer<void>? responseGate;
+  final String blockedPath;
+  final blocked = Completer<void>();
   final requests = <RequestOptions>[];
   @override
   Future<ResponseBody> fetch(RequestOptions options,
       Stream<Uint8List>? requestStream, Future<void>? cancelFuture) async {
     requests.add(options);
+    if (responseGate != null && options.path == blockedPath) {
+      if (!blocked.isCompleted) blocked.complete();
+      await responseGate!.future;
+    }
     return ResponseBody.fromString(
         jsonEncode(options.path == 'api/auth/login'
             ? {'loggedIn': authenticated}
@@ -99,6 +110,8 @@ void main() {
         await Directory.systemTemp.createTemp('dr_school_notifications_');
     storage = TestSecureStorage();
     native = _Notifications();
+    when(() => native.getNotificationAppLaunchDetails())
+        .thenAnswer((_) async => null);
     shown.clear();
     when(() => native.initialize(
             settings: any(named: 'settings'),
@@ -371,6 +384,134 @@ void main() {
     await service.ingest(server, user, [event(1)]);
     await service.ingest(server, user, [event(1)]);
     expect(shown, hasLength(1));
+  });
+
+  for (final blockedPath in ['api/auth/login', 'api/notification/unread']) {
+    for (final change in [
+      'none',
+      'logout',
+      'switch-back',
+      'credentials',
+      'foreground',
+      'permission',
+      'background-disabled',
+      'category',
+      'foreground-sync'
+    ]) {
+      test('slow $blockedPath releases storage lock and rechecks $change',
+          () async {
+        service.dispose();
+        final gate = Completer<void>();
+        final api = _SchoolApi([event(1)],
+            responseGate: gate, blockedPath: blockedPath);
+        var permitted = true;
+        service = _MobileService(
+            native: native,
+            storage: storage,
+            permission: () async => permitted,
+            database: () async => _Database(),
+            historyDirectory: () async => directory,
+            httpClient: (options) => Dio(options)..httpClientAdapter = api);
+        await service.initialize(background: true);
+        await service.activate(server, user, backgroundAllowed: true);
+        await service.ingest(server, user, []);
+        final account = service.accountKey(server, user);
+        storage.storage['login'] = jsonEncode(
+            {'url': server, 'user': user, 'pass': 'test-only-password'});
+        storage.storage.remove('school-notification-last-sync-$account');
+        final work = service.backgroundSync();
+        try {
+          await api.blocked.future.timeout(const Duration(seconds: 2));
+          expect(identical(work, service.backgroundSync()), isTrue,
+              reason: 'overlapping calls share the in-flight request');
+          // This would time out with the old implementation, even though
+          // permission/history work has no dependency on the server response.
+          await service.reload().timeout(const Duration(seconds: 2));
+          switch (change) {
+            case 'logout':
+              await service.deactivate();
+            case 'switch-back':
+              await service.activate('https://other.example', user,
+                  backgroundAllowed: true);
+              await service.activate(server, user, backgroundAllowed: true);
+            case 'credentials':
+              storage.storage['login'] = jsonEncode(
+                  {'url': server, 'user': user, 'pass': 'new-test-password'});
+            case 'foreground':
+              service.didChangeAppLifecycleState(AppLifecycleState.resumed);
+              await service.reload();
+            case 'permission':
+              permitted = false;
+            case 'background-disabled':
+              await service.activate(server, user, backgroundAllowed: false);
+            case 'category':
+              await service.setCategory(
+                  SchoolNotificationCategory.grade, false);
+            case 'foreground-sync':
+              await service.ingest(server, user, []);
+            case 'none':
+              break;
+          }
+        } finally {
+          gate.complete();
+          await work;
+        }
+        expect(shown, hasLength(change == 'none' ? 1 : 0));
+        if (change == 'none') {
+          await service.ingest(server, user, [event(1)]);
+          expect(shown, hasLength(1), reason: 'commit claims remain durable');
+        }
+      });
+    }
+  }
+
+  test('overlapping initialization runs native setup only once', () async {
+    service.dispose();
+    final gate = Completer<bool?>();
+    when(() => native.initialize(
+            settings: any(named: 'settings'),
+            onDidReceiveNotificationResponse:
+                any(named: 'onDidReceiveNotificationResponse')))
+        .thenAnswer((_) => gate.future);
+    service = SchoolNotificationService(
+        native: native,
+        storage: storage,
+        permission: () async => true,
+        historyDirectory: () async => directory);
+    clearInteractions(native);
+    final first = service.initialize(background: true);
+    final second = service.initialize(background: true);
+    expect(identical(first, second), isTrue);
+    gate.complete(true);
+    await Future.wait([first, second]);
+    verify(() => native.initialize(
+        settings: any(named: 'settings'),
+        onDidReceiveNotificationResponse:
+            any(named: 'onDidReceiveNotificationResponse'))).called(1);
+  });
+
+  test('logout invalidates activation still waiting for initialization',
+      () async {
+    service.dispose();
+    final gate = Completer<bool?>();
+    when(() => native.initialize(
+            settings: any(named: 'settings'),
+            onDidReceiveNotificationResponse:
+                any(named: 'onDidReceiveNotificationResponse')))
+        .thenAnswer((_) => gate.future);
+    service = SchoolNotificationService(
+        native: native,
+        storage: storage,
+        permission: () async => true,
+        historyDirectory: () async => directory);
+    final activation = service.activate(server, user, backgroundAllowed: true);
+    await service.deactivate();
+    gate.complete(true);
+    await activation;
+    expect(storage.storage['school-notification-active'], isNull);
+    expect(storage.storage['school-notification-session'], isNull);
+    await service.ingest(server, user, [event(1)]);
+    expect(shown, isEmpty);
   });
 
   test('cold launch queues destination and warm tap invokes routing handler',

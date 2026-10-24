@@ -1,7 +1,10 @@
+import 'dart:math' as math;
+
 import 'package:dr/app_clock.dart';
 import 'package:dr/app_state.dart';
 import 'package:dr/calendar_date.dart';
 import 'package:dr/data.dart';
+import 'package:dr/grade_average.dart';
 
 enum GradeForecastTrend { rising, falling, stable }
 
@@ -29,9 +32,11 @@ class GradeForecast {
   bool get isReliable => gradeCount >= 4 && distinctDates >= 3;
 }
 
-/// Calculates a forecast from cumulative, weighted averages over time.
-/// Several grades on one day are combined into one observation, so that a
-/// test-heavy day does not get extra influence merely because it has entries.
+/// Estimates each subject's future grades from its recency-weighted results
+/// (30-day half-life), then combines them with grades already earned at the
+/// observed assessment rate. Subjects contribute equally to the overall mean.
+/// This keeps predictions within demonstrated performance instead of extending
+/// a short cumulative-average slope unboundedly across the school year.
 GradeForecast? calculateGradeForecast({
   required Iterable<Subject> subjects,
   required Semester semester,
@@ -46,63 +51,63 @@ GradeForecast? calculateGradeForecast({
   final end = schoolYearEnd ??
       (appClock.isDemoMode ? AppClock.demoSchoolYearEnd : _schoolYearEnd(asOf));
   final ignored = ignoredSubjects.map((s) => s.toLowerCase()).toSet();
-  final grades = <GradeAll>[];
+  final subjectGrades = <List<GradeAll>>[];
   for (final subject in subjects) {
     if (ignored.contains(subject.name.toLowerCase())) continue;
+    final grades = <GradeAll>[];
     for (final grade in subject.basicGrades(semester) ?? const <GradeAll>[]) {
       if (grade.grade != null &&
           !grade.cancelled &&
+          grade.weightPercentage > 0 &&
           !calendarDate(grade.date).isBefore(calendarDate(schoolYearStart)) &&
           !calendarDate(grade.date).isAfter(asOf)) {
         grades.add(grade);
       }
     }
+    if (grades.isNotEmpty) {
+      grades
+          .sort((a, b) => calendarDate(a.date).compareTo(calendarDate(b.date)));
+      subjectGrades.add(grades);
+    }
   }
+  final grades = subjectGrades.expand((grades) => grades).toList();
   if (grades.isEmpty) return null;
-  grades.sort((a, b) => calendarDate(a.date).compareTo(calendarDate(b.date)));
-
-  final byDay = <DateTime, List<GradeAll>>{};
-  for (final grade in grades) {
-    final day = calendarDate(grade.date);
-    byDay.putIfAbsent(day, () => <GradeAll>[]).add(grade);
-  }
+  final byDay = grades.map((grade) => calendarDate(grade.date)).toSet();
   if (grades.length < 4 || byDay.length < 3) return null;
 
-  final observations = <_Observation>[];
-  var sum = 0;
-  var weight = 0;
-  for (final entry in byDay.entries) {
-    for (final grade in entry.value) {
-      final gradeWeight =
-          grade.weightPercentage > 0 ? grade.weightPercentage : 1;
-      sum += grade.grade! * gradeWeight;
-      weight += gradeWeight;
+  final remainingDays = math.max(0, calendarDaysBetween(end, asOf));
+  var currentTotal = 0.0;
+  var predictedTotal = 0.0;
+  for (final grades in subjectGrades) {
+    var sum = 0;
+    var weight = 0;
+    var recentSum = 0.0;
+    var recentWeight = 0.0;
+    for (final grade in grades) {
+      sum += grade.grade! * grade.weightPercentage;
+      weight += grade.weightPercentage;
+      final age = calendarDaysBetween(grades.last.date, grade.date);
+      final recencyWeight = grade.weightPercentage * math.pow(0.5, age / 30);
+      recentSum += grade.grade! * recencyWeight;
+      recentWeight += recencyWeight;
     }
-    observations.add(_Observation(
-      entry.key,
-      sum / weight,
-    ));
+    final current = roundedGradeAverage(sum, weight)!.toDouble();
+    currentTotal += current;
+    if (remainingDays == 0) {
+      predictedTotal += current;
+      continue;
+    }
+    final observedDays = calendarDaysBetween(asOf, grades.first.date) + 1;
+    final futureWeight = weight * remainingDays / observedDays;
+    predictedTotal += (sum + futureWeight * (recentSum / recentWeight)) /
+        (weight + futureWeight);
   }
-  final first = observations.first.date;
-  final xs = observations
-      .map((o) => o.date.difference(first).inDays.toDouble())
-      .toList();
-  final ys = observations.map((o) => o.average).toList();
-  final xMean = xs.reduce((a, b) => a + b) / xs.length;
-  final yMean = ys.reduce((a, b) => a + b) / ys.length;
-  var numerator = 0.0;
-  var denominator = 0.0;
-  for (var i = 0; i < xs.length; i++) {
-    numerator += (xs[i] - xMean) * (ys[i] - yMean);
-    denominator += (xs[i] - xMean) * (xs[i] - xMean);
-  }
-  if (denominator == 0) return null;
-  final slope = numerator / denominator;
-  final intercept = yMean - slope * xMean;
-  final endX = calendarDaysBetween(end, first).toDouble();
-  final prediction = (intercept + slope * endX).clamp(100.0, 1000.0);
+  final current = currentTotal / subjectGrades.length;
+  final prediction = predictedTotal / subjectGrades.length;
+  final slope =
+      remainingDays == 0 ? 0.0 : (prediction - current) / remainingDays;
   return GradeForecast(
-    currentAverage: sum / weight,
+    currentAverage: current,
     predictedAverage: prediction,
     trend: slope > 0.002
         ? GradeForecastTrend.rising
@@ -115,12 +120,6 @@ GradeForecast? calculateGradeForecast({
     asOf: asOf,
     schoolYearEnd: end,
   );
-}
-
-class _Observation {
-  const _Observation(this.date, this.average);
-  final DateTime date;
-  final double average;
 }
 
 DateTime _schoolYearEnd(DateTime date) => date.month >= 8

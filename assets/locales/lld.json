@@ -713,7 +713,7 @@
   "grades.forecast": "Previsiun dla media",
   "grades.forecast.info": "Informaziuns sön la previsiun dla media",
   "grades.forecast.value": "incër {value}",
-  "grades.forecast.body": "La previsiun é na stima statistica. Les notes valides cun pes vëgn valutades tl ordin dl tëmp. Le trend linear dles medies cumulades vëgn slungé fina ala fin dl ann de scora. Al mëss ester almanco cater notes te trëi dis. Notes nöies po mudé le resultat.",
+  "grades.forecast.body": "La previsiun é na stima statistica y nia na nota ofiziala de pagela. I resultac da gnì vëgn stimá cun les notes cun pes; les notes plü nöies cunta de plü (le pes dl tëmp se smënza vigni 30 dis). Cun la medema frequënza de valutaziun vëgn i resultac da gnì combiná cun les notes bele ciafades fina ala fin dl ann de scora. Dutes les materies cunta anfat. Notes anulades, notes zënza pes y materies escludüdes ne cunta nia. Al mëss ester almanco cater notes te trëi dis. Notes nöies po mudé le resultat.",
   "grades.statistics": "Statistiches dles notes",
   "grades.statistics.subtitle": "Confronta tües medies dles materies",
   "grades.statistics.explanation": "Spiegaziun",

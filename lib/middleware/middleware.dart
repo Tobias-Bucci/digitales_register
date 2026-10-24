@@ -1214,11 +1214,11 @@ Future<void> _loggedIn(
   if (!action.payload.offlineOnly &&
       !wrapper.demoMode &&
       wrapper.user != null) {
-    await schoolNotificationOperation(() => schoolNotifications.activate(
+    unawaited(schoolNotificationOperation(() => schoolNotifications.activate(
           wrapper.url!,
           wrapper.user!,
           backgroundAllowed: !api.state.settingsState.noPasswordSaving,
-        ));
+        )));
   }
   for (final callback in api.state.loginState.callAfterLogin) {
     callback();
@@ -1377,14 +1377,20 @@ Future<void> _restarted(
   Action<void> action,
 ) async {
   await next(action);
-  await schoolNotificationOperation(() async {
+  final source = wrapper;
+  final server = source.url;
+  final user = source.user;
+  unawaited(schoolNotificationOperation(() async {
     await schoolNotifications.reload();
-    if (api.state.loginState.loggedIn) {
+    if (api.state.loginState.loggedIn &&
+        identical(source, wrapper) &&
+        server == wrapper.url &&
+        user == wrapper.user) {
       await api.actions.notificationsActions.load();
       await schoolNotifications.schedule();
       await schoolNotifications.onTap?.call();
     }
-  });
+  }));
   if (api.state.loginState.loggedIn &&
       DateTime.now().difference(wrapper.lastInteraction).inMinutes > 3) {
     wrapper.interaction();
