@@ -1,4 +1,8 @@
 {
+  "dashboard.recentGrade.title": "Ultimo voto",
+  "dashboard.nextAssessment.title": "Prossima verifica",
+  "dashboard.grades.empty": "Nessun voto disponibile",
+  "dashboard.grades.open": "Apri i voti per caricare i dati",
   "schoolNotifications.grade.title": "Nuovo voto",
   "schoolNotifications.grade.body": "È disponibile un nuovo voto nel registro scolastico.",
   "schoolNotifications.message.title": "Nuovo messaggio scolastico",

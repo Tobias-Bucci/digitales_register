@@ -199,10 +199,10 @@ void main() {
       };
       for (var index = 0; index < sizes.length; index++) {
         final size = sizes[index];
-        // The fourth automatic card fills the remaining row.
+        // The final automatic card fills the remaining row.
         expect(
             size.width,
-            mode == DashboardItemWidth.automatic && index == 3
+            mode == DashboardItemWidth.automatic && index == ids.length - 1
                 ? 800.0
                 : expectedWidth);
         previousHeight ??= size.height;
