@@ -25,19 +25,21 @@ class DashboardWidgetProvider : AppWidgetProvider() {
             val snapshot = DigitalesRegisterWidgetSnapshotStore.load(context)
             for (appWidgetId in appWidgetIds) {
                 val views = RemoteViews(context.packageName, R.layout.widget_collection).apply {
+                    setImageViewResource(R.id.widget_icon, R.drawable.ic_widget_dashboard)
                     setTextViewText(
                         R.id.widget_title,
                         snapshot?.dashboard?.title ?: context.getString(R.string.widget_dashboard_title),
                     )
                     setTextViewText(
                         R.id.widget_subtitle,
-                        snapshot?.dashboard?.subtitle ?: context.getString(R.string.widget_dashboard_subtitle),
+                        if (snapshot?.isReady() == true && snapshot.planningIsCurrent()) snapshot.dashboard.subtitle else "",
                     )
                     setTextViewText(
                         R.id.widget_empty,
                         when {
                             snapshot == null -> context.getString(R.string.widget_state_open_app)
                             !snapshot.isReady() -> snapshot.statusMessage(context)
+                            !snapshot.planningIsCurrent() -> context.getString(R.string.widget_state_outdated)
                             else -> snapshot.dashboard.emptyMessage
                         },
                     )
@@ -63,6 +65,7 @@ class DashboardWidgetProvider : AppWidgetProvider() {
                 }
                 appWidgetManager.updateAppWidget(appWidgetId, views)
             }
+            appWidgetManager.notifyAppWidgetViewDataChanged(appWidgetIds, R.id.widget_list)
         }
     }
 }

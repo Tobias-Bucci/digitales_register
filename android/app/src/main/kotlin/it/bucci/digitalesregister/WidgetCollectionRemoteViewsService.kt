@@ -31,10 +31,18 @@ private class WidgetCollectionRemoteViewsFactory(
 
     override fun onDestroy() = Unit
 
+    private fun isPlanning(): Boolean = widgetKind == DigitalesRegisterWidgetContract.WIDGET_KIND_SCHOOL_BAG ||
+        widgetKind == DigitalesRegisterWidgetContract.WIDGET_KIND_PREPARATION
+
     override fun getCount(): Int {
+        snapshot = DigitalesRegisterWidgetSnapshotStore.load(context)
         val current = snapshot
         if (current == null || !current.isReady()) {
             return 0
+        }
+        if (widgetKind != DigitalesRegisterWidgetContract.WIDGET_KIND_GRADES && !current.planningIsCurrent()) return 0
+        if (isPlanning()) {
+            return if (current.planningIsCurrent()) current.planningSection(widgetKind).items.size else 0
         }
         return when (widgetKind) {
             DigitalesRegisterWidgetContract.WIDGET_KIND_GRADES -> current.grades.subjects.size
@@ -44,18 +52,20 @@ private class WidgetCollectionRemoteViewsFactory(
     }
 
     override fun getViewAt(position: Int): RemoteViews {
-        val views = RemoteViews(context.packageName, R.layout.widget_list_item)
+        val views = RemoteViews(context.packageName,
+            if (widgetKind == DigitalesRegisterWidgetContract.WIDGET_KIND_GRADES)
+                R.layout.widget_grade_item else R.layout.widget_list_item)
         val current = snapshot
-        if (current == null || !current.isReady()) {
+        if (current == null || !current.isReady() || (widgetKind != DigitalesRegisterWidgetContract.WIDGET_KIND_GRADES && !current.planningIsCurrent())) {
             return views
         }
 
         when (widgetKind) {
             DigitalesRegisterWidgetContract.WIDGET_KIND_GRADES -> {
-                val item = current.grades.subjects[position]
+                val item = current.grades.subjects.getOrNull(position) ?: return views
                 views.setTextViewText(R.id.widget_item_primary, item.subject)
                 views.setTextViewText(R.id.widget_item_secondary, item.average)
-                views.setTextViewText(R.id.widget_item_meta, context.getString(R.string.widget_average_label))
+                views.setInt(R.id.widget_item_secondary, "setTextColor", widgetGradeTextColor(context, item.category))
                 views.setInt(
                     R.id.widget_item_primary,
                     "setTextColor",
@@ -64,10 +74,11 @@ private class WidgetCollectionRemoteViewsFactory(
             }
 
             DigitalesRegisterWidgetContract.WIDGET_KIND_TODAY -> {
-                val item = current.today.items[position]
-                views.setTextViewText(R.id.widget_item_primary, item.subject)
-                views.setTextViewText(R.id.widget_item_secondary, item.timeLabel)
+                val item = current.today.items.getOrNull(position) ?: return views
+                views.setTextViewText(R.id.widget_item_primary, item.timeLabel)
+                views.setTextViewText(R.id.widget_item_secondary, item.subject)
                 views.setTextViewText(R.id.widget_item_meta, item.roomLabel)
+                views.setViewVisibility(R.id.widget_item_meta, if (item.roomLabel.isBlank()) android.view.View.GONE else android.view.View.VISIBLE)
                 views.setInt(
                     R.id.widget_item_primary,
                     "setTextColor",
@@ -79,21 +90,17 @@ private class WidgetCollectionRemoteViewsFactory(
             }
 
             else -> {
-                val item = current.dashboard.items[position]
+                val items = if (isPlanning()) current.planningSection(widgetKind).items else current.dashboard.items
+                val item = items.getOrNull(position) ?: return views
                 views.setTextViewText(R.id.widget_item_primary, item.subject)
                 views.setTextViewText(R.id.widget_item_secondary, item.title)
-                val meta = buildString {
-                    append(item.dayLabel)
-                    if (item.trailing != null) {
-                        append("  •  ")
-                        append(item.trailing)
-                    }
-                    if (item.subtitle.isNotEmpty()) {
-                        append("  •  ")
-                        append(item.subtitle)
-                    }
-                }
+                val meta = listOfNotNull(
+                    item.dayLabel.takeIf { !isPlanning() && it.isNotBlank() },
+                    item.trailing?.takeIf { it.isNotBlank() },
+                    item.subtitle.takeIf { it.isNotBlank() },
+                ).joinToString(" · ")
                 views.setTextViewText(R.id.widget_item_meta, meta)
+                views.setViewVisibility(R.id.widget_item_meta, if (meta.isBlank()) android.view.View.GONE else android.view.View.VISIBLE)
                 views.setInt(
                     R.id.widget_item_primary,
                     "setTextColor",
@@ -131,5 +138,5 @@ private class WidgetCollectionRemoteViewsFactory(
 
     override fun getItemId(position: Int): Long = position.toLong()
 
-    override fun hasStableIds(): Boolean = true
+    override fun hasStableIds(): Boolean = false
 }

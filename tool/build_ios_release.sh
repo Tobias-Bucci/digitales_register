@@ -10,6 +10,8 @@ echo "Release source commit: $(git rev-parse HEAD)"
 echo "Codemagic counter (not used as CFBundleVersion): ${BUILD_NUMBER:-unset}"
 flutter --version
 pod --version
+python3 tool/prepare_ios_firebase.py
+python3 tool/check_ios_release.py
 
 # Explicit arguments take precedence over Codemagic's BUILD_NUMBER counter.
 read -r build_name build_number < <(python3 - <<'PY'

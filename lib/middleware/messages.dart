@@ -224,6 +224,16 @@ Future<void> _markAsRead(
   ActionHandler next,
   Action<int> action,
 ) async {
+  if (wrapper.user != null && wrapper.url != null && !wrapper.demoMode) {
+    await schoolNotificationOperation(
+        () => schoolNotifications.markViewed(wrapper.url!, wrapper.user!, [
+              <String, Object?>{
+                'type': 'message',
+                'objectId': action.payload,
+                'timeSent': DateTime.now().toIso8601String(),
+              }
+            ]));
+  }
   await next(action);
   _markRuntimeCacheStale(_messagesCacheKey);
   _markRuntimeCacheStale(_notificationsCacheKey);

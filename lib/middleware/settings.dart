@@ -44,10 +44,6 @@ final _substituteTeacherHistoryMutex = Mutex();
 final Set<String> _substituteTeacherHistoryAttemptedKeys = <String>{};
 final Set<String> _substituteTeacherHistoryLoadingKeys = <String>{};
 
-const int _initialSubstituteTeacherPastWeeks = 4;
-const int _initialSubstituteTeacherFutureWeeks = 8;
-const int _extendedSubstituteTeacherFutureWeeks = 20;
-
 Future<void> _updateSubjectThemes(
     MiddlewareApi<AppState, AppStateBuilder, AppActions> api,
     ActionHandler next,
@@ -289,6 +285,15 @@ String? _singleTeacher(Iterable<String> teachers) {
   return null;
 }
 
+void _startCalendarBackgroundLoad(
+    MiddlewareApi<AppState, AppStateBuilder, AppActions> api) {
+  unawaited(_ensureSubstituteTeacherHistoryLoaded(api)
+      .catchError((Object error, StackTrace stack) {
+    logCalendarLoad(CalendarLoadEvent.backgroundError);
+    diagnostics.report(error, stack, DiagnosticError.caught);
+  }));
+}
+
 Future<void> _ensureSubstituteTeacherHistoryLoaded(
   MiddlewareApi<AppState, AppStateBuilder, AppActions> api,
 ) async {
@@ -301,6 +306,11 @@ Future<void> _ensureSubstituteTeacherHistoryLoaded(
     return;
   }
   final sessionKey = _substituteTeacherHistorySessionKey(api.state);
+  final session = wrapper;
+  bool active() =>
+      identical(wrapper, session) &&
+      api.state.loginState.loggedIn &&
+      _substituteTeacherHistorySessionKey(api.state) == sessionKey;
   if (_substituteTeacherHistoryLoadingKeys.contains(sessionKey)) {
     return;
   }
@@ -309,6 +319,7 @@ Future<void> _ensureSubstituteTeacherHistoryLoaded(
     return;
   }
   await _substituteTeacherHistoryMutex.protect(() async {
+    if (!active()) return;
     if (_substituteTeacherHistoryLoadingKeys.contains(sessionKey)) {
       return;
     }
@@ -326,6 +337,7 @@ Future<void> _ensureSubstituteTeacherHistoryLoaded(
       // for the stable teacher baseline. Detection and substitute marking are
       // applied once, using the complete locally cached year.
       await _ensureSchoolYearCalendarLoaded(api);
+      if (!active()) return;
       if (api.state.calendarState.prefetchedSchoolYears.contains(schoolYear)) {
         if (shouldGenerateInitialSubjectNicks) {
           await _populateInitialSubjectNicks(api);
@@ -338,60 +350,8 @@ Future<void> _ensureSubstituteTeacherHistoryLoaded(
         return;
       }
 
-      final anchorMonday =
-          api.state.calendarState.currentMonday ?? toMonday(now);
-      await _loadCalendarWeeksAround(
-        api,
-        anchorMonday,
-        fromOffsetWeeks: -_initialSubstituteTeacherPastWeeks,
-        toOffsetWeeks: _initialSubstituteTeacherFutureWeeks,
-      );
-
-      if (_allKnownSubjectsHavePrimaryTeacher(api.state)) {
-        if (shouldGenerateInitialSubjectNicks) {
-          await _populateInitialSubjectNicks(api);
-        }
-        await _applyDetectedSubstituteTeacherSettings(api);
-        await api.actions.calendarActions.recalculateSubstitutes(
-          SubstituteDetectionConfig(
-            (b) => b
-              ..enabled = api.state.settingsState.substituteDetectionEnabled
-              ..primaryTeachers =
-                  api.state.settingsState.substitutePrimaryTeachers.toBuilder()
-              ..lockedSubjects = api
-                  .state.settingsState.substitutePrimaryTeachersLockedSubjects
-                  .toBuilder(),
-          ),
-        );
-        _substituteTeacherHistoryAttemptedKeys.add(sessionKey);
-        return;
-      }
-
-      await _loadCalendarWeeksAround(
-        api,
-        anchorMonday,
-        fromOffsetWeeks: _initialSubstituteTeacherFutureWeeks + 1,
-        toOffsetWeeks: _extendedSubstituteTeacherFutureWeeks,
-      );
-
-      if (shouldGenerateInitialSubjectNicks) {
-        await _populateInitialSubjectNicks(api);
-      }
-
-      await _applyDetectedSubstituteTeacherSettings(api);
-      await api.actions.calendarActions.recalculateSubstitutes(
-        SubstituteDetectionConfig(
-          (b) => b
-            ..enabled = api.state.settingsState.substituteDetectionEnabled
-            ..primaryTeachers =
-                api.state.settingsState.substitutePrimaryTeachers.toBuilder()
-            ..lockedSubjects = api
-                .state.settingsState.substitutePrimaryTeachersLockedSubjects
-                .toBuilder(),
-        ),
-      );
-
-      _substituteTeacherHistoryAttemptedKeys.add(sessionKey);
+      // A failed provider request must not trigger another 25 serial requests.
+      // Keep partial holiday data and retry on a later explicit refresh/open.
     } finally {
       _substituteTeacherHistoryLoadingKeys.remove(sessionKey);
     }
@@ -400,59 +360,6 @@ Future<void> _ensureSubstituteTeacherHistoryLoaded(
 
 String _substituteTeacherHistorySessionKey(AppState state) {
   return '${state.url ?? ''}|${state.loginState.username ?? ''}';
-}
-
-Future<void> _loadCalendarWeeksAround(
-  MiddlewareApi<AppState, AppStateBuilder, AppActions> api,
-  UtcDateTime anchorMonday, {
-  required int fromOffsetWeeks,
-  required int toOffsetWeeks,
-}) async {
-  final loadedMondays = {
-    for (final date in api.state.calendarState.days.keys) toMonday(date),
-  };
-  final formatter = DateFormat('yyyy-MM-dd');
-
-  for (var weekOffset = fromOffsetWeeks;
-      weekOffset <= toOffsetWeeks;
-      weekOffset++) {
-    final monday = anchorMonday.add(Duration(days: weekOffset * 7));
-    final normalizedMonday = UtcDateTime(
-      monday.year,
-      monday.month,
-      monday.day,
-    );
-    if (loadedMondays.contains(normalizedMonday)) {
-      continue;
-    }
-    dynamic data;
-    try {
-      data = await wrapper.send(
-        'api/calendar/student',
-        args: {'startDate': formatter.format(normalizedMonday)},
-      );
-    } catch (_) {
-      continue;
-    }
-    if (data is! Map<String, dynamic>) {
-      continue;
-    }
-    await api.actions.calendarActions.loaded(
-      CalendarLoadedPayload(
-        data: data,
-        config: SubstituteDetectionConfig(
-          (b) => b
-            ..enabled = api.state.settingsState.substituteDetectionEnabled
-            ..primaryTeachers =
-                api.state.settingsState.substitutePrimaryTeachers.toBuilder()
-            ..lockedSubjects = api
-                .state.settingsState.substitutePrimaryTeachersLockedSubjects
-                .toBuilder(),
-        ),
-      ),
-    );
-    loadedMondays.add(normalizedMonday);
-  }
 }
 
 Future<void> _populateInitialSubjectNicks(

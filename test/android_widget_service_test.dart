@@ -11,6 +11,12 @@ import 'support/fixtures.dart';
 
 class RecordingWidgetBridge extends AndroidWidgetPlatformBridge {
   final snapshots = <String?>[];
+  final planningSnapshots = <String?>[];
+  @override
+  Future<void> writePlanningSnapshot(String? payload) async {
+    planningSnapshots.add(payload);
+  }
+
   @override
   Future<void> refreshWidgets() async {
     snapshots.add((await SharedPreferences.getInstance())
@@ -38,6 +44,27 @@ void main() {
     await service.clear();
     expect(bridge.snapshots, hasLength(3));
     expect(bridge.snapshots.skip(1), everyElement(isNull));
+    expect(bridge.planningSnapshots.skip(1), everyElement(isNull));
+  });
+
+  test('privacy changes cancel pending content without waiting for debounce',
+      () async {
+    final bridge = RecordingWidgetBridge();
+    final service = AndroidWidgetSnapshotService(
+      bridge: bridge,
+      debounce: const Duration(days: 1),
+    );
+    service.scheduleSync(loggedIn);
+    service.scheduleSync(loggedIn
+        .rebuild((b) => b.settingsState.biometricAppLockEnabled = true));
+    // A subsequent flush waits behind the immediate redaction operation.
+    await service.flush(
+        state: loggedIn
+            .rebuild((b) => b.settingsState.biometricAppLockEnabled = true));
+    expect(bridge.snapshots, hasLength(1));
+    expect(jsonDecode(bridge.snapshots.single!)['meta']['status'], 'appLocked');
+    expect(bridge.planningSnapshots, bridge.snapshots);
+    await service.clear();
   });
   for (final newFlush in [false, true]) {
     test('blocked old flush, clear, new flush=$newFlush preserves ordering',
@@ -66,6 +93,7 @@ void main() {
       await Future.wait([old, concurrent, clear, next]);
       final prefs = await SharedPreferences.getInstance();
       expect(bridge.snapshots[2], isNull);
+      expect(bridge.planningSnapshots, bridge.snapshots);
       if (newFlush) {
         final payload = prefs.getString(androidWidgetSnapshotStorageKey)!;
         expect(jsonDecode(payload)['meta']['status'], 'loggedOut');
@@ -90,5 +118,16 @@ void main() {
         (await SharedPreferences.getInstance())
             .getString(androidWidgetSnapshotStorageKey),
         isNull);
+  });
+
+  test('app-group clear still runs when app preference access fails', () async {
+    final bridge = RecordingWidgetBridge();
+    final service = AndroidWidgetSnapshotService(
+      bridge: bridge,
+      preferences: () async => throw StateError('storage unavailable'),
+    );
+    await expectLater(service.clear(), throwsStateError);
+    expect(bridge.planningSnapshots, [null]);
+    expect(bridge.snapshots, [null]);
   });
 }

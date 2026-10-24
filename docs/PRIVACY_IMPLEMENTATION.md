@@ -1,4 +1,9 @@
-> Current 2026-10-01 audit: [PRIVACY_AUDIT_V4.md](PRIVACY_AUDIT_V4.md), [inventory](PRIVACY_DATA_INVENTORY.md), [Analytics setup](FIREBASE_ANALYTICS_SETUP.md). The historic v3 section below describes the prior implementation and is not the current notice.
+> Current code review, 2026-10-24: notice version **5** has separate explicit
+> diagnostic, usage and academic consent, without an age question or age gate.
+> Legacy age fields are read for compatibility, not authorization; new decisions
+> do not store age. Old-version decisions do not authorize telemetry. Native
+> default-off bootstrap and Windows/Linux exclusions remain. The v4/v3 reports
+> below are historical. See [iOS/CI setup](IOS_FIREBASE_SETUP.md).
 
 # Version 4 privacy update — 2026-09-30
 

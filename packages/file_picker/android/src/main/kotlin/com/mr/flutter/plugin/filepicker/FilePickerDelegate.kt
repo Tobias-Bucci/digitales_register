@@ -65,15 +65,19 @@ class FilePickerDelegate(
     }
 
     private fun saveFile(uri: Uri?): Boolean {
-        uri ?: return false
+        if (uri == null) {
+            finishWithError("save_failed", "The selected destination is unavailable.")
+            return false
+        }
         dispatchEventStatus(true)
         return try {
-            val newUri = FileUtils.writeBytesData(context = activity, uri, bytes) ?: uri
+            val newUri = FileUtils.writeBytesData(context = activity, uri, bytes)
             finishWithSuccess(newUri.path)
             true
-        } catch (e: IOException) {
-            Log.e(TAG, "Error while saving file", e)
-            finishWithError("Error while saving file", e.message)
+        } catch (_: Exception) {
+            // IO/provider/permission failures must complete the Dart future.
+            // Do not log private document URIs or provider exception messages.
+            finishWithError("save_failed", "Could not write to the selected destination.")
             false
         }
     }

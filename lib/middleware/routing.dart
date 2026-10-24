@@ -166,62 +166,25 @@ Future<void> _showCalendar(
     MiddlewareApi<AppState, AppStateBuilder, AppActions> api,
     ActionHandler next,
     Action<void> action) async {
-  scaffoldKey!.currentState!
-      .selectContentWidget(CalendarContainer(), Pages.calendar);
   final monday = toMonday(now);
   await api.actions.calendarActions.setCurrentMonday(monday);
-
+  scaffoldKey!.currentState!
+      .selectContentWidget(CalendarContainer(), Pages.calendar);
   await next(action);
 
-  DialogRoute<void>? progressRoute;
-  if (_shouldPrefetchSubstituteTeacherHistory(api.state) &&
-      navigatorKey?.currentContext != null) {
-    progressRoute = DialogRoute<void>(
-      context: navigatorKey!.currentContext!,
-      barrierDismissible: false,
-      builder: (context) {
-        return AlertDialog(
-          title: Text(tr('calendar.primaryTeacherScan.title')),
-          content: ConstrainedBox(
-            constraints: const BoxConstraints(maxWidth: 320),
-            child: Row(
-              children: [
-                const SizedBox(
-                  width: 24,
-                  height: 24,
-                  child: CircularProgressIndicator(strokeWidth: 3),
-                ),
-                const SizedBox(width: 16),
-                Expanded(
-                  child: Text(tr('calendar.primaryTeacherScan.body')),
-                ),
-              ],
-            ),
-          ),
-        );
-      },
-    );
-    unawaited(navigatorKey!.currentState!.push(progressRoute));
-    await Future<void>.delayed(Duration.zero);
-  }
-  try {
-    if (!_allKnownSubjectsHavePrimaryTeacher(api.state)) {
-      _substituteTeacherHistoryAttemptedKeys
-          .remove(_substituteTeacherHistorySessionKey(api.state));
-    }
-    await api.actions.calendarActions.load(monday);
-    await _ensureSubstituteTeacherHistoryLoaded(api);
-  } finally {
-    if (progressRoute?.isActive ?? false) {
-      navigatorKey!.currentState!.removeRoute(progressRoute!);
-    }
-  }
+  // Rendering the visible week must not await the full school-year scan.
+  await api.actions.calendarActions.load(monday);
+  _startCalendarBackgroundLoad(api);
 }
 
 Future<void> _showGrades(
     MiddlewareApi<AppState, AppStateBuilder, AppActions> api,
     ActionHandler next,
     Action<void> action) async {
+  await _rememberViewedSchoolNotifications(api
+          .state.notificationState.notifications
+          ?.where((n) => n.type == 'grade') ??
+      <Notification>[]);
   scaffoldKey!.currentState!
       .selectContentWidget(const GradesPageContainer(), Pages.grades);
   await api.actions.gradesActions.load(api.state.gradesState.semester);
@@ -262,7 +225,8 @@ Future<void> _showMessage(
     MiddlewareApi<AppState, AppStateBuilder, AppActions> api,
     ActionHandler next,
     Action<int> action) async {
-  navigatorKey!.currentState!.pop();
+  navigatorKey?.currentState
+      ?.popUntil((route) => route.settings.name != '/notifications');
   await api.actions.routingActions.showMessages();
   await next(action);
 }

@@ -2,7 +2,10 @@
 <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
 <plist version="1.0">
 	<dict>
-		<key>CADisableMinimumFrameDurationOnPhone</key>
+		<key>CFBundleURLTypes</key>
+        <array><dict><key>CFBundleURLSchemes</key>
+        <array><string>register-planning</string></array></dict></array>
+        <key>CADisableMinimumFrameDurationOnPhone</key>
 		<true/>
 		<key>CFBundleDevelopmentRegion</key>
 		<string>en</string>
@@ -54,6 +57,10 @@
 		<key>UIApplicationSupportsIndirectInputEvents</key>
 		<true/>
 <key>FirebaseAutomaticScreenReportingEnabled</key><false/>
+<key>UIBackgroundModes</key>
+<array><string>fetch</string></array>
+<key>BGTaskSchedulerPermittedIdentifiers</key>
+<array><string>it.bucci.digitalesregister.schoolRefresh</string></array>
 <key>FirebaseCrashlyticsCollectionEnabled</key><false/>
 <key>FIREBASE_ANALYTICS_COLLECTION_ENABLED</key><false/>
 <key>GOOGLE_ANALYTICS_IDFA_COLLECTION_ENABLED</key><false/>

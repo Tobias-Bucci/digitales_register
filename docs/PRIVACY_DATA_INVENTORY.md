@@ -1,4 +1,10 @@
-# Privacy data inventory — version 4
+> 2026-10-24 correction: current notice version is **5**. References below to
+> v4 and atLeast14 describe the previous policy. Current authorization requires
+> a completed v5 decision and the corresponding purpose consent, without an age
+> gate. New decisions do not store age. Platform exclusions and data boundaries
+> remain. For current iOS provisioning, see [iOS setup](IOS_FIREBASE_SETUP.md).
+
+# Privacy data inventory — version 4 (historical audit)
 
 Audited 2026-10-01 against this repository. Controller for this app fork, confirmed by the owner: **Tobias Bucci, Mühlenweg 51, St. Sigmund, Italy (Bolzano)**; privacy contact **buccitobias774@gmail.com**. The school/register provider's roles and necessary-processing legal bases require legal review. This is an implementation inventory, not a legal compliance guarantee.
 
@@ -36,3 +42,14 @@ The app uses the selected school's existing API, not a newly introduced first-pa
 - Secure local account ID lookup and normalized fingerprints are not sent to Firebase. A person on multiple devices can count as multiple pseudonymous users.
 
 References: [Firebase privacy](https://firebase.google.com/support/privacy), [BigQuery retention](BIGQUERY_RETENTION.md), [Store checklist](STORE_PRIVACY_CHECKLIST.md). App notice exists in de/it/en/lld catalogs and includes the confirmed contact.
+
+## Native exports (Issue #12)
+
+The user can explicitly create local PDF/CSV/ZIP copies of currently loaded
+register data under Settings → Data export. These may contain grades, messages,
+certificate text/tables, calendar entries, lesson content and absences. No export
+data is sent to an additional service or included in analytics/logs. Bytes are
+created in memory and saved to a user-selected native destination; these copies
+are controlled by the user and are not removed when clearing app data or logging
+out. iOS requires a temporary native staging copy, cleaned on completion/cancel
+(OS-managed if the process terminates). See [Native export](NATIVE_EXPORT.md).

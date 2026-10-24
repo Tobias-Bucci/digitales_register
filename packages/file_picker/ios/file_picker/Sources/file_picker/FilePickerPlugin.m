@@ -18,6 +18,7 @@
 @property (nonatomic) dispatch_group_t group;
 @property (nonatomic) MediaType type;
 @property (nonatomic) BOOL isSaveFile;
+@property (nonatomic) NSURL *exportStagingDirectory;
 @end
 
 @implementation FilePickerPlugin
@@ -165,28 +166,36 @@
     return paths.firstObject;
 }
 
+// Only remove the exact UUID directory created by this plugin instance.
+- (void)cleanupExportStaging {
+    if (self.exportStagingDirectory != nil) {
+        [[NSFileManager defaultManager] removeItemAtURL:self.exportStagingDirectory error:nil];
+        self.exportStagingDirectory = nil;
+    }
+}
+
 #pragma mark - Resolvers
 
 #ifdef PICKER_DOCUMENT
 - (void)saveFileWithName:(NSString*)fileName fileType:(NSString *)fileType initialDirectory:(NSString*)initialDirectory bytes:(FlutterStandardTypedData*)bytes{
     self.isSaveFile = YES;
     NSFileManager* fm = [NSFileManager defaultManager];
-    NSURL* documentsDirectory = [fm URLsForDirectory:NSDocumentDirectory inDomains:NSUserDomainMask][0];
-    NSURL* destinationPath = [documentsDirectory URLByAppendingPathComponent:fileName];
-    NSError* error;
-    if ([fm fileExistsAtPath:destinationPath.path]) {
-        [fm removeItemAtURL:destinationPath error:&error];
-        if (error != nil) {
-            _result([FlutterError errorWithCode:@"Failed to remove file" message:[error debugDescription] details:nil]);
-            error = nil;
-        }
-    }
-    if(bytes != nil){
-        [bytes.data writeToURL:destinationPath options:NSDataWritingAtomic error:&error];
-        if (error != nil) {
-            _result([FlutterError errorWithCode:@"Failed to write file" message:[error debugDescription] details:nil]);
-            error = nil;
-        }
+    // Stage only in tmp, never leave private exports in app Documents/iCloud.
+    [self cleanupExportStaging];
+    self.exportStagingDirectory = [[NSURL fileURLWithPath:NSTemporaryDirectory()]
+        URLByAppendingPathComponent:[@"register-export-" stringByAppendingString:NSUUID.UUID.UUIDString]
+        isDirectory:YES];
+    NSURL* destinationPath = [self.exportStagingDirectory URLByAppendingPathComponent:fileName.lastPathComponent];
+    NSError* error = nil;
+    BOOL created = [fm createDirectoryAtURL:self.exportStagingDirectory
+               withIntermediateDirectories:YES attributes:nil error:&error];
+    if (!created || bytes == nil ||
+        ![bytes.data writeToURL:destinationPath options:NSDataWritingAtomic error:&error]) {
+        [self cleanupExportStaging];
+        _result([FlutterError errorWithCode:@"export_write_failed"
+                                  message:@"Could not prepare the file for saving." details:nil]);
+        _result = nil;
+        return;
     }
     self.documentPickerController = [[UIDocumentPickerViewController alloc] initWithURL:destinationPath inMode:UIDocumentPickerModeExportToService];
     self.documentPickerController.delegate = self;
@@ -287,7 +296,8 @@ didPickDocumentsAtURLs:(NSArray<NSURL *> *)urls{
         return;
     }
     if(self.isSaveFile){
-        _result(urls[0].path);
+        [self cleanupExportStaging];
+        _result(urls.firstObject.path);
         _result = nil;
         return;
     }
@@ -524,8 +534,9 @@ didPickDocumentsAtURLs:(NSArray<NSURL *> *)urls{
 
 #pragma mark - Actions canceled
 
-#ifdef PICKER_MEDIA
+#if defined(PICKER_MEDIA) || defined(PICKER_DOCUMENT)
 - (void)presentationControllerDidDismiss:(UIPresentationController *)controller {
+    [self cleanupExportStaging];
     Log(@"FilePicker canceled");
     if (self.result != nil) {
         self.result(nil);
@@ -545,6 +556,7 @@ didPickDocumentsAtURLs:(NSArray<NSURL *> *)urls{
 
 #ifdef PICKER_DOCUMENT
 - (void)documentPickerWasCancelled:(UIDocumentPickerViewController *)controller {
+    [self cleanupExportStaging];
     Log(@"FilePicker canceled");
     _result(nil);
     _result = nil;

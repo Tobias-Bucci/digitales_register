@@ -17,74 +17,38 @@
 // along with digitales_register.  If not, see <http://www.gnu.org/licenses/>.
 
 import 'package:dr/app_state.dart';
+import 'package:dr/container/export_container.dart';
 import 'package:dr/container/grades_chart_container.dart';
 import 'package:dr/container/grades_forecast_container.dart';
 import 'package:dr/container/grades_history_container.dart';
 import 'package:dr/container/grades_page_container.dart';
 import 'package:dr/container/grades_statistics_container.dart';
 import 'package:dr/container/sorted_grades_container.dart';
+import 'package:dr/export/export_data.dart';
 import 'package:dr/i18n/app_localizations.dart';
 import 'package:dr/tutorial/tutorial_target.dart';
 import 'package:dr/ui/animated_linear_progress_indicator.dart';
 import 'package:dr/ui/app_popup_button.dart';
+import 'package:dr/ui/grade_colors.dart';
 import 'package:dr/ui/last_fetched_overlay.dart';
 import 'package:dr/ui/no_internet.dart';
+import 'package:dr/ui/readable_content.dart';
 import 'package:flutter/material.dart';
 import 'package:responsive_scaffold/responsive_scaffold.dart';
-
-bool _isFailingAverage(String gradeText) {
-  final parsed = double.tryParse(gradeText.replaceAll(',', '.'));
-  return parsed != null && parsed < 6;
-}
-
-bool _isPassingAverage(String gradeText) {
-  final parsed = double.tryParse(gradeText.replaceAll(',', '.'));
-  return parsed != null && parsed >= 6;
-}
 
 Widget _buildAverageValue(
   BuildContext context,
   String value,
   TextStyle? style,
   bool colorGrades,
-) {
-  if (!colorGrades) {
-    return Text(value, style: style);
-  }
-  final failing = _isFailingAverage(value);
-  final passing = _isPassingAverage(value);
-  final foreground = failing
-      ? Theme.of(context).colorScheme.onErrorContainer
-      : Colors.green.shade900;
-  final text = Text(
-    value,
-    style: (failing || passing)
-        ? style?.copyWith(
-              color: foreground,
-              fontWeight: FontWeight.w700,
-            ) ??
-            TextStyle(
-              color: foreground,
-              fontWeight: FontWeight.w700,
-            )
-        : style,
-  );
-  if (!failing && !passing) {
-    return text;
-  }
-  return DecoratedBox(
-    decoration: ShapeDecoration(
-      color: failing
-          ? Theme.of(context).colorScheme.errorContainer
-          : Colors.green.shade100,
-      shape: const StadiumBorder(),
-    ),
-    child: Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-      child: text,
-    ),
-  );
-}
+) =>
+    GradeBadge(
+      text: value,
+      hundredths:
+          (double.tryParse(value.replaceAll(',', '.')) ?? double.nan) * 100,
+      style: style,
+      colorized: colorGrades,
+    );
 
 class GradesPage extends StatefulWidget {
   final GradesPageViewModel vm;
@@ -135,9 +99,12 @@ class _GradesPageState extends State<GradesPage> {
               const GradesHistoryContainer(),
               Padding(
                 padding: const EdgeInsets.only(right: 12),
-                child: _SemesterSwitcher(
-                  selectedSemester: vm.showSemester,
-                  onChanged: widget.changeSemester,
+                child: ConstrainedBox(
+                  constraints: const BoxConstraints(maxWidth: 180),
+                  child: _SemesterSwitcher(
+                    selectedSemester: vm.showSemester,
+                    onChanged: widget.changeSemester,
+                  ),
                 ),
               ),
             ],
@@ -153,96 +120,119 @@ class _GradesPageState extends State<GradesPage> {
                         AnimatedLinearProgressIndicator(show: vm.loading),
                         RawLastFetchedOverlay(
                           message: vm.lastFetchedMessage,
-                          child: ListView(
-                            children: <Widget>[
-                              if (vm.showGradesDiagram)
-                                Padding(
-                                  padding:
-                                      const EdgeInsets.fromLTRB(12, 12, 12, 4),
-                                  child: Card(
-                                    margin: EdgeInsets.zero,
-                                    clipBehavior: Clip.antiAlias,
-                                    child: SizedBox(
-                                      height: 220,
-                                      child: Column(
-                                        children: [
-                                          Padding(
-                                            padding: const EdgeInsets.fromLTRB(
-                                              16,
-                                              10,
-                                              10,
-                                              0,
-                                            ),
-                                            child: Row(
-                                              children: [
-                                                Icon(
-                                                  Icons.show_chart_rounded,
-                                                  color: Theme.of(context)
-                                                      .colorScheme
-                                                      .primary,
+                          child: ReadableContent(
+                              maxWidth: Theme.of(context).platform ==
+                                      TargetPlatform.windows
+                                  ? double.infinity
+                                  : 960,
+                              child: ListView(
+                                children: <Widget>[
+                                  Padding(
+                                    padding: const EdgeInsets.symmetric(
+                                        horizontal: 12),
+                                    child: Align(
+                                        alignment: Alignment.centerRight,
+                                        child: TextButton.icon(
+                                            icon: const Icon(
+                                                Icons.file_download_outlined),
+                                            label:
+                                                Text(l10n.text('export.title')),
+                                            onPressed: () => openExportPage(
+                                                context,
+                                                category:
+                                                    ExportCategory.grades))),
+                                  ),
+                                  if (vm.showGradesDiagram)
+                                    Padding(
+                                      padding: const EdgeInsets.fromLTRB(
+                                          12, 12, 12, 4),
+                                      child: Card(
+                                        margin: EdgeInsets.zero,
+                                        clipBehavior: Clip.antiAlias,
+                                        child: SizedBox(
+                                          height: 220,
+                                          child: Column(
+                                            children: [
+                                              Padding(
+                                                padding:
+                                                    const EdgeInsets.fromLTRB(
+                                                  16,
+                                                  10,
+                                                  10,
+                                                  0,
                                                 ),
-                                                const SizedBox(width: 8),
-                                                Expanded(
-                                                  child: Text(
-                                                    l10n.text(
-                                                        'grades.chart.title'),
-                                                    style: Theme.of(context)
-                                                        .textTheme
-                                                        .titleMedium,
-                                                  ),
+                                                child: Row(
+                                                  children: [
+                                                    Icon(
+                                                      Icons.show_chart_rounded,
+                                                      color: Theme.of(context)
+                                                          .colorScheme
+                                                          .primary,
+                                                    ),
+                                                    const SizedBox(width: 8),
+                                                    Expanded(
+                                                      child: Text(
+                                                        l10n.text(
+                                                            'grades.chart.title'),
+                                                        style: Theme.of(context)
+                                                            .textTheme
+                                                            .titleMedium,
+                                                      ),
+                                                    ),
+                                                    const Icon(Icons
+                                                        .open_in_full_rounded),
+                                                  ],
                                                 ),
-                                                const Icon(
-                                                    Icons.open_in_full_rounded),
-                                              ],
-                                            ),
+                                              ),
+                                              const Expanded(
+                                                child: GradesChartContainer(
+                                                  isFullscreen: false,
+                                                ),
+                                              ),
+                                            ],
                                           ),
-                                          const Expanded(
-                                            child: GradesChartContainer(
-                                              isFullscreen: false,
-                                            ),
-                                          ),
-                                        ],
+                                        ),
                                       ),
                                     ),
-                                  ),
-                                ),
-                              if (vm.showAllSubjectsAverage) ...[
-                                Column(children: [
-                                  _AverageRow(
-                                    label: l10n.text('grades.average'),
-                                    icon: Icons.settings,
-                                    onIconPressed: widget.showGradesSettings,
-                                    value: _buildAverageValue(
-                                      context,
-                                      vm.allSubjectsAverage,
-                                      averageStyle,
-                                      vm.colorGrades,
+                                  if (vm.showAllSubjectsAverage) ...[
+                                    Column(children: [
+                                      _AverageRow(
+                                        label: l10n.text('grades.average'),
+                                        icon: Icons.settings,
+                                        onIconPressed:
+                                            widget.showGradesSettings,
+                                        value: _buildAverageValue(
+                                          context,
+                                          vm.allSubjectsAverage,
+                                          averageStyle,
+                                          vm.colorGrades,
+                                        ),
+                                      ),
+                                      _AverageRow(
+                                        label: l10n
+                                            .text('grades.certificateAverage'),
+                                        icon: Icons.info_outline,
+                                        onIconPressed: () =>
+                                            _showCertificateAverageInfo(
+                                                context),
+                                        value: _buildAverageValue(
+                                          context,
+                                          vm.certificateAverage,
+                                          averageStyle,
+                                          vm.colorGrades,
+                                        ),
+                                      ),
+                                      const GradesForecastContainer(),
+                                    ]),
+                                    const Divider(
+                                      height: 0,
                                     ),
-                                  ),
-                                  _AverageRow(
-                                    label:
-                                        l10n.text('grades.certificateAverage'),
-                                    icon: Icons.info_outline,
-                                    onIconPressed: () =>
-                                        _showCertificateAverageInfo(context),
-                                    value: _buildAverageValue(
-                                      context,
-                                      vm.certificateAverage,
-                                      averageStyle,
-                                      vm.colorGrades,
-                                    ),
-                                  ),
-                                  const GradesForecastContainer(),
-                                ]),
-                                const Divider(
-                                  height: 0,
-                                ),
-                              ],
-                              SortedGradesContainer(),
-                              const GradesStatisticsContainer(),
-                              const SizedBox(height: 50),
-                            ],
-                          ),
+                                  ],
+                                  SortedGradesContainer(),
+                                  const GradesStatisticsContainer(),
+                                  const SizedBox(height: 50),
+                                ],
+                              )),
                         ),
                       ],
                     ),
@@ -269,8 +259,8 @@ class _AverageRow extends StatelessWidget {
         Theme.of(context).textTheme.titleMedium;
     return Padding(
       padding: const EdgeInsetsDirectional.fromSTEB(16, 2, 16, 2),
-      child: SizedBox(
-        height: 44,
+      child: ConstrainedBox(
+        constraints: const BoxConstraints(minHeight: 48),
         child: Row(
           children: [
             Expanded(child: Text(label, style: labelStyle)),

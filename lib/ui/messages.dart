@@ -21,11 +21,14 @@ import 'dart:convert';
 
 import 'package:badges/badges.dart' as badge;
 import 'package:dr/app_state.dart';
+import 'package:dr/container/export_container.dart';
 import 'package:dr/data.dart';
+import 'package:dr/export/export_data.dart';
 import 'package:dr/i18n/app_localizations.dart';
 import 'package:dr/ui/animated_linear_progress_indicator.dart';
 import 'package:dr/ui/last_fetched_overlay.dart';
 import 'package:dr/ui/no_internet.dart';
+import 'package:dr/ui/readable_content.dart';
 import 'package:dr/util.dart';
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
@@ -128,6 +131,13 @@ class _MessagesPageState extends State<MessagesPage>
     return Scaffold(
       appBar: ResponsiveAppBar(
         title: Text(context.t('messages.title')),
+        actions: [
+          IconButton(
+              tooltip: context.t('export.title'),
+              icon: const Icon(Icons.file_download_outlined),
+              onPressed: () =>
+                  openExportPage(context, category: ExportCategory.messages))
+        ],
       ),
       body: Column(
         children: [
@@ -143,7 +153,9 @@ class _MessagesPageState extends State<MessagesPage>
               Tab(text: context.t('messages.all')),
             ],
           ),
-          Expanded(child: _buildMessageList(context, visibleMessages)),
+          Expanded(
+              child: ReadableContent(
+                  child: _buildMessageList(context, visibleMessages))),
         ],
       ),
     );

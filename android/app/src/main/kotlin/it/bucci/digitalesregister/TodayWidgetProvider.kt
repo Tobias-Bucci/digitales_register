@@ -25,19 +25,21 @@ class TodayWidgetProvider : AppWidgetProvider() {
             val snapshot = DigitalesRegisterWidgetSnapshotStore.load(context)
             for (appWidgetId in appWidgetIds) {
                 val views = RemoteViews(context.packageName, R.layout.widget_collection).apply {
+                    setImageViewResource(R.id.widget_icon, R.drawable.ic_widget_today)
                     setTextViewText(
                         R.id.widget_title,
                         snapshot?.today?.title ?: context.getString(R.string.widget_today_title),
                     )
                     setTextViewText(
                         R.id.widget_subtitle,
-                        snapshot?.today?.subtitle ?: context.getString(R.string.widget_today_subtitle),
+                        if (snapshot?.isReady() == true && snapshot.planningIsCurrent()) snapshot.today.subtitle else "",
                     )
                     setTextViewText(
                         R.id.widget_empty,
                         when {
                             snapshot == null -> context.getString(R.string.widget_state_open_app)
                             !snapshot.isReady() -> snapshot.statusMessage(context)
+                            !snapshot.planningIsCurrent() -> context.getString(R.string.widget_state_outdated)
                             else -> snapshot.today.emptyMessage
                         },
                     )
@@ -63,6 +65,7 @@ class TodayWidgetProvider : AppWidgetProvider() {
                 }
                 appWidgetManager.updateAppWidget(appWidgetId, views)
             }
+            appWidgetManager.notifyAppWidgetViewDataChanged(appWidgetIds, R.id.widget_list)
         }
     }
 }

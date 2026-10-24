@@ -17,6 +17,8 @@
 // along with digitales_register.  If not, see <http://www.gnu.org/licenses/>.
 
 import 'package:dr/container/certificate_container.dart';
+import 'package:dr/container/export_container.dart';
+import 'package:dr/export/export_data.dart';
 import 'package:dr/i18n/app_localizations.dart';
 import 'package:dr/ui/certificate_image_factory.dart';
 import 'package:dr/ui/last_fetched_overlay.dart';
@@ -39,7 +41,15 @@ class Certificate extends StatelessWidget {
         ? parsedBaseUrl
         : null;
     return Scaffold(
-      appBar: ResponsiveAppBar(title: Text(context.t('certificate.title'))),
+      appBar: ResponsiveAppBar(
+          title: Text(context.t('certificate.title')),
+          actions: [
+            IconButton(
+                tooltip: context.t('export.title'),
+                icon: const Icon(Icons.file_download_outlined),
+                onPressed: () => openExportPage(context,
+                    category: ExportCategory.certificates)),
+          ]),
       body: vm.html == null
           ? Center(
               child: vm.noInternet

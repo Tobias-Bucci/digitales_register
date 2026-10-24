@@ -187,6 +187,7 @@ class TutorialService extends ChangeNotifier {
   List<TutorialStep> _active = const [];
   int _index = 0;
   bool _checkingOffer = false;
+  bool _offerScheduled = false;
   bool _starting = false;
   bool _advancing = false;
   Timer? _tracking;
@@ -286,13 +287,20 @@ class TutorialService extends ChangeNotifier {
     return !hasHistory;
   }
 
+  /// Ask for a frame explicitly; an idle dashboard may not paint again until
+  /// the user interacts with it.
+  void scheduleOffer(BuildContext context, {bool Function()? isCurrent}) {
+    if (_offerScheduled || _checkingOffer || active || _starting) return;
+    _offerScheduled = true;
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _offerScheduled = false;
+      if (!context.mounted || !(isCurrent?.call() ?? true)) return;
+      unawaited(maybeOffer(context));
+    });
+    WidgetsBinding.instance.ensureVisualUpdate();
+  }
+
   Future<void> maybeOffer(BuildContext context) async {
-    // Dashboard fragments in widget tests do not represent a real login.
-    if (WidgetsBinding.instance.runtimeType
-        .toString()
-        .contains('TestWidgetsFlutterBinding')) {
-      return;
-    }
     if (_checkingOffer || active || _starting) return;
     _checkingOffer = true;
     try {

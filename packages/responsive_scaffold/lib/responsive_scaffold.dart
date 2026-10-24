@@ -99,6 +99,7 @@ class ResponsiveScaffoldState<T> extends State<ResponsiveScaffold<T>>
   // This is required in order not to show an opening animation
   // right when the app is opened
   bool isInitialized = false;
+  bool? _previousTabletMode;
   late final ValueNotifier<T> _currentSelected;
   T get currentSelected => _currentSelected.value;
   set currentSelected(T v) {
@@ -171,13 +172,19 @@ class ResponsiveScaffoldState<T> extends State<ResponsiveScaffold<T>>
   }
 
   @override
+  void dispose() {
+    _drawerAnimationController.dispose();
+    _currentSelected.dispose();
+    super.dispose();
+  }
+
+  @override
   Widget build(BuildContext context) {
-    bool? previousTabletMode;
     return Portal(
       child: LayoutBuilder(
         builder: (context, constraints) {
-          tabletMode = constraints.maxWidth > tabletLayoutBreakpoint;
-          if (tabletMode != previousTabletMode) {
+          tabletMode = constraints.maxWidth >= tabletLayoutBreakpoint;
+          if (tabletMode != _previousTabletMode) {
             if (tabletMode) {
               if (isInitialized) {
                 if (_drawerAnimationController.value != 1) {
@@ -190,7 +197,7 @@ class ResponsiveScaffoldState<T> extends State<ResponsiveScaffold<T>>
               _drawerAnimationController.fling(velocity: -1);
             }
           }
-          previousTabletMode = tabletMode;
+          _previousTabletMode = tabletMode;
           isInitialized = true;
           return _InheritedTabletMode(
             tabletMode: tabletMode,
