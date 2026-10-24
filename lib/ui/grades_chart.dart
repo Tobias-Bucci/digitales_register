@@ -22,6 +22,7 @@ import 'package:dr/app_selectors.dart';
 import 'package:dr/app_state.dart';
 import 'package:dr/data.dart';
 import 'package:dr/i18n/app_localizations.dart';
+import 'package:dr/ui/grade_colors.dart';
 import 'package:dr/utc_date_time.dart';
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
@@ -37,6 +38,7 @@ class _Selection {
 class GradesChart extends StatelessWidget {
   final VoidCallback? goFullscreen;
   final bool isFullscreen;
+  final bool colorGrades;
   final List<
       charts
       .Series<MapEntry<UtcDateTime, Tuple2<int, String>>, UtcDateTime>> grades;
@@ -48,11 +50,14 @@ class GradesChart extends StatelessWidget {
     super.key,
     required Map<SubjectGrades, SubjectTheme> graphs,
     this.goFullscreen,
+    this.colorGrades = false,
     required this.isFullscreen,
-  }) : grades = convert(graphs);
+  }) : grades = convert(graphs, colorGrades: colorGrades);
 
   bool get _shouldIncludePreviewPoints =>
-      isFullscreen || grades.any((series) => series.data.length < 2);
+      colorGrades ||
+      isFullscreen ||
+      grades.any((series) => series.data.length < 2);
 
   static int _channelValue(double component) {
     final value = (component * 255.0).round();
@@ -62,7 +67,8 @@ class GradesChart extends StatelessWidget {
   static List<
           charts
           .Series<MapEntry<UtcDateTime, Tuple2<int, String>>, UtcDateTime>>
-      convert(Map<SubjectGrades, SubjectTheme> data) {
+      convert(Map<SubjectGrades, SubjectTheme> data,
+          {bool colorGrades = false}) {
     return data.entries.where((entry) => entry.value.thick != 0).map(
       (entry) {
         final s = entry.key;
@@ -73,6 +79,15 @@ class GradesChart extends StatelessWidget {
           domainFn: (grade, _) => grade.key,
           measureFn: (grade, _) => grade.value.item1 / 100,
           data: s.grades.entries.toList(),
+          fillColorFn: colorGrades
+              ? (grade, _) {
+                  final fill = gradeColor(grade.value.item1)!;
+                  return charts.Color(
+                      r: _channelValue(fill.r),
+                      g: _channelValue(fill.g),
+                      b: _channelValue(fill.b));
+                }
+              : null,
           strokeWidthPxFn: (_, __) => strokeWidth,
           id: s.name,
           seriesColor: charts.Color(
@@ -181,7 +196,7 @@ class GradesChart extends StatelessWidget {
                   : null,
               defaultRenderer: charts.LineRendererConfig(
                 includePoints: _shouldIncludePreviewPoints,
-                radiusPx: 2,
+                radiusPx: colorGrades ? 4 : 2,
                 roundEndCaps: true,
               ),
               layoutConfig: charts.LayoutConfig(
@@ -209,12 +224,13 @@ class GradesChart extends StatelessWidget {
                       allDate = date;
                       return _Selection(
                         "${context.l10n.translateSubjectName(subject)} – ${context.l10n.translateSchoolTerm(type)}: ${formatGradeFromInt(grade)}",
-                        Color.fromARGB(
-                          color.a,
-                          color.r,
-                          color.g,
-                          color.b,
-                        ),
+                        (colorGrades ? gradeColor(grade) : null) ??
+                            Color.fromARGB(
+                              color.a,
+                              color.r,
+                              color.g,
+                              color.b,
+                            ),
                       );
                     }).toBuiltList();
                     final selectedDate = allDate;

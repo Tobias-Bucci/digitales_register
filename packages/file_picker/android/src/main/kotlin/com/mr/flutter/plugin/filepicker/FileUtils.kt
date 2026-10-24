@@ -118,10 +118,11 @@ object FileUtils {
         uri: Uri,
         bytes: ByteArray?
     ): Uri {
-        context.contentResolver.openOutputStream(uri)?.use { output ->
-            bytes?.let {
-                output.write(it)
-            }
+        val payload = bytes ?: throw IOException("No export bytes supplied")
+        val stream = context.contentResolver.openOutputStream(uri)
+            ?: throw IOException("The selected destination is unavailable")
+        stream.use { output ->
+            output.write(payload)
         }
 
         return uri

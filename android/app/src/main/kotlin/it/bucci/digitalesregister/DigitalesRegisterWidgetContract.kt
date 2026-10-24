@@ -15,6 +15,9 @@ object DigitalesRegisterWidgetContract {
     const val DESTINATION_GRADES = "grades"
     const val DESTINATION_CALENDAR = "calendar"
 
+    const val WIDGET_KIND_SCHOOL_BAG = "schoolBag"
+    const val WIDGET_KIND_PREPARATION = "preparation"
+
     const val WIDGET_KIND_DASHBOARD = "dashboard"
     const val WIDGET_KIND_GRADES = "grades"
     const val WIDGET_KIND_TODAY = "today"

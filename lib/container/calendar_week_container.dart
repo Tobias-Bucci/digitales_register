@@ -33,11 +33,15 @@ part 'calendar_week_container.g.dart';
 class CalendarWeekContainer extends StatelessWidget {
   final UtcDateTime monday;
   final String? favoriteSubject;
+  final bool loading;
+  final VoidCallback? onRetry;
 
   const CalendarWeekContainer({
     super.key,
     required this.monday,
     this.favoriteSubject,
+    this.loading = true,
+    this.onRetry,
   });
   @override
   Widget build(BuildContext context) {
@@ -46,6 +50,8 @@ class CalendarWeekContainer extends StatelessWidget {
         return CalendarWeek(
           vm: vm,
           favoriteSubject: favoriteSubject,
+          loading: loading,
+          onRetry: onRetry,
           key: key,
         );
       },

@@ -22,6 +22,7 @@ import 'package:dr/app_clock.dart';
 import 'package:dr/app_state.dart';
 import 'package:dr/app_subject_translation_controller.dart';
 import 'package:dr/calendar_sync_service.dart';
+import 'package:dr/container/export_container.dart';
 import 'package:dr/container/settings_page.dart';
 import 'package:dr/demo.dart';
 import 'package:dr/i18n/app_language.dart';
@@ -37,6 +38,7 @@ import 'package:dr/ui/committed_deleteable.dart';
 import 'package:dr/ui/dialog.dart';
 import 'package:dr/ui/network_protocol_page.dart';
 import 'package:dr/ui/privacy_data_details_page.dart';
+import 'package:dr/ui/school_notification_settings.dart';
 import 'package:dr/util.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/rendering.dart' show ScrollCacheExtent;
@@ -787,13 +789,14 @@ class _SettingsPageWidgetState extends State<SettingsPageWidget> {
           },
         ),
         ListTile(
+          key: const Key('settings-contrast-color-tile'),
           title: Text(l10n.text('settings.contrastColor.title')),
           subtitle: Text(l10n.text('settings.contrastColor.subtitle')),
           trailing: Container(
             width: 28,
             height: 28,
             decoration: BoxDecoration(
-              color: Theme.of(context).colorScheme.primary,
+              color: themeController.contrastColor,
               borderRadius: BorderRadius.circular(8),
               border: Border.all(
                 color: Theme.of(context).dividerColor.withValues(alpha: 0.4),
@@ -804,7 +807,7 @@ class _SettingsPageWidgetState extends State<SettingsPageWidget> {
             final color = await showDialog<Color>(
               context: context,
               builder: (context) => _ColorPicker(
-                initialColor: Theme.of(context).colorScheme.primary,
+                initialColor: themeController.contrastColor,
               ),
             );
             if (color != null) {
@@ -1127,6 +1130,21 @@ class _SettingsPageWidgetState extends State<SettingsPageWidget> {
               _buildTutorialSection(l10n),
               const SizedBox(height: 16),
               _buildPrivacySection(l10n),
+              const SizedBox(height: 16),
+              const SchoolNotificationSettings(),
+              const SizedBox(height: 16),
+              _SettingsSectionCard(
+                title: l10n.text('export.title'),
+                children: [
+                  ListTile(
+                    leading: const Icon(Icons.file_download_outlined),
+                    title: Text(l10n.text('export.title')),
+                    subtitle: Text(l10n.text('export.settingsHint')),
+                    trailing: const Icon(Icons.chevron_right),
+                    onTap: () => openExportPage(context),
+                  )
+                ],
+              ),
               const SizedBox(height: 16),
               _buildAdvancedSection(l10n),
               if (widget.vm.username == 'debug')

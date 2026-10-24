@@ -57,6 +57,9 @@ Future<void> _logout(
     }
   }
 
+  if (action.payload.hard) {
+    await schoolNotificationOperation(schoolNotifications.deactivate);
+  }
   if (action.payload.hard &&
       api.state.loginState.loggedIn &&
       api.state.loginState.username != null) {
@@ -165,6 +168,9 @@ Future<void> _login(
     // We need to set the url earlier because other parts of the app will try to read it
     // because we pretend we are logged in earlier than we actually are.
     wrapper.url = url;
+    // Post-login loads capture this identity to reject responses from another
+    // account. Set it before loggedIn starts those loads, not afterwards.
+    await api.actions.setUrl(url);
 
     bool offlineLogin = false;
     if (action.payload.fromStorage) {
@@ -473,6 +479,7 @@ Future<void> _selectAccount(
 Future<void> _switchAccountSession(
     MiddlewareApi<AppState, AppStateBuilder, AppActions> api,
     {bool explicitSelection = false}) async {
+  await schoolNotificationOperation(schoolNotifications.deactivate);
   // Save the outgoing account before clearing its state. This is a session
   // transition, so the explicit logout's credential/data deletion does not apply.
   await statePersistenceService.flush(

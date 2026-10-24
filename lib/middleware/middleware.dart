@@ -45,6 +45,7 @@ import 'package:dr/app_clock.dart';
 import 'package:dr/app_language_controller.dart';
 import 'package:dr/app_selectors.dart';
 import 'package:dr/app_state.dart';
+import 'package:dr/calendar_load_log.dart';
 import 'package:dr/calendar_sync_service.dart';
 import 'package:dr/class_register_cache.dart';
 import 'package:dr/container/absences_page_container.dart';
@@ -62,6 +63,7 @@ import 'package:dr/main.dart';
 import 'package:dr/page_payload_cache.dart';
 import 'package:dr/platform_adapter.dart';
 import 'package:dr/privacy_log.dart';
+import 'package:dr/school_notification_service.dart';
 import 'package:dr/serializers.dart';
 import 'package:dr/settings_persistence_service.dart';
 import 'package:dr/state_persistence_service.dart';
@@ -1176,6 +1178,7 @@ Future<void> _loggedIn(
             serializedState.rebuild(
               (b) => b
                 ..loginState.replace(currentState.loginState)
+                ..url = currentState.url
                 ..noInternet = currentState.noInternet
                 ..config = currentState.config?.toBuilder()
                 ..dashboardState.future = true
@@ -1208,6 +1211,15 @@ Future<void> _loggedIn(
   // Restoring settings applies the session policy without removing accounts or
   // rewriting their credentials as a side effect of signing in.
   wrapper.safeMode = api.state.settingsState.noPasswordSaving;
+  if (!action.payload.offlineOnly &&
+      !wrapper.demoMode &&
+      wrapper.user != null) {
+    await schoolNotificationOperation(() => schoolNotifications.activate(
+          wrapper.url!,
+          wrapper.user!,
+          backgroundAllowed: !api.state.settingsState.noPasswordSaving,
+        ));
+  }
   for (final callback in api.state.loginState.callAfterLogin) {
     callback();
   }
@@ -1217,14 +1229,26 @@ Future<void> _loggedIn(
       api.actions.notificationsActions.load(),
       api.actions.profileActions.load(),
     ]);
-    unawaited(_ensureSubstituteTeacherHistoryLoaded(api));
+    // Dashboard loading starts holiday hydration independently in the background.
   }
-  WidgetsBinding.instance.addPostFrameCallback((_) {
-    final context = navigatorKey?.currentContext;
-    if (context != null && api.state.loginState.loggedIn) {
-      unawaited(tutorialService.maybeOffer(context));
-    }
+  await schoolNotificationOperation(() async {
+    await schoolNotifications.onTap?.call();
   });
+  WidgetsBinding.instance.addPostFrameCallback((_) {
+    unawaited(schoolNotificationOperation(() async {
+      await schoolNotifications.onTap?.call();
+    }));
+  });
+  final context = navigatorKey?.currentContext;
+  final session = wrapper;
+  if (context != null && context.mounted && api.state.loginState.loggedIn) {
+    tutorialService.scheduleOffer(context,
+        isCurrent: () =>
+            identical(wrapper, session) && api.state.loginState.loggedIn);
+  }
+  // Registering a post-frame callback does not itself request a frame. With
+  // idle startup data the offer would otherwise wait for the user's next tap.
+  WidgetsBinding.instance.ensureVisualUpdate();
 }
 
 Future<SettingsState> _settingsForAccountLoad({
@@ -1272,7 +1296,11 @@ NextActionHandler _saveStateMiddleware(
                 writer: _writeToStorage,
                 keyFactory: getStorageKey,
               );
-              await androidWidgetSnapshotService.flush(state: api.state);
+              if (deletedData) {
+                await androidWidgetSnapshotService.clear();
+              } else {
+                await androidWidgetSnapshotService.flush(state: api.state);
+              }
             } else {
               statePersistenceService.schedule(
                 state: api.state,
@@ -1281,7 +1309,11 @@ NextActionHandler _saveStateMiddleware(
                 writer: _writeToStorage,
                 keyFactory: getStorageKey,
               );
-              androidWidgetSnapshotService.scheduleSync(api.state);
+              if (deletedData) {
+                await androidWidgetSnapshotService.clear();
+              } else {
+                androidWidgetSnapshotService.scheduleSync(api.state);
+              }
             }
           }
         };
@@ -1343,6 +1375,14 @@ Future<void> _restarted(
   Action<void> action,
 ) async {
   await next(action);
+  await schoolNotificationOperation(() async {
+    await schoolNotifications.reload();
+    if (api.state.loginState.loggedIn) {
+      await api.actions.notificationsActions.load();
+      await schoolNotifications.schedule();
+      await schoolNotifications.onTap?.call();
+    }
+  });
   if (api.state.loginState.loggedIn &&
       DateTime.now().difference(wrapper.lastInteraction).inMinutes > 3) {
     wrapper.interaction();

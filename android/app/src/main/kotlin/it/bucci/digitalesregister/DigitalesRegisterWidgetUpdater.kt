@@ -8,6 +8,14 @@ object DigitalesRegisterWidgetUpdater {
     fun refreshAllWidgets(context: Context) {
         val appWidgetManager = AppWidgetManager.getInstance(context)
 
+        for (provider in listOf(SchoolBagWidgetProvider::class.java, PreparationWidgetProvider::class.java)) {
+            val ids = appWidgetManager.getAppWidgetIds(ComponentName(context, provider))
+            PlanningWidgetProvider.updateWidgets(context, appWidgetManager, ids,
+                if (provider == SchoolBagWidgetProvider::class.java)
+                    DigitalesRegisterWidgetContract.WIDGET_KIND_SCHOOL_BAG
+                else DigitalesRegisterWidgetContract.WIDGET_KIND_PREPARATION)
+        }
+
         val dashboardIds = appWidgetManager.getAppWidgetIds(
             ComponentName(context, DashboardWidgetProvider::class.java),
         )

@@ -6,10 +6,19 @@ import org.json.JSONObject
 
 data class DigitalesRegisterWidgetSnapshot(
     val status: String,
+    val planningValidOn: String,
+    val schoolBag: DashboardSection,
+    val preparation: DashboardSection,
     val dashboard: DashboardSection,
     val grades: GradesSection,
     val today: TodaySection,
 ) {
+    fun planningIsCurrent(): Boolean = isReady() && planningValidOn ==
+        java.text.SimpleDateFormat("yyyy-MM-dd", java.util.Locale.ROOT).format(java.util.Date())
+
+    fun planningSection(kind: String): DashboardSection =
+        if (kind == DigitalesRegisterWidgetContract.WIDGET_KIND_SCHOOL_BAG) schoolBag else preparation
+
     fun isReady(): Boolean = status == "ready"
 
     fun statusMessage(context: Context): String {
@@ -43,12 +52,14 @@ data class DigitalesRegisterWidgetSnapshot(
         val subtitle: String,
         val emptyMessage: String,
         val overallAverage: String,
+        val category: String?,
         val subjects: List<GradeItem>,
     )
 
     data class GradeItem(
         val subject: String,
         val average: String,
+        val category: String?,
     )
 
     data class TodaySection(
@@ -75,7 +86,9 @@ object DigitalesRegisterWidgetSnapshotStore {
         val raw = prefs.getString(DigitalesRegisterWidgetContract.SNAPSHOT_PREF_KEY, null)
             ?: return null
         return try {
-            parse(JSONObject(raw))
+            val root = JSONObject(raw)
+            if (root.optInt("schemaVersion") != 1) return null
+            parse(root)
         } catch (_: Throwable) {
             null
         }
@@ -83,6 +96,9 @@ object DigitalesRegisterWidgetSnapshotStore {
 
     private fun parse(root: JSONObject): DigitalesRegisterWidgetSnapshot {
         return DigitalesRegisterWidgetSnapshot(
+            planningValidOn = root.optString("planningValidOn"),
+            schoolBag = parseDashboard(root.optJSONObject("schoolBag") ?: JSONObject()),
+            preparation = parseDashboard(root.optJSONObject("preparation") ?: JSONObject()),
             status = root.optJSONObject("meta")?.optString("status").orEmpty(),
             dashboard = parseDashboard(root.optJSONObject("dashboard") ?: JSONObject()),
             grades = parseGrades(root.optJSONObject("grades") ?: JSONObject()),
@@ -115,10 +131,12 @@ object DigitalesRegisterWidgetSnapshotStore {
             subtitle = section.optString("subtitle"),
             emptyMessage = section.optString("emptyMessage"),
             overallAverage = section.optString("overallAverage"),
+            category = section.optNullableString("category"),
             subjects = parseArray(section.optJSONArray("subjects")) { item ->
                 DigitalesRegisterWidgetSnapshot.GradeItem(
                     subject = item.optString("subject"),
                     average = item.optString("average"),
+                    category = item.optNullableString("category"),
                 )
             },
         )
@@ -160,3 +178,11 @@ object DigitalesRegisterWidgetSnapshotStore {
         return value.takeUnless { it.isEmpty() || it == "null" }
     }
 }
+
+fun widgetGradeTextColor(context: Context, category: String?): Int =
+    androidx.core.content.ContextCompat.getColor(context, when (category) {
+        "failing" -> R.color.widget_grade_failing
+        "satisfactory" -> R.color.widget_grade_satisfactory
+        "good" -> R.color.widget_grade_good
+        else -> R.color.widget_text_primary
+    })

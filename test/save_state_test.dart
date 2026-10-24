@@ -76,6 +76,30 @@ void main() {
     expect(deserialized.settingsState.subjectNicks['Geschichte'], 'Ge');
   });
 
+  test('custom subject colors survive refresh and settings reload exactly',
+      () async {
+    final store = _createLoggedInStore(username: 'subject-colors-user');
+    const color = 0xFFFF00FF;
+    await store.actions.settingsActions.updateSubjectThemes(['Mathematik']);
+    final customTheme = store.state.settingsState.subjectThemes['Mathematik']!
+        .rebuild((b) => b.color = color);
+    await store.actions.settingsActions.setSubjectTheme(
+      MapEntry('Mathematik', customTheme),
+    );
+    // This action is dispatched after grade, dashboard and calendar refreshes.
+    await store.actions.settingsActions.updateSubjectThemes(
+      ['Mathematik', 'Geschichte'],
+    );
+    expect(store.state.settingsState.subjectThemes['Mathematik']!.color, color);
+    await store.actions.saveState();
+    final payload = await storedPayload(storage, 'subject-colors-user');
+    final restored =
+        serializers.deserialize(json.decode(payload!) as Object) as AppState;
+    expect(restored.settingsState.subjectThemes['Mathematik']!.color, color);
+    final settings = await settingsPersistenceService.load();
+    expect(settings!.subjectThemes['Mathematik']!.color, color);
+  });
+
   test('calendar substitute helper visibility persists immediately', () async {
     final store = _createLoggedInStore(username: 'calendar-substitute-user');
 

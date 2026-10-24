@@ -1,3 +1,9 @@
+> 2026-10-24 update: Runner now has a local matching Firebase plist and Xcode
+> resource references. The file is ignored; CI provisioning and source/archive
+> checks are described in [iOS setup](IOS_FIREBASE_SETUP.md). Windows remains
+> disabled. The stale Pod lockfile, macOS build and device delivery remain
+> unverified. The dated audit below records the earlier state.
+
 # Analytics / Crashlytics platform check — 2026-10-03
 
 Scope: the recently added Firebase Analytics, product/academic analytics and

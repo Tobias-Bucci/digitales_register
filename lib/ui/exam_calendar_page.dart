@@ -4,10 +4,11 @@ import 'package:dr/assessment_attachments.dart';
 import 'package:dr/calendar_date.dart';
 import 'package:dr/exam_study_plan.dart';
 import 'package:dr/i18n/app_localizations.dart';
+import 'package:dr/ui/exam_timeline.dart';
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 
-class ExamCalendarPage extends StatelessWidget {
+class ExamCalendarPage extends StatefulWidget {
   const ExamCalendarPage({
     super.key,
     this.calendarView = false,
@@ -37,24 +38,33 @@ class ExamCalendarPage extends StatelessWidget {
       onAttachmentsChanged;
 
   @override
+  State<ExamCalendarPage> createState() => _ExamCalendarPageState();
+}
+
+class _ExamCalendarPageState extends State<ExamCalendarPage> {
+  bool _timeline = false;
+
+  @override
   Widget build(BuildContext context) {
-    final upcoming =
-        assessments.where((item) => item.daysUntil(now) >= 0).toList();
+    final upcoming = widget.assessments
+        .where((item) => item.daysUntil(widget.now) >= 0)
+        .toList()
+      ..sort((a, b) => a.date.compareTo(b.date));
     final weekCalendar = _ExamWeekCalendar(
       assessments: upcoming,
-      now: now,
-      completedFor: completedFor,
-      phasesFor: phasesFor,
-      noteFor: noteFor,
-      attachmentsFor: attachmentsFor,
-      onProgressChanged: onProgressChanged,
-      onPhasesChanged: onPhasesChanged,
-      onNoteChanged: onNoteChanged,
-      onAttachmentsChanged: onAttachmentsChanged,
+      now: widget.now,
+      completedFor: widget.completedFor,
+      phasesFor: widget.phasesFor,
+      noteFor: widget.noteFor,
+      attachmentsFor: widget.attachmentsFor,
+      onProgressChanged: widget.onProgressChanged,
+      onPhasesChanged: widget.onPhasesChanged,
+      onNoteChanged: widget.onNoteChanged,
+      onAttachmentsChanged: widget.onAttachmentsChanged,
     );
-    if (calendarView) return weekCalendar;
-    final past = assessments
-        .where((item) => item.daysUntil(now) < 0)
+    if (widget.calendarView) return weekCalendar;
+    final past = widget.assessments
+        .where((item) => item.daysUntil(widget.now) < 0)
         .toList()
         .reversed
         .toList();
@@ -62,6 +72,13 @@ class ExamCalendarPage extends StatelessWidget {
       appBar: AppBar(
         title: Text(context.l10n.text('exam.title')),
         actions: [
+          IconButton(
+            key: const Key('exam-timeline-view'),
+            tooltip: context.l10n
+                .text(_timeline ? 'exam.listView' : 'exam.timelineView'),
+            icon: Icon(_timeline ? Icons.view_list_outlined : Icons.timeline),
+            onPressed: () => setState(() => _timeline = !_timeline),
+          ),
           IconButton(
             key: const Key('exam-calendar-week-view'),
             tooltip: context.l10n.text('exam.calendarView'),
@@ -72,52 +89,73 @@ class ExamCalendarPage extends StatelessWidget {
           ),
         ],
       ),
-      body: upcoming.isEmpty && past.isEmpty
-          ? const _EmptyExamCalendar()
-          : ListView(
-              padding: const EdgeInsets.fromLTRB(12, 16, 12, 32),
-              children: [
-                if (upcoming.isNotEmpty) ...[
-                  Text(context.l10n.text('exam.upcoming'),
-                      style: Theme.of(context).textTheme.titleLarge),
-                  const SizedBox(height: 8),
-                  for (final assessment in upcoming)
-                    _AssessmentCard(
-                      assessment: assessment,
-                      now: now,
-                      completed: completedFor(assessment.id),
-                      customPhases: phasesFor(assessment.id),
-                      note: noteFor(assessment.id),
-                      attachments: attachmentsFor(assessment.id),
-                      onProgressChanged: (value) =>
-                          onProgressChanged(assessment.id, value),
-                      onPhasesChanged: (value) =>
-                          onPhasesChanged(assessment.id, value),
-                      onNoteChanged: (value) =>
-                          onNoteChanged(assessment.id, value),
-                      onAttachmentsChanged: (value) =>
-                          onAttachmentsChanged(assessment.id, value),
-                    ),
-                ],
-                if (past.isNotEmpty) ...[
-                  const SizedBox(height: 16),
-                  ExpansionTile(
-                    title: Text(context.l10n
-                        .text('exam.past', args: {'count': '${past.length}'})),
-                    children: [
-                      for (final assessment in past)
-                        ListTile(
-                          leading: const Icon(Icons.history_rounded),
-                          title: Text(assessment.title),
-                          subtitle: Text(_subtitle(context, assessment)),
-                          trailing: Text(
-                              DateFormat('dd.MM.yyyy').format(assessment.date)),
+      body: _timeline
+          ? ExamTimeline(
+              assessments: upcoming,
+              now: widget.now,
+              assessmentBuilder: (assessment) => _AssessmentCard(
+                assessment: assessment,
+                now: widget.now,
+                completed: widget.completedFor(assessment.id),
+                customPhases: widget.phasesFor(assessment.id),
+                note: widget.noteFor(assessment.id),
+                attachments: widget.attachmentsFor(assessment.id),
+                onProgressChanged: (value) =>
+                    widget.onProgressChanged(assessment.id, value),
+                onPhasesChanged: (value) =>
+                    widget.onPhasesChanged(assessment.id, value),
+                onNoteChanged: (value) =>
+                    widget.onNoteChanged(assessment.id, value),
+                onAttachmentsChanged: (value) =>
+                    widget.onAttachmentsChanged(assessment.id, value),
+              ),
+            )
+          : upcoming.isEmpty && past.isEmpty
+              ? const _EmptyExamCalendar()
+              : ListView(
+                  padding: const EdgeInsets.fromLTRB(12, 16, 12, 32),
+                  children: [
+                    if (upcoming.isNotEmpty) ...[
+                      Text(context.l10n.text('exam.upcoming'),
+                          style: Theme.of(context).textTheme.titleLarge),
+                      const SizedBox(height: 8),
+                      for (final assessment in upcoming)
+                        _AssessmentCard(
+                          assessment: assessment,
+                          now: widget.now,
+                          completed: widget.completedFor(assessment.id),
+                          customPhases: widget.phasesFor(assessment.id),
+                          note: widget.noteFor(assessment.id),
+                          attachments: widget.attachmentsFor(assessment.id),
+                          onProgressChanged: (value) =>
+                              widget.onProgressChanged(assessment.id, value),
+                          onPhasesChanged: (value) =>
+                              widget.onPhasesChanged(assessment.id, value),
+                          onNoteChanged: (value) =>
+                              widget.onNoteChanged(assessment.id, value),
+                          onAttachmentsChanged: (value) =>
+                              widget.onAttachmentsChanged(assessment.id, value),
                         ),
                     ],
-                  ),
-                ],
-              ],
-            ),
+                    if (past.isNotEmpty) ...[
+                      const SizedBox(height: 16),
+                      ExpansionTile(
+                        title: Text(context.l10n.text('exam.past',
+                            args: {'count': '${past.length}'})),
+                        children: [
+                          for (final assessment in past)
+                            ListTile(
+                              leading: const Icon(Icons.history_rounded),
+                              title: Text(assessment.title),
+                              subtitle: Text(_subtitle(context, assessment)),
+                              trailing: Text(DateFormat('dd.MM.yyyy')
+                                  .format(assessment.date)),
+                            ),
+                        ],
+                      ),
+                    ],
+                  ],
+                ),
     );
   }
 }

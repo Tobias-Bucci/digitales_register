@@ -18,6 +18,20 @@
 </p>
 
 # File Picker
+
+## Local export privacy and error handling patches
+
+The bundled iOS `saveFile` implementation stages export bytes in a UUID-named
+temporary directory instead of app Documents. It removes that exact directory
+after a successful export, cancellation, dismissal or write failure, and reports
+preparation errors without filesystem details. This avoids persistent/backed-up
+copies of private register exports. User-picked destinations are never removed.
+Android also reports a missing provider output stream, URI or permission as a save
+error; it does not report success without writing or log private provider errors.
+The OS owns cleanup if the process is killed before a callback. Remove the patch
+when an upstream replacement provides equivalent staging/cleanup behavior; verify
+success, cancel, swipe dismissal and write failure on an iOS device first.
+
 A package that allows you to use the native file explorer to pick single or multiple files, with extensions filtering support.
 
 ## Currently supported features

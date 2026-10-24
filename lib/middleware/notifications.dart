@@ -40,9 +40,19 @@ Future<void> _loadNotifications(
 
   await _runCoalescedLoad(_notificationsCacheKey, () async {
     await next(action);
-    final dynamic data = await wrapper.send("api/notification/unread");
+    final source = wrapper;
+    final server = source.url;
+    final user = source.user;
+    final dynamic data = await source.send("api/notification/unread");
 
-    if (data != null) {
+    if (data != null &&
+        identical(source, wrapper) &&
+        server == wrapper.url &&
+        user == wrapper.user) {
+      if (server != null && user != null && !source.demoMode) {
+        await schoolNotificationOperation(
+            () => schoolNotifications.ingest(server, user, data as List));
+      }
       await api.actions.notificationsActions.loaded(data as List);
       _markRuntimeCacheFresh(_notificationsCacheKey);
     }
@@ -59,6 +69,7 @@ Future<void> _deleteNotification(
       action.payload.type == 'message'
           ? 'general'
           : (action.payload.type ?? 'unknown'));
+  await _rememberViewedSchoolNotifications([action.payload]);
   await next(action);
   _markRuntimeCacheStale(_notificationsCacheKey);
   await wrapper.send(
@@ -72,6 +83,8 @@ Future<void> _deleteAllNotifications(
   ActionHandler next,
   Action<void> action,
 ) async {
+  await _rememberViewedSchoolNotifications(
+      api.state.notificationState.notifications ?? <Notification>[]);
   await next(action);
   _markRuntimeCacheStale(_notificationsCacheKey);
   for (final n in api.state.notificationState.notifications!.where(
@@ -80,4 +93,25 @@ Future<void> _deleteAllNotifications(
     await api.actions.messagesActions.markAsRead(n.objectId!);
   }
   await wrapper.send("api/notification/markAsRead", args: {});
+}
+
+Future<void> _rememberViewedSchoolNotifications(
+    Iterable<Notification> items) async {
+  if (wrapper.user == null || wrapper.url == null || wrapper.demoMode) return;
+  await schoolNotificationOperation(() => schoolNotifications.markViewed(
+      wrapper.url!,
+      wrapper.user!,
+      items
+          .map((n) => <String, Object?>{
+                'id': n.id,
+                'type': n.type,
+                'objectId': n.objectId,
+                'timeSent': n.timeSent.toIso8601String(),
+              })
+          .toList()));
+}
+
+Future<void> refreshSchoolNotificationFeed(AppActions actions) async {
+  _markRuntimeCacheStale(_notificationsCacheKey);
+  await actions.notificationsActions.load();
 }

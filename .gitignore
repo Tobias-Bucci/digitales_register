@@ -1,27 +1,43 @@
-# Miscellaneous
+# ============================================================
+# Digitales Register - Git Ignore
+# Flutter / Dart / Android / iOS / macOS / Windows / Linux
+# Firebase / CI / Signing / Local Development
+# ============================================================
+
+# General temporary and system files
 *.class
 *.log
 *.pyc
 *.swp
+*.tmp
+*.temp
+*.bak
+*.orig
+*.rej
+*~
 .DS_Store
+Thumbs.db
+Desktop.ini
 .atom/
 .buildlog/
-.history
+.history/
 .svn/
 
-# IntelliJ related
+# IDEs and editors
 *.iml
 *.ipr
 *.iws
 .idea/
-
-# Visual Studio Code related
 .vscode/
+*.suo
+*.user
+*.userosscache
+*.sln.docstates
 
-# Eclipse/Buildship settings inside local packages
+# Eclipse / Buildship settings in local packages
 packages/uni_links/**/**/.settings/
 
-# Flutter/Dart/Pub related
+# Flutter / Dart / Pub
 **/doc/api/
 **/ios/Flutter/.last_build_id
 **/.gradle/
@@ -32,83 +48,113 @@ packages/uni_links/**/**/.settings/
 .packages
 .pub-cache/
 .pub/
-/build/
-/build/native_assets/
-/build/test_cache/
-/build/unit_test_assets/
-/android/build/
 **/build/
 
-# Web related
+# Web
 lib/generated_plugin_registrant.dart
 
-# Symbolication related
+# Debug symbols and obfuscation
 app.*.symbols
-
-# Obfuscation related
 app.*.map.json
 
-# Exceptions to above rules
+# Exceptions
 !/packages/flutter_tools/test/data/dart_dependencies_test/**/.packages
 
 # Generated Dart files
 **.g.dart
 
-# Temporary test files
+# Temporary tests and reports
 **/test/linux
 /test/**/failures/
 /flutter_*.log
+/AUDIT_REPORT/
 
-# Private requests & answers
+# Private requests and answers
 **/lib/requests/
 
-# Vendored plugin examples are not needed by the app overrides
+# Vendored plugin examples
 packages/firebase_analytics/example/
 packages/package_info_plus/example/
 packages/flutterfire/**/example/
 
-# Android signing secrets
-android/key.properties
-android/*.jks
-**/key.properties
-**/local.properties
-*.jks
-*.keystore
-*.p8
-*.mobileprovision
-*.pfx
-*.p12
-*.pvk
-*.pem
-*.key
-*.cer
-*.msix
-*.msixbundle
-tool/microsoft_store.local.psd1
-**/google-services.json
-**/GoogleService-Info.plist
-/lib/firebase_options.dart
+# ============================================================
+# Credentials and secrets
+# ============================================================
 
-# Local environment secrets and Firebase Admin credentials
+# Environment variables
 .env
 .env.*
 !.env.example
 !.env.template
+
+# Local credentials
 **/credentials.json
 **/service-account*.json
 **/*-firebase-adminsdk-*.json
 **/secrets.json
+**/secret.json
+**/client_secret*.json
 
-# iOS / macOS generated files
+# Private signing keys and certificates
+*.jks
+*.keystore
+*.p8
+*.p12
+*.pfx
+*.pvk
+*.pem
+*.key
+*.cer
+*.mobileprovision
+*.provisionprofile
+*.p8.bak
+*.p12.bak
+
+# Android signing
+android/key.properties
+android/*.jks
+**/key.properties
+**/local.properties
+
+# Microsoft Store signing
+tool/microsoft_store.local.psd1
+*.msix
+*.msixbundle
+
+# ============================================================
+# Firebase
+# ============================================================
+
+# Native Firebase configuration
+# Must be provided separately during CI builds.
+**/google-services.json
+**/GoogleService-Info.plist
+
+# Generated FlutterFire configuration
+# Must be provided or regenerated during CI builds.
+/lib/firebase_options.dart
+
+# Firebase local emulator data
+firebase-debug.log
+firebase-debug.*.log
+firestore-debug.log
+database-debug.log
+ui-debug.log
+.firebase/
+firebase-export/
+firebase-emulator-data/
+
+# Firebase Admin SDK credentials are covered above.
+# firebase.json is intentionally NOT ignored.
+
+# ============================================================
+# iOS / macOS
+# ============================================================
+
+# Generated Flutter files
 ios/Flutter/ephemeral/
 macos/Flutter/GeneratedPluginRegistrant.swift
 
-# ======= iOS =======
-# Pods and symlinks are generated on macOS via pod install
-**/ios/Pods/
-**/ios/.symlinks/
-
-# Generated Flutter iOS configuration
 **/ios/Flutter/Flutter.podspec
 **/ios/Flutter/Generated.xcconfig
 **/ios/Flutter/app.flx
@@ -116,7 +162,13 @@ macos/Flutter/GeneratedPluginRegistrant.swift
 **/ios/Flutter/flutter_assets/
 **/ios/Flutter/flutter_export_environment.sh
 
-# User-specific Xcode files
+# CocoaPods and generated symlinks
+**/ios/Pods/
+**/ios/.symlinks/
+**/macos/Pods/
+**/macos/.symlinks/
+
+# Xcode user-specific files
 *.mode1v3
 *.mode2v3
 *.pbxuser
@@ -124,10 +176,22 @@ macos/Flutter/GeneratedPluginRegistrant.swift
 *.xcuserstate
 *.xcworkspace/xcuserdata/
 *.xcodeproj/xcuserdata/
+*.xcscmblueprint
+*.xccheckout
 
-# Flatpak local build artifacts
+# Xcode build artifacts
+*.xcarchive
+*.ipa
+*.dSYM/
+DerivedData/
+
+# Local Xcode project backups
+*.pbxproj.bak
+
+# ============================================================
+# Flatpak
+# ============================================================
+
 .flatpak-builder/
 build-dir/
 repo/
-
-/AUDIT_REPORT/

@@ -2,6 +2,8 @@ include: package:lint/analysis_options.yaml
 
 analyzer:
   exclude:
+    # Ignored local audit scratch files, outside the app and test source trees.
+    - "AUDIT_REPORT/**"
     - "**.g.dart"
     - "ios/Flutter/ephemeral/**"
     - "packages/**"

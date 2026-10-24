@@ -43,6 +43,7 @@ import 'package:dr/ui/committed_deleteable.dart';
 import 'package:dr/ui/controlled_text_builder.dart';
 import 'package:dr/ui/dialog.dart';
 import 'package:dr/ui/favorite_subject_filter.dart';
+import 'package:dr/ui/grade_colors.dart';
 import 'package:dr/ui/last_fetched_overlay.dart';
 import 'package:dr/ui/no_internet.dart';
 import 'package:dr/utc_date_time.dart';
@@ -1584,8 +1585,10 @@ class ItemWidget extends StatelessWidget {
                           padding: const EdgeInsets.only(right: 8.0),
                           child: Text(
                             item.gradeFormatted!,
-                            style: const TextStyle(
-                                color: Colors.green, fontSize: 30),
+                            style: TextStyle(
+                                color: gradeColor(
+                                    parseBackendGradeHundredths(item.grade)),
+                                fontSize: 30),
                           ),
                         )
                       else if (!isHistory && !isDeletedView && item.checkable)

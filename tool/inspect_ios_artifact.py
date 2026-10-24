@@ -7,6 +7,7 @@ import plistlib
 import re
 import struct
 import zipfile
+from ios_firebase import configuration_errors, privacy_errors
 
 ROOT = Path(__file__).resolve().parents[1]
 MAGICS = {
@@ -75,6 +76,24 @@ def inspect_entries(entries, read, expected):
               'frameworks': [], 'picker_resource_bundles': [],
               'legacy_resources': [], 'binaries': [], 'errors': []}
     errors = report['errors']
+    errors.extend(privacy_errors(info))
+    firebase_path = prefix + 'GoogleService-Info.plist'
+    if firebase_path not in entries:
+        errors.append('Missing bundled GoogleService-Info.plist')
+    else:
+        errors.extend(configuration_errors(read(firebase_path)))
+    report['privacy_manifests'] = []
+    for name in entries:
+        if name.startswith(prefix) and name.endswith('/PrivacyInfo.xcprivacy'):
+            manifest = plistlib.loads(read(name))
+            report['privacy_manifests'].append(name)
+            if not isinstance(manifest, dict):
+                errors.append(f'Invalid privacy manifest: {name}')
+            elif manifest.get('NSPrivacyTracking') is True or manifest.get('NSPrivacyTrackingDomains'):
+                errors.append(f'Unexpected tracking declaration: {name}')
+    for plugin in ('file_picker', 'package_info_plus'):
+        if not any(plugin in name for name in report['privacy_manifests']):
+            errors.append(f'Missing bundled privacy manifest: {plugin}')
     version, build = expected.split('+')
     for key, value in [('CFBundleIdentifier', 'it.bucci.digitalesregister'),
                        ('CFBundleShortVersionString', version), ('CFBundleVersion', build)]:
