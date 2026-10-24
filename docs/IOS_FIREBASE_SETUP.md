@@ -76,13 +76,25 @@ Update Apple App Privacy from the actual shipped SDKs and behavior.
 
 ## Android and Windows
 
-The current Android JSON only contains the production package. Debug (`.debug`),
-Profile (`.profile`) and the conditional private release (`.irelease`) need their
-own matching Firebase clients/configurations if those variants are used. Obtain
-real files from the intended Firebase project, either with all required clients
-or under Gradle's `android/app/src/<buildType>/google-services.json` locations.
-Supply ignored files in Android CI before Gradle runs. Do not invent app IDs,
-remove package suffixes or reuse the production client for another package.
+Android Debug always uses `it.bucci.digitalesregister.debug`, Profile always uses
+`it.bucci.digitalesregister.profile`, and normal Release keeps
+`it.bucci.digitalesregister`. They install alongside each other with separate
+Android app storage, settings and login credentials.
+
+The current Android JSON only contains the production package. Debug and Profile
+still build without matching Firebase clients: their Google Services task is
+disabled and the native readiness gate prevents Firebase initialization, including
+when stale generated resources exist. Analytics and Crashlytics are unavailable
+in those development builds; the rest of the app remains functional.
+
+To enable Firebase in a development build, register its exact `.debug` or
+`.profile` package and supply the real configuration with that client, either in
+`android/app/google-services.json` or in
+`android/app/src/<buildType>/google-services.json`. The matching configuration
+automatically enables Firebase for that build without changing its package name.
+The conditional private release (`.irelease`) still needs its own matching client.
+Supply ignored files in Android CI before Gradle runs. Do not invent Firebase app
+IDs or reuse a Firebase client with a different Android package name.
 
 Windows intentionally has no Analytics or Crashlytics capability. The registered
 Firebase Core plugin and generated Windows options do not enable diagnostics.

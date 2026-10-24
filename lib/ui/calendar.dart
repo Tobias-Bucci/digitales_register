@@ -16,7 +16,10 @@
 // You should have received a copy of the GNU General Public License
 // along with digitales_register.  If not, see <http://www.gnu.org/licenses/>.
 
+import 'dart:async';
+
 import 'package:dr/analytics_service.dart';
+import 'package:dr/calendar_load_log.dart';
 import 'package:dr/container/calendar_container.dart';
 import 'package:dr/container/calendar_detail_container.dart';
 import 'package:dr/container/calendar_week_container.dart';
@@ -37,7 +40,7 @@ typedef DayCallback = void Function(UtcDateTime day);
 class Calendar extends StatefulWidget {
   final CalendarViewModel vm;
 
-  final DayCallback dayCallback;
+  final Future<void> Function(UtcDateTime day) dayCallback;
   final DayCallback currentMondayCallback;
   final VoidCallback showEditSubjectNicks;
   final VoidCallback showEditSubstituteSettings;
@@ -70,6 +73,8 @@ class _CalendarState extends State<Calendar> with TickerProviderStateMixin {
   final Duration _animatePageDuration = const Duration(milliseconds: 200);
   late bool tabletMode;
   String? _favoriteSubject;
+  final Set<UtcDateTime> _loadingWeeks = {};
+  final Set<UtcDateTime> _finishedWeeks = {};
 
   static final Animatable<double> _chevronOpacityTween =
       Tween<double>(begin: 1.0, end: 0.0)
@@ -100,7 +105,7 @@ class _CalendarState extends State<Calendar> with TickerProviderStateMixin {
     _dateRangeOpacityAnimation =
         _dateRangeOpacityController.drive(_dateRangeOpacityTween);
 
-    widget.dayCallback(widget.vm.currentMonday);
+    unawaited(_loadWeek(widget.vm.currentMonday));
     AnalyticsService.logCustomEvent('calendar_viewed');
 
     super.initState();
@@ -108,13 +113,31 @@ class _CalendarState extends State<Calendar> with TickerProviderStateMixin {
 
   late List<int> animatingPages;
 
+  Future<void> _loadWeek(UtcDateTime monday) async {
+    if (!_loadingWeeks.add(monday)) return;
+    setState(() {});
+    try {
+      await widget.dayCallback(monday);
+    } catch (_) {
+      // The middleware reports the failure; keep the visible week retryable.
+      logCalendarLoad(CalendarLoadEvent.weekError);
+    } finally {
+      if (mounted) {
+        setState(() {
+          _loadingWeeks.remove(monday);
+          _finishedWeeks.add(monday);
+        });
+      }
+    }
+  }
+
   void _pageViewControllerListener() {
     final floor = _controller.page!.floor(), ceil = _controller.page!.ceil();
     if (!animatingPages.contains(floor)) {
-      widget.dayCallback(mondayOf(floor));
+      unawaited(_loadWeek(mondayOf(floor)));
     }
     if (ceil != floor && !animatingPages.contains(ceil)) {
-      widget.dayCallback(mondayOf(ceil));
+      unawaited(_loadWeek(mondayOf(ceil)));
     }
     animatingPages = [floor, ceil];
   }
@@ -232,6 +255,9 @@ class _CalendarState extends State<Calendar> with TickerProviderStateMixin {
           return CalendarWeekContainer(
             monday: mondayOf(index),
             favoriteSubject: selectedFavoriteSubject,
+            loading: _loadingWeeks.contains(mondayOf(index)) ||
+                !_finishedWeeks.contains(mondayOf(index)),
+            onRetry: () => unawaited(_loadWeek(mondayOf(index))),
           );
         },
         controller: _controller,
@@ -334,9 +360,10 @@ class _CalendarState extends State<Calendar> with TickerProviderStateMixin {
                                         "${_dateFormat.format(widget.vm.first!)} - ${_dateFormat.format(widget.vm.last!)}",
                                         textAlign: TextAlign.center,
                                       )
-                                    : widget.vm.noInternet
-                                        ? Text(context.t('calendar.chooseDate'))
-                                        : const CircularProgressIndicator(),
+                                    : Text(
+                                        '${_dateFormat.format(widget.vm.currentMonday)} - ${_dateFormat.format(widget.vm.currentMonday.add(const Duration(days: 5)))}',
+                                        textAlign: TextAlign.center,
+                                      ),
                               ),
                             )),
                             SizedBox(

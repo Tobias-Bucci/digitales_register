@@ -31,7 +31,10 @@ class MainActivity: FlutterFragmentActivity() {
         MethodChannel(flutterEngine.dartExecutor.binaryMessenger, "dr/privacy_bootstrap")
             .setMethodCallHandler { call, result ->
                 when (call.method) {
-                    "ready" -> result.success(PrivacyApplication.ready)
+                    // Do not initialize a development build with stale generated
+                    // Firebase resources from a previously configured build.
+                    "ready" -> result.success(PrivacyApplication.ready &&
+                        resources.getBoolean(R.bool.firebase_configured))
                     "installationSource" -> {
                         try {
                         val installer = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {

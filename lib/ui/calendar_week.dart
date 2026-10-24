@@ -35,11 +35,15 @@ const holidayIconSize = 65.0;
 class CalendarWeek extends StatelessWidget {
   final CalendarWeekViewModel vm;
   final String? favoriteSubject;
+  final bool loading;
+  final VoidCallback? onRetry;
 
   const CalendarWeek({
     super.key,
     required this.vm,
     required this.favoriteSubject,
+    this.loading = true,
+    this.onRetry,
   });
 
   @override
@@ -69,9 +73,24 @@ class CalendarWeek extends StatelessWidget {
     return vm.days.isEmpty
         ? vm.noInternet
             ? const NoInternet()
-            : const Center(
-                child: CircularProgressIndicator(),
-              )
+            : loading
+                ? const Center(child: CircularProgressIndicator())
+                : Center(
+                    child: SingleChildScrollView(
+                      padding: const EdgeInsets.all(24),
+                      child: Column(mainAxisSize: MainAxisSize.min, children: [
+                        Text(context.t('calendar.noWeekData'),
+                            textAlign: TextAlign.center),
+                        const SizedBox(height: 12),
+                        OutlinedButton.icon(
+                          key: const Key('calendar-retry-week'),
+                          onPressed: onRetry,
+                          icon: const Icon(Icons.refresh),
+                          label: Text(context.t('calendar.retry')),
+                        ),
+                      ]),
+                    ),
+                  )
         : LastFetchedOverlay(
             lastFetched: vm.days.first.lastFetched,
             noInternet: vm.noInternet,

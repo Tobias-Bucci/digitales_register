@@ -31,14 +31,57 @@ Future<void> _ensureSchoolYearCalendarLoaded(
 ) async {
   await loadExportCalendarYear(
       state: () => api.state,
-      onLoaded: api.actions.calendarActions.loaded.call);
+      onLoaded: api.actions.calendarActions.loaded.call,
+      progressive: true);
 }
 
-/// Explicit calendar/export hydration, never invoked by login. Aggregate week
-/// responses before reducing them so the growing year is rebuilt only once.
+// Share network requests between the visible week and background history scan.
+final _calendarWeekRequests =
+    Expando<Map<UtcDateTime, Future<Map<String, dynamic>?>>>();
+
+Future<Map<String, dynamic>?> _requestCalendarWeek(
+    Wrapper session, UtcDateTime monday) async {
+  final requests = _calendarWeekRequests[session] ??= {};
+  final existing = requests[monday];
+  if (existing != null) {
+    logCalendarLoad(CalendarLoadEvent.coalesced);
+    return existing;
+  }
+  final future = Future<Map<String, dynamic>?>(() async {
+    final timer = Stopwatch()..start();
+    logCalendarLoad(CalendarLoadEvent.weekStart);
+    try {
+      final dynamic data = await session.send('api/calendar/student',
+          args: {'startDate': DateFormat('yyyy-MM-dd').format(monday)});
+      final valid = data is Map<String, dynamic>;
+      logCalendarLoad(
+          valid ? CalendarLoadEvent.weekReceived : CalendarLoadEvent.weekFailed,
+          elapsedMs: timer.elapsedMilliseconds,
+          days: valid ? data.length : 0);
+      return valid ? data : null;
+    } catch (_) {
+      logCalendarLoad(CalendarLoadEvent.weekError,
+          elapsedMs: timer.elapsedMilliseconds);
+      rethrow;
+    }
+  });
+  requests[monday] = future;
+  try {
+    return await future;
+  } finally {
+    if (identical(requests[monday], future)) {
+      final removed = requests.remove(monday);
+      assert(identical(removed, future));
+    }
+  }
+}
+
+/// Exports reduce once; background loading publishes nearby weeks in batches
+/// so holiday data becomes available before the whole school year completes.
 Future<bool> loadExportCalendarYear(
     {required AppState Function() state,
     required Future<void> Function(CalendarLoadedPayload) onLoaded,
+    bool progressive = false,
     bool Function()? isActive}) async {
   final initial = state();
   if (wrapper.demoMode) return true;
@@ -57,20 +100,58 @@ Future<bool> loadExportCalendarYear(
       () async {
     final loaded = state().calendarState.days.keys.map(toMonday).toSet();
     final merged = <String, dynamic>{};
-    for (final monday in schoolYearCalendarMondays(year)) {
+    final mondays = schoolYearCalendarMondays(year);
+    if (progressive) {
+      final anchor = toMonday(now);
+      mondays.sort((a, b) {
+        final aPast = a.isBefore(anchor), bPast = b.isBefore(anchor);
+        if (aPast != bPast) return aPast ? 1 : -1;
+        return aPast ? b.compareTo(a) : a.compareTo(b);
+      });
+    }
+    final timer = Stopwatch()..start();
+    var batchWeeks = 0;
+    var requestedWeeks = 0;
+    logCalendarLoad(CalendarLoadEvent.historyStart, weeks: mondays.length);
+    Future<void> publish({int? completedYear}) async {
+      if (!active()) return;
+      final data = Map<String, dynamic>.from(merged);
+      merged.clear();
+      batchWeeks = 0;
+      await onLoaded(CalendarLoadedPayload(
+          data: data,
+          config: _currentSubstituteDetectionConfig(state()),
+          completedSchoolYear: completedYear));
+      logCalendarLoad(CalendarLoadEvent.historyBatch,
+          elapsedMs: timer.elapsedMilliseconds, days: data.length);
+    }
+
+    for (final monday in mondays) {
       if (!active()) {
         complete = false;
+        logCalendarLoad(CalendarLoadEvent.cancelled,
+            elapsedMs: timer.elapsedMilliseconds, weeks: requestedWeeks);
         return;
       }
       if (loaded.contains(monday)) continue;
-      final dynamic data = await session.send('api/calendar/student',
-          args: {'startDate': DateFormat('yyyy-MM-dd').format(monday)});
+      Map<String, dynamic>? data;
+      try {
+        data = await _requestCalendarWeek(session, monday);
+      } catch (_) {
+        complete = false;
+        break;
+      }
+      requestedWeeks++;
       if (!active()) {
         complete = false;
+        logCalendarLoad(CalendarLoadEvent.cancelled,
+            elapsedMs: timer.elapsedMilliseconds, weeks: requestedWeeks);
         return;
       }
       if (data is Map<String, dynamic>) {
         merged.addAll(data);
+        batchWeeks++;
+        if (progressive && batchWeeks >= 4) await publish();
       } else {
         complete = false;
         // Stop on a provider/network failure rather than repeating it for
@@ -86,10 +167,13 @@ Future<bool> loadExportCalendarYear(
       complete = false;
       return;
     }
-    await onLoaded(CalendarLoadedPayload(
-        data: merged,
-        config: _currentSubstituteDetectionConfig(state()),
-        completedSchoolYear: complete ? year : null));
+    await publish(completedYear: complete ? year : null);
+    logCalendarLoad(
+        complete
+            ? CalendarLoadEvent.historyComplete
+            : CalendarLoadEvent.historyIncomplete,
+        elapsedMs: timer.elapsedMilliseconds,
+        weeks: requestedWeeks);
   });
   return complete;
 }
@@ -128,21 +212,28 @@ Future<void> _loadCalendar(
   if (api.state.noInternet) return;
 
   final cacheKey = _calendarCacheKey(action.payload);
-  if (_isRuntimeCacheFresh(cacheKey, _calendarCacheTtl)) {
+  if (_isRuntimeCacheFresh(cacheKey, _calendarCacheTtl) &&
+      api.state.calendarState.daysForWeek(action.payload).isNotEmpty) {
+    logCalendarLoad(CalendarLoadEvent.cacheHit);
     return;
   }
 
   await _runCoalescedLoad(cacheKey, () async {
     await next(action);
-    final dynamic data = await wrapper.send(
-      "api/calendar/student",
-      args: {"startDate": DateFormat("yyyy-MM-dd").format(action.payload)},
-    );
+    final session = wrapper;
+    final owner = (api.state.url, api.state.loginState.username);
+    final data = await _requestCalendarWeek(session, action.payload);
+    if (!identical(wrapper, session) ||
+        (api.state.url, api.state.loginState.username) != owner) {
+      logCalendarLoad(CalendarLoadEvent.cancelled);
+      return;
+    }
 
     if (data != null) {
+      final timer = Stopwatch()..start();
       await api.actions.calendarActions.loaded(
         CalendarLoadedPayload(
-          data: data as Map<String, dynamic>,
+          data: data,
           config: SubstituteDetectionConfig(
             (b) => b
               ..enabled = api.state.settingsState.substituteDetectionEnabled
@@ -155,6 +246,8 @@ Future<void> _loadCalendar(
         ),
       );
       _markRuntimeCacheFresh(cacheKey);
+      logCalendarLoad(CalendarLoadEvent.weekApplied,
+          elapsedMs: timer.elapsedMilliseconds, days: data.length);
     }
   });
 }

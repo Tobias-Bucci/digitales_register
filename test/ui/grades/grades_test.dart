@@ -2,6 +2,7 @@ import 'package:dr/app_state.dart';
 import 'package:dr/container/grades_page_container.dart';
 import 'package:dr/ui/animated_linear_progress_indicator.dart';
 import 'package:dr/ui/favorite_subject_filter.dart';
+import 'package:dr/ui/readable_content.dart';
 import 'package:dr/ui/sorted_grades_widget.dart';
 import 'package:dr/wrapper.dart';
 import '../../parse_webpage_test.dart' as webpage;
@@ -17,6 +18,30 @@ void main() {
   });
 
   tearDown(resetTestState);
+
+  for (final platform in [TargetPlatform.windows, TargetPlatform.iOS]) {
+    testWidgets('grade content resizes to the expected width on $platform',
+        (tester) async {
+      tester.view.devicePixelRatio = 1;
+      tester.view.physicalSize = const Size(1920, 1080);
+      addTearDown(tester.view.resetPhysicalSize);
+      addTearDown(tester.view.resetDevicePixelRatio);
+      final store = createStore(initialState: buildGradesPageState());
+      await pumpApp(tester,
+          store: store,
+          home: const GradesPageContainer(),
+          theme: ThemeData(platform: platform));
+      for (final width in [1920.0, 1280.0, 700.0]) {
+        tester.view.physicalSize = Size(width, 1080);
+        await tester.pumpAndSettle();
+        final content = find.descendant(
+            of: find.byType(ReadableContent), matching: find.byType(ListView));
+        expect(tester.getSize(content.first).width,
+            platform == TargetPlatform.windows || width < 960 ? width : 960);
+        expect(tester.takeException(), isNull);
+      }
+    });
+  }
 
   testWidgets('shows circular loading state when there are no grades yet',
       (tester) async {

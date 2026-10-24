@@ -23,7 +23,8 @@ import 'support/test_harness.dart';
 import 'support/fixtures.dart';
 
 void main() {
-  setUp(() => bootstrapTestEnvironment(fixedNow: fixtureNow));
+  setUp(() => bootstrapTestEnvironment(
+      fixedNow: fixtureNow, sharedPreferences: const {}));
   tearDown(resetTestState);
 
   for (final history in <Map<String, Object>>[
@@ -54,6 +55,30 @@ void main() {
     final tour = TutorialService();
     expect(await tour.shouldOffer(), isTrue);
     tour.dispose();
+  });
+
+  testWidgets('an idle dashboard offers the tutorial without a tap',
+      (tester) async {
+    final tour = TutorialService();
+    final store = createStore();
+    await pumpApp(tester,
+        store: store, home: const Scaffold(body: Text('Dashboard')));
+    await tester.pumpAndSettle();
+    expect(tester.binding.hasScheduledFrame, isFalse);
+    tour.scheduleOffer(tester.element(find.text('Dashboard')));
+    expect(tester.binding.hasScheduledFrame, isTrue,
+        reason: 'adding a post-frame callback alone leaves an idle UI waiting');
+    await tester.pumpAndSettle();
+    expect(find.byType(AlertDialog), findsOneWidget);
+    final cancel = find.descendant(
+        of: find.byType(AlertDialog), matching: find.byType(TextButton));
+    await tester.tap(cancel);
+    await tester.pumpAndSettle();
+    expect(find.byType(AlertDialog), findsNothing);
+    expect(tour.active, isFalse);
+    expect(await tour.shouldOffer(), isFalse);
+    tour.dispose();
+    store.dispose();
   });
 
   test('seven focused steps and two replay chapters remain', () {
