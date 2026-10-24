@@ -178,6 +178,7 @@ class DashboardSummaryCard extends StatelessWidget {
     required this.title,
     required this.primaryText,
     required this.secondaryText,
+    this.primaryContent,
     this.progress,
     this.onTap,
   });
@@ -186,6 +187,7 @@ class DashboardSummaryCard extends StatelessWidget {
   final String title;
   final String primaryText;
   final String secondaryText;
+  final Widget? primaryContent;
   final double? progress;
   final Future<void> Function()? onTap;
 
@@ -232,13 +234,14 @@ class DashboardSummaryCard extends StatelessWidget {
                     ],
                   ),
                   const SizedBox(height: 4),
-                  Text(
-                    primaryText,
-                    softWrap: true,
-                    style: theme.textTheme.titleLarge?.copyWith(
-                      fontWeight: FontWeight.w700,
-                    ),
-                  ),
+                  primaryContent ??
+                      Text(
+                        primaryText,
+                        softWrap: true,
+                        style: theme.textTheme.titleLarge?.copyWith(
+                          fontWeight: FontWeight.w700,
+                        ),
+                      ),
                   const SizedBox(height: 2),
                   Text(
                     secondaryText,

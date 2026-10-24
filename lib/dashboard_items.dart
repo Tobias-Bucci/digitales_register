@@ -4,7 +4,10 @@ enum DashboardItem {
   holidays('holidays', 'schoolCountdown.holidays.title'),
   gradingDeadline('gradingDeadline', 'schoolCountdown.grades.title'),
   absences('absences', 'absences.title'),
-  studyPlan('studyPlan', 'exam.plan');
+  studyPlan('studyPlan', 'exam.plan'),
+  gradeAverage('gradeAverage', 'grades.average'),
+  recentGrade('recentGrade', 'dashboard.recentGrade.title'),
+  nextAssessment('nextAssessment', 'dashboard.nextAssessment.title');
 
   const DashboardItem(this.id, this.titleKey);
   final String id;

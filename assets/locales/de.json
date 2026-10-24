@@ -1,4 +1,8 @@
 {
+  "dashboard.recentGrade.title": "Neueste Note",
+  "dashboard.nextAssessment.title": "Nächste Prüfung",
+  "dashboard.grades.empty": "Keine Noten verfügbar",
+  "dashboard.grades.open": "Noten öffnen, um Daten zu laden",
   "schoolNotifications.grade.title": "Neue Note",
   "schoolNotifications.grade.body": "Eine neue Note ist im Schulregister verfügbar.",
   "schoolNotifications.message.title": "Neue Schulnachricht",

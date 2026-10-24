@@ -242,6 +242,7 @@ void main() {
         lessThan(tester
             .getCenter(find.byKey(const ValueKey('gradingDeadline')))
             .dy));
+    await tester.ensureVisible(find.text('Standard wiederherstellen'));
     await tester.tap(find.text('Standard wiederherstellen'));
     await tester.pump();
     expect(find.byKey(const ValueKey('absences')), findsNothing);

@@ -1,4 +1,8 @@
 {
+  "dashboard.recentGrade.title": "Ultima nota",
+  "dashboard.nextAssessment.title": "Proscima proa",
+  "dashboard.grades.empty": "Degüna nota a disposiziun",
+  "dashboard.grades.open": "Daur les notes per ciarié i dac",
   "schoolNotifications.grade.title": "Nota nueva",
   "schoolNotifications.grade.body": "Na nota nueva ie desponibla tl register de scola.",
   "schoolNotifications.message.title": "Messaje nuef de scola",

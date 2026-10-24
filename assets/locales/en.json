@@ -1,4 +1,8 @@
 {
+  "dashboard.recentGrade.title": "Most recent grade",
+  "dashboard.nextAssessment.title": "Next assessment",
+  "dashboard.grades.empty": "No grades available",
+  "dashboard.grades.open": "Open grades to load data",
   "schoolNotifications.grade.title": "New grade",
   "schoolNotifications.grade.body": "A new grade is available in your school register.",
   "schoolNotifications.message.title": "New school message",
