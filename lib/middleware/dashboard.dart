@@ -41,6 +41,7 @@ Future<void> _loadDays(
 
   final cacheKey = _dashboardCacheKey(action.payload);
   if (_isRuntimeCacheFresh(cacheKey, _dashboardCacheTtl)) {
+    _startCalendarBackgroundLoad(api);
     return;
   }
 
@@ -67,6 +68,8 @@ Future<void> _loadDays(
       ),
     );
     _markRuntimeCacheFresh(cacheKey);
+    // Holidays also need calendar data when the timetable has never been opened.
+    _startCalendarBackgroundLoad(api);
   });
 }
 

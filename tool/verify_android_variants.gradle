@@ -1,0 +1,29 @@
+// Run from android/: ./gradlew -I ../tool/verify_android_variants.gradle verifyAndroidVariants
+gradle.projectsEvaluated {
+    gradle.rootProject.tasks.register('verifyAndroidVariants') {
+        doLast {
+            def app = gradle.rootProject.project(':app')
+            def android = app.extensions.getByName('android')
+            def ids = [:]
+            android.applicationVariants.each { variant ->
+                ids[variant.name] = variant.applicationId
+            }
+            def baseId = 'it.bucci.digitalesregister'
+            assert ids.debug == "${baseId}.debug"
+            assert ids.profile == "${baseId}.profile"
+            assert ids.values().toSet().size() == ids.size() : 'Builds must install separately'
+            def privateRelease = android.signingConfigs.release.keyAlias == 'myandroidkey'
+            assert ids.release == baseId + (privateRelease ? '.irelease' : '')
+            ['debug', 'profile'].each { buildType ->
+                def configured = android.buildTypes.getByName(buildType).resValues.values()
+                        .find { it.name == 'firebase_configured' }.value == 'true'
+                def task = app.tasks.getByName("process${buildType.capitalize()}GoogleServices")
+                assert task.enabled == configured : 'Firebase resources must match readiness'
+                println "${buildType}: ${ids[buildType]}, Firebase configured: ${configured}"
+            }
+            assert app.tasks.getByName('processReleaseGoogleServices').enabled
+            println "release: ${ids.release}, Firebase required"
+            println 'ANDROID_VARIANTS_VERIFIED'
+        }
+    }
+}

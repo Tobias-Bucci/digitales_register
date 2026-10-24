@@ -1,13 +1,13 @@
 import 'package:flutter/material.dart';
 
-/// Visual categories use the existing statistics thresholds, in hundredths.
+/// Orange covers 5.50 through 5.75 inclusive, in hundredths.
 /// They do not change the passing threshold (6) or any grade calculations.
 enum GradeCategory { failing, satisfactory, good }
 
 GradeCategory? gradeCategory(num? hundredths) {
   if (hundredths == null || !hundredths.isFinite || hundredths < 0) return null;
-  if (hundredths < 600) return GradeCategory.failing;
-  if (hundredths < 800) return GradeCategory.satisfactory;
+  if (hundredths < 550) return GradeCategory.failing;
+  if (hundredths <= 575) return GradeCategory.satisfactory;
   return GradeCategory.good;
 }
 

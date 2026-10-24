@@ -33,6 +33,28 @@ def allowDebugSigningForRelease = (localProperties.getProperty('allowDebugSignin
         ?: System.getenv('ALLOW_DEBUG_SIGNING_FOR_RELEASE')
         ?: 'false').toBoolean()
 
+// Development builds always have their own application ID. Firebase is optional
+// for those builds and must never change the installation's identity.
+def developmentFirebaseConfigured = { String buildType ->
+    def config = [file("src/${buildType}/google-services.json"), file('google-services.json')]
+            .find { it.isFile() }
+    if (config == null) return false
+    def clients = new groovy.json.JsonSlurper().parse(config).client ?: []
+    def packageName = "it.bucci.digitalesregister.${buildType}"
+    return clients.any {
+        it.client_info?.android_client_info?.package_name == packageName
+    }
+}
+def debugFirebaseConfigured = developmentFirebaseConfigured('debug')
+def profileFirebaseConfigured = developmentFirebaseConfigured('profile')
+
+tasks.configureEach { task ->
+    if ((task.name == 'processDebugGoogleServices' && !debugFirebaseConfigured) ||
+            (task.name == 'processProfileGoogleServices' && !profileFirebaseConfigured)) {
+        task.enabled = false
+    }
+}
+
 android {
     namespace "it.bucci.digitalesregister"
     compileSdk 37
@@ -58,6 +80,7 @@ android {
         targetSdk 37
         versionCode flutterVersionCode.toInteger()
         versionName flutterVersionName
+        resValue "bool", "firebase_configured", "true"
     }
 
     signingConfigs {
@@ -93,10 +116,12 @@ android {
         }
         debug {
             applicationIdSuffix ".debug"
+            resValue "bool", "firebase_configured", debugFirebaseConfigured.toString()
             resValue "string", "app_name", "dr DEBUG"
         }
         profile {
             applicationIdSuffix ".profile"
+            resValue "bool", "firebase_configured", profileFirebaseConfigured.toString()
             resValue "string", "app_name", "dr PROFILE"
         }
     }

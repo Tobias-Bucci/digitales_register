@@ -168,6 +168,9 @@ Future<void> _login(
     // We need to set the url earlier because other parts of the app will try to read it
     // because we pretend we are logged in earlier than we actually are.
     wrapper.url = url;
+    // Post-login loads capture this identity to reject responses from another
+    // account. Set it before loggedIn starts those loads, not afterwards.
+    await api.actions.setUrl(url);
 
     bool offlineLogin = false;
     if (action.payload.fromStorage) {
