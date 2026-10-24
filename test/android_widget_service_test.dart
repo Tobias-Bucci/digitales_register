@@ -35,6 +35,63 @@ void main() {
     ..loggedIn = true
     ..username = 'old');
 
+  for (final status in [
+    'ready',
+    'appLocked',
+    'dataSavingDisabled',
+    'loggedOut'
+  ]) {
+    test(
+        '$status ignores generation time but refreshes changed content and date',
+        () async {
+      final state = loggedIn.rebuild((b) {
+        b.settingsState.biometricAppLockEnabled = status == 'appLocked';
+        b.settingsState.noDataSaving = status == 'dataSavingDisabled';
+        b.loginState.loggedIn = status != 'loggedOut';
+      });
+      final bridge = RecordingWidgetBridge();
+      final service = AndroidWidgetSnapshotService(bridge: bridge);
+      await service.flush(state: state);
+      final original = bridge.snapshots.single;
+      for (var i = 0; i < 10; i++) {
+        mockNow = mockNow!.add(const Duration(seconds: 1));
+        await service.flush(state: state);
+      }
+      expect(bridge.snapshots, [original]);
+      expect(jsonDecode(original!)['meta']['status'], status);
+
+      final translated =
+          state.rebuild((b) => b.settingsState.languageCode = 'it');
+      await service.flush(state: translated);
+      expect(bridge.snapshots, hasLength(2));
+      mockNow = mockNow!.add(const Duration(days: 1));
+      await service.flush(state: translated);
+      expect(bridge.snapshots, hasLength(3));
+
+      await service.clear();
+      await service.flush(state: translated);
+      expect(bridge.snapshots, hasLength(5));
+      expect(bridge.snapshots[3], isNull);
+      expect(bridge.planningSnapshots, bridge.snapshots);
+    });
+  }
+
+  test('repeated immediate privacy syncs refresh only once', () async {
+    final bridge = RecordingWidgetBridge();
+    final service = AndroidWidgetSnapshotService(bridge: bridge);
+    final locked =
+        loggedIn.rebuild((b) => b.settingsState.biometricAppLockEnabled = true);
+    for (var i = 0; i < 20; i++) {
+      mockNow = mockNow!.add(const Duration(milliseconds: 1));
+      service.scheduleSync(locked, reason: 'test-action');
+    }
+    await service.flush(state: locked);
+    expect(bridge.snapshots, hasLength(1));
+    await service.flush(state: loggedIn);
+    expect(bridge.snapshots, hasLength(2));
+    expect(jsonDecode(bridge.snapshots.last!)['meta']['status'], 'ready');
+  });
+
   test('normal flush and repeated clear refresh after deletion', () async {
     final bridge = RecordingWidgetBridge();
     final service = AndroidWidgetSnapshotService(bridge: bridge);

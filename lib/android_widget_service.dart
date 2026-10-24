@@ -24,6 +24,7 @@ import 'package:dr/android_widget_snapshot.dart';
 import 'package:dr/app_state.dart';
 import 'package:dr/diagnostics_service.dart';
 import 'package:dr/main.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/services.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
@@ -132,6 +133,7 @@ class AndroidWidgetSnapshotService {
   Future<void> _enqueue(Future<void> Function() work) {
     final operation = _tail.then((_) => work());
     _tail = operation.catchError((Object error, StackTrace stack) {
+      _trace('operation-failed', 'queue', 'type=${error.runtimeType}');
       diagnostics.report(error, stack, DiagnosticError.storage);
     });
     return operation;
@@ -139,19 +141,31 @@ class AndroidWidgetSnapshotService {
 
   Timer? _pendingSave;
   AppState? _pendingState;
-  String? _lastPayload;
+  String? _lastContent;
+  String? _pendingReason;
+  final Stopwatch _traceClock = Stopwatch()..start();
+  int _traceSequence = 0;
 
-  void scheduleSync(AppState state) {
+  void _trace(String event, String reason, [String details = '']) {
+    if (!kDebugMode) return;
+    debugPrint('[WidgetSync] ${DateTime.now().toUtc().toIso8601String()} '
+        '+${_traceClock.elapsedMilliseconds}ms #${++_traceSequence} '
+        '$event reason=$reason $details');
+  }
+
+  void scheduleSync(AppState state, {String reason = 'state-change'}) {
     if (!state.loginState.loggedIn ||
         state.settingsState.noDataSaving ||
         state.settingsState.biometricAppLockEnabled) {
-      unawaited(
-          flush(state: state).catchError((Object error, StackTrace stack) {
+      unawaited(flush(state: state, reason: reason)
+          .catchError((Object error, StackTrace stack) {
         diagnostics.report(error, stack, DiagnosticError.storage);
       }));
       return;
     }
     _pendingState = state;
+    _pendingReason = reason;
+    _trace('scheduled', reason, 'debounceMs=${debounce.inMilliseconds}');
     _pendingSave?.cancel();
     _pendingSave = Timer(debounce, () {
       unawaited(flush().catchError((Object error, StackTrace stack) {
@@ -160,35 +174,57 @@ class AndroidWidgetSnapshotService {
     });
   }
 
-  Future<void> flush({AppState? state}) async {
+  Future<void> flush({AppState? state, String? reason}) async {
     final resolvedState = state ?? _pendingState;
+    final resolvedReason = reason ?? _pendingReason ?? 'explicit-flush';
     if (resolvedState == null) {
       return;
     }
     _pendingSave?.cancel();
     _pendingSave = null;
     _pendingState = null;
+    _pendingReason = null;
 
-    final payload =
-        json.encode(buildAndroidWidgetSnapshot(resolvedState).toJson());
+    final snapshot = buildAndroidWidgetSnapshot(resolvedState);
+    final snapshotJson = snapshot.toJson();
+    final payload = json.encode(snapshotJson);
+    // Generation time is metadata, not a change to widget content. Keep the
+    // date, privacy status and every displayed field in the comparison.
+    final contentJson = Map<String, Object?>.from(snapshotJson)
+      ..['meta'] = (Map<String, Object?>.from(snapshot.meta.toJson())
+        ..remove('generatedAt'));
+    final content = json.encode(contentJson);
+    _trace('queued', resolvedReason, 'status=${snapshot.meta.status.name}');
     await _enqueue(() async {
-      if (_lastPayload == payload) return;
+      if (_lastContent == content) {
+        _trace('skipped', resolvedReason, 'unchanged');
+        return;
+      }
+      final timer = Stopwatch()..start();
+      _trace('refresh-start', resolvedReason,
+          'status=${snapshot.meta.status.name}');
       final prefs = await _preferences();
       if (!await prefs.setString(androidWidgetSnapshotStorageKey, payload)) {
         throw StateError('Widget snapshot could not be saved');
       }
-      _lastPayload = payload;
       await _bridge.writePlanningSnapshot(payload);
       await _bridge.refreshWidgets();
+      _lastContent = content;
+      _trace('refresh-end', resolvedReason,
+          'durationMs=${timer.elapsedMilliseconds}');
     });
   }
 
-  Future<void> clear() async {
+  Future<void> clear({String reason = 'clear'}) async {
     _pendingSave?.cancel();
     _pendingSave = null;
     _pendingState = null;
+    _pendingReason = null;
+    _trace('clear-queued', reason);
     await _enqueue(() async {
-      _lastPayload = null;
+      final timer = Stopwatch()..start();
+      _trace('clear-start', reason);
+      _lastContent = null;
       try {
         final prefs = await _preferences();
         if (!await prefs.remove(androidWidgetSnapshotStorageKey)) {
@@ -199,6 +235,7 @@ class AndroidWidgetSnapshotService {
         // the app's own preferences fails during logout/account switching.
         await _bridge.writePlanningSnapshot(null);
         await _bridge.refreshWidgets();
+        _trace('clear-end', reason, 'durationMs=${timer.elapsedMilliseconds}');
       }
     });
   }

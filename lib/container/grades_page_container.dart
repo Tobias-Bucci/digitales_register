@@ -41,6 +41,7 @@ class GradesPageContainer extends StatelessWidget {
           changeSemester: actions.gradesActions.setSemester.call,
           showGradesSettings:
               actions.routingActions.showEditGradesAverageSettings.call,
+          showGradesChart: actions.routingActions.showGradesChart.call,
         );
       },
       connect: (state) {

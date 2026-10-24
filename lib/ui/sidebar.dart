@@ -107,12 +107,12 @@ class Sidebar extends StatelessWidget {
       onExpansionChange: onDrawerExpansionChange,
       alwaysExpanded: !tabletMode,
       expanded: drawerExpanded,
-      iconSize: 32,
-      textStyle: theme.textTheme.titleMedium,
+      iconSize: 26,
+      textStyle: theme.textTheme.titleMedium?.copyWith(fontSize: 15),
       fitItemsToBottom: true,
       borderRadius: 0,
-      // 68 - 20 px container padding leaves a square 48 px touch target.
-      minWidth: 68,
+      // 62 - 20 px container padding leaves a square 42 px item.
+      minWidth: 62,
       screenPadding: 0,
       title: showExpandedHeader
           ? Padding(

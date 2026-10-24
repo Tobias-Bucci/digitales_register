@@ -12,6 +12,7 @@ class PreparationWidgetProvider : PlanningWidgetProvider(DigitalesRegisterWidget
 
 open class PlanningWidgetProvider(private val kind: String) : AppWidgetProvider() {
     override fun onUpdate(context: Context, manager: AppWidgetManager, ids: IntArray) {
+        WidgetSyncTrace.log(context, "provider-onUpdate", "provider=$kind count=${ids.size}")
         updateWidgets(context, manager, ids, kind)
     }
 

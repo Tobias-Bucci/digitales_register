@@ -1297,9 +1297,10 @@ NextActionHandler _saveStateMiddleware(
                 keyFactory: getStorageKey,
               );
               if (deletedData) {
-                await androidWidgetSnapshotService.clear();
+                await androidWidgetSnapshotService.clear(reason: action.name);
               } else {
-                await androidWidgetSnapshotService.flush(state: api.state);
+                await androidWidgetSnapshotService.flush(
+                    state: api.state, reason: action.name);
               }
             } else {
               statePersistenceService.schedule(
@@ -1310,9 +1311,10 @@ NextActionHandler _saveStateMiddleware(
                 keyFactory: getStorageKey,
               );
               if (deletedData) {
-                await androidWidgetSnapshotService.clear();
+                await androidWidgetSnapshotService.clear(reason: action.name);
               } else {
-                androidWidgetSnapshotService.scheduleSync(api.state);
+                androidWidgetSnapshotService.scheduleSync(api.state,
+                    reason: action.name);
               }
             }
           }

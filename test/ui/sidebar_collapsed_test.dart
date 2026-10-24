@@ -122,7 +122,7 @@ void main() {
       find.byKey(const ValueKey('collapsible-sidebar-selected-box')),
     );
     expect(selectedButtonSize.width, selectedButtonSize.height);
-    expect(selectedButtonSize.width, greaterThanOrEqualTo(48));
+    expect(selectedButtonSize.width, 42);
 
     Opacity labelOpacity() => tester.widget<Opacity>(
           find
