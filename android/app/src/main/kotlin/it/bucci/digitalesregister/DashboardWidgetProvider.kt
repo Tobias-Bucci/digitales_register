@@ -13,6 +13,7 @@ class DashboardWidgetProvider : AppWidgetProvider() {
         appWidgetManager: AppWidgetManager,
         appWidgetIds: IntArray,
     ) {
+        WidgetSyncTrace.log(context, "provider-onUpdate", "provider=Dashboard count=${appWidgetIds.size}")
         updateWidgets(context, appWidgetManager, appWidgetIds)
     }
 

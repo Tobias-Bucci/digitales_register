@@ -2,6 +2,7 @@ import 'package:dr/app_state.dart';
 import 'package:dr/container/grades_page_container.dart';
 import 'package:dr/ui/animated_linear_progress_indicator.dart';
 import 'package:dr/ui/favorite_subject_filter.dart';
+import 'package:dr/ui/grades_chart_page.dart';
 import 'package:dr/ui/readable_content.dart';
 import 'package:dr/ui/sorted_grades_widget.dart';
 import 'package:dr/wrapper.dart';
@@ -18,6 +19,39 @@ void main() {
   });
 
   tearDown(resetTestState);
+
+  testWidgets('chart expand button opens fullscreen and back returns to grades',
+      (tester) async {
+    final store = createStore(
+      initialState: buildGradesPageState()
+          .rebuild((b) => b.settingsState.showGradesDiagram = true),
+      withMiddleware: true,
+    );
+    await pumpApp(
+      tester,
+      store: store,
+      home: const GradesPageContainer(),
+      onGenerateRoute: (settings) => settings.name == '/gradesChart'
+          ? MaterialPageRoute<void>(
+              settings: settings,
+              builder: (_) => const GradesChartPage(),
+            )
+          : null,
+    );
+    await settleFor(tester);
+
+    expect(find.byIcon(Icons.file_download_outlined), findsNothing);
+    await tester.tap(find.byIcon(Icons.open_in_full_rounded));
+    await tester.pumpAndSettle();
+    expect(find.byType(GradesChartPage), findsOneWidget);
+    expect(tester.takeException(), isNull);
+
+    await tester.tap(find.byType(BackButton));
+    await tester.pumpAndSettle();
+    expect(find.byType(GradesChartPage), findsNothing);
+    expect(find.byIcon(Icons.open_in_full_rounded), findsOneWidget);
+    expect(tester.takeException(), isNull);
+  });
 
   for (final platform in [TargetPlatform.windows, TargetPlatform.iOS]) {
     testWidgets('grade content resizes to the expected width on $platform',

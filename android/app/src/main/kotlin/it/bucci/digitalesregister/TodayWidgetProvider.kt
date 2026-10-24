@@ -13,6 +13,7 @@ class TodayWidgetProvider : AppWidgetProvider() {
         appWidgetManager: AppWidgetManager,
         appWidgetIds: IntArray,
     ) {
+        WidgetSyncTrace.log(context, "provider-onUpdate", "provider=Today count=${appWidgetIds.size}")
         updateWidgets(context, appWidgetManager, appWidgetIds)
     }
 

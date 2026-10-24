@@ -13,6 +13,7 @@ class GradesWidgetProvider : AppWidgetProvider() {
         appWidgetManager: AppWidgetManager,
         appWidgetIds: IntArray,
     ) {
+        WidgetSyncTrace.log(context, "provider-onUpdate", "provider=Grades count=${appWidgetIds.size}")
         updateWidgets(context, appWidgetManager, appWidgetIds)
     }
 
