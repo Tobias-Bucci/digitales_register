@@ -94,4 +94,46 @@ void main() {
     );
     expect(controller.isEnabled, isFalse);
   });
+
+  // Only an explicit `true` from the platform prompt may authenticate; a `false`
+  // or missing result must not be mistaken for success.
+  for (final result in <Object?>[false, null]) {
+    final label = result == null ? 'null' : 'false';
+
+    test('enabling the lock fails when the prompt returns $label', () async {
+      messenger.setMockMethodCallHandler(channel, (call) async {
+        calls.add(call);
+        return switch (call.method) {
+          'canAuthenticate' => 'success',
+          'authenticate' => result,
+          _ => null,
+        };
+      });
+
+      await expectLater(
+        controller.enable(),
+        throwsA(isA<BiometricAppLockSetupException>()),
+      );
+      expect(controller.isEnabled, isFalse);
+      expect(controller.isLocked, isFalse);
+    });
+
+    test('a prompt returning $label keeps the app locked', () async {
+      await controller.enable();
+      controller.lock();
+      expect(controller.isLocked, isTrue);
+
+      messenger.setMockMethodCallHandler(channel, (call) async {
+        calls.add(call);
+        return switch (call.method) {
+          'canAuthenticate' => 'success',
+          'authenticate' => result,
+          _ => null,
+        };
+      });
+
+      expect(await controller.authenticateIfNeeded(), isFalse);
+      expect(controller.isLocked, isTrue);
+    });
+  }
 }
