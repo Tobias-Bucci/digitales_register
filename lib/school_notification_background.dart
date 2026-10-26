@@ -5,10 +5,13 @@ import 'dart:io';
 import 'package:cookie_jar/cookie_jar.dart';
 import 'package:dio/dio.dart';
 import 'package:dio_cookie_manager/dio_cookie_manager.dart';
+import 'package:dr/desktop.dart';
 import 'package:dr/school_api_endpoints.dart';
 import 'package:flutter/foundation.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter/widgets.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
+import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:workmanager/workmanager.dart';
 
 const schoolNotificationTask = 'it.bucci.digitalesregister.schoolRefresh';
@@ -25,6 +28,50 @@ void initializeSchoolNotificationBackground() {
     AndroidFlutterLocalNotificationsPlugin.registerWith();
   } else if (defaultTargetPlatform == TargetPlatform.iOS) {
     IOSFlutterLocalNotificationsPlugin.registerWith();
+  }
+}
+
+/// Mobile notification storage. iOS workers must read the saved login after
+/// the first unlock, while the UI keeps its existing Keychain items. A storage
+/// fixed to after-first-unlock never saw the UI's when-unlocked `login` item
+/// (see [keychainAnyAccessibility]), so every iOS background check skipped all
+/// accounts and the credential upgrade wrote nothing. Read across classes;
+/// create or upgrade items as after-first-unlock, device-only.
+class SchoolNotificationKeychain extends FlutterSecureStorage {
+  const SchoolNotificationKeychain() : super(iOptions: keychainAnyAccessibility);
+
+  static const background = IOSOptions(
+      accessibility: KeychainAccessibility.first_unlock_this_device);
+
+  @override
+  Future<void> write({
+    required String key,
+    required String? value,
+    AppleOptions? iOptions,
+    AndroidOptions? aOptions,
+    LinuxOptions? lOptions,
+    WebOptions? webOptions,
+    AppleOptions? mOptions,
+    WindowsOptions? wOptions,
+  }) async {
+    if (value == null || defaultTargetPlatform != TargetPlatform.iOS) {
+      return super.write(key: key, value: value, aOptions: aOptions);
+    }
+    try {
+      await super.write(key: key, value: value, iOptions: background);
+    } on PlatformException {
+      // The class-specific existence check missed an item of another class,
+      // so adding collided with it. Deletion ignores the class; recreate it.
+      if (!await containsKey(key: key)) rethrow;
+      await delete(key: key);
+      try {
+        await super.write(key: key, value: value, iOptions: background);
+      } catch (_) {
+        // Never lose the saved login: keep it readable for the UI instead.
+        await super.write(key: key, value: value);
+        rethrow;
+      }
+    }
   }
 }
 

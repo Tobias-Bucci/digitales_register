@@ -933,6 +933,7 @@
   "schoolNotifications.result.networkError": "L server de scola ne fova nia cuntatabl tl ultimo control.",
   "schoolNotifications.result.invalidResponse": "L server de scola ne à nia dat na resposta cumpleta y valida.",
   "schoolNotifications.result.storageOrNotificationError": "L ultimo control ne à nia pudù unì salvà dl dut o damandà coche notificazion de sistem.",
+  "schoolNotifications.result.credentialsUnavailable": "L control tl fon ne à nia pudù liejer i dac de azes salvei de chësc account. Fajede l azes da nuef tl’app.",
   "schoolNotifications.settings.accountUnavailable": "L account de chësta notificazion ne ie nia plu desponibl.",
   "schoolNotifications.settings.scheduled": "Control tl fon planisà",
   "schoolNotifications.settings.notScheduled": "Degun control tl fon en spieta. Controlea i permësc y i dac de azes salvéi.",

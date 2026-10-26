@@ -106,10 +106,7 @@ class SchoolNotificationService extends ChangeNotifier
   final Duration backgroundAccountBudget;
   late final _storage = _providedStorage ??
       (mobileBackgroundSupported
-          ? const FlutterSecureStorage(
-              iOptions: IOSOptions(
-                  accessibility:
-                      KeychainAccessibility.first_unlock_this_device))
+          ? const SchoolNotificationKeychain()
           : getFlutterSecureStorage());
   Future<Database>? _database;
   LazyBox<String>? _history;
@@ -1274,7 +1271,14 @@ class SchoolNotificationService extends ChangeNotifier
       }
       if (await _foregroundSessionActive()) return null;
       final raw = await _storage.read(key: 'login');
-      if (raw == null) return null;
+      // Fixed category only. This skip was silent, which hid the iOS Keychain
+      // mismatch: settings reported nothing while every check skipped.
+      Future<_BackgroundNotificationRequest?> unavailable() async {
+        await _diagnose(account, {'backgroundResult': 'credentialsUnavailable'});
+        return null;
+      }
+
+      if (raw == null) return unavailable();
       final login = jsonDecode(raw) as Map;
       final saved = [
         login,
@@ -1297,11 +1301,10 @@ class SchoolNotificationService extends ChangeNotifier
       if (server == null ||
           user == null ||
           password is! String ||
-          accountKey(server, user) != account ||
-          user == 'demo' ||
-          user == 'debug') {
-        return null;
+          accountKey(server, user) != account) {
+        return unavailable();
       }
+      if (user == 'demo' || user == 'debug') return null;
       final uri = Uri.tryParse(server);
       if (uri == null ||
           uri.scheme != 'https' ||

@@ -949,6 +949,7 @@
   "schoolNotifications.result.networkError": "Der Schulserver war bei der letzten Prüfung nicht erreichbar.",
   "schoolNotifications.result.invalidResponse": "Der Schulserver hat keine vollständige, gültige Antwort geliefert.",
   "schoolNotifications.result.storageOrNotificationError": "Die letzte Prüfung konnte nicht vollständig gespeichert oder als Systembenachrichtigung angefordert werden.",
+  "schoolNotifications.result.credentialsUnavailable": "Für die Hintergrundprüfung waren keine gespeicherten Zugangsdaten dieses Accounts lesbar. Melde dich in der App erneut an.",
   "schoolNotifications.settings.accountUnavailable": "Der zu dieser Benachrichtigung gehörende Account ist nicht mehr verfügbar.",
   "schoolNotifications.settings.scheduled": "Hintergrundprüfung eingerichtet",
   "schoolNotifications.settings.notScheduled": "Keine ausstehende Hintergrundprüfung erkannt. Prüfe Berechtigung und gespeicherte Anmeldung.",

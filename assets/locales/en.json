@@ -933,6 +933,7 @@
   "schoolNotifications.result.networkError": "The school server was unreachable during the last check.",
   "schoolNotifications.result.invalidResponse": "The school server did not return a complete, valid response.",
   "schoolNotifications.result.storageOrNotificationError": "The last check could not be fully saved or submitted as a system notification.",
+  "schoolNotifications.result.credentialsUnavailable": "The background check could not read saved sign-in details for this account. Sign in again in the app.",
   "schoolNotifications.settings.accountUnavailable": "The account for this notification is no longer available.",
   "schoolNotifications.settings.scheduled": "Background check scheduled",
   "schoolNotifications.settings.notScheduled": "No pending background check was found. Check permission and saved sign-in details.",

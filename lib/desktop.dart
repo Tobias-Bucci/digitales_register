@@ -31,11 +31,21 @@ bool isDesktop() {
   return Platform.isMacOS || Platform.isLinux || Platform.isWindows;
 }
 
+/// flutter_secure_storage puts kSecAttrAccessible into every iOS Keychain
+/// query. A class-specific read cannot see an item of another class, and a
+/// class-specific write collides with it. Without a class, reads match any
+/// item and updates keep the item's class; new items still use Apple's default
+/// (when unlocked). The background notification worker upgrades `login` to
+/// after-first-unlock, so the UI must not query a fixed class. Other platforms
+/// ignore iOS options.
+const keychainAnyAccessibility = secure_storage.IOSOptions(accessibility: null);
+
 secure_storage.FlutterSecureStorage getFlutterSecureStorage() {
   if (isDesktop() && !Platform.isWindows) {
     return DesktopSecureStorage();
   } else {
-    return const secure_storage.FlutterSecureStorage();
+    return const secure_storage.FlutterSecureStorage(
+        iOptions: keychainAnyAccessibility);
   }
 }
 
