@@ -1,4 +1,5 @@
 """Static configuration consistency only; never a native delivery qualification."""
+import argparse
 import json
 import plistlib
 import re
@@ -15,7 +16,11 @@ def check(condition, description):
 
 
 def main():
-    dart = (ROOT / 'lib/school_notification_service.dart').read_text(encoding='utf-8')
+    parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument('--merged-manifest', type=Path,
+                        help='Also inspect the manifest produced by an Android build')
+    args = parser.parse_args()
+    dart = (ROOT / 'lib/school_notification_background.dart').read_text(encoding='utf-8')
     task = re.search(r"const schoolNotificationTask = '([^']+)'", dart)[1]
     with (ROOT / 'ios/Runner/Info.plist').open('rb') as file:
         info = plistlib.load(file)
@@ -35,6 +40,24 @@ def main():
           'No direct battery exemption permission requested')
     check((ROOT / 'android/app/src/main/res/drawable/ic_school_notification.xml').is_file(),
           'Android notification icon available')
+    if args.merged_manifest:
+        merged = ET.parse(args.merged_manifest).getroot()
+        merged_permissions = {e.get(attribute) for e in merged.findall('uses-permission')}
+        for permission in ['INTERNET', 'POST_NOTIFICATIONS', 'ACCESS_NETWORK_STATE',
+                           'WAKE_LOCK', 'RECEIVE_BOOT_COMPLETED']:
+            check(f'android.permission.{permission}' in merged_permissions,
+                  f'Built manifest declares {permission}')
+        application = merged.find('application')
+        services = {e.get(attribute): e for e in application.findall('service')}
+        job = services.get('androidx.work.impl.background.systemjob.SystemJobService')
+        check(job is not None and job.get(attribute.replace('name', 'permission')) ==
+              'android.permission.BIND_JOB_SERVICE', 'Built manifest includes protected WorkManager JobService')
+        receivers = {e.get(attribute): e for e in application.findall('receiver')}
+        receiver = receivers.get('androidx.work.impl.background.systemalarm.RescheduleReceiver')
+        check(receiver is not None and any(
+            action.get(attribute) == 'android.intent.action.BOOT_COMPLETED'
+            for action in receiver.findall('intent-filter/action')),
+            'Built manifest includes WorkManager reboot rescheduling receiver')
     pubspec = (ROOT / 'pubspec.yaml').read_text(encoding='utf-8')
     for package in ['workmanager_android', 'workmanager_apple']:
         check(f'path: packages/{package}' in pubspec and (ROOT / 'packages' / package / 'pubspec.yaml').is_file(),

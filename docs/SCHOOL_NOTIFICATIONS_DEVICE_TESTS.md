@@ -3,6 +3,31 @@
 Stand: 25.10.2026. Diese Anleitung ist vorbereitet; die nachfolgenden Gerätetests
 wurden in der Windows-Entwicklungsumgebung **nicht durchgeführt**.
 
+Die Referenzübernahme vom 25.10.2026 ist in
+`SCHOOL_NOTIFICATIONS_REFERENCE_REBUILD.md` beschrieben. Für diese Version müssen
+die untenstehenden Zustellszenarien neu geprüft werden; alte Builds qualifizieren
+den neuen Pluginstart und Lifecyclepfad nicht.
+
+## Zusätzliche Regressionen der Referenzübernahme
+
+- Ohne sichtbare Activity eine natürliche WorkManager-Ausführung abwarten. Auch
+  nach Prozessende muss die neue Engine das Anzeigeplugin initialisieren und
+  eine tatsächlich neue Note/Mitteilung anzeigen können.
+- App direkt nach einem Wechsel A → B → A schließen. Der eindeutige periodische
+  Auftrag muss erhalten bleiben; Wechsel dürfen den nächsten Lauf nicht wieder
+  um 15 Minuten verschieben. Expliziter Logout muss weitere Abrufe verhindern.
+- Eine geteilte Mitteilung (`messageShared`) nach der stillen Baseline anlegen.
+  Derselbe Mitteilungsschalter und dieselbe Duplikatvermeidung müssen gelten.
+- Mit mehreren berechtigten Testkonten eine nicht erreichbare Schule und eine
+  erreichbare Schule kombinieren. Der Timeout der ersten darf die zweite nicht
+  aus jeder Runde verdrängen; keine fremden Zugangsdaten in Logs aufzeichnen.
+- Die App während eines laufenden Hintergrundabrufs öffnen, auch mit Biometrie
+  und in Split Screen. Keine nachträgliche Systemanzeige im sichtbaren Fenster;
+  angemeldete Schul-Sitzung und Kontoansicht anschließend prüfen.
+- Neuen Prozess nach verpasstem Pause-Callback, Reboot und manueller Uhränderung
+  prüfen. Eine gespeicherte Markierung aus einem anderen Prozess darf den
+  Android-Abruf nicht blockieren.
+
 ## Vorbereitung und Messverfahren
 
 1. Signierten Release-Build sowie einen Debug-Build auf einem physischen Android-

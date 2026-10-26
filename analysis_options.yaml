@@ -4,6 +4,8 @@ analyzer:
   exclude:
     # Ignored local audit scratch files, outside the app and test source trees.
     - "AUDIT_REPORT/**"
+    # Read-only reference checkout, not part of this app's package.
+    - "digitales_register/**"
     - "**.g.dart"
     - "ios/Flutter/ephemeral/**"
     - "packages/**"

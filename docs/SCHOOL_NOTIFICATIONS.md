@@ -1,7 +1,8 @@
 # Personal school notifications — Issue #82
 
-Implementation after the 2026-10-24/25 revision. The German completion report is in
-`ISSUE_82_COMPLETION_REPORT.md`; device qualification is in
+Implementation after the 2026-10-25 reference-based revision. The current German
+comparison and completion report is in `SCHOOL_NOTIFICATIONS_REFERENCE_REBUILD.md`.
+`ISSUE_82_COMPLETION_REPORT.md` records the earlier implementation; device qualification is in
 `SCHOOL_NOTIFICATIONS_DEVICE_TESTS.md`.
 
 ## Scope and data flow
@@ -93,7 +94,8 @@ system-settings button never changes permissions or battery policy automatically
 
 ## Event identities, persistence and states
 
-The engine accepts `grade` and `message`; unknown announcement types stay in the
+The engine accepts `grade`, `message` and `messageShared` without case sensitivity;
+both message types use the existing message setting. Unknown types stay in the
 in-app feed. A malformed relevant entry fails ingestion before advancing
 baselines. A partial invalid feed cannot become a successful empty baseline.
 
@@ -137,10 +139,13 @@ Foreground ingestion is always quiet, including startup, resume and refresh
 after a long absence. It stores known identities and updates the in-app feed and
 badge. It creates no delayed notification queue and does not mark the feed read.
 
-A foreground heartbeat is published before native notification initialization,
-renewed every three minutes, and expires after six. Pause removes it. A worker
-skips foreground sessions and feeds checked within the last two minutes. A crash
-heartbeat cannot suppress checks indefinitely.
+Before authenticating and before committing a response, mobile workers ask the
+native lifecycle channel whether the app is visible. Android tracks started
+Activities in the Application, shared by UI and headless engines; process
+importance is no longer used as a proxy. This state is not persisted and resets
+after process death/reboot. The additional Dart foreground mark contains the
+process ID and a six-minute deadline; pause removes it. Legacy timestamps are
+ignored by mobile workers. Workers also skip feeds checked within the last two minutes.
 
 Background ingestion requests at most one alert per category/account/batch.
 Stable account/category IDs replace previous category alerts. Optional counts
@@ -157,7 +162,7 @@ requires a packaged app identity; Linux cannot recover another process's daemon
 notification mappings. These desktop limits do not apply to the mobile channels.
 Android additionally clears them in native `onResume` before Dart startup.
 `SchoolLocalNotificationsPlugin` subclasses the existing plugin and gates only
-personal `show` calls on the native main queue when the process is foreground.
+personal `show` calls on the native main queue when an Activity is visible.
 It is installed in UI and headless engines. Other plugin behavior is delegated.
 iOS native `willPresent` suppresses personal foreground alerts/sounds; background
 requests retain normal notification sound behavior.
@@ -165,8 +170,9 @@ requests retain normal notification sound behavior.
 ## Background execution, authentication and retries
 
 Android registers one unique network-constrained periodic WorkManager job:
-`it.bucci.digitalesregister.schoolRefresh`. Interval/initial delay: 15 minutes;
-policy: keep; exponential retry backoff starts at one minute. WorkManager persists
+`it.bucci.digitalesregister.schoolRefresh`. Interval: 15 minutes; no extra initial
+delay on Android; policy: update, preserving the enqueue time. Account switching
+does not cancel the job. Exponential retry backoff starts at one minute. WorkManager persists
 work through ordinary process death/reboot. Doze, restrictions, OEM policies,
 force-stop and networking can delay/prevent execution.
 
@@ -183,8 +189,15 @@ The OS chooses whether/when iOS refresh runs. Force-quitting, disabled refresh
 and power restrictions may prevent it. Neither platform guarantees 15-minute
 polling or immediate notifications.
 
+The dispatcher explicitly registers the Android/iOS Dart notification plugin
+before constructing the service: the pinned Workmanager version initializes the
+binding but does not perform this registration itself. This prevents a missing
+platform implementation from turning initialization/show into silent no-ops.
+The Android host still registers native plugins in each engine.
+
 Eligible saved accounts run sequentially, least recently attempted first, within
-a shared 20-second network budget. Each phase has 8-second connect/send/receive
+a two-minute round on Android and a 20-second round on iOS. Each account gets at
+most 20 seconds for its own network requests. Each phase has 8-second connect/send/receive
 limits. One login and one unread-feed request are needed per checked account;
 with both categories disabled there is no request. No documented category-filter
 or incremental cursor exists in the reused contract, so none is invented.

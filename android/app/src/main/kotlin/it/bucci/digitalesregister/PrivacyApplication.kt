@@ -4,6 +4,7 @@ import android.app.Application
 import android.content.Context
 import dev.fluttercommunity.workmanager.BackgroundEngineConfigurator
 import io.flutter.embedding.engine.FlutterEngine
+import io.flutter.plugin.common.MethodChannel
 
 /**
  * FlutterFire's runtime overrides survive process death and take precedence over
@@ -15,8 +16,21 @@ import io.flutter.embedding.engine.FlutterEngine
  * compatibility boundary when upgrading the Firebase BoM (see privacy report).
  */
 class PrivacyApplication : Application(), BackgroundEngineConfigurator {
+    override fun onCreate() {
+        super.onCreate()
+        registerActivityLifecycleCallbacks(SchoolNotificationVisibility)
+    }
+
     override fun configureBackgroundEngine(engine: FlutterEngine) {
         SchoolLocalNotificationsPlugin.install(engine)
+        MethodChannel(engine.dartExecutor.binaryMessenger, "dr/school_notifications")
+            .setMethodCallHandler { call, result ->
+                when (call.method) {
+                    "isForeground" -> result.success(SchoolNotificationVisibility.isForeground)
+                    "diagnostics" -> result.success(emptyMap<String, Any>())
+                    else -> result.notImplemented()
+                }
+            }
     }
     override fun attachBaseContext(base: Context) {
         super.attachBaseContext(base)

@@ -29,12 +29,17 @@ class SchoolNotificationEvent {
   final String? fallbackIdentity;
   Iterable<String> get identities => [identity, ...aliases];
 
+  // The reference's notification_type.dart identifies messageShared as a
+  // message and compares the portal's types without case sensitivity.
+  static SchoolNotificationCategory? categoryFor(Object? type) =>
+      switch (type is String ? type.toLowerCase() : null) {
+        'grade' => SchoolNotificationCategory.grade,
+        'message' || 'messageshared' => SchoolNotificationCategory.message,
+        _ => null,
+      };
+
   static SchoolNotificationEvent? parse(Map item) {
-    final category = switch (item['type']) {
-      'grade' => SchoolNotificationCategory.grade,
-      'message' => SchoolNotificationCategory.message,
-      _ => null,
-    };
+    final category = categoryFor(item['type']);
     if (category == null) return null;
     final timestamp = item['timeSent'];
     final sent =

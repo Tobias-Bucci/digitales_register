@@ -1,8 +1,6 @@
 package dev.fluttercommunity.workmanager
 
 import android.content.Context
-import android.app.ActivityManager
-import io.flutter.plugin.common.MethodChannel
 import android.os.Handler
 import android.os.Looper
 import androidx.concurrent.futures.CallbackToFutureAdapter
@@ -75,18 +73,6 @@ class BackgroundWorker(
 
         engine = FlutterEngine(applicationContext)
         (applicationContext as? BackgroundEngineConfigurator)?.configureBackgroundEngine(engine!!)
-        MethodChannel(engine!!.dartExecutor.binaryMessenger, "dr/school_notifications")
-            .setMethodCallHandler { call, result ->
-                when (call.method) {
-                    "isForeground" -> {
-                        val state = ActivityManager.RunningAppProcessInfo()
-                        ActivityManager.getMyMemoryState(state)
-                        result.success(state.importance <= ActivityManager.RunningAppProcessInfo.IMPORTANCE_FOREGROUND)
-                    }
-                    "diagnostics" -> result.success(emptyMap<String, Any>())
-                    else -> result.notImplemented()
-                }
-            }
 
         if (!flutterLoader.initialized()) {
             flutterLoader.startInitialization(applicationContext)

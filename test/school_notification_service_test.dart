@@ -5,8 +5,10 @@ import 'dart:typed_data';
 
 import 'package:dio/dio.dart';
 import 'package:dr/school_notification_engine.dart';
+import 'package:dr/school_notification_background.dart';
 import 'package:dr/school_notification_service.dart';
 import 'package:flutter/widgets.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:mocktail/mocktail.dart';
@@ -16,6 +18,8 @@ import 'package:sqflite/sqflite.dart';
 import 'support/test_harness.dart';
 
 class _Notifications extends Mock implements FlutterLocalNotificationsPlugin {}
+
+class _Scheduler extends Mock implements SchoolNotificationScheduler {}
 
 class _Database extends Fake implements Database {
   @override
@@ -52,9 +56,15 @@ class _MobileService extends SchoolNotificationService {
       super.historyDirectory,
       super.permission,
       super.httpClient,
-      super.backgroundBudget});
+      super.backgroundBudget,
+      super.backgroundAccountBudget,
+      super.scheduler,
+      this.android = false});
+  final bool android;
   @override
   bool get mobileBackgroundSupported => true;
+  @override
+  bool get androidBackgroundSupported => android;
 }
 
 class _SchoolApi implements HttpClientAdapter {
@@ -92,6 +102,18 @@ class _SchoolApi implements HttpClientAdapter {
 
   @override
   void close({bool force = false}) {}
+}
+
+class _StalledLoginApi extends _SchoolApi {
+  _StalledLoginApi() : super([]);
+
+  @override
+  Future<ResponseBody> fetch(RequestOptions options,
+      Stream<Uint8List>? requestStream, Future<void>? cancelFuture) async {
+    requests.add(options);
+    await cancelFuture;
+    throw DioException(requestOptions: options, type: DioExceptionType.cancel);
+  }
 }
 
 extension _BackgroundHarness on SchoolNotificationService {
@@ -192,6 +214,8 @@ void main() {
       bool authenticated = true,
       Completer<void>? gate,
       DioExceptionType? failureType,
+      bool android = false,
+      SchoolNotificationScheduler? scheduler,
       Duration budget = const Duration(seconds: 20)}) async {
     service.dispose();
     final api = _SchoolApi(events ?? [event(1)],
@@ -203,6 +227,8 @@ void main() {
         storage: storage,
         permission: () async => true,
         database: () async => _Database(),
+        android: android,
+        scheduler: scheduler,
         backgroundBudget: budget,
         historyDirectory: () async => directory,
         httpClient: (options) => Dio(options)..httpClientAdapter = api);
@@ -815,6 +841,161 @@ void main() {
         .toIso8601String();
     await service.backgroundSync();
     expect(shown, hasLength(1));
+  });
+
+  test('account switching keeps periodic work, explicit logout cancels it',
+      () async {
+    final scheduler = _Scheduler();
+    when(() => scheduler.schedule()).thenAnswer((_) async {});
+    when(() => scheduler.cancel()).thenAnswer((_) async {});
+    await mobile(scheduler: scheduler);
+    clearInteractions(scheduler);
+    await service.deactivate(switchingAccount: true);
+    verifyNever(() => scheduler.cancel());
+    await service.activate('https://other-school.example', user,
+        backgroundAllowed: true);
+    verify(() => scheduler.schedule()).called(1);
+    verifyNever(() => scheduler.cancel());
+    await service.deactivate();
+    verify(() => scheduler.cancel()).called(1);
+  });
+
+  test('one slow school cannot consume the entire multi-account round',
+      () async {
+    service.dispose();
+    final stalled = _StalledLoginApi();
+    final healthy = _SchoolApi([event(1)]);
+    service = _MobileService(
+        native: native,
+        storage: storage,
+        permission: () async => true,
+        database: () async => _Database(),
+        historyDirectory: () async => directory,
+        backgroundBudget: const Duration(seconds: 2),
+        backgroundAccountBudget: const Duration(milliseconds: 80),
+        httpClient: (options) => Dio(options)
+          ..httpClientAdapter = options.baseUrl.contains('other-school.example')
+              ? healthy
+              : stalled);
+    await service.initialize(background: true);
+    await service.activate(server, user, backgroundAllowed: true);
+    await service.ingest(server, user, []);
+    await service.activate('https://other-school.example', user,
+        backgroundAllowed: true);
+    await service.ingest('https://other-school.example', user, []);
+    for (final url in [server, 'https://other-school.example']) {
+      storage.storage.remove(
+          'school-notification-last-sync-${service.accountKey(url, user)}');
+    }
+    storage.storage['login'] = jsonEncode({
+      'url': server,
+      'user': user,
+      'pass': 'fixture-password',
+      'otherAccounts': [
+        {
+          'url': 'https://other-school.example',
+          'user': user,
+          'pass': 'fixture-password'
+        }
+      ]
+    });
+    await expectLater(service.backgroundSync(), throwsA(isA<DioException>()));
+    expect(stalled.requests, hasLength(1));
+    expect(healthy.requests, hasLength(2));
+    expect(shown, hasLength(1));
+    expect(SchoolNotificationDestination.decode(shown.single)!.account,
+        service.accountKey('https://other-school.example', user));
+  });
+
+  test('malformed shared messages cannot silently establish a baseline',
+      () async {
+    await enable();
+    await expectLater(
+        service.ingestAsBackground(server, user, [
+          {'type': 'messageShared', 'id': 1}
+        ]),
+        throwsFormatException);
+    await expectLater(service.ingestAsBackground(server, user, ['invalid']),
+        throwsFormatException);
+  });
+
+  test('Android ignores a stale heartbeat when no Activity is visible',
+      () async {
+    const channel = MethodChannel('dr/school_notifications');
+    TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
+        .setMockMethodCallHandler(channel, (call) async => false);
+    addTearDown(() => TestDefaultBinaryMessengerBinding
+        .instance.defaultBinaryMessenger
+        .setMockMethodCallHandler(channel, null));
+    final api = await mobile(android: true);
+    storage.storage['school-notification-foreground-until'] =
+        DateTime.now().add(const Duration(minutes: 6)).toIso8601String();
+    storage.storage['school-notification-foreground-v2'] =
+        schoolNotificationForegroundMark(DateTime.now(), pid + 1);
+    await service.backgroundSync();
+    expect(api.requests, hasLength(2));
+    expect(shown, hasLength(1));
+  });
+
+  test('Android checks native visibility before authenticating', () async {
+    const channel = MethodChannel('dr/school_notifications');
+    TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
+        .setMockMethodCallHandler(channel, (call) async => true);
+    addTearDown(() => TestDefaultBinaryMessengerBinding
+        .instance.defaultBinaryMessenger
+        .setMockMethodCallHandler(channel, null));
+    final api = await mobile(android: true);
+    await service.backgroundSync();
+    expect(api.requests, isEmpty);
+    expect(shown, isEmpty);
+  });
+
+  test('a missing Android lifecycle channel fails before authenticating',
+      () async {
+    final api = await mobile(android: true);
+    await expectLater(
+        service.backgroundSync(), throwsA(isA<MissingPluginException>()));
+    expect(api.requests, isEmpty);
+    expect(shown, isEmpty);
+  });
+
+  test('Android discards a feed if an Activity opens during the request',
+      () async {
+    var visible = false;
+    const channel = MethodChannel('dr/school_notifications');
+    TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
+        .setMockMethodCallHandler(channel, (call) async => visible);
+    addTearDown(() => TestDefaultBinaryMessengerBinding
+        .instance.defaultBinaryMessenger
+        .setMockMethodCallHandler(channel, null));
+    final gate = Completer<void>();
+    final api = await mobile(android: true, gate: gate);
+    final work = service.backgroundSync();
+    await api.blocked.future;
+    visible = true;
+    gate.complete();
+    await work;
+    expect(shown, isEmpty);
+    expect(service.diagnostics['backgroundResult'], 'superseded');
+  });
+
+  test(
+      'an expired worker cannot commit after another engine acquired its lease',
+      () async {
+    final gate = Completer<void>();
+    final api = await mobile(gate: gate);
+    final work = service.backgroundSync();
+    await api.blocked.future;
+    storage.storage[
+            'school-notification-lease-${service.accountKey(server, user)}'] =
+        'replacement-lease';
+    gate.complete();
+    await work;
+    expect(shown, isEmpty);
+    expect(
+        storage.storage[
+            'school-notification-lease-${service.accountKey(server, user)}'],
+        'replacement-lease');
   });
 
   test('transient SQLite contention yields and retries before touching history',
