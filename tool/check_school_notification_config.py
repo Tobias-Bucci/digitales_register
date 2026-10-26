@@ -32,7 +32,14 @@ def main():
           'Apple task registered before launch returns')
     check('WorkmanagerPlugin.setPluginRegistrantCallback' in swift and 'registerSchoolNotificationChannel(registrar.messenger())' in swift,
           'Apple headless plugin/lifecycle registration present (source consistency)')
-    manifest = ET.parse(ROOT / 'android/app/src/main/AndroidManifest.xml').getroot()
+    # flutter_secure_storage filters iOS Keychain queries by accessibility class.
+    # The UI and the worker must both read the shared `login` item across classes.
+    desktop = (ROOT / 'lib/desktop.dart').read_text(encoding='utf-8')
+    service = (ROOT / 'lib/school_notification_service.dart').read_text(encoding='utf-8')
+    check('iOptions: keychainAnyAccessibility' in desktop and 'const SchoolNotificationKeychain()' in service
+          and 'KeychainAccessibility.first_unlock_this_device' not in service,
+          'UI and worker read the shared iOS login across Keychain classes')
+    manifest =ET.parse(ROOT / 'android/app/src/main/AndroidManifest.xml').getroot()
     attribute = '{http://schemas.android.com/apk/res/android}name'
     permissions = {element.get(attribute) for element in manifest.findall('uses-permission')}
     check('android.permission.POST_NOTIFICATIONS' in permissions, 'Android notification permission declared')

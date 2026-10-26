@@ -933,6 +933,7 @@
   "schoolNotifications.result.networkError": "Il server scolastico non era raggiungibile durante l’ultimo controllo.",
   "schoolNotifications.result.invalidResponse": "Il server scolastico non ha restituito una risposta completa e valida.",
   "schoolNotifications.result.storageOrNotificationError": "Non è stato possibile salvare completamente l’ultimo controllo o richiedere la notifica di sistema.",
+  "schoolNotifications.result.credentialsUnavailable": "Il controllo in background non ha potuto leggere le credenziali salvate di questo account. Accedi di nuovo nell’app.",
   "schoolNotifications.settings.accountUnavailable": "L’account di questa notifica non è più disponibile.",
   "schoolNotifications.settings.scheduled": "Controllo in background pianificato",
   "schoolNotifications.settings.notScheduled": "Nessun controllo in background in attesa. Verifica i permessi e le credenziali salvate.",

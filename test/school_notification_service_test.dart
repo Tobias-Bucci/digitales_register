@@ -351,6 +351,23 @@ void main() {
     expect(service.diagnostics.containsKey('deliveredAt'), isFalse);
   });
 
+  test('an unreadable saved login is reported instead of skipped silently',
+      () async {
+    final api = await mobile();
+    storage.storage.remove('login');
+    await service.backgroundSync();
+    expect(api.requests, isEmpty);
+    expect(service.diagnostics['backgroundResult'], 'credentialsUnavailable');
+
+    storage.storage['login'] = jsonEncode({'url': server, 'user': user});
+    service.diagnostics = {};
+    await service.backgroundSync();
+    expect(api.requests, isEmpty);
+    expect(service.diagnostics['backgroundResult'], 'credentialsUnavailable');
+    expect(jsonEncode(service.diagnostics), isNot(contains(user)));
+    expect(jsonEncode(service.diagnostics), isNot(contains('school.example')));
+  });
+
   test('rejected authentication pauses retries until a new app session',
       () async {
     final api = await mobile(authenticated: false);

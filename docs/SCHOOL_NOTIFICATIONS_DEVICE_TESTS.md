@@ -8,6 +8,24 @@ Die Referenzübernahme vom 25.10.2026 ist in
 die untenstehenden Zustellszenarien neu geprüft werden; alte Builds qualifizieren
 den neuen Pluginstart und Lifecyclepfad nicht.
 
+## iOS-Keychain-Regression (26.10.2026)
+
+Siehe `SCHOOL_NOTIFICATIONS_DEBUG_2026-10-26.md`. Auf einem iPhone mit einem
+Build **vor** dieser Korrektur angemeldete Accounts verwenden, dann auf den neuen
+Build aktualisieren:
+
+- Nach dem Update ohne erneute Anmeldung: App einmal öffnen, gespeicherte Anmeldung
+  muss weiterhin automatisch funktionieren (keine verlorenen Zugangsdaten).
+- Einstellungen der Schulbenachrichtigungen: eingerichtete Accounts müssen wieder
+  aufgelistet werden (vorher war die Liste unter iOS leer).
+- Gerät sperren, BGAppRefresh mit Apples Entwicklungsverfahren auslösen: Die
+  Diagnose darf nicht `credentialsUnavailable` zeigen; nach einer neuen Note muss
+  eine Systembenachrichtigung angefordert werden.
+- Neustart, **vor** der ersten Entsperrung Task auslösen: Fehlschlag ist zulässig,
+  die gespeicherte Anmeldung darf danach nicht verloren sein.
+- Accountwechsel, Abmelden/Anmelden und Passwortänderung: Die App muss die
+  Anmeldung weiter lesen und speichern können; danach wieder gesperrter Hintergrundlauf.
+
 ## Zusätzliche Regressionen der Referenzübernahme
 
 - Ohne sichtbare Activity eine natürliche WorkManager-Ausführung abwarten. Auch

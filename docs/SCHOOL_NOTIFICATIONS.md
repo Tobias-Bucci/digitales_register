@@ -2,6 +2,8 @@
 
 Implementation after the 2026-10-25 reference-based revision. The current German
 comparison and completion report is in `SCHOOL_NOTIFICATIONS_REFERENCE_REBUILD.md`.
+The 2026-10-26 end-to-end debugging report, including the iOS Keychain root
+cause, is in `SCHOOL_NOTIFICATIONS_DEBUG_2026-10-26.md`.
 `ISSUE_82_COMPLETION_REPORT.md` records the earlier implementation; device qualification is in
 `SCHOOL_NOTIFICATIONS_DEVICE_TESTS.md`.
 
@@ -86,6 +88,13 @@ permission-status handling still needs Xcode/device qualification.
 - iOS uses device-only Keychain accessibility after first unlock for enabled
   background credentials/key material. Before first unlock a run may fail; the
   OS must grant a later run. Locked-device access needs device verification.
+  flutter_secure_storage filters every iOS query by accessibility class, so
+  the UI storage (`getFlutterSecureStorage`) and the notification storage
+  (`SchoolNotificationKeychain`) both read without a class. The notification
+  storage creates items after-first-unlock and upgrades the UI's `login` item
+  after consent by deleting and recreating it; if recreation fails, the login is
+  restored readable for the UI. UI updates keep the item's class.
+  A missing or unreadable saved login is reported as `credentialsUnavailable`.
 
 Settings distinguish permission, actual pending work, known power/background
 restrictions, disabled channels, and four times: last background start, last
@@ -193,7 +202,10 @@ The dispatcher explicitly registers the Android/iOS Dart notification plugin
 before constructing the service: the pinned Workmanager version initializes the
 binding but does not perform this registration itself. This prevents a missing
 platform implementation from turning initialization/show into silent no-ops.
-The Android host still registers native plugins in each engine.
+The Android host still registers native plugins in each engine. The Flutter
+engine also runs the generated Dart plugin registrant when it starts a root
+isolate from a callback, so this registration is defense in depth; the
+2026-10-26 review found no evidence that it caused the reported failures.
 
 Eligible saved accounts run sequentially, least recently attempted first, within
 a two-minute round on Android and a 20-second round on iOS. Each account gets at
