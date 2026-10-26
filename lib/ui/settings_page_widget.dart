@@ -35,6 +35,7 @@ import 'package:dr/tutorial/tutorial_target.dart';
 import 'package:dr/ui/about_app_dialog.dart';
 import 'package:dr/ui/autocomplete_options.dart';
 import 'package:dr/ui/committed_deleteable.dart';
+import 'package:dr/ui/credits_page.dart';
 import 'package:dr/ui/dialog.dart';
 import 'package:dr/ui/network_protocol_page.dart';
 import 'package:dr/ui/privacy_data_details_page.dart';
@@ -1118,6 +1119,25 @@ class _SettingsPageWidgetState extends State<SettingsPageWidget> {
               ),
               const SizedBox(height: 16),
               _buildAdvancedSection(l10n),
+              const SizedBox(height: 16),
+              _SettingsSectionCard(
+                title: l10n.text('settings.section.credits'),
+                children: [
+                  ListTile(
+                    key: const Key('settings-credits-tile'),
+                    leading: const Icon(Icons.favorite_outline_rounded),
+                    title: Text(l10n.text('credits.title')),
+                    subtitle: Text(l10n.text('credits.settings.subtitle')),
+                    trailing: const Icon(Icons.chevron_right),
+                    onTap: () => Navigator.of(context).push(
+                      MaterialPageRoute<void>(
+                        builder: (_) => const CreditsPage(),
+                        settings: const RouteSettings(name: '/credits'),
+                      ),
+                    ),
+                  ),
+                ],
+              ),
               if (widget.vm.username == 'debug')
                 Padding(
                   padding: const EdgeInsets.only(top: 16),
