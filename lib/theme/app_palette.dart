@@ -18,16 +18,19 @@
 import 'dart:math' as math;
 
 import 'package:flutter/material.dart';
+import 'package:material_color_utilities/material_color_utilities.dart';
 
 /// The app's single, curated color palette.
 ///
-/// Every scheme is hand-tuned instead of generated from a seed so that light,
-/// dark and AMOLED mode share the same identity (slate blue, teal and a warm
-/// amber accent) while keeping WCAG AA contrast for all on-color pairs.
+/// Neutral surfaces are hand-tuned and shared by every accent. The accent
+/// families (primary, secondary, tertiary) come from one of the curated
+/// [AppAccent]s: its light-mode primary is fixed, and the remaining roles are
+/// HCT tones of the same hue, so every accent keeps WCAG AA contrast in light,
+/// dark and AMOLED mode.
 // A namespace keeps palette lookups readable at call sites (AppPalette.dark).
 // ignore: avoid_classes_with_only_static_members
 abstract final class AppPalette {
-  static const ColorScheme light = ColorScheme(
+  static const ColorScheme _lightBase = ColorScheme(
     brightness: Brightness.light,
     primary: Color(0xFF2F5DA8),
     onPrimary: Color(0xFFFFFFFF),
@@ -69,7 +72,7 @@ abstract final class AppPalette {
     surfaceTint: Color(0xFF2F5DA8),
   );
 
-  static const ColorScheme dark = ColorScheme(
+  static const ColorScheme _darkBase = ColorScheme(
     brightness: Brightness.dark,
     primary: Color(0xFF9DBEF5),
     onPrimary: Color(0xFF0B2A5C),
@@ -113,10 +116,7 @@ abstract final class AppPalette {
 
   /// Dark accents on true black. Containers stay just above black so cards
   /// and sheets remain distinguishable without lighting up OLED pixels.
-  static final ColorScheme amoled = dark.copyWith(
-    primaryContainer: const Color(0xFF172F57),
-    secondaryContainer: const Color(0xFF003833),
-    tertiaryContainer: const Color(0xFF4D240C),
+  static final ColorScheme _amoledBase = _darkBase.copyWith(
     errorContainer: const Color(0xFF690005),
     surface: const Color(0xFF000000),
     surfaceDim: const Color(0xFF000000),
@@ -129,12 +129,82 @@ abstract final class AppPalette {
     outlineVariant: const Color(0xFF2C3038),
   );
 
+  /// The default (blue) schemes.
+  static final ColorScheme light =
+      scheme(brightness: Brightness.light, amoled: false);
+  static final ColorScheme dark =
+      scheme(brightness: Brightness.dark, amoled: false);
+  static final ColorScheme amoled =
+      scheme(brightness: Brightness.dark, amoled: true);
+
+  static final Map<(AppAccent, Brightness, bool), ColorScheme> _cache = {};
+
   static ColorScheme scheme({
     required Brightness brightness,
     required bool amoled,
+    AppAccent accent = AppAccent.blue,
   }) {
-    if (brightness == Brightness.light) return light;
-    return amoled ? AppPalette.amoled : dark;
+    final isAmoled = amoled && brightness == Brightness.dark;
+    return _cache.putIfAbsent(
+      (accent, brightness, isAmoled),
+      () => _build(accent, brightness, isAmoled),
+    );
+  }
+
+  static ColorScheme _build(
+      AppAccent accent, Brightness brightness, bool amoled) {
+    final seed = Hct.fromInt(accent.seed.toARGB32());
+    final primary = TonalPalette.of(seed.hue, seed.chroma);
+    // Calm companions in the same hue family (Material "tonal spot").
+    final secondary = TonalPalette.of(seed.hue, math.min(seed.chroma, 16));
+    final tertiary =
+        TonalPalette.of((seed.hue + 60) % 360, math.min(seed.chroma, 24));
+    Color tone(TonalPalette palette, int tone) => Color(palette.get(tone));
+
+    if (brightness == Brightness.light) {
+      return _lightBase.copyWith(
+        primary: accent.seed,
+        onPrimary: const Color(0xFFFFFFFF),
+        primaryContainer: tone(primary, 90),
+        onPrimaryContainer: tone(primary, 10),
+        primaryFixed: tone(primary, 90),
+        primaryFixedDim: tone(primary, 80),
+        onPrimaryFixed: tone(primary, 10),
+        onPrimaryFixedVariant: tone(primary, 30),
+        secondary: tone(secondary, 40),
+        onSecondary: const Color(0xFFFFFFFF),
+        secondaryContainer: tone(secondary, 90),
+        onSecondaryContainer: tone(secondary, 10),
+        tertiary: tone(tertiary, 40),
+        onTertiary: const Color(0xFFFFFFFF),
+        tertiaryContainer: tone(tertiary, 90),
+        onTertiaryContainer: tone(tertiary, 10),
+        inversePrimary: tone(primary, 80),
+        surfaceTint: accent.seed,
+      );
+    }
+    // On AMOLED, containers sit one tone lower to stay close to black.
+    final container = amoled ? 20 : 30;
+    return (amoled ? _amoledBase : _darkBase).copyWith(
+      primary: tone(primary, 80),
+      onPrimary: tone(primary, 20),
+      primaryContainer: tone(primary, container),
+      onPrimaryContainer: tone(primary, 90),
+      primaryFixed: tone(primary, 90),
+      primaryFixedDim: tone(primary, 80),
+      onPrimaryFixed: tone(primary, 10),
+      onPrimaryFixedVariant: tone(primary, 30),
+      secondary: tone(secondary, 80),
+      onSecondary: tone(secondary, 20),
+      secondaryContainer: tone(secondary, container),
+      onSecondaryContainer: tone(secondary, 90),
+      tertiary: tone(tertiary, 80),
+      onTertiary: tone(tertiary, 20),
+      tertiaryContainer: tone(tertiary, container),
+      onTertiaryContainer: tone(tertiary, 90),
+      inversePrimary: accent.seed,
+      surfaceTint: tone(primary, 80),
+    );
   }
 
   /// Subject colors. Each is a mid tone that keeps at least 3:1 contrast
@@ -240,4 +310,47 @@ extension AppStatusColors on ColorScheme {
           : const Color(0xFFFCE7C2);
   Color get onWarningContainer =>
       _isDark ? const Color(0xFFFCE7C2) : const Color(0xFF3D2400);
+}
+
+/// Curated accent colors. Each [seed] is the exact light-mode primary and was
+/// chosen to keep at least 4.5:1 contrast for white text on it and for it as
+/// text on light surfaces and cards.
+enum AppAccent {
+  blue(Color(0xFF3972A6), 'palette.accent.blue'),
+  violet(Color(0xFF6750A4), 'palette.accent.violet'),
+  teal(Color(0xFF00796B), 'palette.accent.teal'),
+  green(Color(0xFF2E7D32), 'palette.accent.green'),
+  rose(Color(0xFFB03A6B), 'palette.accent.rose'),
+  orange(Color(0xFFA0520F), 'palette.accent.orange'),
+  slate(Color(0xFF4F5B6B), 'palette.accent.slate');
+
+  const AppAccent(this.seed, this.nameKey);
+
+  final Color seed;
+  final String nameKey;
+
+  static AppAccent fromName(String? name) => values.firstWhere(
+        (accent) => accent.name == name,
+        orElse: () => blue,
+      );
+
+  /// Maps a freely picked color from older versions to the closest accent.
+  static AppAccent nearest(Color color) {
+    final hct = Hct.fromInt(color.toARGB32());
+    // Greys and near-greys read best as the neutral slate accent.
+    if (hct.chroma < 12) return slate;
+    AppAccent best = blue;
+    var bestDistance = double.infinity;
+    for (final accent in values) {
+      if (accent == slate) continue;
+      final other = Hct.fromInt(accent.seed.toARGB32());
+      final hueDelta = (hct.hue - other.hue).abs() % 360;
+      final distance = math.min(hueDelta, 360 - hueDelta);
+      if (distance < bestDistance) {
+        bestDistance = distance;
+        best = accent;
+      }
+    }
+    return best;
+  }
 }

@@ -74,9 +74,14 @@ void main() {
 
   group('palette contrast', () {
     final schemes = {
-      'light': AppPalette.light,
-      'dark': AppPalette.dark,
-      'amoled': AppPalette.amoled,
+      for (final accent in AppAccent.values) ...{
+        '${accent.name} light': AppPalette.scheme(
+            brightness: Brightness.light, amoled: false, accent: accent),
+        '${accent.name} dark': AppPalette.scheme(
+            brightness: Brightness.dark, amoled: false, accent: accent),
+        '${accent.name} amoled': AppPalette.scheme(
+            brightness: Brightness.dark, amoled: true, accent: accent),
+      },
     };
     for (final MapEntry(key: name, value: scheme) in schemes.entries) {
       test('$name on-colors meet WCAG AA', () {
@@ -106,6 +111,8 @@ void main() {
           ),
           'primaryOnSurface': (scheme.surface, scheme.primary),
           'primaryOnCard': (scheme.surfaceContainerLow, scheme.primary),
+          'secondaryOnSurface': (scheme.surface, scheme.secondary),
+          'tertiaryOnSurface': (scheme.surface, scheme.tertiary),
           'errorOnSurface': (scheme.surface, scheme.error),
           'inverse': (scheme.inverseSurface, scheme.onInverseSurface),
         };
@@ -116,6 +123,14 @@ void main() {
             reason: '$name $role',
           );
         }
+        // The highest container holds tracks and fills, not primary text, so
+        // the accent there only needs the 3:1 non-text contrast.
+        expect(
+          AppPalette.contrastRatio(
+              scheme.surfaceContainerHighest, scheme.primary),
+          greaterThanOrEqualTo(3),
+          reason: '$name primary on highest container',
+        );
       });
     }
 
@@ -145,6 +160,65 @@ void main() {
       );
     });
   });
+
+  test('blue is the default accent and the choice persists', () async {
+    final controller = AppThemeController();
+    await controller.load();
+    expect(controller.accent, AppAccent.blue);
+    expect(
+      controller
+          .buildTheme(brightness: Brightness.light, amoledMode: false)
+          .colorScheme
+          .primary,
+      AppAccent.blue.seed,
+    );
+
+    await controller.setAccent(AppAccent.green);
+    final restored = AppThemeController();
+    await restored.load();
+    expect(restored.accent, AppAccent.green);
+    for (final (brightness, amoled) in [
+      (Brightness.light, false),
+      (Brightness.dark, false),
+      (Brightness.dark, true),
+    ]) {
+      expect(
+        restored
+            .buildTheme(brightness: brightness, amoledMode: amoled)
+            .colorScheme
+            .primary,
+        AppPalette.scheme(
+                brightness: brightness, amoled: amoled, accent: AppAccent.green)
+            .primary,
+      );
+    }
+    final amoled =
+        restored.buildTheme(brightness: Brightness.dark, amoledMode: true);
+    expect(amoled.scaffoldBackgroundColor, Colors.black);
+  });
+
+  for (final (legacy, expected) in [
+    (0xFF3D79AF, AppAccent.blue),
+    (0xFF4CAF50, AppAccent.green),
+    (0xFF9C27B0, AppAccent.violet),
+    (0xFFE91E63, AppAccent.rose),
+    (0xFFFF9800, AppAccent.orange),
+    (0xFF009688, AppAccent.teal),
+    (0xFF9E9E9E, AppAccent.slate),
+  ]) {
+    test('legacy accent ${legacy.toRadixString(16)} migrates to $expected',
+        () async {
+      SharedPreferences.setMockInitialValues(<String, Object>{
+        legacyContrastColorPreferenceKey: legacy,
+      });
+      final controller = AppThemeController();
+      await controller.load();
+      expect(controller.accent, expected);
+      final prefs = await SharedPreferences.getInstance();
+      expect(prefs.containsKey(legacyContrastColorPreferenceKey), isFalse);
+      expect(prefs.getString(accentPreferenceKey), expected.name);
+    });
+  }
 
   test('freely picked subject colors migrate to the nearest swatch', () {
     final settings = SettingsState(
