@@ -48,7 +48,7 @@ void main() {
 
     expect(find.text('9 Absenzen'), findsOneWidget);
     expect(find.text('2 nicht entschuldigt'), findsOneWidget);
-    expect(find.text('1 Verspätungen'), findsOneWidget);
+    expect(find.text('1 Verspätung'), findsOneWidget);
     expect(find.text('3 für die Schule'), findsOneWidget);
     expect(find.text('4,5 % abwesend'), findsOneWidget);
     expect(find.textContaining('Geplant:'), findsOneWidget);

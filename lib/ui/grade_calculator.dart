@@ -24,8 +24,6 @@ import 'package:dr/app_state.dart';
 import 'package:dr/data.dart';
 import 'package:dr/grade_average.dart';
 import 'package:dr/i18n/app_localizations.dart';
-import 'package:dr/tutorial/tutorial_service.dart';
-import 'package:dr/tutorial/tutorial_target.dart';
 import 'package:dr/ui/dialog.dart';
 import 'package:dr/ui/target_grade_calculator.dart';
 import 'package:dr/util.dart';
@@ -154,8 +152,7 @@ class _GradeCalculatorState extends State<GradeCalculator> {
   void showTargetCalculator() {
     Navigator.of(context).push(
       MaterialPageRoute<void>(
-        builder: (_) => TargetGradeCalculator(
-            tutorialExample: TutorialService.of(context).active),
+        builder: (_) => const TargetGradeCalculator(),
         fullscreenDialog: true,
       ),
     );
@@ -265,13 +262,10 @@ class _GradeCalculatorState extends State<GradeCalculator> {
       appBar: AppBar(
         title: Text(context.t('gradeCalculator.title')),
         actions: [
-          TutorialTarget(
-            id: 'calculator-target',
-            child: IconButton(
-              onPressed: showTargetCalculator,
-              icon: const Icon(Icons.track_changes),
-              tooltip: context.t('targetCalculator.open'),
-            ),
+          IconButton(
+            onPressed: showTargetCalculator,
+            icon: const Icon(Icons.track_changes),
+            tooltip: context.t('targetCalculator.open'),
           ),
         ],
       ),
@@ -483,18 +477,15 @@ class Greeting extends StatelessWidget {
           Center(
             child: Padding(
               padding: const EdgeInsets.all(16),
-              child: TutorialTarget(
-                id: 'calculator-target',
-                child: ElevatedButton(
-                  onPressed: showTargetCalculator,
-                  child: Row(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      const Icon(Icons.track_changes),
-                      const SizedBox(width: 8),
-                      Text(context.t('targetCalculator.open')),
-                    ],
-                  ),
+              child: ElevatedButton(
+                onPressed: showTargetCalculator,
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    const Icon(Icons.track_changes),
+                    const SizedBox(width: 8),
+                    Text(context.t('targetCalculator.open')),
+                  ],
                 ),
               ),
             ),

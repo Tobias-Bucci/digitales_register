@@ -37,8 +37,6 @@ import 'package:dr/main.dart';
 import 'package:dr/middleware/middleware.dart';
 import 'package:dr/school_timeline.dart';
 import 'package:dr/theme/app_palette.dart';
-import 'package:dr/tutorial/tutorial_service.dart';
-import 'package:dr/tutorial/tutorial_target.dart';
 import 'package:dr/ui/animated_linear_progress_indicator.dart';
 import 'package:dr/ui/committed_deleteable.dart';
 import 'package:dr/ui/controlled_text_builder.dart';
@@ -178,9 +176,6 @@ class _DaysWidgetState extends State<DaysWidget> {
 
   Future<void> _editGradeDeadline(GradeDeadline deadline) async {
     var count = _gradeDeadlineCount;
-    final tour = TutorialService.of(context);
-    final requireSelection = tour.active && tour.step.key == 'deadlines';
-    final confirmedDates = <int>{};
     final candidates = SchoolTimeline.fromCalendarData(
       dashboardDays: widget.vm.schoolTimelineDays,
       calendarDays: widget.vm.schoolTimelineCalendarDays,
@@ -205,67 +200,56 @@ class _DaysWidgetState extends State<DaysWidget> {
     final save = await showDialog<bool>(
       context: context,
       builder: (dialogContext) => StatefulBuilder(
-        builder: (context, setDialogState) => TutorialTarget(
-            id: 'deadline-dialog',
-            child: AlertDialog(
-              title: Text(context.t('schoolCountdown.deadlineDialog.title')),
-              content: SingleChildScrollView(
-                  child: Column(mainAxisSize: MainAxisSize.min, children: [
-                if (requireSelection)
-                  Text(context.t('tutorial.deadline.select')),
-                SegmentedButton<int>(
-                  segments: [
-                    ButtonSegment(
-                        value: 1,
-                        label: Text(
-                            context.t('schoolCountdown.deadlineDialog.one'))),
-                    ButtonSegment(
-                        value: 2,
-                        label: Text(
-                            context.t('schoolCountdown.deadlineDialog.two'))),
-                  ],
-                  selected: {count},
-                  onSelectionChanged: (value) =>
-                      setDialogState(() => count = value.first),
-                ),
-                const SizedBox(height: 12),
-                for (var index = 0; index < count; index++)
-                  ListTile(
-                    leading: const Icon(Icons.event_outlined),
-                    title: Text(context.t('schoolCountdown.deadlineDialog.date',
-                        args: {'number': '${index + 1}'})),
-                    subtitle: Text(MaterialLocalizations.of(context)
-                        .formatMediumDate(dates[index])),
-                    onTap: () async {
-                      final selected = await showDatePicker(
-                        context: context,
-                        initialDate: dates[index],
-                        firstDate: DateTime(appClock.now.year - 1),
-                        lastDate: DateTime(
-                            appClock.now.year + 2, DateTime.december, 31),
-                      );
-                      if (selected != null && context.mounted) {
-                        setDialogState(() {
-                          dates[index] = selected;
-                          confirmedDates.add(index);
-                        });
-                      }
-                    },
-                  ),
-              ])),
-              actions: [
-                TextButton(
-                    onPressed: () => Navigator.pop(dialogContext, false),
-                    child: Text(context.t('common.cancel'))),
-                FilledButton(
-                    onPressed: requireSelection &&
-                            List.generate(count, (i) => i)
-                                .any((i) => !confirmedDates.contains(i))
-                        ? null
-                        : () => Navigator.pop(dialogContext, true),
-                    child: Text(context.t('button.save'))),
+        builder: (context, setDialogState) => AlertDialog(
+          title: Text(context.t('schoolCountdown.deadlineDialog.title')),
+          content: SingleChildScrollView(
+              child: Column(mainAxisSize: MainAxisSize.min, children: [
+            SegmentedButton<int>(
+              segments: [
+                ButtonSegment(
+                    value: 1,
+                    label:
+                        Text(context.t('schoolCountdown.deadlineDialog.one'))),
+                ButtonSegment(
+                    value: 2,
+                    label:
+                        Text(context.t('schoolCountdown.deadlineDialog.two'))),
               ],
-            )),
+              selected: {count},
+              onSelectionChanged: (value) =>
+                  setDialogState(() => count = value.first),
+            ),
+            const SizedBox(height: 12),
+            for (var index = 0; index < count; index++)
+              ListTile(
+                leading: const Icon(Icons.event_outlined),
+                title: Text(context.t('schoolCountdown.deadlineDialog.date',
+                    args: {'number': '${index + 1}'})),
+                subtitle: Text(MaterialLocalizations.of(context)
+                    .formatMediumDate(dates[index])),
+                onTap: () async {
+                  final selected = await showDatePicker(
+                    context: context,
+                    initialDate: dates[index],
+                    firstDate: DateTime(appClock.now.year - 1),
+                    lastDate:
+                        DateTime(appClock.now.year + 2, DateTime.december, 31),
+                  );
+                  if (selected != null && context.mounted) {
+                    setDialogState(() => dates[index] = selected);
+                  }
+                },
+              ),
+          ])),
+          actions: [
+            TextButton(
+                onPressed: () => Navigator.pop(dialogContext, false),
+                child: Text(context.t('common.cancel'))),
+            FilledButton(
+                onPressed: () => Navigator.pop(dialogContext, true),
+                child: Text(context.t('button.save'))),
+          ],
+        ),
       ),
     );
     if (save != true || !mounted) return;
@@ -288,7 +272,6 @@ class _DaysWidgetState extends State<DaysWidget> {
         ...updated.map((key, value) => MapEntry(key, value.toIso8601String())),
       }),
     );
-    if (mounted) TutorialService.of(context).completeAction('deadlines');
   }
 
   void _updateShowScrollUp() {
@@ -485,33 +468,30 @@ class _DaysWidgetState extends State<DaysWidget> {
   }) {
     if (n == 0) {
       final timeline = _schoolTimeline();
-      return TutorialTarget(
-        id: 'dashboard-page',
-        child: DashboardHeader(
-          future: widget.vm.future,
-          onSwitchFuture: widget.onSwitchFuture,
-          favoriteSubjects: availableFavoriteSubjects,
-          selectedFavoriteSubject: activeFavoriteSubject,
-          onFavoriteSubjectChanged: (favoriteSubject) {
-            setState(() {
-              _favoriteSubject = favoriteSubject;
-              updateValues(_filteredDays(favoriteSubject));
-              update();
-            });
-          },
-          showEmptyDays: _showEmptyDays,
-          onShowEmptyDaysChanged: (value) {
-            setState(() {
-              _showEmptyDays = value;
-              updateValues(_filteredDays(activeFavoriteSubject));
-              update();
-            });
-          },
-          subjectThemes: widget.vm.subjectThemes,
-          schoolTimeline: timeline,
-          openCalendarAt: widget.openCalendarAt,
-          editGradeDeadline: _editGradeDeadline,
-        ),
+      return DashboardHeader(
+        future: widget.vm.future,
+        onSwitchFuture: widget.onSwitchFuture,
+        favoriteSubjects: availableFavoriteSubjects,
+        selectedFavoriteSubject: activeFavoriteSubject,
+        onFavoriteSubjectChanged: (favoriteSubject) {
+          setState(() {
+            _favoriteSubject = favoriteSubject;
+            updateValues(_filteredDays(favoriteSubject));
+            update();
+          });
+        },
+        showEmptyDays: _showEmptyDays,
+        onShowEmptyDaysChanged: (value) {
+          setState(() {
+            _showEmptyDays = value;
+            updateValues(_filteredDays(activeFavoriteSubject));
+            update();
+          });
+        },
+        subjectThemes: widget.vm.subjectThemes,
+        schoolTimeline: timeline,
+        openCalendarAt: widget.openCalendarAt,
+        editGradeDeadline: _editGradeDeadline,
       );
     }
     if (isLast) {
@@ -735,15 +715,13 @@ class _DaysWidgetState extends State<DaysWidget> {
         ],
       ),
       homeAppBar: ResponsiveAppBar(
-        leading: TutorialTarget(
-            id: 'navigation-menu',
-            child: Builder(
-              builder: (context) => IconButton(
-                tooltip: MaterialLocalizations.of(context).openAppDrawerTooltip,
-                icon: const Icon(Icons.menu),
-                onPressed: () => Scaffold.of(context).openDrawer(),
-              ),
-            )),
+        leading: Builder(
+          builder: (context) => IconButton(
+            tooltip: MaterialLocalizations.of(context).openAppDrawerTooltip,
+            icon: const Icon(Icons.menu),
+            onPressed: () => Scaffold.of(context).openDrawer(),
+          ),
+        ),
         title: Row(
           mainAxisSize: MainAxisSize.min,
           children: [
