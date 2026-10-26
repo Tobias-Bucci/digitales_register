@@ -6,7 +6,6 @@ import 'package:dr/app_clock.dart';
 import 'package:dr/dashboard_items.dart';
 import 'package:dr/i18n/app_localizations.dart';
 import 'package:dr/school_timeline.dart';
-import 'package:dr/tutorial/tutorial_target.dart';
 import 'package:dr/ui/dashboard_card_layout.dart';
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
@@ -48,14 +47,11 @@ class SchoolCountdownOverview extends StatelessWidget {
                       countdown: holiday,
                       today: today,
                       onOpenCalendarAt: onOpenCalendarAt),
-              DashboardItem.gradingDeadline => TutorialTarget(
-                  id: 'dashboard-deadline',
-                  child: loading && deadline == null
-                      ? DashboardLoadingCard(title: context.t(item.titleKey))
-                      : _GradeDeadlineCountdownCard(
-                          countdown: deadline,
-                          onEditGradeDeadline: onEditGradeDeadline),
-                ),
+              DashboardItem.gradingDeadline => loading && deadline == null
+                  ? DashboardLoadingCard(title: context.t(item.titleKey))
+                  : _GradeDeadlineCountdownCard(
+                      countdown: deadline,
+                      onEditGradeDeadline: onEditGradeDeadline),
               _ => additionalCards[item] ?? const SizedBox.shrink(),
             },
         ];

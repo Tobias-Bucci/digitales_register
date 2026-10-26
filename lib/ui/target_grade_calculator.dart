@@ -7,49 +7,32 @@ import 'package:dr/data.dart';
 import 'package:dr/exam_study_plan.dart';
 import 'package:dr/i18n/app_localizations.dart';
 import 'package:dr/target_grade_calculation.dart';
-import 'package:dr/tutorial/tutorial_service.dart';
-import 'package:dr/tutorial/tutorial_target.dart';
 import 'package:dr/ui/grade_calculator.dart' show tryParseFormattedGrade;
 import 'package:dr/util.dart';
 import 'package:flutter/material.dart';
-import 'package:flutter/rendering.dart' show ScrollCacheExtent;
 import 'package:flutter_built_redux/flutter_built_redux.dart';
 import 'package:intl/intl.dart';
 
 class TargetGradeCalculator extends StatelessWidget {
-  const TargetGradeCalculator({super.key, this.tutorialExample = false});
-  final bool tutorialExample;
+  const TargetGradeCalculator({super.key});
 
   @override
   Widget build(BuildContext context) {
-    final tour = TutorialService.of(context);
-    return AnimatedBuilder(
-        animation: tour,
-        builder: (_, child) => PopScope<void>(
-              canPop: !tour.active || tour.step.key != 'calculatorTarget',
-              onPopInvokedWithResult: (didPop, _) {
-                if (!didPop) unawaited(tour.back());
-              },
-              child: child!,
-            ),
-        child: StoreConnection<AppState, AppActions, AppState>(
-          connect: (state) => state,
-          builder: (context, state, actions) => AnimatedBuilder(
-            animation: appClock,
-            builder: (context, _) => _TargetGradeCalculatorPage(
-              state: state,
-              tutorialExample: tutorialExample,
-              now: appClock.now,
-            ),
-          ),
-        ));
+    return StoreConnection<AppState, AppActions, AppState>(
+      connect: (state) => state,
+      builder: (context, state, actions) => AnimatedBuilder(
+        animation: appClock,
+        builder: (context, _) => _TargetGradeCalculatorPage(
+          state: state,
+          now: appClock.now,
+        ),
+      ),
+    );
   }
 }
 
 class _TargetGradeCalculatorPage extends StatefulWidget {
-  const _TargetGradeCalculatorPage(
-      {required this.state, required this.now, required this.tutorialExample});
-  final bool tutorialExample;
+  const _TargetGradeCalculatorPage({required this.state, required this.now});
 
   final AppState state;
   final DateTime now;
@@ -74,25 +57,9 @@ class _TargetGradeCalculatorPageState
   TargetGradeCalculation? _calculation;
   String? _error;
 
-  List<Subject> get _subjects => widget.tutorialExample && _subject != null
-      ? [_subject!]
-      : widget.state.gradesState.subjects.toList();
+  List<Subject> get _subjects => widget.state.gradesState.subjects.toList();
 
-  @override
-  void didChangeDependencies() {
-    super.didChangeDependencies();
-    if (widget.tutorialExample && _subject == null) {
-      _subject = Subject(
-          (b) => b..name = context.l10n.text('tutorial.calculator.subject'));
-      _targetController.text = '7';
-      _additionalExistingGrades
-          .add(const TargetGradeEntry(grade: 600, weightPercentage: 100));
-      _weightControllers.add(TextEditingController(text: '100'));
-    }
-  }
-
-  List<ExamAssessment> get _calendarAssessments => widget.tutorialExample ||
-          _subject == null
+  List<ExamAssessment> get _calendarAssessments => _subject == null
       ? const <ExamAssessment>[]
       : upcomingExamAssessmentsForSubject(widget.state, _subject!, widget.now);
 
@@ -210,7 +177,6 @@ class _TargetGradeCalculatorPageState
       _calculation = calculation;
       _error = null;
     });
-    TutorialService.of(context).completeAction('calculatorTarget');
   }
 
   String _formatAverage(double average) =>
@@ -315,39 +281,29 @@ class _TargetGradeCalculatorPageState
       appBar: AppBar(title: Text(l10n.text('targetCalculator.title'))),
       body: ListView(
         keyboardDismissBehavior: ScrollViewKeyboardDismissBehavior.onDrag,
-        scrollCacheExtent: widget.tutorialExample
-            ? const ScrollCacheExtent.pixels(10000)
-            : null,
         padding: const EdgeInsets.all(16),
         children: [
-          if (widget.tutorialExample)
-            Card(
-                child: Padding(
-                    padding: const EdgeInsets.all(12),
-                    child: Text(l10n.text('tutorial.calculator.example')))),
-          TutorialTarget(
-              id: 'target-calculator-form',
-              child: DropdownButtonFormField<Subject>(
-                key: const Key('target-calculator-subject'),
-                isExpanded: true,
-                initialValue: _subject,
-                decoration: InputDecoration(
-                    labelText: l10n.text('targetCalculator.subject')),
-                items: _subjects
-                    .map(
-                      (subject) => DropdownMenuItem<Subject>(
-                        value: subject,
-                        child: Text(l10n.translateSubjectName(subject.name),
-                            maxLines: 1, overflow: TextOverflow.ellipsis),
-                      ),
-                    )
-                    .toList(),
-                onChanged: (subject) => setState(() {
-                  _subject = subject;
-                  _calculation = null;
-                  _error = null;
-                }),
-              )),
+          DropdownButtonFormField<Subject>(
+            key: const Key('target-calculator-subject'),
+            isExpanded: true,
+            initialValue: _subject,
+            decoration: InputDecoration(
+                labelText: l10n.text('targetCalculator.subject')),
+            items: _subjects
+                .map(
+                  (subject) => DropdownMenuItem<Subject>(
+                    value: subject,
+                    child: Text(l10n.translateSubjectName(subject.name),
+                        maxLines: 1, overflow: TextOverflow.ellipsis),
+                  ),
+                )
+                .toList(),
+            onChanged: (subject) => setState(() {
+              _subject = subject;
+              _calculation = null;
+              _error = null;
+            }),
+          ),
           const SizedBox(height: 12),
           DropdownButtonFormField<Semester>(
             isExpanded: true,
@@ -572,14 +528,12 @@ class _TargetGradeCalculatorPageState
             ),
           ),
           const SizedBox(height: 16),
-          TutorialTarget(
-              id: 'target-calculator-calculate',
-              child: ElevatedButton.icon(
-                key: const Key('target-calculator-calculate'),
-                onPressed: _calculate,
-                icon: const Icon(Icons.calculate),
-                label: Text(l10n.text('targetCalculator.calculate')),
-              )),
+          ElevatedButton.icon(
+            key: const Key('target-calculator-calculate'),
+            onPressed: _calculate,
+            icon: const Icon(Icons.calculate),
+            label: Text(l10n.text('targetCalculator.calculate')),
+          ),
           if (_error != null) ...[
             const SizedBox(height: 12),
             Text(_error!,
@@ -587,24 +541,20 @@ class _TargetGradeCalculatorPageState
           ],
           if (_calculation != null) ...[
             const SizedBox(height: 20),
-            TutorialTarget(
-                id: 'target-calculator-result',
-                child: _ResultCard(
-                  calculation: _calculation!,
-                  futureWeights: _futureWeights,
-                  futureLabels: <String>[
-                    for (final assessment in _includedCalendarAssessments)
-                      '${DateFormat('dd.MM.yyyy').format(assessment.date)} · ${assessment.title}',
-                    for (var index = 0;
-                        index < _weightControllers.length;
-                        index++)
-                      l10n.text('targetCalculator.additionalFutureGrade',
-                          args: {'count': (index + 1).toString()}),
-                  ],
-                  target: _targetController.text,
-                  formatAverage: _formatAverage,
-                  formatContribution: _formatContribution,
-                )),
+            _ResultCard(
+              calculation: _calculation!,
+              futureWeights: _futureWeights,
+              futureLabels: <String>[
+                for (final assessment in _includedCalendarAssessments)
+                  '${DateFormat('dd.MM.yyyy').format(assessment.date)} · ${assessment.title}',
+                for (var index = 0; index < _weightControllers.length; index++)
+                  l10n.text('targetCalculator.additionalFutureGrade',
+                      args: {'count': (index + 1).toString()}),
+              ],
+              target: _targetController.text,
+              formatAverage: _formatAverage,
+              formatContribution: _formatContribution,
+            ),
           ],
           const SizedBox(height: 32),
         ],

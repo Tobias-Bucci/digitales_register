@@ -24,7 +24,6 @@ import 'package:dr/container/grades_page_container.dart';
 import 'package:dr/container/grades_statistics_container.dart';
 import 'package:dr/container/sorted_grades_container.dart';
 import 'package:dr/i18n/app_localizations.dart';
-import 'package:dr/tutorial/tutorial_target.dart';
 import 'package:dr/ui/animated_linear_progress_indicator.dart';
 import 'package:dr/ui/app_popup_button.dart';
 import 'package:dr/ui/grade_colors.dart';
@@ -90,144 +89,139 @@ class _GradesPageState extends State<GradesPage> {
 
     final l10n = context.l10n;
     final averageStyle = Theme.of(context).textTheme.titleMedium;
-    return TutorialTarget(
-        id: 'grades-page',
-        child: Scaffold(
-          appBar: ResponsiveAppBar(
-            title: Text(l10n.text('sidebar.grades')),
-            actions: <Widget>[
-              const GradesHistoryContainer(),
-              Padding(
-                padding: const EdgeInsets.only(right: 12),
-                child: ConstrainedBox(
-                  constraints: const BoxConstraints(maxWidth: 180),
-                  child: _SemesterSwitcher(
-                    selectedSemester: vm.showSemester,
-                    onChanged: widget.changeSemester,
-                  ),
-                ),
+    return Scaffold(
+      appBar: ResponsiveAppBar(
+        title: Text(l10n.text('sidebar.grades')),
+        actions: <Widget>[
+          const GradesHistoryContainer(),
+          Padding(
+            padding: const EdgeInsets.only(right: 12),
+            child: ConstrainedBox(
+              constraints: const BoxConstraints(maxWidth: 180),
+              child: _SemesterSwitcher(
+                selectedSemester: vm.showSemester,
+                onChanged: widget.changeSemester,
               ),
-            ],
+            ),
           ),
-          body: !vm.hasData && vm.noInternet
-              ? const NoInternet()
-              : vm.loading && !vm.hasData
-                  ? const Center(
-                      child: CircularProgressIndicator(),
-                    )
-                  : Stack(
-                      children: [
-                        AnimatedLinearProgressIndicator(show: vm.loading),
-                        RawLastFetchedOverlay(
-                          message: vm.lastFetchedMessage,
-                          child: ReadableContent(
-                              maxWidth: Theme.of(context).platform ==
-                                      TargetPlatform.windows
-                                  ? double.infinity
-                                  : 960,
-                              child: ListView(
-                                children: <Widget>[
-                                  if (vm.showGradesDiagram)
-                                    Padding(
-                                      padding: const EdgeInsets.fromLTRB(
-                                          12, 12, 12, 4),
-                                      child: Card(
-                                        margin: EdgeInsets.zero,
-                                        clipBehavior: Clip.antiAlias,
-                                        child: SizedBox(
-                                          height: 220,
-                                          child: Column(
-                                            children: [
-                                              Padding(
-                                                padding:
-                                                    const EdgeInsets.fromLTRB(
-                                                  16,
-                                                  10,
-                                                  10,
-                                                  0,
+        ],
+      ),
+      body: !vm.hasData && vm.noInternet
+          ? const NoInternet()
+          : vm.loading && !vm.hasData
+              ? const Center(
+                  child: CircularProgressIndicator(),
+                )
+              : Stack(
+                  children: [
+                    AnimatedLinearProgressIndicator(show: vm.loading),
+                    RawLastFetchedOverlay(
+                      message: vm.lastFetchedMessage,
+                      child: ReadableContent(
+                          maxWidth: Theme.of(context).platform ==
+                                  TargetPlatform.windows
+                              ? double.infinity
+                              : 960,
+                          child: ListView(
+                            children: <Widget>[
+                              if (vm.showGradesDiagram)
+                                Padding(
+                                  padding:
+                                      const EdgeInsets.fromLTRB(12, 12, 12, 4),
+                                  child: Card(
+                                    margin: EdgeInsets.zero,
+                                    clipBehavior: Clip.antiAlias,
+                                    child: SizedBox(
+                                      height: 220,
+                                      child: Column(
+                                        children: [
+                                          Padding(
+                                            padding: const EdgeInsets.fromLTRB(
+                                              16,
+                                              10,
+                                              10,
+                                              0,
+                                            ),
+                                            child: Row(
+                                              children: [
+                                                Icon(
+                                                  Icons.show_chart_rounded,
+                                                  color: Theme.of(context)
+                                                      .colorScheme
+                                                      .primary,
                                                 ),
-                                                child: Row(
-                                                  children: [
-                                                    Icon(
-                                                      Icons.show_chart_rounded,
-                                                      color: Theme.of(context)
-                                                          .colorScheme
-                                                          .primary,
-                                                    ),
-                                                    const SizedBox(width: 8),
-                                                    Expanded(
-                                                      child: Text(
-                                                        l10n.text(
-                                                            'grades.chart.title'),
-                                                        style: Theme.of(context)
-                                                            .textTheme
-                                                            .titleMedium,
-                                                      ),
-                                                    ),
-                                                    IconButton(
-                                                      tooltip: l10n.text(
-                                                          'ui.gradeChart'),
-                                                      onPressed: widget
-                                                          .showGradesChart,
-                                                      icon: const Icon(Icons
-                                                          .open_in_full_rounded),
-                                                    ),
-                                                  ],
+                                                const SizedBox(width: 8),
+                                                Expanded(
+                                                  child: Text(
+                                                    l10n.text(
+                                                        'grades.chart.title'),
+                                                    style: Theme.of(context)
+                                                        .textTheme
+                                                        .titleMedium,
+                                                  ),
                                                 ),
-                                              ),
-                                              const Expanded(
-                                                child: GradesChartContainer(
-                                                  isFullscreen: false,
+                                                IconButton(
+                                                  tooltip: l10n
+                                                      .text('ui.gradeChart'),
+                                                  onPressed:
+                                                      widget.showGradesChart,
+                                                  icon: const Icon(Icons
+                                                      .open_in_full_rounded),
                                                 ),
-                                              ),
-                                            ],
+                                              ],
+                                            ),
                                           ),
-                                        ),
+                                          const Expanded(
+                                            child: GradesChartContainer(
+                                              isFullscreen: false,
+                                            ),
+                                          ),
+                                        ],
                                       ),
                                     ),
-                                  if (vm.showAllSubjectsAverage) ...[
-                                    Column(children: [
-                                      _AverageRow(
-                                        label: l10n.text('grades.average'),
-                                        icon: Icons.settings,
-                                        onIconPressed:
-                                            widget.showGradesSettings,
-                                        value: _buildAverageValue(
-                                          context,
-                                          vm.allSubjectsAverage,
-                                          averageStyle,
-                                          vm.colorGrades,
-                                        ),
-                                      ),
-                                      _AverageRow(
-                                        label: l10n
-                                            .text('grades.certificateAverage'),
-                                        icon: Icons.info_outline,
-                                        onIconPressed: () =>
-                                            _showCertificateAverageInfo(
-                                                context),
-                                        value: _buildAverageValue(
-                                          context,
-                                          vm.certificateAverage,
-                                          averageStyle,
-                                          vm.colorGrades,
-                                        ),
-                                      ),
-                                      const GradesForecastContainer(),
-                                    ]),
-                                    const Divider(
-                                      height: 0,
+                                  ),
+                                ),
+                              if (vm.showAllSubjectsAverage) ...[
+                                Column(children: [
+                                  _AverageRow(
+                                    label: l10n.text('grades.average'),
+                                    icon: Icons.settings,
+                                    onIconPressed: widget.showGradesSettings,
+                                    value: _buildAverageValue(
+                                      context,
+                                      vm.allSubjectsAverage,
+                                      averageStyle,
+                                      vm.colorGrades,
                                     ),
-                                  ],
-                                  SortedGradesContainer(),
-                                  const GradesStatisticsContainer(),
-                                  const SizedBox(height: 50),
-                                ],
-                              )),
-                        ),
-                      ],
+                                  ),
+                                  _AverageRow(
+                                    label:
+                                        l10n.text('grades.certificateAverage'),
+                                    icon: Icons.info_outline,
+                                    onIconPressed: () =>
+                                        _showCertificateAverageInfo(context),
+                                    value: _buildAverageValue(
+                                      context,
+                                      vm.certificateAverage,
+                                      averageStyle,
+                                      vm.colorGrades,
+                                    ),
+                                  ),
+                                  const GradesForecastContainer(),
+                                ]),
+                                const Divider(
+                                  height: 0,
+                                ),
+                              ],
+                              SortedGradesContainer(),
+                              const GradesStatisticsContainer(),
+                              const SizedBox(height: 50),
+                            ],
+                          )),
                     ),
-        ));
+                  ],
+                ),
+    );
   }
 }
 

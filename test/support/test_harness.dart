@@ -167,7 +167,7 @@ Future<void> bootstrapTestEnvironment({
   Wrapper? wrapperOverride,
   UtcDateTime? fixedNow,
   Map<String, Object> sharedPreferences = const <String, Object>{
-    'tutorial.v2.offered': true,
+    'tutorial.v3.seen': true,
   },
 }) async {
   TestWidgetsFlutterBinding.ensureInitialized();

@@ -49,8 +49,6 @@ import 'package:dr/school_notification_engine.dart';
 import 'package:dr/school_notification_service.dart';
 import 'package:dr/settings_persistence_service.dart';
 import 'package:dr/theme_controller.dart';
-import 'package:dr/tutorial/tutorial_overlay.dart';
-import 'package:dr/tutorial/tutorial_service.dart';
 import 'package:dr/ui/grade_calculator.dart';
 import 'package:dr/ui/grades_chart_page.dart';
 import 'package:dr/util.dart';
@@ -425,9 +423,7 @@ class RegisterApp extends StatelessWidget {
                     color: Theme.of(context).scaffoldBackgroundColor,
                     child: SafeArea(
                       top: false,
-                      child: TutorialHost(
-                          service: tutorialService,
-                          child: child ?? const SizedBox.shrink()),
+                      child: child ?? const SizedBox.shrink(),
                     ),
                   ),
                 ),

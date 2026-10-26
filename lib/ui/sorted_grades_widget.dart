@@ -21,7 +21,6 @@ import 'package:dr/container/grades_page_container.dart';
 import 'package:dr/container/sorted_grades_container.dart';
 import 'package:dr/data.dart';
 import 'package:dr/i18n/app_localizations.dart';
-import 'package:dr/tutorial/tutorial_target.dart';
 import 'package:dr/ui/animated_linear_progress_indicator.dart';
 import 'package:dr/ui/favorite_subject_filter.dart';
 import 'package:dr/ui/grade_colors.dart';
@@ -197,16 +196,14 @@ class _SortedGradesWidgetState extends State<SortedGradesWidget> {
                   color: Theme.of(context).colorScheme.onSurfaceVariant),
             ),
           ),
-        TutorialTarget(
-            id: 'grades-calculator',
-            child: Padding(
-              padding: const EdgeInsets.symmetric(vertical: 16),
-              child: ListTile(
-                title: Text(context.t('grades.calculator')),
-                subtitle: Text(context.t('grades.calculator.subtitle')),
-                onTap: widget.showGradeCalculator,
-              ),
-            )),
+        Padding(
+          padding: const EdgeInsets.symmetric(vertical: 16),
+          child: ListTile(
+            title: Text(context.t('grades.calculator')),
+            subtitle: Text(context.t('grades.calculator.subtitle')),
+            onTap: widget.showGradeCalculator,
+          ),
+        ),
       ],
     );
   }
