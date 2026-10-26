@@ -284,10 +284,6 @@ Future<void> _loadPackageInfo() async {
   }
 }
 
-Future<void> setGlobalContrastColor(Color color) async {
-  await themeController.setContrastColor(color);
-}
-
 class RegisterApp extends StatelessWidget {
   const RegisterApp({super.key, required this.store});
 

@@ -19,11 +19,11 @@ import 'package:dr/app_state.dart';
 import 'package:dr/app_clock.dart';
 import 'package:dr/container/settings_page.dart';
 import 'package:dr/i18n/app_language.dart';
+import 'package:dr/theme/app_palette.dart';
 import 'package:dr/theme_controller.dart';
+import 'package:dr/ui/subject_swatch_picker.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:flutter_colorpicker/flutter_colorpicker.dart';
-import 'package:shared_preferences/shared_preferences.dart';
 
 import '../../support/test_harness.dart';
 
@@ -42,60 +42,46 @@ void main() {
     addTearDown(tester.view.resetDevicePixelRatio);
   }
 
-  testWidgets(
-      'accent picker saves and reopens the exact custom color in dark mode',
+  testWidgets('subject colors are chosen from the curated palette swatches',
       (tester) async {
     await useLargeSurface(tester);
-    const original = Color(0xFF0000FF);
-    const selected = Color(0xFFFF00FF);
-    await themeController.setContrastColor(original);
-    addTearDown(() => themeController.setContrastColor(defaultContrastColor));
     final store = createStore(
       initialState: AppState(
-        (b) => b.settingsState.languageCode = AppLanguage.en.code,
+        (b) => b
+          ..settingsState.languageCode = AppLanguage.en.code
+          ..settingsState.subjectThemes['Mathematik'] = SubjectTheme(
+            (t) => t
+              ..color = AppPalette.subjectSwatches.first.toARGB32()
+              ..thick = 2,
+          ),
       ),
     );
-    // Deliberately use a different theme accent to ensure the picker and swatch
-    // read the stored selection rather than a derived or transitional theme.
     await pumpApp(
       tester,
       store: store,
       home: SettingsPageContainer(),
       themeMode: ThemeMode.dark,
-      darkTheme:
-          ThemeData(colorSchemeSeed: Colors.green, brightness: Brightness.dark),
     );
     await settleFor(tester);
-    final tile = find.byKey(const Key('settings-contrast-color-tile'));
+    expect(find.byKey(const Key('settings-contrast-color-tile')), findsNothing);
+    final tile = find.byKey(const Key('settings-subject-colors-tile'));
     await tester.ensureVisible(tile);
     await tester.pumpAndSettle();
-    Color swatchColor() {
-      final container = tester.widget<ListTile>(tile).trailing! as Container;
-      return (container.decoration! as BoxDecoration).color!;
-    }
+    await tester.tap(tile);
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Mathematik'));
+    await tester.pumpAndSettle();
 
-    expect(swatchColor(), original);
-    await tester.tap(tile);
+    expect(find.byType(SubjectSwatchPicker), findsOneWidget);
+    expect(find.byTooltip('Blue'), findsOneWidget);
+    await tester.tap(find.byTooltip('Teal'));
     await tester.pumpAndSettle();
-    expect(tester.widget<ColorPicker>(find.byType(ColorPicker)).pickerColor,
-        original);
-    tester
-        .widget<ColorPicker>(find.byType(ColorPicker))
-        .onColorChanged(selected);
-    await tester.pumpAndSettle();
-    await tester.tap(find.widgetWithText(ElevatedButton, 'Select'));
-    await tester.pumpAndSettle();
-    expect(themeController.contrastColor, selected);
-    expect(swatchColor(), selected);
-    final prefs = await SharedPreferences.getInstance();
-    expect(prefs.getInt(contrastColorPreferenceKey), selected.toARGB32());
-    await tester.tap(tile);
-    await tester.pumpAndSettle();
-    expect(tester.widget<ColorPicker>(find.byType(ColorPicker)).pickerColor,
-        selected);
-    await tester.tap(find.text('Cancel'));
-    await tester.pumpAndSettle();
-    expect(themeController.contrastColor, selected);
+
+    expect(find.byType(SubjectSwatchPicker), findsNothing);
+    expect(
+      store.state.settingsState.subjectThemes['Mathematik']!.color,
+      const Color(0xFF13948A).toARGB32(),
+    );
   });
 
   Future<void> scrollToText(WidgetTester tester, String text) async {

@@ -57,9 +57,7 @@ class _ExamTimelineState extends State<ExamTimeline> {
     final end = _start.add(const Duration(days: 6));
     final next =
         upcoming.where((exam) => calendarDate(exam.date).isAfter(_selected));
-    final todayColor = theme.brightness == Brightness.dark
-        ? Colors.lightBlue.shade200
-        : Colors.lightBlue.shade800;
+    final todayColor = theme.colorScheme.primary;
     final examColor = theme.colorScheme.error;
     final normalColor = theme.colorScheme.outline;
     final dateFormat = DateFormat.yMMMd(l10n.locale.toLanguageTag());

@@ -66,13 +66,14 @@ class _AppPopupButtonState<T> extends State<AppPopupButton<T>> {
     final theme = Theme.of(context);
     final colorScheme = theme.colorScheme;
     final isDark = theme.brightness == Brightness.dark;
-    final buttonColor = isDark ? const Color(0xFF1C1C1E) : Colors.transparent;
-    final menuColor = isDark ? const Color(0xFF141414) : colorScheme.surface;
+    final buttonColor =
+        isDark ? colorScheme.surfaceContainerHigh : Colors.transparent;
+    final menuColor =
+        isDark ? colorScheme.surfaceContainer : colorScheme.surface;
     final borderColor = isDark
-        ? const Color(0xFF323236)
+        ? colorScheme.outlineVariant
         : colorScheme.primary.withValues(alpha: 0.18);
-    final selectedIconColor =
-        isDark ? const Color(0xFFB8B8BD) : colorScheme.primary;
+    final selectedIconColor = colorScheme.primary;
 
     final child = AnimatedScale(
       scale: _pressed ? 0.985 : 1,

@@ -21,6 +21,7 @@ import 'package:collection/collection.dart';
 import 'package:dr/class_register_cache.dart';
 import 'package:dr/i18n/app_localizations.dart';
 import 'package:dr/middleware/middleware.dart';
+import 'package:dr/theme/app_palette.dart';
 import 'package:dr/ui/animated_linear_progress_indicator.dart';
 import 'package:dr/ui/no_internet.dart';
 import 'package:dr/util.dart';
@@ -455,7 +456,7 @@ class _LessonCard extends StatelessWidget {
     final statusColor = lesson.hasToBeSigned
         ? scheme.error
         : lesson.signedByCurrentUser
-            ? Colors.green
+            ? scheme.success
             : scheme.outline;
     return Card(
       elevation: 0,
@@ -757,7 +758,7 @@ class _StatusBadge extends StatelessWidget {
     final color = lesson.hasToBeSigned
         ? scheme.error
         : lesson.signedByCurrentUser
-            ? Colors.green
+            ? scheme.success
             : scheme.onSurfaceVariant;
     return DecoratedBox(
       decoration: BoxDecoration(

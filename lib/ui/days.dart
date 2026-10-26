@@ -36,6 +36,7 @@ import 'package:dr/local_reminder_assessments.dart';
 import 'package:dr/main.dart';
 import 'package:dr/middleware/middleware.dart';
 import 'package:dr/school_timeline.dart';
+import 'package:dr/theme/app_palette.dart';
 import 'package:dr/tutorial/tutorial_service.dart';
 import 'package:dr/tutorial/tutorial_target.dart';
 import 'package:dr/ui/animated_linear_progress_indicator.dart';
@@ -1174,7 +1175,7 @@ class DayWidget extends StatelessWidget {
                       ),
                       badgeStyle: badge.BadgeStyle(
                         badgeColor: day.deletedHomework.any((h) => h.isChanged)
-                            ? Colors.red
+                            ? Theme.of(context).colorScheme.error
                             : Theme.of(context).scaffoldBackgroundColor,
                         padding: EdgeInsets.zero,
                         elevation: 0,
@@ -1376,10 +1377,10 @@ class ItemWidget extends StatelessWidget {
 
   Color _getBorderColor(BuildContext context) {
     if (item.checked) {
-      return Colors.green;
+      return Theme.of(context).colorScheme.success;
     }
     if (displayedHomeworkWarning(item, allSubjects) && colorTestsInRed) {
-      return Colors.red;
+      return Theme.of(context).colorScheme.error;
     }
     final displayLabel = displayedHomeworkLabel(item, allSubjects);
     if (colorBorder &&
@@ -1594,7 +1595,7 @@ class ItemWidget extends StatelessWidget {
                       else if (!isHistory && !isDeletedView && item.checkable)
                         Checkbox(
                           visualDensity: VisualDensity.standard,
-                          activeColor: Colors.green,
+                          activeColor: Theme.of(context).colorScheme.success,
                           value: item.checked,
                           onChanged: noInternet
                               ? null

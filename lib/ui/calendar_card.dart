@@ -21,6 +21,7 @@ import 'package:dr/data.dart';
 import 'package:dr/i18n/app_localizations.dart';
 import 'package:dr/local_reminder_assessments.dart';
 import 'package:dr/main.dart';
+import 'package:dr/theme/app_palette.dart';
 import 'package:dr/ui/animated_linear_progress_indicator.dart';
 import 'package:dr/utc_date_time.dart';
 import 'package:flutter/material.dart';
@@ -46,8 +47,9 @@ class CalendarCard extends StatelessWidget {
 
   String formatTime(UtcDateTime dateTime) {
     final context = navigatorKey?.currentContext;
-    final locale =
-        context == null ? 'de' : Localizations.localeOf(context).toLanguageTag();
+    final locale = context == null
+        ? 'de'
+        : Localizations.localeOf(context).toLanguageTag();
     return DateFormat.Hm(locale).format(dateTime);
   }
 
@@ -121,7 +123,9 @@ class CalendarCard extends StatelessWidget {
         title: title,
         content: homeworkExam.name,
         icon: homeworkExam.warning ? Icons.grade : Icons.assignment,
-        iconColor: homeworkExam.warning ? Colors.red : Colors.grey,
+        iconColor: homeworkExam.warning
+            ? Theme.of(context).colorScheme.error
+            : Theme.of(context).colorScheme.onSurfaceVariant,
       );
       if (isLocalReminderAssessmentHomeworkExam(homeworkExam)) {
         addContentRow(
@@ -172,7 +176,7 @@ class CalendarCard extends StatelessWidget {
                     width: 6,
                     height: 38,
                     decoration: BoxDecoration(
-                      color: Colors.amber.shade700,
+                      color: AppPalette.markerWarning,
                       borderRadius: BorderRadius.circular(999),
                     ),
                   ),
@@ -307,11 +311,11 @@ class _SubmissionWidget extends StatelessWidget {
     return Row(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        const Padding(
-          padding: EdgeInsets.only(top: 4),
+        Padding(
+          padding: const EdgeInsets.only(top: 4),
           child: Icon(
             Icons.attachment,
-            color: Colors.grey,
+            color: Theme.of(context).colorScheme.onSurfaceVariant,
           ),
         ),
         const SizedBox(width: 8),

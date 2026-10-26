@@ -22,7 +22,7 @@ import 'package:dr/actions/routing_actions.dart';
 import 'package:dr/actions/settings_actions.dart';
 import 'package:dr/app_state.dart';
 import 'package:dr/dashboard_items.dart';
-import 'package:flutter/material.dart' hide Action;
+import 'package:dr/theme/app_palette.dart';
 
 final settingsReducerBuilder = NestedReducerBuilder<AppState, AppStateBuilder,
     SettingsState, SettingsStateBuilder>(
@@ -313,40 +313,24 @@ void _setAssessmentStudyPhases(SettingsState state,
 void _updateSubjectThemes(SettingsState? state, Action<List<String>> action,
     SettingsStateBuilder builder) {
   for (final subject in action.payload) {
-    if (!builder.subjectThemes.build().containsKey(subject)) {
-      builder.subjectThemes.update(
-        (b) => b
-          ..[subject] = SubjectTheme((b) => b
-            ..thick = _defaultThick
-            ..color = _colors
-                .firstWhere(
-                  (color) => !builder.subjectThemes
-                      .build()
-                      .values
-                      .any((config) => config.color == color.toARGB32()),
-                  orElse: () => _similarColors.firstWhere(
-                    (color) => !builder.subjectThemes
-                        .build()
-                        .values
-                        .any((config) => config.color == color.toARGB32()),
-                    orElse: () => (List.of(Colors.primaries)..shuffle()).first,
-                  ),
-                )
-                .toARGB32()),
-      );
-    }
+    final themes = builder.subjectThemes.build();
+    if (themes.containsKey(subject)) continue;
+    // Prefer an unused palette swatch; once all are taken, reuse the least
+    // used one so colors stay evenly spread.
+    final usage = {
+      for (final swatch in AppPalette.subjectSwatches)
+        swatch.toARGB32(): themes.values
+            .where((config) => config.color == swatch.toARGB32())
+            .length,
+    };
+    final color = usage.entries
+        .reduce((best, next) => next.value < best.value ? next : best)
+        .key;
+    builder.subjectThemes[subject] = SubjectTheme((b) => b
+      ..thick = _defaultThick
+      ..color = color);
   }
 }
-
-final _colors = List.of(Colors.primaries)
-  ..removeWhere((c) => _similarColors.contains(c));
-
-final _similarColors = [
-  Colors.lime,
-  Colors.lightBlue,
-  Colors.cyan,
-  Colors.amber
-];
 
 const _defaultThick = 2;
 

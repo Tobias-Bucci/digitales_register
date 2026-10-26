@@ -26,7 +26,6 @@ import 'package:dr/app_clock.dart';
 import 'package:dr/app_state.dart';
 import 'package:dr/demo.dart';
 import 'package:dr/i18n/app_language.dart';
-import 'package:dr/main.dart';
 import 'package:dr/middleware/middleware.dart';
 import 'package:dr/theme_controller.dart';
 import 'package:dr/ui/settings_page_widget.dart';
@@ -125,9 +124,6 @@ class SettingsPageContainer extends StatelessWidget {
                 actions.settingsActions.removeCalendarSyncEvents.call,
             onSetAmoledMode: actions.settingsActions.amoledMode.call,
             onSetSubjectTheme: actions.settingsActions.setSubjectTheme.call,
-            onSetContrastColor: (color) {
-              unawaited(setGlobalContrastColor(color));
-            },
             onSetSimulatedDate: (date) async {
               if (date == null) {
                 await appClock.resetSimulatedDate();
