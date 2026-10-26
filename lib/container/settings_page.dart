@@ -123,6 +123,8 @@ class SettingsPageContainer extends StatelessWidget {
             onRemoveCalendarSyncEvents:
                 actions.settingsActions.removeCalendarSyncEvents.call,
             onSetAmoledMode: actions.settingsActions.amoledMode.call,
+            onSetAccent: (accent) =>
+                unawaited(themeController.setAccent(accent)),
             onSetSubjectTheme: actions.settingsActions.setSubjectTheme.call,
             onSetSimulatedDate: (date) async {
               if (date == null) {

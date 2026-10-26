@@ -22,7 +22,10 @@ import 'package:dr/theme/app_palette.dart';
 import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
-/// Removed in favor of the curated palette; deleted from prefs on load.
+const accentPreferenceKey = "accent";
+
+/// Freely picked accent of older versions; migrated to the nearest curated
+/// accent on load and then deleted.
 const legacyContrastColorPreferenceKey = "contrastColor";
 const _themeBrightnessPreferenceKey = "isDark";
 const _followDeviceThemePreferenceKey = "followDeviceTheme";
@@ -38,9 +41,11 @@ class AppThemeController extends ChangeNotifier with WidgetsBindingObserver {
   AppThemeController();
 
   AppThemePreference _themePreference = AppThemePreference.system;
+  AppAccent _accent = AppAccent.blue;
   bool _platformOverride = false;
 
   AppThemePreference get themePreference => _themePreference;
+  AppAccent get accent => _accent;
   bool get platformOverride => _platformOverride;
 
   ThemeMode get themeMode {
@@ -57,6 +62,14 @@ class AppThemeController extends ChangeNotifier with WidgetsBindingObserver {
   Future<void> load() async {
     WidgetsBinding.instance.addObserver(this);
     final prefs = await SharedPreferences.getInstance();
+    final legacyColor = prefs.getInt(legacyContrastColorPreferenceKey);
+    final savedAccent = prefs.getString(accentPreferenceKey);
+    if (savedAccent != null) {
+      _accent = AppAccent.fromName(savedAccent);
+    } else if (legacyColor != null) {
+      _accent = AppAccent.nearest(Color(legacyColor));
+      await prefs.setString(accentPreferenceKey, _accent.name);
+    }
     if (prefs.containsKey(legacyContrastColorPreferenceKey)) {
       await prefs.remove(legacyContrastColorPreferenceKey);
     }
@@ -95,7 +108,11 @@ class AppThemeController extends ChangeNotifier with WidgetsBindingObserver {
   }) {
     final isDark = brightness == Brightness.dark;
     final amoled = amoledMode && isDark;
-    final scheme = AppPalette.scheme(brightness: brightness, amoled: amoled);
+    final scheme = AppPalette.scheme(
+      brightness: brightness,
+      amoled: amoled,
+      accent: _accent,
+    );
     final baseTheme = ThemeData(
       colorScheme: scheme,
       brightness: brightness,
@@ -182,6 +199,15 @@ class AppThemeController extends ChangeNotifier with WidgetsBindingObserver {
         preference == AppThemePreference.dark,
       );
     }
+  }
+
+  Future<void> setAccent(AppAccent accent) async {
+    if (accent == _accent) return;
+    _accent = accent;
+    notifyListeners();
+
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setString(accentPreferenceKey, accent.name);
   }
 
   Future<void> setPlatformOverride(bool value) async {

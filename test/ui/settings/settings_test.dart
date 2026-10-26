@@ -24,6 +24,7 @@ import 'package:dr/theme_controller.dart';
 import 'package:dr/ui/subject_swatch_picker.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 import '../../support/test_harness.dart';
 
@@ -41,6 +42,33 @@ void main() {
     addTearDown(tester.view.resetPhysicalSize);
     addTearDown(tester.view.resetDevicePixelRatio);
   }
+
+  testWidgets('accent colors are chosen from the curated accents',
+      (tester) async {
+    await useLargeSurface(tester);
+    addTearDown(() => themeController.setAccent(AppAccent.blue));
+    await pumpApp(
+      tester,
+      store: createStore(
+        initialState: AppState(
+          (b) => b.settingsState.languageCode = AppLanguage.en.code,
+        ),
+      ),
+      home: SettingsPageContainer(),
+    );
+    await settleFor(tester);
+    expect(themeController.accent, AppAccent.blue);
+    final violet = find.byKey(const Key('accent-violet'));
+    await tester.ensureVisible(violet);
+    await tester.pumpAndSettle();
+    expect(find.byTooltip('Violet'), findsOneWidget);
+    await tester.tap(violet);
+    await tester.pumpAndSettle();
+    expect(themeController.accent, AppAccent.violet);
+    final prefs = await SharedPreferences.getInstance();
+    expect(prefs.getString(accentPreferenceKey), 'violet');
+    expect(tester.getSemantics(violet), containsSemantics(isSelected: true));
+  });
 
   testWidgets('subject colors are chosen from the curated palette swatches',
       (tester) async {

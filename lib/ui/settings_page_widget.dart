@@ -28,9 +28,11 @@ import 'package:dr/demo.dart';
 import 'package:dr/i18n/app_language.dart';
 import 'package:dr/i18n/app_localizations.dart';
 import 'package:dr/platform_adapter.dart';
+import 'package:dr/theme/app_palette.dart';
 import 'package:dr/theme_controller.dart';
 import 'package:dr/tutorial/tutorial_service.dart';
 import 'package:dr/ui/about_app_dialog.dart';
+import 'package:dr/ui/accent_picker.dart';
 import 'package:dr/ui/autocomplete_options.dart';
 import 'package:dr/ui/committed_deleteable.dart';
 import 'package:dr/ui/credits_page.dart';
@@ -76,6 +78,7 @@ class SettingsPageWidget extends StatefulWidget {
   final Future<void> Function(int? calendarId) onSetCalendarSyncCalendarId;
   final Future<void> Function() onRemoveCalendarSyncEvents;
   final OnSettingChanged<bool> onSetAmoledMode;
+  final OnSettingChanged<AppAccent> onSetAccent;
   final OnSettingChanged<MapEntry<String, SubjectTheme>> onSetSubjectTheme;
   final OnSettingChanged<Map<String, String>> onSetSubjectNicks;
   final OnSettingChanged<List<String>> onSetIgnoreForGradesAverage;
@@ -119,6 +122,7 @@ class SettingsPageWidget extends StatefulWidget {
     required this.onSetCalendarSyncCalendarId,
     required this.onRemoveCalendarSyncEvents,
     required this.onSetAmoledMode,
+    required this.onSetAccent,
     required this.onSetFavoriteSubjects,
     required this.currentThemePreference,
     required this.onSetSimulatedDate,
@@ -783,6 +787,18 @@ class _SettingsPageWidgetState extends State<SettingsPageWidget> {
               widget.onSetSubjectNicks(Map.of(defaultSubjectNicks));
             }
           },
+        ),
+        ListTile(
+          key: const Key('settings-accent-tile'),
+          title: Text(l10n.text('settings.accent.title')),
+          subtitle: Text(l10n.text('settings.accent.subtitle')),
+        ),
+        Padding(
+          padding: const EdgeInsets.fromLTRB(16, 0, 16, 12),
+          child: AccentPicker(
+            selected: themeController.accent,
+            onSelected: widget.onSetAccent,
+          ),
         ),
         ListTile(
           key: const Key('settings-subject-colors-tile'),
