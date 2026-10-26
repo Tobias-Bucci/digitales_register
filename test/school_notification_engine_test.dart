@@ -60,6 +60,23 @@ void main() {
     expect(delivered, isEmpty);
   });
 
+  test(
+      'portal messageShared and mixed-case types use existing message settings',
+      () async {
+    await sync([]);
+    final shared = event(3, type: 'messageShared');
+    expect(shared.category, SchoolNotificationCategory.message);
+    await sync([shared]);
+    expect(delivered, hasLength(1));
+    await sync([event(3, type: 'Message')]);
+    expect(delivered, hasLength(1),
+        reason: 'shared/direct aliases never replay');
+    preferences.messages = false;
+    await sync([event(4, type: 'MESSAGESHARED')]);
+    expect(delivered, hasLength(1));
+    expect(event(5, type: 'GRADE').category, SchoolNotificationCategory.grade);
+  });
+
   test('enabled category defaults alone cannot authorize a notification',
       () async {
     preferences.consent = SchoolNotificationConsent.unknown;

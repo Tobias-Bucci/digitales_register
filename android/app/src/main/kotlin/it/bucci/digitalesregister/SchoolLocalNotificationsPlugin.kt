@@ -1,6 +1,5 @@
 package it.bucci.digitalesregister
 
-import android.app.ActivityManager
 import com.dexterous.flutterlocalnotifications.FlutterLocalNotificationsPlugin
 import io.flutter.embedding.engine.FlutterEngine
 import io.flutter.plugin.common.MethodCall
@@ -16,9 +15,7 @@ class SchoolLocalNotificationsPlugin : FlutterLocalNotificationsPlugin() {
         if (call.method == "show") {
             val channel = call.argument<Map<String, Any?>>("platformSpecifics")?.get("channelId")
             if (channel == "school_grade" || channel == "school_message") {
-                val state = ActivityManager.RunningAppProcessInfo()
-                ActivityManager.getMyMemoryState(state)
-                if (state.importance <= ActivityManager.RunningAppProcessInfo.IMPORTANCE_FOREGROUND) {
+                if (SchoolNotificationVisibility.isForeground) {
                     result.success(null)
                     return
                 }

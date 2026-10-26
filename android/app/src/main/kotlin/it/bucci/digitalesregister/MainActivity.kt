@@ -38,7 +38,7 @@ class MainActivity: FlutterFragmentActivity() {
         MethodChannel(flutterEngine.dartExecutor.binaryMessenger, "dr/school_notifications")
             .setMethodCallHandler { call, result ->
                 when (call.method) {
-                    "isForeground" -> result.success(true)
+                    "isForeground" -> result.success(SchoolNotificationVisibility.isForeground)
                     "canRequestNotificationPermission" -> result.success(
                         Build.VERSION.SDK_INT >= 33 &&
                         !ActivityCompat.shouldShowRequestPermissionRationale(this, Manifest.permission.POST_NOTIFICATIONS))

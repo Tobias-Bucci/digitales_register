@@ -2,14 +2,12 @@ import 'dart:async';
 import 'dart:convert';
 import 'dart:io';
 
-import 'package:cookie_jar/cookie_jar.dart';
 import 'package:dio/dio.dart';
-import 'package:dio_cookie_manager/dio_cookie_manager.dart';
 import 'package:dr/app_language_controller.dart';
 import 'package:dr/desktop.dart';
 import 'package:dr/i18n/app_localizations.dart';
 import 'package:dr/runtime_trace.dart';
-import 'package:dr/school_api_endpoints.dart';
+import 'package:dr/school_notification_background.dart';
 import 'package:dr/school_notification_engine.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter/widgets.dart';
@@ -22,7 +20,9 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'package:sqflite/sqflite.dart';
 import 'package:workmanager/workmanager.dart';
 
-const schoolNotificationTask = 'it.bucci.digitalesregister.schoolRefresh';
+export 'package:dr/school_notification_background.dart'
+    show schoolNotificationTask;
+
 final schoolNotifications = SchoolNotificationService();
 
 /// Optional native functionality must never break school-data navigation/login.
@@ -39,9 +39,16 @@ Future<void> schoolNotificationOperation(
 
 @pragma('vm:entry-point')
 void schoolNotificationDispatcher() {
+  initializeSchoolNotificationBackground();
   Workmanager().executeTask((task, input) async {
-    WidgetsFlutterBinding.ensureInitialized();
-    final service = SchoolNotificationService();
+    if (task != schoolNotificationTask &&
+        task != Workmanager.iOSBackgroundTask) {
+      return true;
+    }
+    final service = SchoolNotificationService(
+        backgroundBudget: Platform.isAndroid
+            ? const Duration(minutes: 2)
+            : const Duration(seconds: 20));
     try {
       await service.initialize(background: true);
       await service.backgroundSync();
@@ -70,6 +77,8 @@ class SchoolNotificationService extends ChangeNotifier
       Future<bool> Function()? canRequestPermission,
       Dio Function(BaseOptions)? httpClient,
       Future<Directory> Function()? historyDirectory,
+      SchoolNotificationScheduler? scheduler,
+      this.backgroundAccountBudget = schoolNotificationAccountBudget,
       this.backgroundBudget = const Duration(seconds: 20)})
       : _native = native ?? FlutterLocalNotificationsPlugin(),
         _providedStorage = storage,
@@ -78,6 +87,7 @@ class SchoolNotificationService extends ChangeNotifier
         _canRequestPermission = canRequestPermission,
         _httpClient = httpClient ?? ((options) => Dio(options)),
         _databaseFactory = database,
+        _providedScheduler = scheduler,
         _historyDirectory = historyDirectory ?? getApplicationSupportDirectory;
   static final _processMutex = Mutex();
   static final _scheduleMutex = Mutex();
@@ -90,7 +100,10 @@ class SchoolNotificationService extends ChangeNotifier
   final Dio Function(BaseOptions) _httpClient;
   final Future<Database> Function()? _databaseFactory;
   final Future<Directory> Function() _historyDirectory;
+  final SchoolNotificationScheduler? _providedScheduler;
+  late final _scheduler = _providedScheduler ?? SchoolNotificationScheduler();
   final Duration backgroundBudget;
+  final Duration backgroundAccountBudget;
   late final _storage = _providedStorage ??
       (mobileBackgroundSupported
           ? const FlutterSecureStorage(
@@ -134,6 +147,7 @@ class SchoolNotificationService extends ChangeNotifier
       Platform.isWindows ||
       Platform.isLinux;
   bool get mobileBackgroundSupported => Platform.isAndroid || Platform.isIOS;
+  bool get androidBackgroundSupported => Platform.isAndroid;
   String accountKey(String server, String user) {
     final uri = Uri.parse(server.replaceAll(RegExp(r'/+$'), ''));
     return notificationDigest([
@@ -299,7 +313,7 @@ class SchoolNotificationService extends ChangeNotifier
         }
         try {
           if (mobileBackgroundSupported) {
-            await Workmanager().initialize(schoolNotificationDispatcher);
+            await _scheduler.initialize(schoolNotificationDispatcher);
           }
         } catch (_) {
           backgroundAvailable = false;
@@ -352,16 +366,16 @@ class SchoolNotificationService extends ChangeNotifier
   }
 
   Future<void> _markForeground(bool active) => _locked(() async {
+        // Android's native Activity lifecycle is authoritative, including when
+        // Dart could not persist pause before the process was killed.
         if (active) {
           await _storage.write(
-              key: 'school-notification-foreground-until',
-              value: DateTime.now()
-                  .toUtc()
-                  .add(const Duration(minutes: 6))
-                  .toIso8601String());
+              key: 'school-notification-foreground-v2',
+              value: schoolNotificationForegroundMark(DateTime.now(), pid));
         } else {
-          await _storage.delete(key: 'school-notification-foreground-until');
+          await _storage.delete(key: 'school-notification-foreground-v2');
         }
+        await _storage.delete(key: 'school-notification-foreground-until');
       }, label: 'foreground-heartbeat', history: false);
 
   @override
@@ -508,10 +522,7 @@ class SchoolNotificationService extends ChangeNotifier
   }
 
   Future<bool> _presentationAllowed() async {
-    if (_foreground) return false;
-    final until = DateTime.tryParse(
-        await _storage.read(key: 'school-notification-foreground-until') ?? '');
-    if (until != null && until.isAfter(DateTime.now().toUtc())) return false;
+    if (await _foregroundSessionActive()) return false;
     if (Platform.isAndroid || Platform.isIOS) {
       // Registered in both UI and headless engines. Missing native integration
       // fails closed instead of producing a late popup during startup.
@@ -522,6 +533,25 @@ class SchoolNotificationService extends ChangeNotifier
       }
     }
     return await _hasPermission();
+  }
+
+  Future<bool> _foregroundSessionActive() async {
+    if (_foreground) return true;
+    if (androidBackgroundSupported || Platform.isIOS) {
+      // A missing channel fails closed. Job/engine process importance is not
+      // evidence that an Activity is visible.
+      return await const MethodChannel('dr/school_notifications')
+              .invokeMethod<bool>('isForeground') !=
+          false;
+    }
+    final mark = await _storage.read(key: 'school-notification-foreground-v2');
+    if (schoolNotificationHasForegroundMark(mark, DateTime.now(), pid)) {
+      return true;
+    }
+    // Transitional iOS/desktop heartbeat. Android ignores this old record.
+    final until = DateTime.tryParse(
+        await _storage.read(key: 'school-notification-foreground-until') ?? '');
+    return until != null && until.isAfter(DateTime.now().toUtc());
   }
 
   Future<void> _diagnose(String account, Map<String, dynamic> updates) async {
@@ -935,10 +965,9 @@ class SchoolNotificationService extends ChangeNotifier
       }
       _preserveDestinationOnce = false;
     }, label: 'deactivate', history: false);
-    if (mobileBackgroundSupported && _initialized) {
+    if (!switchingAccount && mobileBackgroundSupported && _initialized) {
       try {
-        await _scheduleMutex.protect(
-            () => Workmanager().cancelByUniqueName(schoolNotificationTask));
+        await _scheduleMutex.protect(_scheduler.cancel);
       } catch (error) {
         // The account is already revoked. An unavailable scheduler must not
         // undo that barrier or prevent logout; later workers recheck storage.
@@ -966,7 +995,7 @@ class SchoolNotificationService extends ChangeNotifier
           await _storage.read(key: 'school-notification-active') == null ||
           await _storage.read(key: 'school-notification-background') !=
               'true') {
-        await Workmanager().cancelByUniqueName(schoolNotificationTask);
+        await _scheduler.cancel();
       } else {
         if (Platform.isIOS &&
             await const MethodChannel('dr/school_notifications')
@@ -976,14 +1005,7 @@ class SchoolNotificationService extends ChangeNotifier
           notifyListeners();
           return;
         }
-        await Workmanager().registerPeriodicTask(
-            schoolNotificationTask, schoolNotificationTask,
-            frequency: const Duration(minutes: 15),
-            initialDelay: const Duration(minutes: 15),
-            constraints: Constraints(networkType: NetworkType.connected),
-            existingWorkPolicy: ExistingPeriodicWorkPolicy.keep,
-            backoffPolicy: BackoffPolicy.exponential,
-            backoffPolicyDelay: const Duration(minutes: 1));
+        await _scheduler.schedule();
       }
       backgroundAvailable = true;
       if (Platform.isAndroid || Platform.isIOS) {
@@ -1016,9 +1038,9 @@ class SchoolNotificationService extends ChangeNotifier
   Future<void> _ingest(String account, List data,
       {required bool background}) async {
     if (data.any((e) =>
-        e is Map &&
-        (e['type'] == 'grade' || e['type'] == 'message') &&
-        SchoolNotificationEvent.parse(e) == null)) {
+        e is! Map ||
+        (SchoolNotificationEvent.categoryFor(e['type']) != null &&
+            SchoolNotificationEvent.parse(e) == null))) {
       throw const FormatException('Incomplete personal notification entry');
     }
     final events = data
@@ -1209,7 +1231,11 @@ class SchoolNotificationService extends ChangeNotifier
       final remaining = backgroundBudget - elapsed.elapsed;
       if (remaining <= Duration.zero) break;
       try {
-        await _backgroundSyncAccount(account, remaining);
+        await _backgroundSyncAccount(
+            account,
+            remaining < backgroundAccountBudget
+                ? remaining
+                : backgroundAccountBudget);
       } catch (error, stack) {
         failure = error;
         failureStack = stack;
@@ -1246,13 +1272,7 @@ class SchoolNotificationService extends ChangeNotifier
               const Duration(minutes: 2)) {
         return null;
       }
-      final foregroundUntil = DateTime.tryParse(
-          await _storage.read(key: 'school-notification-foreground-until') ??
-              '');
-      if (foregroundUntil != null &&
-          foregroundUntil.isAfter(DateTime.now().toUtc())) {
-        return null;
-      }
+      if (await _foregroundSessionActive()) return null;
       final raw = await _storage.read(key: 'login');
       if (raw == null) return null;
       final login = jsonDecode(raw) as Map;
@@ -1330,48 +1350,12 @@ class SchoolNotificationService extends ChangeNotifier
     }
     final networkTimer = Stopwatch()..start();
     runtimeTrace('SchoolNotifications', 'background-network-start');
-    final dio = _httpClient(BaseOptions(
-        baseUrl: schoolApiBase(request.server),
-        connectTimeout: const Duration(seconds: 8),
-        receiveTimeout: const Duration(seconds: 8),
-        sendTimeout: const Duration(seconds: 8),
-        followRedirects: false));
-    dio.interceptors.add(CookieManager(CookieJar()));
-    final cancellation = CancelToken();
-    final deadline =
-        Timer(budget, () => cancellation.cancel('Background refresh deadline'));
     try {
-      final result = (await dio.post<dynamic>(schoolLoginEndpoint,
-              data: {
-                'username': request.user,
-                'password': request.password,
-              },
-              cancelToken: cancellation))
-          .data;
-      final auth = result is String ? jsonDecode(result) : result;
-      if (auth is! Map) {
-        throw const FormatException('Invalid school authentication response');
-      }
-      if (auth['loggedIn'] != true && auth['loggedIn'] != 1) {
-        await _locked(() async {
-          if ((await _enrolledAccounts()).containsKey(request.account)) {
-            await _diagnose(request.account, {
-              'backgroundResult': 'authenticationRequired',
-              'authenticationSession': request.session
-            });
-          }
-        });
-        return;
-      }
-      final response = (await dio.post<dynamic>(
-              schoolUnreadNotificationsEndpoint,
-              data: <String, Object?>{},
-              cancelToken: cancellation))
-          .data;
-      final data = response is String ? jsonDecode(response) : response;
-      if (data is! List) {
-        throw const FormatException('Invalid school notification feed');
-      }
+      final data = await SchoolNotificationFeedClient(_httpClient).fetch(
+          server: request.server,
+          user: request.user,
+          password: request.password,
+          budget: budget);
       runtimeTrace('SchoolNotifications', 'background-response-received',
           durationMs: networkTimer.elapsedMilliseconds);
       // Everything mutable is checked again while holding the commit lock.
@@ -1381,11 +1365,11 @@ class SchoolNotificationService extends ChangeNotifier
         final last = DateTime.tryParse(await _storage.read(
                 key: 'school-notification-last-sync-${request.account}') ??
             '');
-        final foreground = DateTime.tryParse(
-            await _storage.read(key: 'school-notification-foreground-until') ??
-                '');
         if (await _storage.read(key: 'school-notification-active') !=
                 request.active ||
+            await _storage.read(
+                    key: 'school-notification-lease-${request.account}') !=
+                request.lease ||
             !(await _enrolledAccounts()).containsKey(request.account) ||
             await _storage.read(key: 'school-notification-session') !=
                 request.session ||
@@ -1393,8 +1377,7 @@ class SchoolNotificationService extends ChangeNotifier
                 'true' ||
             await _storage.read(key: 'login') != request.rawLogin ||
             !await _hasPermission() ||
-            (foreground != null &&
-                foreground.isAfter(DateTime.now().toUtc())) ||
+            await _foregroundSessionActive() ||
             (last != null &&
                 DateTime.now().toUtc().difference(last) <
                     const Duration(minutes: 2))) {
@@ -1407,9 +1390,27 @@ class SchoolNotificationService extends ChangeNotifier
         }
         await _ingest(request.account, data, background: true);
       }, label: 'background-commit');
+    } on SchoolNotificationAuthenticationRequired {
+      await _locked(() async {
+        if (!(await _enrolledAccounts()).containsKey(request.account) ||
+            await _storage.read(key: 'school-notification-session') !=
+                request.session ||
+            await _storage.read(key: 'login') != request.rawLogin) {
+          return;
+        }
+        await _diagnose(request.account, {
+          'backgroundResult': 'authenticationRequired',
+          'authenticationSession': request.session
+        });
+      });
     } catch (error) {
       await _locked(() async {
-        if (!(await _enrolledAccounts()).containsKey(request.account)) return;
+        if (!(await _enrolledAccounts()).containsKey(request.account) ||
+            await _storage.read(key: 'school-notification-session') !=
+                request.session ||
+            await _storage.read(key: 'login') != request.rawLogin) {
+          return;
+        }
         await _diagnose(request.account, {
           'backgroundResult': error is DioException &&
                   (error.response?.statusCode == 401 ||
@@ -1433,8 +1434,6 @@ class SchoolNotificationService extends ChangeNotifier
       });
       rethrow;
     } finally {
-      deadline.cancel();
-      dio.close(force: true);
       await _locked(() async {
         if (await _storage.read(
                 key: 'school-notification-lease-${request.account}') ==
