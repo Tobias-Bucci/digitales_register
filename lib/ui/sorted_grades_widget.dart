@@ -193,7 +193,8 @@ class _SortedGradesWidgetState extends State<SortedGradesWidget> {
           ListTile(
             title: Text(
               context.t('grades.excludedAverageInfo'),
-              style: const TextStyle(color: Colors.grey),
+              style: TextStyle(
+                  color: Theme.of(context).colorScheme.onSurfaceVariant),
             ),
           ),
         TutorialTarget(
@@ -341,9 +342,11 @@ class _SubjectWidgetState extends State<SubjectWidget> {
                   text: context.l10n.translateSubjectName(widget.subject.name),
                   children: [
                     if (widget.ignoredForAverage)
-                      const TextSpan(
+                      TextSpan(
                         text: " *",
-                        style: TextStyle(color: Colors.grey),
+                        style: TextStyle(
+                            color:
+                                Theme.of(context).colorScheme.onSurfaceVariant),
                       ),
                   ],
                 ),

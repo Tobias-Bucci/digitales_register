@@ -39,10 +39,10 @@ import 'package:dr/ui/dialog.dart';
 import 'package:dr/ui/network_protocol_page.dart';
 import 'package:dr/ui/privacy_data_details_page.dart';
 import 'package:dr/ui/school_notification_settings.dart';
+import 'package:dr/ui/subject_swatch_picker.dart';
 import 'package:dr/util.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/rendering.dart' show ScrollCacheExtent;
-import 'package:flutter_colorpicker/flutter_colorpicker.dart';
 import 'package:responsive_scaffold/responsive_scaffold.dart';
 import 'package:url_launcher/url_launcher.dart';
 
@@ -78,7 +78,6 @@ class SettingsPageWidget extends StatefulWidget {
   final Future<void> Function(int? calendarId) onSetCalendarSyncCalendarId;
   final Future<void> Function() onRemoveCalendarSyncEvents;
   final OnSettingChanged<bool> onSetAmoledMode;
-  final OnSettingChanged<Color> onSetContrastColor;
   final OnSettingChanged<MapEntry<String, SubjectTheme>> onSetSubjectTheme;
   final OnSettingChanged<Map<String, String>> onSetSubjectNicks;
   final OnSettingChanged<List<String>> onSetIgnoreForGradesAverage;
@@ -122,7 +121,6 @@ class SettingsPageWidget extends StatefulWidget {
     required this.onSetCalendarSyncCalendarId,
     required this.onRemoveCalendarSyncEvents,
     required this.onSetAmoledMode,
-    required this.onSetContrastColor,
     required this.onSetFavoriteSubjects,
     required this.currentThemePreference,
     required this.onSetSimulatedDate,
@@ -789,36 +787,9 @@ class _SettingsPageWidgetState extends State<SettingsPageWidget> {
           },
         ),
         ListTile(
-          key: const Key('settings-contrast-color-tile'),
-          title: Text(l10n.text('settings.contrastColor.title')),
-          subtitle: Text(l10n.text('settings.contrastColor.subtitle')),
-          trailing: Container(
-            width: 28,
-            height: 28,
-            decoration: BoxDecoration(
-              color: themeController.contrastColor,
-              borderRadius: BorderRadius.circular(8),
-              border: Border.all(
-                color: Theme.of(context).dividerColor.withValues(alpha: 0.4),
-              ),
-            ),
-          ),
-          onTap: () async {
-            final color = await showDialog<Color>(
-              context: context,
-              builder: (context) => _ColorPicker(
-                initialColor: themeController.contrastColor,
-              ),
-            );
-            if (color != null) {
-              widget.onSetContrastColor(color);
-            }
-          },
-        ),
-        ListTile(
           key: const Key('settings-subject-colors-tile'),
           title: Text(l10n.text('settings.subjectColors.title')),
-          subtitle: Text('${widget.vm.subjectThemes.length}'),
+          subtitle: Text(l10n.text('settings.subjectColors.subtitle')),
           trailing: const Icon(Icons.chevron_right),
           onTap: () async {
             await _openSubjectColorsPage();
@@ -1367,19 +1338,18 @@ class _SubjectColorsSettingsPageState
                 ListTile(
                   title: Text(entry.key),
                   trailing: Container(
-                    width: 44,
-                    height: 20,
+                    width: 28,
+                    height: 28,
                     decoration: BoxDecoration(
                       color: Color(entry.value.color),
-                      borderRadius: BorderRadius.circular(6),
+                      shape: BoxShape.circle,
                     ),
                   ),
                   onTap: () async {
-                    final color = await showDialog<Color>(
-                      context: context,
-                      builder: (context) => _ColorPicker(
-                        initialColor: Color(entry.value.color),
-                      ),
+                    final color = await showSubjectSwatchPicker(
+                      context,
+                      subject: entry.key,
+                      current: Color(entry.value.color),
                     );
                     if (color == null) {
                       return;
@@ -1509,7 +1479,8 @@ class _GradesSettingsPageState extends State<_GradesSettingsPage> {
               ? ListTile(
                   title: Text(
                     l10n.text('settings.grades.noExcludedSubject'),
-                    style: const TextStyle(color: Colors.grey),
+                    style: TextStyle(
+                        color: Theme.of(context).colorScheme.onSurfaceVariant),
                   ),
                 )
               : Column(
@@ -1668,7 +1639,8 @@ class _SubjectNicksSettingsPageState extends State<_SubjectNicksSettingsPage> {
               ? ListTile(
                   title: Text(
                     l10n.text('settings.calendar.subjectNicksHintBody'),
-                    style: const TextStyle(color: Colors.grey),
+                    style: TextStyle(
+                        color: Theme.of(context).colorScheme.onSurfaceVariant),
                   ),
                 )
               : Column(
@@ -1914,7 +1886,10 @@ class _SubstituteSettingsPageState extends State<_SubstituteSettingsPage> {
                               l10n.text(
                                 'settings.calendar.substituteTeachers.noTeachers',
                               ),
-                              style: const TextStyle(color: Colors.grey),
+                              style: TextStyle(
+                                  color: Theme.of(context)
+                                      .colorScheme
+                                      .onSurfaceVariant),
                             ),
                           ),
                         for (final teacher in entry.value)
@@ -2031,7 +2006,8 @@ class _FavoriteSubjectsSettingsPageState
               ? ListTile(
                   title: Text(
                     l10n.text('settings.calendar.noFavoriteSubject'),
-                    style: const TextStyle(color: Colors.grey),
+                    style: TextStyle(
+                        color: Theme.of(context).colorScheme.onSurfaceVariant),
                   ),
                 )
               : Column(
@@ -2418,58 +2394,6 @@ class _AddSubjectState extends State<AddSubject> {
                 }
               : null,
           child: Text(l10n.text('common.done')),
-        ),
-      ],
-    );
-  }
-}
-
-class _ColorPicker extends StatefulWidget {
-  final Color? initialColor;
-
-  const _ColorPicker({this.initialColor});
-  @override
-  _ColorPickerState createState() => _ColorPickerState();
-}
-
-class _ColorPickerState extends State<_ColorPicker> {
-  Color? color;
-
-  @override
-  void initState() {
-    color = widget.initialColor;
-    super.initState();
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    final l10n = context.l10n;
-    return InfoDialog(
-      title: Text(l10n.text('settings.colorPicker.title')),
-      content: SingleChildScrollView(
-        child: ColorPicker(
-          pickerColor: color!,
-          onColorChanged: (pickedColor) {
-            setState(() {
-              color = pickedColor;
-            });
-          },
-        ),
-      ),
-      actions: [
-        TextButton(
-          onPressed: () {
-            Navigator.pop(context);
-          },
-          child: Text(l10n.text('common.cancel')),
-        ),
-        ElevatedButton(
-          onPressed: color != widget.initialColor
-              ? () {
-                  Navigator.pop(context, color);
-                }
-              : null,
-          child: Text(l10n.text('common.select')),
         ),
       ],
     );

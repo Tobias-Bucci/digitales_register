@@ -25,6 +25,7 @@ import 'package:dr/container/export_container.dart';
 import 'package:dr/data.dart';
 import 'package:dr/export/export_data.dart';
 import 'package:dr/i18n/app_localizations.dart';
+import 'package:dr/theme/app_palette.dart';
 import 'package:dr/ui/animated_linear_progress_indicator.dart';
 import 'package:dr/ui/last_fetched_overlay.dart';
 import 'package:dr/ui/no_internet.dart';
@@ -304,10 +305,19 @@ class _MessageWidgetState extends State<MessageWidget> {
   }
 
   Color _getBadgeColor(BuildContext context, String badgeKey) {
-    if (badgeKey == "agree") return Colors.green;
-    if (badgeKey == "not_agree") return Colors.red;
-    if (badgeKey == "Nicht beantwortet") return Colors.orange.shade700;
-    return Theme.of(context).primaryColor;
+    final scheme = Theme.of(context).colorScheme;
+    if (badgeKey == "agree") return scheme.success;
+    if (badgeKey == "not_agree") return scheme.error;
+    if (badgeKey == "Nicht beantwortet") return scheme.warning;
+    return scheme.primary;
+  }
+
+  Color _getBadgeTextColor(BuildContext context, String badgeKey) {
+    final scheme = Theme.of(context).colorScheme;
+    if (badgeKey == "agree") return scheme.onSuccess;
+    if (badgeKey == "not_agree") return scheme.onError;
+    if (badgeKey == "Nicht beantwortet") return scheme.onWarning;
+    return scheme.onPrimary;
   }
 
   @override
@@ -331,8 +341,8 @@ class _MessageWidgetState extends State<MessageWidget> {
               child: Container(
                 width: 8,
                 height: 8,
-                decoration: const BoxDecoration(
-                  color: Colors.red,
+                decoration: BoxDecoration(
+                  color: Theme.of(context).colorScheme.error,
                   shape: BoxShape.circle,
                 ),
               ),
@@ -384,8 +394,8 @@ class _MessageWidgetState extends State<MessageWidget> {
                   ),
                   badgeContent: Text(
                     _getTranslatedBadge(context, badgeStr),
-                    style: const TextStyle(
-                        color: Colors.white,
+                    style: TextStyle(
+                        color: _getBadgeTextColor(context, badgeStr),
                         fontSize: 12,
                         fontWeight: FontWeight.bold),
                   ),
@@ -511,8 +521,9 @@ class _MessageWidgetState extends State<MessageWidget> {
                   children: [
                     ElevatedButton(
                       style: ElevatedButton.styleFrom(
-                        backgroundColor: Colors.green,
-                        foregroundColor: Colors.white,
+                        backgroundColor: Theme.of(context).colorScheme.success,
+                        foregroundColor:
+                            Theme.of(context).colorScheme.onSuccess,
                       ),
                       onPressed: () =>
                           widget.onReply(widget.message.id, "agree"),
@@ -520,8 +531,8 @@ class _MessageWidgetState extends State<MessageWidget> {
                     ),
                     ElevatedButton(
                       style: ElevatedButton.styleFrom(
-                        backgroundColor: Colors.red,
-                        foregroundColor: Colors.white,
+                        backgroundColor: Theme.of(context).colorScheme.error,
+                        foregroundColor: Theme.of(context).colorScheme.onError,
                       ),
                       onPressed: () =>
                           widget.onReply(widget.message.id, "not_agree"),

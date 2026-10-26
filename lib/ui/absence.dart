@@ -19,6 +19,7 @@
 import 'package:dr/container/absence_group_container.dart';
 import 'package:dr/data.dart';
 import 'package:dr/i18n/app_localizations.dart';
+import 'package:dr/theme/app_palette.dart';
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 
@@ -46,8 +47,9 @@ class AbsenceGroupWidget extends StatelessWidget {
       shape: RoundedRectangleBorder(
         side: vm.justified == AbsenceJustified.notYetJustified ||
                 vm.justified == AbsenceJustified.notJustified
-            ? const BorderSide(color: Colors.red)
-            : const BorderSide(color: Colors.green, width: 0),
+            ? BorderSide(color: Theme.of(context).colorScheme.error)
+            : BorderSide(
+                color: Theme.of(context).colorScheme.success, width: 0),
         borderRadius: BorderRadius.circular(16),
       ),
       color: Colors.transparent,
@@ -151,8 +153,9 @@ class FutureAbsenceWidget extends StatelessWidget {
       shape: RoundedRectangleBorder(
         side: absence.justified == AbsenceJustified.notYetJustified ||
                 absence.justified == AbsenceJustified.notJustified
-            ? const BorderSide(color: Colors.red)
-            : const BorderSide(color: Colors.green, width: 0),
+            ? BorderSide(color: Theme.of(context).colorScheme.error)
+            : BorderSide(
+                color: Theme.of(context).colorScheme.success, width: 0),
         borderRadius: BorderRadius.circular(16),
       ),
       color: Colors.transparent,

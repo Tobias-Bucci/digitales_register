@@ -4,6 +4,7 @@ import 'package:dr/app_clock.dart';
 import 'package:dr/app_state.dart';
 import 'package:dr/grade_history.dart';
 import 'package:dr/i18n/app_localizations.dart';
+import 'package:dr/theme/app_palette.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_built_redux/flutter_built_redux.dart';
 
@@ -87,7 +88,7 @@ class _HistoryDialog extends StatelessWidget {
                               '${subject.change >= 0 ? '+' : ''}${_format(subject.change)}',
                               style: TextStyle(
                                 color: subject.change >= 0
-                                    ? Colors.green
+                                    ? Theme.of(context).colorScheme.success
                                     : Theme.of(context).colorScheme.error,
                                 fontWeight: FontWeight.w600,
                               ),

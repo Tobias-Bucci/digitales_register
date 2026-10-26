@@ -18,14 +18,15 @@ import 'package:dr/analytics_service.dart';
 // along with digitales_register.  If not, see <http://www.gnu.org/licenses/>.
 
 import 'package:dr/diagnostics_service.dart';
+import 'package:dr/theme/app_palette.dart';
 import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
-const contrastColorPreferenceKey = "contrastColor";
+/// Removed in favor of the curated palette; deleted from prefs on load.
+const legacyContrastColorPreferenceKey = "contrastColor";
 const _themeBrightnessPreferenceKey = "isDark";
 const _followDeviceThemePreferenceKey = "followDeviceTheme";
 const platformOverridePreferenceKey = "platformOverride";
-const defaultContrastColor = Color(0xFF3D79AF);
 
 enum AppThemePreference {
   light,
@@ -36,11 +37,9 @@ enum AppThemePreference {
 class AppThemeController extends ChangeNotifier with WidgetsBindingObserver {
   AppThemeController();
 
-  Color _contrastColor = defaultContrastColor;
   AppThemePreference _themePreference = AppThemePreference.system;
   bool _platformOverride = false;
 
-  Color get contrastColor => _contrastColor;
   AppThemePreference get themePreference => _themePreference;
   bool get platformOverride => _platformOverride;
 
@@ -58,9 +57,8 @@ class AppThemeController extends ChangeNotifier with WidgetsBindingObserver {
   Future<void> load() async {
     WidgetsBinding.instance.addObserver(this);
     final prefs = await SharedPreferences.getInstance();
-    final persistedColor = prefs.getInt(contrastColorPreferenceKey);
-    if (persistedColor != null) {
-      _contrastColor = Color(persistedColor);
+    if (prefs.containsKey(legacyContrastColorPreferenceKey)) {
+      await prefs.remove(legacyContrastColorPreferenceKey);
     }
 
     _platformOverride = prefs.getBool(platformOverridePreferenceKey) ?? false;
@@ -95,97 +93,71 @@ class AppThemeController extends ChangeNotifier with WidgetsBindingObserver {
     required Brightness brightness,
     required bool amoledMode,
   }) {
-    // A seed generates a tonal palette; it does not preserve the selected
-    // color, especially in dark mode. Keep the palette for surfaces, but use
-    // the saved color itself for the app's primary and secondary accents.
-    final luminance = _contrastColor.computeLuminance();
-    final onAccent = (luminance + 0.05) / 0.05 >= 1.05 / (luminance + 0.05)
-        ? Colors.black
-        : Colors.white;
-    final colorScheme = ColorScheme.fromSeed(
-      seedColor: _contrastColor,
-      brightness: brightness,
-    ).copyWith(
-      primary: _contrastColor,
-      onPrimary: onAccent,
-      secondary: _contrastColor,
-      onSecondary: onAccent,
-      surfaceTint: _contrastColor,
-    );
+    final isDark = brightness == Brightness.dark;
+    final amoled = amoledMode && isDark;
+    final scheme = AppPalette.scheme(brightness: brightness, amoled: amoled);
     final baseTheme = ThemeData(
-      colorScheme: colorScheme,
-      primaryColor: _contrastColor,
-      tabBarTheme: TabBarThemeData(indicatorColor: _contrastColor),
+      colorScheme: scheme,
       brightness: brightness,
+      primaryColor: scheme.primary,
+      scaffoldBackgroundColor: scheme.surface,
+      canvasColor: scheme.surface,
+      dividerColor: scheme.outlineVariant,
+      tabBarTheme: TabBarThemeData(indicatorColor: scheme.primary),
     );
-    final scheme = baseTheme.colorScheme;
     final appBarTheme = baseTheme.appBarTheme.copyWith(
       centerTitle: false,
       backgroundColor: scheme.surface,
       foregroundColor: scheme.onSurface,
       elevation: 0,
-      scrolledUnderElevation: brightness == Brightness.dark ? 10 : 6,
-      shadowColor: scheme.shadow.withValues(
-        alpha: brightness == Brightness.dark ? 0.36 : 0.12,
-      ),
-      surfaceTintColor: brightness == Brightness.dark
-          ? scheme.surfaceContainerHighest.withValues(alpha: 0.18)
-          : scheme.surfaceTint.withValues(alpha: 0.08),
+      scrolledUnderElevation: amoled ? 0 : (isDark ? 10 : 6),
+      shadowColor: scheme.shadow.withValues(alpha: isDark ? 0.36 : 0.12),
+      surfaceTintColor: amoled
+          ? Colors.transparent
+          : isDark
+              ? scheme.surfaceContainerHighest.withValues(alpha: 0.18)
+              : scheme.surfaceTint.withValues(alpha: 0.08),
       shape: Border(
         bottom: BorderSide(
-          color: scheme.outlineVariant.withValues(
-            alpha: brightness == Brightness.dark ? 0.32 : 0.55,
-          ),
+          color: scheme.outlineVariant.withValues(alpha: isDark ? 0.5 : 0.55),
         ),
       ),
     );
-    if (!amoledMode || brightness != Brightness.dark) {
-      return baseTheme.copyWith(
-        appBarTheme: appBarTheme,
-      );
+    if (!amoled) {
+      return baseTheme.copyWith(appBarTheme: appBarTheme);
     }
 
-    final amoledScheme = baseTheme.colorScheme.copyWith(
-      surface: Colors.black,
-      surfaceContainerHighest: Colors.black,
-      primaryContainer: Colors.black,
-      secondaryContainer: Colors.black,
-      tertiaryContainer: Colors.black,
-      errorContainer: Colors.black,
+    // On AMOLED, page-level surfaces stay pure black. Raised surfaces use the
+    // near-black containers with a thin outline instead of shadows.
+    final outlinedShape = RoundedRectangleBorder(
+      borderRadius: BorderRadius.circular(12),
+      side: BorderSide(color: scheme.outlineVariant),
     );
     return baseTheme.copyWith(
-      scaffoldBackgroundColor: Colors.black,
-      canvasColor: Colors.black,
-      cardColor: Colors.black,
-      dividerColor: Colors.black,
+      cardColor: scheme.surfaceContainerLow,
       shadowColor: Colors.black,
-      colorScheme: amoledScheme,
-      appBarTheme: appBarTheme.copyWith(
-        backgroundColor: Colors.black,
-        surfaceTintColor: Colors.black,
-        shadowColor: Colors.black,
-      ),
+      appBarTheme: appBarTheme,
       cardTheme: baseTheme.cardTheme.copyWith(
-        color: Colors.black,
-        surfaceTintColor: Colors.black,
-        shadowColor: Colors.black,
+        color: scheme.surfaceContainerLow,
+        surfaceTintColor: Colors.transparent,
+        shadowColor: Colors.transparent,
+        shape: outlinedShape,
       ),
       drawerTheme: baseTheme.drawerTheme.copyWith(
         backgroundColor: Colors.black,
       ),
       dialogTheme: baseTheme.dialogTheme.copyWith(
-        backgroundColor: Colors.black,
-        surfaceTintColor: Colors.black,
+        backgroundColor: scheme.surfaceContainer,
+        surfaceTintColor: Colors.transparent,
       ),
       bottomSheetTheme: baseTheme.bottomSheetTheme.copyWith(
-        backgroundColor: Colors.black,
-        modalBackgroundColor: Colors.black,
+        backgroundColor: scheme.surfaceContainer,
+        modalBackgroundColor: scheme.surfaceContainer,
+        surfaceTintColor: Colors.transparent,
       ),
       popupMenuTheme: baseTheme.popupMenuTheme.copyWith(
-        color: Colors.black,
-      ),
-      listTileTheme: baseTheme.listTileTheme.copyWith(
-        tileColor: Colors.black,
+        color: scheme.surfaceContainerHigh,
+        surfaceTintColor: Colors.transparent,
       ),
     );
   }
@@ -221,15 +193,6 @@ class AppThemeController extends ChangeNotifier with WidgetsBindingObserver {
     await prefs.setBool(platformOverridePreferenceKey, value);
     // If platform override is enabled, stop following device theme.
     await prefs.setBool(_followDeviceThemePreferenceKey, !value);
-  }
-
-  Future<void> setContrastColor(Color color) async {
-    _contrastColor = color;
-    diagnostics.update('theme', _themePreference.name);
-    notifyListeners();
-
-    final prefs = await SharedPreferences.getInstance();
-    await prefs.setInt(contrastColorPreferenceKey, color.toARGB32());
   }
 }
 

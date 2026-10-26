@@ -9,6 +9,7 @@ import 'package:dr/middleware/middleware.dart';
 import 'package:dr/reducer/reducer.dart';
 import 'package:dr/serializers.dart';
 import 'package:dr/settings_persistence_service.dart';
+import 'package:dr/theme/app_palette.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:mocktail/mocktail.dart';
 import 'package:quiver/testing/src/async/fake_async.dart';
@@ -76,10 +77,10 @@ void main() {
     expect(deserialized.settingsState.subjectNicks['Geschichte'], 'Ge');
   });
 
-  test('custom subject colors survive refresh and settings reload exactly',
+  test('chosen subject swatches survive refresh and settings reload exactly',
       () async {
     final store = _createLoggedInStore(username: 'subject-colors-user');
-    const color = 0xFFFF00FF;
+    final color = AppPalette.subjectSwatches[3].toARGB32();
     await store.actions.settingsActions.updateSubjectThemes(['Mathematik']);
     final customTheme = store.state.settingsState.subjectThemes['Mathematik']!
         .rebuild((b) => b.color = color);

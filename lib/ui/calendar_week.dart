@@ -22,6 +22,7 @@ import 'package:dr/container/calendar_week_container.dart';
 import 'package:dr/data.dart';
 import 'package:dr/i18n/app_localizations.dart';
 import 'package:dr/main.dart';
+import 'package:dr/theme/app_palette.dart';
 import 'package:dr/ui/last_fetched_overlay.dart';
 import 'package:dr/ui/no_internet.dart';
 import 'package:dr/utc_date_time.dart';
@@ -166,7 +167,7 @@ class _HoursChunk extends StatelessWidget {
             side: BorderSide(
               color: isSelected
                   ? Theme.of(context).colorScheme.secondary
-                  : Colors.grey,
+                  : Theme.of(context).colorScheme.outline,
               width: 0.75,
             ),
             borderRadius: BorderRadius.circular(8),
@@ -491,10 +492,12 @@ class HourWidget extends StatelessWidget {
             decoration: BoxDecoration(
               border: Border(
                 left: hour.warning
-                    ? const BorderSide(color: Colors.red, width: 5)
+                    ? const BorderSide(
+                        color: AppPalette.markerNegative, width: 5)
                     : BorderSide.none,
                 right: hour.isDetectedSubstitute
-                    ? BorderSide(color: Colors.amber.shade700, width: 5)
+                    ? const BorderSide(
+                        color: AppPalette.markerWarning, width: 5)
                     : BorderSide.none,
               ),
               color: isSelected ? selectedBackgroundColor : backgroundColor,

@@ -1,3 +1,4 @@
+import 'package:dr/theme/app_palette.dart';
 import 'package:flutter/material.dart';
 
 /// Orange covers 5.50 through 5.75 inclusive, in hundredths.
@@ -12,9 +13,9 @@ GradeCategory? gradeCategory(num? hundredths) {
 }
 
 Color? gradeColor(num? hundredths) => switch (gradeCategory(hundredths)) {
-      GradeCategory.failing => Colors.red,
-      GradeCategory.satisfactory => Colors.orange,
-      GradeCategory.good => Colors.green,
+      GradeCategory.failing => AppPalette.markerNegative,
+      GradeCategory.satisfactory => AppPalette.markerWarning,
+      GradeCategory.good => AppPalette.markerPositive,
       null => null,
     };
 
@@ -49,10 +50,13 @@ class GradeBadge extends StatelessWidget {
     final (foreground, background) = switch (category) {
       GradeCategory.failing => (scheme.onErrorContainer, scheme.errorContainer),
       GradeCategory.satisfactory => (
-          Colors.orange.shade900,
-          Colors.orange.shade100
+          scheme.onWarningContainer,
+          scheme.warningContainer
         ),
-      GradeCategory.good => (Colors.green.shade900, Colors.green.shade100),
+      GradeCategory.good => (
+          scheme.onSuccessContainer,
+          scheme.successContainer
+        ),
     };
     return DecoratedBox(
       decoration:

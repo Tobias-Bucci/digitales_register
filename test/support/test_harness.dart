@@ -272,11 +272,15 @@ Widget buildTestApp({
           AppLanguage.fromCode(store.state.settingsState.languageCode).locale,
       onGenerateRoute: onGenerateRoute,
       themeMode: themeMode,
-      theme: theme ?? ThemeData(colorSchemeSeed: defaultContrastColor),
+      theme: theme ??
+          themeController.buildTheme(
+            brightness: Brightness.light,
+            amoledMode: false,
+          ),
       darkTheme: darkTheme ??
-          ThemeData(
-            colorSchemeSeed: defaultContrastColor,
+          themeController.buildTheme(
             brightness: Brightness.dark,
+            amoledMode: false,
           ),
       home: home,
     ),

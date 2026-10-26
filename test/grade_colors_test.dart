@@ -1,5 +1,6 @@
 import 'package:dr/app_selectors.dart';
 import 'package:dr/app_state.dart';
+import 'package:dr/theme/app_palette.dart';
 import 'package:dr/ui/grade_colors.dart';
 import 'package:dr/ui/grades_chart.dart';
 import 'package:dr/utc_date_time.dart';
@@ -10,13 +11,13 @@ import 'package:tuple/tuple.dart';
 void main() {
   test('orange is exactly 5.50 through 5.75 without rounding averages', () {
     for (final value in [0, 400, 525, 549, 549.99]) {
-      expect(gradeColor(value), Colors.red);
+      expect(gradeColor(value), AppPalette.markerNegative);
     }
     for (final value in [550, 550.01, 562.5, 574.99, 575]) {
-      expect(gradeColor(value), Colors.orange);
+      expect(gradeColor(value), AppPalette.markerWarning);
     }
     for (final value in [575.01, 599.99, 600, 625, 750, 800, 1000, 1200]) {
-      expect(gradeColor(value), Colors.green);
+      expect(gradeColor(value), AppPalette.markerPositive);
     }
     for (final value in [null, -1, double.nan, double.infinity]) {
       expect(gradeColor(value), isNull);
@@ -32,8 +33,8 @@ void main() {
             ..thick = 2),
     };
     final colored = GradesChart.convert(graphs, colorGrades: true).single;
-    expect(colored.fillColorFn!(0)?.r, 255);
-    expect(colored.fillColorFn!(0)?.g, 152);
+    expect(colored.fillColorFn!(0)?.r, 0xC2);
+    expect(colored.fillColorFn!(0)?.g, 0x7C);
     expect(colored.seriesColor?.r, 0x12);
     expect(colored.measureFn(0), 5.75);
     expect(colored.data.single.value.item1, 575);
@@ -43,8 +44,9 @@ void main() {
   for (final dark in [false, true]) {
     testWidgets('orange badge preserves text and cancellation (dark=$dark)',
         (tester) async {
+      final scheme = dark ? AppPalette.dark : AppPalette.light;
       await tester.pumpWidget(MaterialApp(
-        theme: ThemeData(brightness: dark ? Brightness.dark : Brightness.light),
+        theme: ThemeData(colorScheme: scheme),
         home: const Scaffold(
             body: GradeBadge(
           text: '5¾',
@@ -54,7 +56,7 @@ void main() {
         )),
       ));
       final text = tester.widget<Text>(find.text('5¾'));
-      expect(text.style?.color, Colors.orange.shade900);
+      expect(text.style?.color, scheme.onWarningContainer);
       expect(text.style?.decoration, TextDecoration.lineThrough);
       final badge = tester.widget<DecoratedBox>(find
           .ancestor(
@@ -63,7 +65,7 @@ void main() {
           )
           .first);
       expect(
-          (badge.decoration as ShapeDecoration).color, Colors.orange.shade100);
+          (badge.decoration as ShapeDecoration).color, scheme.warningContainer);
     });
   }
 
