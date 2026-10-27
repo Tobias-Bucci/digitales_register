@@ -574,6 +574,10 @@ class Wrapper {
     ).hasMatch(source);
   }
 
+  /// Whether [source] is the school's login page or login redirect script,
+  /// which the server returns with HTTP 200 once the session has expired.
+  static bool isLoginPage(String source) => _isLoginPage(source);
+
   static bool _isLoginPage(String source) {
     return _isLoginRedirectPage(source) ||
         (RegExp(r'<html\b', caseSensitive: false).hasMatch(source) &&
