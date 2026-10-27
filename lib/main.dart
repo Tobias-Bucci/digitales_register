@@ -236,6 +236,7 @@ Future<void> _initializeAfterFirstFrame({
   await store.actions.start(uri);
   runtimeTrace('AppStartup', 'login-end',
       durationMs: loginTimer.elapsedMilliseconds);
+  _showKeyringFallbackNotice();
 
   WidgetsBinding.instance.addObserver(
     LifecycleObserver(
@@ -244,6 +245,18 @@ Future<void> _initializeAfterFirstFrame({
       store.actions.saveState.call,
     ),
   );
+}
+
+/// Tells the user once when Linux had no keyring for the login data.
+void _showKeyringFallbackNotice() {
+  void show() {
+    if (!DesktopSecureStorage.keyringFallbackNotice.value) return;
+    DesktopSecureStorage.keyringFallbackNotice.value = false;
+    showSnackBar(tr('desktop.keyringUnavailable'));
+  }
+
+  DesktopSecureStorage.keyringFallbackNotice.addListener(show);
+  show();
 }
 
 Future<void> _restoreUserPreferences(

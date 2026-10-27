@@ -986,5 +986,6 @@
   "schoolNotifications.optIn.privacy": "Grade values and message text stay hidden in notifications. You can change your choices at any time in settings.",
   "schoolNotifications.optIn.accept": "Enable notifications",
   "schoolNotifications.optIn.decline": "No, thanks",
-  "schoolNotifications.optIn.failed": "Your choice could not be saved. Please try again."
+  "schoolNotifications.optIn.failed": "Your choice could not be saved. Please try again.",
+  "desktop.keyringUnavailable": "No keyring found. Your sign-in data is stored in a protected file in the app folder."
 }

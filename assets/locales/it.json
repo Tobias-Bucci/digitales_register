@@ -986,5 +986,6 @@
   "schoolNotifications.optIn.privacy": "Voti e testi delle comunicazioni restano nascosti nelle notifiche. Puoi modificare la scelta in qualsiasi momento nelle impostazioni.",
   "schoolNotifications.optIn.accept": "Attiva le notifiche",
   "schoolNotifications.optIn.decline": "No, grazie",
-  "schoolNotifications.optIn.failed": "Non è stato possibile salvare la scelta. Riprova."
+  "schoolNotifications.optIn.failed": "Non è stato possibile salvare la scelta. Riprova.",
+  "desktop.keyringUnavailable": "Nessun portachiavi trovato. I tuoi dati di accesso vengono salvati in un file protetto nella cartella dell’app."
 }
