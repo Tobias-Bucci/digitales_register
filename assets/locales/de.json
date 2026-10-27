@@ -986,5 +986,6 @@
   "schoolNotifications.optIn.privacy": "Notenwerte und Mitteilungstexte bleiben in Benachrichtigungen verborgen. Du kannst deine Auswahl jederzeit in den Einstellungen ändern.",
   "schoolNotifications.optIn.accept": "Benachrichtigungen aktivieren",
   "schoolNotifications.optIn.decline": "Nein, danke",
-  "schoolNotifications.optIn.failed": "Die Auswahl konnte nicht gespeichert werden. Bitte versuche es erneut."
+  "schoolNotifications.optIn.failed": "Die Auswahl konnte nicht gespeichert werden. Bitte versuche es erneut.",
+  "desktop.keyringUnavailable": "Kein Schlüsselbund gefunden. Deine Anmeldedaten werden in einer geschützten Datei im App-Ordner gespeichert."
 }

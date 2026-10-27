@@ -20,6 +20,8 @@ import 'dart:convert';
 import 'dart:io';
 
 import 'package:biometric_storage/biometric_storage.dart';
+import 'package:flutter/foundation.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart'
     as secure_storage;
 import 'package:hive/hive.dart';
@@ -54,7 +56,17 @@ secure_storage.FlutterSecureStorage getFlutterSecureStorage() {
 class DesktopSecureStorage extends secure_storage.FlutterSecureStorage {
   Future<Box<String>> hiveBox = getEncryptedBox();
   DesktopSecureStorage();
-  static Future<Box<String>> getEncryptedBox() async {
+
+  /// Becomes true once per installation when Linux has no reachable keyring
+  /// and the app falls back to a key file. The UI shows a short hint for it.
+  static final keyringFallbackNotice = ValueNotifier<bool>(false);
+
+  // Every instance shares one key lookup so parallel opens cannot create
+  // competing keys.
+  static Future<Box<String>>? _box;
+  static Future<Box<String>> getEncryptedBox() => _box ??= _openEncryptedBox();
+
+  static Future<Box<String>> _openEncryptedBox() async {
     final applicationDocumentDirectory = await getApplicationSupportDirectory();
     final homeDirectory =
         Directory("${applicationDocumentDirectory.path}/RegisterDB");
@@ -62,19 +74,80 @@ class DesktopSecureStorage extends secure_storage.FlutterSecureStorage {
       await homeDirectory.create();
     }
     Hive.init(homeDirectory.path);
-    final biometricStorage = await BiometricStorage().getStorage(
-      "",
-      options: StorageFileInitOptions(
-        authenticationRequired: false,
-      ),
-    );
-    var key = await biometricStorage.read();
+    final keyFile = File("${homeDirectory.path}/database.key");
+    final key = await _readKey(homeDirectory, keyFile);
     if (key == null) {
-      key = base64UrlEncode(Hive.generateSecureKey());
-      await biometricStorage.write(key);
+      // The keyring that encrypted the existing database is unreachable right
+      // now. Opening that file with a new key would make Hive drop its entries
+      // as corrupted, so this session keeps its data in memory only.
+      await _noticeKeyringFallback(homeDirectory);
+      return Hive.openBox('database', bytes: Uint8List(0));
     }
     return Hive.openBox('database',
         encryptionCipher: HiveAesCipher(base64Decode(key)));
+  }
+
+  /// Returns the database key, or null when it is locked in an unreachable
+  /// keyring. Only a keyring that answers "not found" gets a new key.
+  static Future<String?> _readKey(Directory homeDirectory, File keyFile) async {
+    if (await keyFile.exists()) {
+      return (await keyFile.readAsString()).trim();
+    }
+    final BiometricStorageFile keyring;
+    String? key;
+    try {
+      keyring = await BiometricStorage().getStorage(
+        "",
+        options: StorageFileInitOptions(
+          authenticationRequired: false,
+        ),
+      );
+      key = await keyring.read();
+    } catch (error) {
+      if (!_isKeyringUnavailable(error)) rethrow;
+      if (await _hasDatabase(homeDirectory)) return null;
+      return _createKeyFile(homeDirectory, keyFile);
+    }
+    if (key != null) return key;
+    key = base64UrlEncode(Hive.generateSecureKey());
+    try {
+      await keyring.write(key);
+    } catch (error) {
+      if (!_isKeyringUnavailable(error)) rethrow;
+      return _createKeyFile(homeDirectory, keyFile, key: key);
+    }
+    return key;
+  }
+
+  /// Linux desktops without a Secret Service (e.g. minimal setups or a
+  /// Raspberry Pi) report D-Bus errors such as ServiceUnknown here.
+  static bool _isKeyringUnavailable(Object error) =>
+      Platform.isLinux && (error is PlatformException || error is AuthException);
+
+  static Future<bool> _hasDatabase(Directory homeDirectory) =>
+      File("${homeDirectory.path}/database.hive").exists();
+
+  /// Stores the key next to the database, readable by the user only.
+  static Future<String?> _createKeyFile(Directory homeDirectory, File keyFile,
+      {String? key}) async {
+    key ??= base64UrlEncode(Hive.generateSecureKey());
+    final temporary = File("${keyFile.path}.tmp");
+    await temporary.writeAsString(key, flush: true);
+    final chmod = await Process.run('chmod', ['600', temporary.path]);
+    if (chmod.exitCode != 0) {
+      await temporary.delete();
+      return null;
+    }
+    await temporary.rename(keyFile.path);
+    await _noticeKeyringFallback(homeDirectory);
+    return key;
+  }
+
+  static Future<void> _noticeKeyringFallback(Directory homeDirectory) async {
+    final marker = File("${homeDirectory.path}/keyring-notice-shown");
+    if (await marker.exists()) return;
+    await marker.create();
+    keyringFallbackNotice.value = true;
   }
 
   @override

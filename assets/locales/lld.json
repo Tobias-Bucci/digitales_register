@@ -986,5 +986,6 @@
   "schoolNotifications.optIn.privacy": "Notes y tesć dles comunicazions resta nascusc tla notificazions. Te posses mudé tia scelta tres tla impostazions.",
   "schoolNotifications.optIn.accept": "Ativea les notificazions",
   "schoolNotifications.optIn.decline": "No, de gra",
-  "schoolNotifications.optIn.failed": "La scelta ne à nia pudù unì salveda. Prea proa danuef."
+  "schoolNotifications.optIn.failed": "La scelta ne à nia pudù unì salveda. Prea proa danuef.",
+  "desktop.keyringUnavailable": "Nia de portaclês giaté. Tües dades d’azès vëgn salvades te n file protet tl ordinadù dl’app."
 }
