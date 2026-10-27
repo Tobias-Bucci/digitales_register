@@ -62,6 +62,8 @@ class _MobileService extends SchoolNotificationService {
       this.android = false});
   final bool android;
   @override
+  bool get supported => true;
+  @override
   bool get mobileBackgroundSupported => true;
   @override
   bool get androidBackgroundSupported => android;
@@ -166,6 +168,7 @@ void main() {
       shown.add(invocation.namedArguments[#payload] as String);
     });
     service = SchoolNotificationService(
+        platformSupported: true,
         native: native,
         storage: storage,
         permission: () async =>
@@ -667,6 +670,7 @@ void main() {
     await service.ingestAsBackground(server, user, [event(1)]);
     service.dispose();
     service = SchoolNotificationService(
+        platformSupported: true,
         native: native,
         storage: storage,
         permission: () async =>
@@ -735,6 +739,7 @@ void main() {
     await service.ingestAsBackground(server, user, [event(1)]);
     service.dispose();
     service = SchoolNotificationService(
+        platformSupported: true,
         native: native,
         storage: storage,
         permission: () async =>
@@ -1122,6 +1127,7 @@ void main() {
                 any(named: 'onDidReceiveNotificationResponse')))
         .thenAnswer((_) => gate.future);
     service = SchoolNotificationService(
+        platformSupported: true,
         native: native,
         storage: storage,
         permission: () async => true,
@@ -1148,6 +1154,7 @@ void main() {
                 any(named: 'onDidReceiveNotificationResponse')))
         .thenAnswer((_) => gate.future);
     service = SchoolNotificationService(
+        platformSupported: true,
         native: native,
         storage: storage,
         permission: () async => true,
@@ -1175,6 +1182,7 @@ void main() {
                     NotificationResponseType.selectedNotification,
                 payload: destination.encode())));
     service = SchoolNotificationService(
+        platformSupported: true,
         native: native,
         storage: storage,
         permission: () async => false,

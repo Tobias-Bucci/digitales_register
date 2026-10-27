@@ -58,6 +58,7 @@ void main() {
   const secondServer = 'https://other-school.example';
 
   SchoolNotificationService create() => SchoolNotificationService(
+        platformSupported: true,
         native: native,
         storage: storage,
         historyDirectory: () async => directory,
