@@ -509,6 +509,9 @@ Future<bool> openCourseMaterialEntry(CourseMaterialEntry entry) async {
 Future<bool> _downloadCourseMaterialFile(CourseMaterialEntry entry) async {
   final loggedIn = await wrapper.ensureLoggedIn();
   _materialLog('authentication', {'loggedIn': loggedIn});
+  if (!loggedIn) {
+    return false;
+  }
 
   final saveFile =
       File("${await _getAttachmentDownloadDirectory()}/${entry.uniqueName}");
@@ -526,8 +529,7 @@ Future<bool> _downloadCourseMaterialFile(CourseMaterialEntry entry) async {
   for (final candidate in _downloadCandidatesFor(entry)) {
     final bytes = await _downloadCourseMaterialCandidate(candidate);
     if (bytes != null) {
-      await saveFile.parent.create(recursive: true);
-      await saveFile.writeAsBytes(bytes);
+      await _writeFileAtomically(saveFile, bytes);
       _materialLog('saved', {
         'saved': true,
         'path': saveFile.absolute.path,
@@ -1555,16 +1557,20 @@ Future<String> _getAttachmentDownloadDirectory() {
 
 /// Downloads a file.
 ///
-/// Returns true on success and false on a failure.
+/// Returns true on success and false on a failure. The file is only written
+/// once the authenticated response has been validated, so an expired session
+/// never leaves a login page behind as a supposedly downloaded document.
 Future<bool> downloadFile(
   String url,
   String fileName,
   Map<String, dynamic> parameters,
 ) async {
-  await wrapper.ensureLoggedIn();
+  if (!await wrapper.ensureLoggedIn()) {
+    privacyLog('technical_operation');
+    return false;
+  }
 
   final saveFile = File("${await _getAttachmentDownloadDirectory()}/$fileName");
-  var success = true;
   if (await saveFile.exists()) {
     final shouldOverwrite = await askShouldOverwriteFile(fileName);
     if (shouldOverwrite == null) {
@@ -1573,29 +1579,112 @@ Future<bool> downloadFile(
       return true;
     }
   }
+
+  // Mirrors Wrapper.send: one background relogin, then one forced relogin.
+  const maxLoginRetries = 2;
+  for (var attempt = 0; attempt <= maxLoginRetries; attempt++) {
+    if (attempt > 0 &&
+        !await wrapper.ensureLoggedIn(
+          isRetryAfterUnexpectedLogout: true,
+          forceRelogin: attempt > 1,
+        )) {
+      privacyLog('technical_operation');
+      return false;
+    }
+    final List<int> bytes;
+    final String contentType;
+    try {
+      final result = await wrapper.dio.get<List<int>>(
+        url,
+        queryParameters: parameters,
+        options: dio.Options(responseType: dio.ResponseType.bytes),
+      );
+      if (result.statusCode != 200) {
+        privacyLog('technical_operation');
+        return false;
+      }
+      bytes = result.data ?? const <int>[];
+      contentType = result.headers.value(HttpHeaders.contentTypeHeader) ?? '';
+    } catch (_) {
+      privacyLog('technical_operation');
+      return false;
+    }
+
+    switch (validateDownloadedDocument(bytes, contentType, fileName)) {
+      case DownloadValidation.valid:
+        try {
+          await _writeFileAtomically(saveFile, bytes);
+          return true;
+        } catch (_) {
+          privacyLog('technical_operation');
+          return false;
+        }
+      case DownloadValidation.loginPage:
+        privacyLog('technical_operation');
+        continue;
+      case DownloadValidation.invalid:
+        privacyLog('technical_operation');
+        return false;
+    }
+  }
+  return false;
+}
+
+enum DownloadValidation { valid, loginPage, invalid }
+
+/// Checks that an HTTP 200 download body is the requested document and not
+/// the login page or an error response.
+///
+/// HTML and JSON bodies are only accepted when [fileName] asks for such a
+/// document, so legitimate `.html`/`.json` attachments keep working.
+@visibleForTesting
+DownloadValidation validateDownloadedDocument(
+  List<int> bytes,
+  String contentType,
+  String fileName,
+) {
+  if (bytes.isEmpty) {
+    return DownloadValidation.invalid;
+  }
+  final prefix = utf8
+      .decode(bytes.take(64 * 1024).toList(), allowMalformed: true)
+      .replaceFirst('﻿', '')
+      .trimLeft();
+  final looksLikeMarkup = prefix.startsWith('<');
+  if (looksLikeMarkup && Wrapper.isLoginPage(prefix)) {
+    return DownloadValidation.loginPage;
+  }
+  final extension = fileName.contains('.')
+      ? fileName.substring(fileName.lastIndexOf('.') + 1).toLowerCase()
+      : '';
+  final normalizedContentType = contentType.toLowerCase();
+  if (looksLikeMarkup &&
+      normalizedContentType.contains('text/html') &&
+      !const {'htm', 'html', 'xhtml', 'xml', 'svg'}.contains(extension)) {
+    return DownloadValidation.invalid;
+  }
+  if ((prefix.startsWith('{') || prefix.startsWith('[')) &&
+      normalizedContentType.contains('application/json') &&
+      extension != 'json') {
+    return DownloadValidation.invalid;
+  }
+  return DownloadValidation.valid;
+}
+
+/// Writes [bytes] to a sibling temporary file and moves it into place, so a
+/// failed write never replaces or leaves behind a partial [file].
+Future<void> _writeFileAtomically(File file, List<int> bytes) async {
+  await file.parent.create(recursive: true);
+  final partial = File('${file.path}.part');
   try {
-    final result = await wrapper.dio.get<dynamic>(
-      url,
-      queryParameters: parameters,
-      options: dio.Options(responseType: dio.ResponseType.stream),
-    );
-    await saveFile.parent.create(recursive: true);
-    final sink = saveFile.openWrite();
-    await sink.addStream((result.data as dio.ResponseBody).stream);
-    await sink.flush();
-    await sink.close();
-    success = result.statusCode == 200;
-  } catch (e) {
-    privacyLog('technical_operation');
-    success = false;
+    await partial.writeAsBytes(bytes, flush: true);
+    await partial.rename(file.path);
+  } catch (_) {
+    if (await partial.exists()) {
+      await partial.delete();
+    }
+    rethrow;
   }
-
-  if (!success && await saveFile.exists()) {
-    // The download was not successful, we should not keep the empty file or whatever was downloaded.
-    await saveFile.delete();
-  }
-
-  return success;
 }
 
 Future<Uint8List> fetchAuthenticatedBytes(String url) async {
