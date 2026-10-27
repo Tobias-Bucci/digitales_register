@@ -25,6 +25,11 @@ export 'package:dr/school_notification_background.dart'
 
 final schoolNotifications = SchoolNotificationService();
 
+/// System notifications for school news are offered on Android, iOS and macOS
+/// only. Linux and Windows stay without alerts and background checks.
+bool schoolNotificationsSupported() =>
+    Platform.isAndroid || Platform.isIOS || Platform.isMacOS;
+
 /// Optional native functionality must never break school-data navigation/login.
 Future<void> schoolNotificationOperation(
     Future<void> Function() operation) async {
@@ -78,9 +83,11 @@ class SchoolNotificationService extends ChangeNotifier
       Dio Function(BaseOptions)? httpClient,
       Future<Directory> Function()? historyDirectory,
       SchoolNotificationScheduler? scheduler,
+      @visibleForTesting bool? platformSupported,
       this.backgroundAccountBudget = schoolNotificationAccountBudget,
       this.backgroundBudget = const Duration(seconds: 20)})
-      : _native = native ?? FlutterLocalNotificationsPlugin(),
+      : _platformSupported = platformSupported,
+        _native = native ?? FlutterLocalNotificationsPlugin(),
         _providedStorage = storage,
         _permission = permission,
         _permissionRequest = permissionRequest,
@@ -92,6 +99,7 @@ class SchoolNotificationService extends ChangeNotifier
   static final _processMutex = Mutex();
   static final _scheduleMutex = Mutex();
   static final _permissionMutex = Mutex();
+  final bool? _platformSupported;
   final FlutterLocalNotificationsPlugin _native;
   final FlutterSecureStorage? _providedStorage;
   final Future<bool> Function()? _permission;
@@ -137,12 +145,10 @@ class SchoolNotificationService extends ChangeNotifier
   Future<void> Function()? onTap;
   Future<void> Function()? refresh;
 
-  bool get supported =>
-      Platform.isAndroid ||
-      Platform.isIOS ||
-      Platform.isMacOS ||
-      Platform.isWindows ||
-      Platform.isLinux;
+  /// Linux and Windows show no system alerts and run no checks for them:
+  /// initialization, consent prompts, polling and the settings section are all
+  /// gated on this flag.
+  bool get supported => _platformSupported ?? schoolNotificationsSupported();
   bool get mobileBackgroundSupported => Platform.isAndroid || Platform.isIOS;
   bool get androidBackgroundSupported => Platform.isAndroid;
   String accountKey(String server, String user) {

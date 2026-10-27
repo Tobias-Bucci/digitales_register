@@ -30,6 +30,7 @@ Einzelne Funktionen, wie das Eintragen von neuen Absenzen, sind jedoch noch nich
       <description>
         <p>Neues Dashboard mit Noten-, Prüfungs- und Absenzenkarten, Lernpläne für Prüfungen, PDF- und CSV-Export, Schulmitteilungen, verbesserte Notenprognose, kuratierte Akzentfarben und eine neue Einführung.</p>
         <ul>
+          <li>Unter Linux und Windows gibt es keine System-Benachrichtigungen mehr</li>
           <li>Absturz beim Start ohne Schlüsselbund behoben</li>
           <li>Neue Screenshots</li>
         </ul>
