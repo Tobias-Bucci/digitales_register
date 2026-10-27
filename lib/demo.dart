@@ -972,20 +972,21 @@ class _DemoStore {
         'note': null,
         'selfdecl_id': null,
         'selfdecl_input': null,
+        // The API lists a group's lessons in descending order.
         'group': <Map<String, dynamic>>[
           _absenceEntry(
-            id: 7002,
+            id: 7003,
             date: twoWeeksAgo,
-            hour: 3,
+            hour: 4,
             minutes: 50,
             justified: 2,
             reason: 'doctorAppointment',
             signature: 'Demo',
           ),
           _absenceEntry(
-            id: 7003,
+            id: 7002,
             date: twoWeeksAgo,
-            hour: 4,
+            hour: 3,
             minutes: 50,
             justified: 2,
             reason: 'doctorAppointment',

@@ -5,7 +5,7 @@
   <metadata_license>CC0-1.0</metadata_license>
   <project_license>GPL-3.0-or-later</project_license>
   <name>Digitales Register</name>
-  <summary>Inoffizieller Client für das Digitale Register</summary>
+  <summary>Schulregister für Südtirol</summary>
   <description>
     <p>
 Das Digitale Register für Schüler und Eltern, jetzt auch als App verfügbar.
@@ -26,6 +26,14 @@ Einzelne Funktionen, wie das Eintragen von neuen Absenzen, sind jedoch noch nich
 </p>
   </description>
   <releases>
+    <release version="1.17.4" date="2026-10-27">
+      <description>
+        <p>Neues Dashboard mit Noten-, Prüfungs- und Absenzenkarten, Lernpläne für Prüfungen, PDF- und CSV-Export, Schulmitteilungen, verbesserte Notenprognose, kuratierte Akzentfarben und eine neue Einführung.</p>
+        <ul>
+          <li>Neue Screenshots</li>
+        </ul>
+      </description>
+    </release>
     <release version="1.17.2" date="2026-10-04">
       <description>
         <p>Lokale Anhänge unter Linux und Flatpak über das Desktop-Portal öffnen.</p>
@@ -44,31 +52,38 @@ Einzelne Funktionen, wie das Eintragen von neuen Absenzen, sind jedoch noch nich
   </releases>
   <launchable type="desktop-id">io.github.tobias_bucci.digitales_register.desktop</launchable>
   <screenshots>
-    <screenshot type="default">
-      <caption>Hausaufgaben-Übersicht</caption>
-      <image>https://github.com/Tobias-Bucci/digitales_register/raw/main/screenshots/dashboard.png</image>
+    <screenshot type="default" xml:lang="de">
+      <caption>Dashboard mit Ferien-Countdown und Hausaufgaben</caption>
+      <image>https://raw.githubusercontent.com/Tobias-Bucci/digitales_register/__COMMIT__/screenshots/01-dashboard.png</image>
     </screenshot>
-    <screenshot>
-      <caption>Noten</caption>
-      <image>https://github.com/Tobias-Bucci/digitales_register/raw/main/screenshots/grades.png</image>
+    <screenshot xml:lang="de">
+      <caption>Noten mit Verlauf und Durchschnitt</caption>
+      <image>https://raw.githubusercontent.com/Tobias-Bucci/digitales_register/__COMMIT__/screenshots/02-noten.png</image>
     </screenshot>
-    <screenshot>
-      <caption>Noten-Diagramm (Vollbild)</caption>
-      <image>https://github.com/Tobias-Bucci/digitales_register/raw/main/screenshots/grades_diagram_fullscreen.png</image>
+    <screenshot xml:lang="de">
+      <caption>Wochenkalender mit Stundenplan</caption>
+      <image>https://raw.githubusercontent.com/Tobias-Bucci/digitales_register/__COMMIT__/screenshots/03-kalender.png</image>
     </screenshot>
-    <screenshot>
-      <caption>Kalender (Light Mode)</caption>
-      <image>https://github.com/Tobias-Bucci/digitales_register/raw/main/screenshots/calendar_light.png</image>
+    <screenshot xml:lang="de">
+      <caption>Absenzen und Verspätungen im Überblick</caption>
+      <image>https://raw.githubusercontent.com/Tobias-Bucci/digitales_register/__COMMIT__/screenshots/04-absenzen.png</image>
     </screenshot>
-    <screenshot>
-      <caption>Kalender (Dark Mode)</caption>
-      <image>https://github.com/Tobias-Bucci/digitales_register/raw/main/screenshots/calendar_dark.png</image>
+    <screenshot xml:lang="de">
+      <caption>Kommende Prüfungen mit Lernphasen</caption>
+      <image>https://raw.githubusercontent.com/Tobias-Bucci/digitales_register/__COMMIT__/screenshots/05-pruefungskalender.png</image>
     </screenshot>
   </screenshots>
   <content_rating type="oars-1.1" />
   <url type="homepage">https://github.com/Tobias-Bucci/digitales_register</url>
+  <url type="bugtracker">https://github.com/Tobias-Bucci/digitales_register/issues</url>
+  <url type="help">https://github.com/Tobias-Bucci/digitales_register#readme</url>
+  <url type="vcs-browser">https://github.com/Tobias-Bucci/digitales_register</url>
+  <branding>
+    <color type="primary" scheme_preference="light">#9ed4b4</color>
+    <color type="primary" scheme_preference="dark">#24543e</color>
+  </branding>
   <developer id="it.bucci">
-      <name>Tobias Bucci</name>
+    <name>Tobias Bucci</name>
   </developer>
   <update_contact>buccitobias774@gmail.com</update_contact>
 </component>
