@@ -176,6 +176,8 @@ class DashboardSummaryCard extends StatelessWidget {
     required this.secondaryText,
     this.primaryContent,
     this.progress,
+    this.progressLabel,
+    this.progressColor,
     this.onTap,
   });
 
@@ -185,6 +187,10 @@ class DashboardSummaryCard extends StatelessWidget {
   final String secondaryText;
   final Widget? primaryContent;
   final double? progress;
+
+  /// Replaces the default "x % progressed" caption below the progress bar.
+  final String? progressLabel;
+  final Color? progressColor;
   final Future<void> Function()? onTap;
 
   @override
@@ -257,6 +263,7 @@ class DashboardSummaryCard extends StatelessWidget {
                         child: LinearProgressIndicator(
                           minHeight: 4,
                           value: progressValue,
+                          color: progressColor,
                           backgroundColor: scheme.surfaceContainerHighest,
                         ),
                       ),
@@ -265,12 +272,13 @@ class DashboardSummaryCard extends StatelessWidget {
                     Align(
                       alignment: Alignment.centerRight,
                       child: Text(
-                        context.l10n.text(
-                          'schoolCountdown.progressValue',
-                          args: {
-                            'percent': '${(progressValue * 100).round()}',
-                          },
-                        ),
+                        progressLabel ??
+                            context.l10n.text(
+                              'schoolCountdown.progressValue',
+                              args: {
+                                'percent': '${(progressValue * 100).round()}',
+                              },
+                            ),
                         softWrap: true,
                         style: theme.textTheme.labelSmall,
                       ),
