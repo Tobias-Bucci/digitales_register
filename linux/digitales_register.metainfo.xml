@@ -84,7 +84,7 @@ Einzelne Funktionen, wie das Eintragen von neuen Absenzen, sind jedoch noch nich
     <color type="primary" scheme_preference="light">#9ed4b4</color>
     <color type="primary" scheme_preference="dark">#24543e</color>
   </branding>
-  <developer id="it.bucci">
+  <developer id="io.github.tobias_bucci">
     <name>Tobias Bucci</name>
   </developer>
   <update_contact>buccitobias774@gmail.com</update_contact>
