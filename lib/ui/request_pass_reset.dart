@@ -17,6 +17,7 @@
 // along with digitales_register.  If not, see <http://www.gnu.org/licenses/>.
 
 import 'package:dr/i18n/app_localizations.dart';
+import 'package:dr/theme/auth_tokens.dart';
 import 'package:dr/ui/auth_layout.dart';
 import 'package:flutter/material.dart';
 
@@ -58,22 +59,28 @@ class _RequestPassResetState extends State<RequestPassReset> {
       title: l10n.text('login.forgotPassword'),
       showAppBar: true,
       children: [
-        TextField(
-          autofillHints: const [AutofillHints.username],
-          controller: _usernameController,
-          autocorrect: false,
-          textInputAction: TextInputAction.next,
-          decoration: InputDecoration(labelText: l10n.text('login.username')),
+        AuthFieldFrame(
+          child: TextField(
+            autofillHints: const [AutofillHints.username],
+            controller: _usernameController,
+            autocorrect: false,
+            scrollPadding: AuthTokens.fieldScrollPadding,
+            textInputAction: TextInputAction.next,
+            decoration: InputDecoration(labelText: l10n.text('login.username')),
+          ),
         ),
         AuthLayout.fieldGap,
-        TextField(
-          autofillHints: const [AutofillHints.email],
-          keyboardType: TextInputType.emailAddress,
-          controller: _emailController,
-          autocorrect: false,
-          textInputAction: TextInputAction.done,
-          onSubmitted: (_) => _submit(),
-          decoration: InputDecoration(labelText: l10n.text('login.newEmail')),
+        AuthFieldFrame(
+          child: TextField(
+            autofillHints: const [AutofillHints.email],
+            keyboardType: TextInputType.emailAddress,
+            controller: _emailController,
+            autocorrect: false,
+            scrollPadding: AuthTokens.fieldScrollPadding,
+            textInputAction: TextInputAction.done,
+            onSubmitted: (_) => _submit(),
+            decoration: InputDecoration(labelText: l10n.text('login.newEmail')),
+          ),
         ),
         AuthLayout.sectionGap,
         if (widget.message != null) ...[
@@ -81,10 +88,9 @@ class _RequestPassResetState extends State<RequestPassReset> {
               isError: widget.failure, isStatus: !widget.failure),
           AuthLayout.fieldGap,
         ],
-        ElevatedButton.icon(
+        AuthPrimaryButton(
+          label: l10n.text('login.requestPasswordReset'),
           onPressed: _submit,
-          icon: const Icon(Icons.mail_outline_rounded),
-          label: Text(l10n.text('login.requestPasswordReset')),
         ),
       ],
     );

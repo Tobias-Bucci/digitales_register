@@ -103,14 +103,14 @@ class _PassResetState extends State<PassReset> {
             AuthLayout.fieldGap,
           ],
           if (widget.message == null || widget.failure)
-            ElevatedButton(
+            AuthPrimaryButton(
+              label: l10n.text('login.passResetAction'),
               onPressed: _passwordsMatch ? _submit : null,
-              child: Text(l10n.text('login.passResetAction')),
             ),
           if (widget.message != null && !widget.failure)
-            ElevatedButton(
+            AuthPrimaryButton(
+              label: l10n.text('common.done'),
               onPressed: widget.onClose,
-              child: Text(l10n.text('common.done')),
             ),
         ],
       ),
