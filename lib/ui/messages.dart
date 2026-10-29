@@ -260,7 +260,9 @@ class _MessagesPageState extends State<MessagesPage>
         _MessageFolder.archived => message.archived,
         _MessageFolder.all => message.labelAll,
       };
-      return matches && _canRenderMessage(message);
+      // Messages whose body cannot be rendered stay listed: their subject,
+      // attachments and actions remain available with a body fallback.
+      return matches;
     }).toList(growable: false);
   }
 }
@@ -602,22 +604,12 @@ class _MessageWidgetState extends State<MessageWidget> {
   }
 }
 
-bool _canRenderMessage(Message message) {
-  try {
-    final resolved = _resolveMessageDelta(message);
-    return _isRenderableMessageDelta(resolved.delta);
-  } catch (_) {
-    return false;
-  }
-}
-
 Widget renderMessage(Message message) {
+  final Delta delta;
   try {
     final stopwatch = Stopwatch()..start();
     final resolved = _resolveMessageDelta(message);
-    if (!_isRenderableMessageDelta(resolved.delta)) {
-      return const SizedBox.shrink();
-    }
+    delta = resolved.delta;
     stopwatch.stop();
     logPerformanceEvent(
       "message_render_ready",
@@ -627,44 +619,65 @@ Widget renderMessage(Message message) {
         "fromCache": resolved.fromCache,
       },
     );
-    return QuillDeltaViewer(delta: resolved.delta);
   } catch (_) {
-    return const SizedBox.shrink();
+    return const _MessageBodyNotice('messages.body.unsupported');
   }
-}
-
-bool _isRenderableMessageDelta(Delta delta) {
-  final operations = <Operation>[];
-  for (var i = 0; i < delta.length; i++) {
-    final op = delta.elementAt(i);
-    if (op.data is! String) {
-      return false;
-    }
-    var string = op.data as String;
-    final split = <String>[];
-    for (;;) {
-      final index = string.indexOf("\n");
-      if (index == -1) {
-        split.add(string);
-        break;
-      }
-      split.add(string.substring(0, index + 1));
-      string = string.substring(index + 1);
-    }
-    operations.addAll(
-      split.map((s) => Operation.insert(s, op.attributes)),
+  // Embeds such as images are not supported by the viewer; their
+  // surrounding text is still shown.
+  final (:text, :hasEmbeds) = _textOnlyDelta(delta);
+  final hasVisibleText = text.toList().any(
+        (op) => (op.data as String).trim().isNotEmpty,
+      );
+  if (!hasVisibleText) {
+    return _MessageBodyNotice(
+      hasEmbeds ? 'messages.body.unsupported' : 'messages.body.empty',
     );
   }
+  final viewer = QuillDeltaViewer(delta: text);
+  if (!hasEmbeds) return viewer;
+  return Column(
+    crossAxisAlignment: CrossAxisAlignment.start,
+    children: [
+      viewer,
+      const _MessageBodyNotice('messages.body.partiallyUnsupported'),
+    ],
+  );
+}
 
-  while (operations.isNotEmpty) {
-    final last = operations.last.data;
-    if (last is! String || last.isNotEmpty) {
-      break;
+({Delta text, bool hasEmbeds}) _textOnlyDelta(Delta delta) {
+  final text = Delta();
+  var hasEmbeds = false;
+  for (var i = 0; i < delta.length; i++) {
+    final op = delta.elementAt(i);
+    final data = op.data;
+    if (op.isInsert && data is String) {
+      text.push(Operation.insert(data, op.attributes));
+    } else {
+      hasEmbeds = true;
     }
-    operations.removeLast();
   }
+  return (text: text, hasEmbeds: hasEmbeds);
+}
 
-  return operations.isNotEmpty;
+class _MessageBodyNotice extends StatelessWidget {
+  const _MessageBodyNotice(this.textKey);
+
+  final String textKey;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 4),
+      child: Text(
+        context.t(textKey),
+        style: theme.textTheme.bodyMedium?.copyWith(
+          fontStyle: FontStyle.italic,
+          color: theme.colorScheme.onSurfaceVariant,
+        ),
+      ),
+    );
+  }
 }
 
 _ResolvedMessageDelta _resolveMessageDelta(Message message) {
