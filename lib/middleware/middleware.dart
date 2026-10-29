@@ -429,19 +429,19 @@ Future<OpenResult> Function(String)? courseMaterialFileOpenerOverride;
 @visibleForTesting
 TargetPlatform? courseMaterialPlatformOverride;
 
-// Local console only: never send filenames/paths to telemetry or network logs.
-// Use a closed set of fields; never render requests, headers or exceptions.
+/// Overrides whether local course material diagnostics are printed; they
+/// are only printed in debug builds.
+@visibleForTesting
+bool? courseMaterialDebugLogsOverride;
+
+// Local desktop debug console only. Use a closed set of categorical fields:
+// never document names, file labels, local paths, requests, headers or
+// exception messages, which may contain personal data or account names.
 void _materialLog(String stage, Map<String, Object?> fields) {
+  if (!(courseMaterialDebugLogsOverride ?? kDebugMode)) return;
   if (Platform.isWindows || Platform.isLinux) {
     debugPrint('[CourseMaterial] ${jsonEncode({'stage': stage, ...fields})}');
   }
-}
-
-String? _materialFileLabel(String? value) {
-  if (value == null) return null;
-  final uri = Uri.tryParse(value);
-  if (uri != null && uri.hasScheme) return uri.pathSegments.lastOrNull;
-  return value.split(RegExp('[?#]')).first;
 }
 
 Future<bool> openCourseMaterialEntry(CourseMaterialEntry entry) async {
@@ -451,9 +451,7 @@ Future<bool> openCourseMaterialEntry(CourseMaterialEntry entry) async {
       'id': entry.id,
       'courseContentId': entry.courseContentId,
       'type': entry.type,
-      'file': _materialFileLabel(entry.file),
-      'originalName': entry.originalName,
-      'uniqueName': entry.uniqueName,
+      'hasFile': entry.file != null,
     });
     if (entry.isLink) {
       final link = entry.link;
@@ -476,7 +474,7 @@ Future<bool> openCourseMaterialEntry(CourseMaterialEntry entry) async {
     if (file == null) return false;
     final path = file.path;
     final exists = await file.exists();
-    _materialLog(stage, {'path': file.absolute.path, 'exists': exists});
+    _materialLog(stage, {'exists': exists});
     if (!exists) return false;
     final platform = courseMaterialPlatformOverride ?? defaultTargetPlatform;
     if (platform == TargetPlatform.windows ||
@@ -520,7 +518,7 @@ Future<bool> _downloadCourseMaterialFile(CourseMaterialEntry entry) async {
   if (saveFile == null) {
     return false;
   }
-  _materialLog('destination', {'path': saveFile.absolute.path});
+  _materialLog('destination', {'exists': await saveFile.exists()});
   if (await saveFile.exists()) {
     final shouldOverwrite = await askShouldOverwriteFile(entry.uniqueName);
     if (shouldOverwrite == null) {
@@ -537,7 +535,6 @@ Future<bool> _downloadCourseMaterialFile(CourseMaterialEntry entry) async {
       await _writeFileAtomically(saveFile, bytes);
       _materialLog('saved', {
         'saved': true,
-        'path': saveFile.absolute.path,
         'bytes': await saveFile.length(),
       });
       return true;
@@ -547,8 +544,7 @@ Future<bool> _downloadCourseMaterialFile(CourseMaterialEntry entry) async {
   if (await saveFile.exists()) {
     await saveFile.delete();
   }
-  _materialLog(
-      'download_failed', {'saved': false, 'path': saveFile.absolute.path});
+  _materialLog('download_failed', {'saved': false});
   return false;
 }
 
@@ -568,12 +564,7 @@ Future<List<int>?> _downloadCourseMaterialCandidate(
           ? '/${segments.take(segments.length - 1).join('/')}/[file]'
           : endpoint.path,
       'method': method,
-      'parameters': {
-        for (final parameter in candidate.parameters.entries)
-          parameter.key: parameter.key == 'file'
-              ? _materialFileLabel(parameter.value as String?)
-              : parameter.value,
-      },
+      'parameters': candidate.parameters.keys.toList(),
     });
     void logResponse(dio.Response<List<int>> response) {
       _materialLog('response', {

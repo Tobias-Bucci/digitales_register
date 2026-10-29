@@ -1,3 +1,4 @@
+import 'dart:convert';
 import 'dart:io';
 
 import 'package:dio/dio.dart';
@@ -64,6 +65,7 @@ void main() {
     courseMaterialPlatformOverride = null;
     courseMaterialFileOpenerOverride = null;
     debugPrint = previousPrint;
+    courseMaterialDebugLogsOverride = null;
     client.close(force: true);
     await directory.delete(recursive: true);
     TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
@@ -110,13 +112,45 @@ void main() {
       'bytes',
       'saved',
       'open_result',
-      'uniqueName'
     ]) {
       expect(output, contains(field));
     }
     expect(output, isNot(contains('SECRET')));
     expect(output, isNot(contains('Authorization')));
     expect(output, isNot(contains('Cookie')));
+  });
+
+  test('diagnostics contain no document names or local paths', () async {
+    const name = 'Zeugnis Max Mustermann.pdf';
+    courseMaterialFileOpenerOverride = (path) async {
+      opens++;
+      return OpenResult(type: ResultType.done, message: 'done');
+    };
+    respond();
+    expect(await openCourseMaterialEntry(entry(name)), isTrue);
+    // Open again so the local-file branch is logged as well.
+    expect(await openCourseMaterialEntry(entry(name)), isTrue);
+
+    final output = logs.join('\n');
+    expect(output, contains('[CourseMaterial]'));
+    for (final private in [
+      'Mustermann',
+      'Zeugnis',
+      'server.pdf',
+      entry(name).uniqueName,
+      directory.path,
+      jsonEncode(directory.path),
+      directory.uri.pathSegments.where((s) => s.isNotEmpty).last,
+    ]) {
+      expect(output, isNot(contains(private)), reason: private);
+    }
+  });
+
+  test('release builds print no course material diagnostics', () async {
+    courseMaterialDebugLogsOverride = false;
+    respond();
+    expect(await openCourseMaterialEntry(entry()), isTrue);
+    expect(logs.where((l) => l.contains('[CourseMaterial]')), isEmpty);
   });
 
   test('retains POST fallback after rejected GET', () async {
