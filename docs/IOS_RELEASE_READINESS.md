@@ -4,7 +4,7 @@ Checked on 2026-10-02 without starting an application build.
 
 | Setting | Prepared value |
 | --- | --- |
-| App name | Digitales Register |
+| Home screen name | Register (`CFBundleDisplayName` and `CFBundleName`) |
 | Bundle ID | it.bucci.digitalesregister |
 | Version / build | 1.17.1 / 45, sourced from pubspec.yaml through Flutter build variables |
 | Deployment target | iOS 15.0; required by the current Firebase pods |
@@ -33,7 +33,11 @@ python3 tool/check_ios_release.py
 ```
 
 The first command resizes the existing artwork into the native assets; the second
-only reads files. Neither builds the app. The default launcher-icon configuration
+only reads files. Neither builds the app. The checker expects the name Register,
+and checks the Runner app and the PlanningWidgets extension configurations
+(Debug, Release, Profile) for consistent versions, bundle IDs, deployment target
+and entitlements; `python3 tool/test_check_ios_release.py` runs it against the
+current checkout. The default launcher-icon configuration
 also removes iOS alpha so later icon regeneration preserves the opaque background.
 
 ## Remaining checks on the Mac and in App Store Connect

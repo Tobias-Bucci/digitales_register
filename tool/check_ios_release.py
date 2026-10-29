@@ -46,15 +46,23 @@ else:
 check(info['CFBundleShortVersionString'] == '$(FLUTTER_BUILD_NAME)', 'Stale app version source')
 check(info['CFBundleVersion'] == '$(FLUTTER_BUILD_NUMBER)', 'Stale build number source')
 project = (ROOT / 'ios/Runner.xcodeproj/project.pbxproj').read_text(encoding='utf-8')
-for setting, value, count in [
-    ('MARKETING_VERSION', '"$(FLUTTER_BUILD_NAME)"', 3),
-    ('CURRENT_PROJECT_VERSION', '"$(FLUTTER_BUILD_NUMBER)"', 3),
-    ('PRODUCT_BUNDLE_IDENTIFIER', 'it.bucci.digitalesregister', 3),
-    ('IPHONEOS_DEPLOYMENT_TARGET', '15.0', 6),
-    ('ASSETCATALOG_COMPILER_APPICON_NAME', 'AppIcon', 3),
-    ('CODE_SIGN_ENTITLEMENTS', 'Runner/Runner.entitlements', 3),
+# Debug, Release and Profile of the project, the Runner app and the
+# PlanningWidgets extension. Every occurrence of a setting must have one of
+# the expected values, and each value must appear in all three configurations.
+for setting, expected in [
+    ('MARKETING_VERSION', {'"$(FLUTTER_BUILD_NAME)"': 6}),
+    ('CURRENT_PROJECT_VERSION', {'"$(FLUTTER_BUILD_NUMBER)"': 6}),
+    ('PRODUCT_BUNDLE_IDENTIFIER', {'it.bucci.digitalesregister': 3,
+                                   'it.bucci.digitalesregister.PlanningWidgets': 3}),
+    ('IPHONEOS_DEPLOYMENT_TARGET', {'15.0': 9}),
+    ('ASSETCATALOG_COMPILER_APPICON_NAME', {'AppIcon': 3}),
+    ('CODE_SIGN_ENTITLEMENTS', {'Runner/Runner.entitlements': 3,
+                                'PlanningWidgets/PlanningWidgets.entitlements': 3}),
 ]:
-    check(project.count(f'{setting} = {value};') == count, f'Inconsistent {setting}')
+    actual = {}
+    for value in re.findall(rf'\b{setting} = ([^;]+);', project):
+        actual[value] = actual.get(value, 0) + 1
+    check(actual == expected, f'Inconsistent {setting}: {actual}')
 podfile = (ROOT / 'ios/Podfile').read_text(encoding='utf-8')
 check("platform :ios, '15.0'" in podfile, 'Podfile minimum iOS mismatch')
 picker_spec = (ROOT / 'packages/file_picker/ios/file_picker.podspec').read_text(encoding='utf-8')
