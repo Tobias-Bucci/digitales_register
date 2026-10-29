@@ -628,6 +628,7 @@
   "files.overwrite.keep": "Use existing file",
   "files.overwrite.redownload": "Download again",
   "error.savedDataLoadFailed": "Failed to load saved data",
+  "error.savedDataUnreadable": "The saved data of this account could not be read right now. It is kept and will be loaded again on the next start. Until then, changes for this account are not saved.",
   "error.reinstallSuggested": "Please try reinstalling the app.",
   "error.reinstallSuggestedDetailed": "Error: please try reinstalling the app.",
   "about.welcome.title": "Welcome!",

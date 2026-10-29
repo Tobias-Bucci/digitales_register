@@ -628,6 +628,7 @@
   "files.overwrite.keep": "Bestehende Datei verwenden",
   "files.overwrite.redownload": "Erneut herunterladen",
   "error.savedDataLoadFailed": "Fehler beim Laden der gespeicherten Daten",
+  "error.savedDataUnreadable": "Die gespeicherten Daten dieses Kontos konnten gerade nicht gelesen werden. Sie bleiben erhalten und werden beim nächsten Start erneut geladen. Bis dahin werden Änderungen für dieses Konto nicht gespeichert.",
   "error.reinstallSuggested": "Bitte versuche, die App neu zu installieren.",
   "error.reinstallSuggestedDetailed": "Fehler: Bitte versuche, die App neu zu installieren.",
   "about.welcome.title": "Willkommen!",
