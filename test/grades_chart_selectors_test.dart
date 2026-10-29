@@ -3,8 +3,10 @@ import 'package:dr/app_selectors.dart';
 import 'package:dr/app_state.dart';
 import 'package:dr/container/chart_legend_entry_container.dart';
 import 'package:dr/data.dart';
+import 'package:dr/ui/grades_chart.dart';
 import 'package:dr/utc_date_time.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:tuple/tuple.dart';
 
 import 'support/fixtures.dart';
 
@@ -52,8 +54,9 @@ void main() {
     }));
     final graphs = selectors.chartGraphs(state);
     expect(graphs.keys.single.name, 'Neu');
-    expect(graphs.keys.single.grades[early]?.item1, 725);
-    expect(graphs.keys.single.grades[early]?.item2, 'Test');
+    expect(graphs.keys.single.grades.single.key, early);
+    expect(graphs.keys.single.grades.single.value.item1, 725);
+    expect(graphs.keys.single.grades.single.value.item2, 'Test');
     expect(graphs.values.single.color, 0xFF9E9E9E);
     expect(graphs.values.single.thick, 1);
     expect(ChartLegendEntryVM.from(state, 'Neu').config, graphs.values.single);
@@ -133,8 +136,8 @@ void main() {
       ]),
     }));
     final graphs = selectors.chartGraphs(loaded);
-    expect(graphs.keys.single.grades.keys, [early, late]);
-    expect(graphs.keys.single.grades.values.map((g) => g.item1), [725, 850]);
+    expect(graphs.keys.single.grades.map((g) => g.key), [early, late]);
+    expect(graphs.keys.single.grades.map((g) => g.value.item1), [725, 850]);
     expect(selectors.allSubjectsAverage(loaded), '7,88');
     expect(selectors.certificateAverage(loaded), '8,00');
     expect(identical(selectors.chartGraphs(loaded), graphs), isTrue);
@@ -149,7 +152,9 @@ void main() {
     expect(selectors.chartGraphs(themed).values.single, configuredTheme);
     final firstOnly = themed
         .rebuild((b) => b.gradesState.semester = Semester.first.toBuilder());
-    expect(selectors.chartGraphs(firstOnly).keys.single.grades.keys, [early]);
+    expect(
+        selectors.chartGraphs(firstOnly).keys.single.grades.map((g) => g.key),
+        [early]);
     expect(selectors.chartGraphs(initial), isEmpty);
     expectNoAverage(selectors, initial);
   });
@@ -160,10 +165,39 @@ void main() {
           Semester.first: BuiltList<GradeAll>([secondGrade, firstGrade]),
         }),
         semester: Semester.first);
-    expect(AppSelectors().chartGraphs(state).keys.single.grades.keys,
+    expect(
+        AppSelectors().chartGraphs(state).keys.single.grades.map((g) => g.key),
         [early, late]);
     expect(state.gradesState.subjects.single.gradesAll[Semester.first]?.first,
         secondGrade);
+  });
+
+  test('same-day grades keep their own chart points and selection details', () {
+    final day = UtcDateTime(2025, 10, 10);
+    final test = buildGradeAll(date: day, grade: 400, type: 'Test');
+    final oral = buildGradeAll(date: day, grade: 1000, type: 'Mündlich');
+    final cancelled =
+        buildGradeAll(date: day, grade: 700, type: 'Test', cancelled: true);
+    final state = stateWith(
+        buildSubject(name: 'Fach', gradesAll: {
+          Semester.first: BuiltList<GradeAll>([oral, secondGrade, test]),
+          Semester.second: BuiltList<GradeAll>([cancelled]),
+        }),
+        semester: Semester.all);
+    final graphs = AppSelectors().chartGraphs(state);
+    final points = graphs.keys.single.grades;
+    // Both same-day grades stay, in server order, without shifted dates.
+    expect(points.map((g) => g.key), [day, day, late]);
+    expect(points.map((g) => g.value), [
+      const Tuple2(1000, 'Mündlich'),
+      const Tuple2(400, 'Test'),
+      const Tuple2(850, 'Mündlich'),
+    ]);
+
+    final series = GradesChart.convert(graphs).single;
+    expect(series.data, hasLength(3));
+    expect([for (var i = 0; i < 3; i++) series.measureFn(i)], [10, 4, 8.5]);
+    expect([for (var i = 0; i < 3; i++) series.domainFn(i)], [day, day, late]);
   });
 
   test('incomplete detailed grades return no entries until both lists exist',

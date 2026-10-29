@@ -16,6 +16,7 @@
 // along with digitales_register.  If not, see <http://www.gnu.org/licenses/>.
 
 import 'package:built_collection/built_collection.dart';
+import 'package:collection/collection.dart' show mergeSort;
 import 'package:dr/app_clock.dart';
 import 'package:dr/app_state.dart';
 import 'package:dr/data.dart';
@@ -95,7 +96,12 @@ const _typesToTitles = <HomeworkType, List<String>>{
 };
 
 class SubjectGrades {
-  final Map<UtcDateTime, Tuple2<int, String>> grades;
+  /// One chart point per uncancelled numeric grade, in chronological order.
+  ///
+  /// Grades from the same day keep their own point (value and type) in server
+  /// order instead of overwriting each other, so the chart and its selection
+  /// show every assessment.
+  final List<MapEntry<UtcDateTime, Tuple2<int, String>>> grades;
   final String name;
 
   SubjectGrades(this.grades, this.name);
@@ -324,14 +330,14 @@ class _GradesChartSelector {
           : subject.gradesAll[state.gradesState.semester]?.toList() ??
               <GradeAll>[];
       // Domain bounds require chronological points even if a single semester
-      // was loaded in a different order by the server.
-      grades.sort((a, b) => a.date.compareTo(b.date));
-      final points = <UtcDateTime, Tuple2<int, String>>{};
-      for (final grade in grades) {
-        final value = grade.grade;
-        if (grade.cancelled || value == null) continue;
-        points[grade.date] = Tuple2(value, grade.type);
-      }
+      // was loaded in a different order by the server. mergeSort is stable,
+      // so grades from the same day keep their server order.
+      mergeSort(grades, compare: (a, b) => a.date.compareTo(b.date));
+      final points = [
+        for (final grade in grades)
+          if (!grade.cancelled && grade.grade != null)
+            MapEntry(grade.date, Tuple2(grade.grade!, grade.type)),
+      ];
       result[SubjectGrades(points, subject.name)] =
           chartSubjectTheme(state, subject.name);
     }

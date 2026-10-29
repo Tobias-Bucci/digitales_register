@@ -27,7 +27,7 @@ void main() {
   test('chart points use grade colors while lines retain subject colors', () {
     final date = UtcDateTime(2026, 10, 23);
     final graphs = {
-      SubjectGrades({date: const Tuple2(575, 'Test')}, 'Mathematik'):
+      SubjectGrades([MapEntry(date, const Tuple2(575, 'Test'))], 'Mathematik'):
           SubjectTheme((b) => b
             ..color = 0xFF123456
             ..thick = 2),
