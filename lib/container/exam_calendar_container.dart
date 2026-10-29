@@ -38,6 +38,10 @@ class ExamCalendarContainer extends StatelessWidget {
             onAttachmentsChanged: (id, attachments) => actions.settingsActions
                 .setAssessmentStudyAttachments(
                     MapEntry(id, encodeAssessmentAttachments(attachments))),
+            // The pushed week route needs its own subscription: callbacks of
+            // this build close over the state at the time it was pushed.
+            weekViewBuilder: (_) =>
+                const ExamCalendarContainer(calendarView: true),
           ),
         ),
       );
