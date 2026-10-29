@@ -1329,7 +1329,7 @@ class ItemWidget extends StatelessWidget {
           content: SingleChildScrollView(
             child: Column(
               children: [
-                Text(formatChanged(historyItem)),
+                Text(formatChanged(l10n, historyItem)),
                 if (historyItem.previousVersion != null)
                   ExpansionTile(
                     title: Text(l10n.text('dashboard.versions')),
@@ -1592,7 +1592,7 @@ class ItemWidget extends StatelessWidget {
                 Padding(
                   padding: const EdgeInsets.all(8.0),
                   child: Text(
-                    formatChanged(item),
+                    formatChanged(context.l10n, item),
                     style: Theme.of(context).textTheme.bodySmall,
                   ),
                 ),
@@ -1650,28 +1650,42 @@ class ItemWidget extends StatelessWidget {
   }
 }
 
-String formatChanged(Homework hw) {
-  String date;
+/// Describes when [hw] was entered, changed, deleted or restored, in the
+/// selected language. The entry only keeps the observation times, so the text
+/// is rendered from them on every build.
+String formatChanged(AppLocalizations l10n, Homework hw) {
+  final localeTag = l10n.locale.toLanguageTag();
+  final dateTime = DateFormat('EEEE, dd.MM, HH:mm', localeTag);
+  final time = DateFormat('HH:mm', localeTag);
+  final String when;
   if (hw.lastNotSeen == null) {
-    date =
-        "Vor ${DateFormat("EEEE, dd.MM, HH:mm,", "de").format(hw.firstSeen)}";
+    when = l10n.text(
+      'dashboard.history.before',
+      args: {'date': dateTime.format(hw.firstSeen)},
+    );
   } else if (toDate(hw.firstSeen) == toDate(hw.lastNotSeen!)) {
-    date = "Am ${DateFormat("EEEE, dd.MM,", "de").format(hw.firstSeen)}"
-        " zwischen ${DateFormat("HH:mm", "de").format(hw.lastNotSeen!)} und ${DateFormat("HH:mm", "de").format(hw.firstSeen)}";
+    when = l10n.text('dashboard.history.sameDay', args: {
+      'date': DateFormat('EEEE, dd.MM', localeTag).format(hw.firstSeen),
+      'from': time.format(hw.lastNotSeen!),
+      'to': time.format(hw.firstSeen),
+    });
   } else {
-    date =
-        "Zwischen ${DateFormat("EEEE, dd.MM, HH:mm,", "de").format(hw.lastNotSeen!)} "
-        "und ${DateFormat("EEEE, dd.MM, HH:mm,", "de").format(hw.firstSeen)}";
+    when = l10n.text('dashboard.history.between', args: {
+      'from': dateTime.format(hw.lastNotSeen!),
+      'to': dateTime.format(hw.firstSeen),
+    });
   }
+  final String event;
   if (hw.deleted) {
-    return "$date gelöscht.";
+    event = 'dashboard.history.deleted';
   } else if (hw.previousVersion == null) {
-    return "$date eingetragen.";
+    event = 'dashboard.history.created';
   } else if (hw.previousVersion!.deleted) {
-    return "$date wiederhergestellt.";
+    event = 'dashboard.history.restored';
   } else {
-    return "$date geändert.";
+    event = 'dashboard.history.changed';
   }
+  return l10n.text(event, args: {'when': when});
 }
 
 UtcDateTime toDate(UtcDateTime dateTime) {
