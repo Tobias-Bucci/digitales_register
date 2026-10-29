@@ -192,6 +192,7 @@ void _clearRuntimeCaches() {
   _runtimeCacheTimes.clear();
   _staleCacheKeys.clear();
   _authenticatedBytesInFlight.clear();
+  _workingCourseMaterialCandidate = null;
   // A new session (or regenerated demo data) starts on an unknown server-side
   // semester, so the next grades request has to switch explicitly.
   _gradesLock.reset();
@@ -529,9 +530,21 @@ Future<bool> _downloadCourseMaterialFile(CourseMaterialEntry entry) async {
     }
   }
 
-  for (final candidate in _downloadCandidatesFor(entry)) {
-    final bytes = await _downloadCourseMaterialCandidate(candidate);
+  final candidates = _downloadCandidatesFor(entry);
+  // Try the endpoint shape that worked last first, so a known server needs a
+  // single request instead of probing every historical variant.
+  final known = _workingCourseMaterialCandidate;
+  final order = [
+    if (known != null && known < candidates.length) known,
+    for (var i = 0; i < candidates.length; i++)
+      if (i != known) i,
+  ];
+  for (final index in order) {
+    final result = await _downloadCourseMaterialCandidate(
+        candidates[index], entry.uniqueName);
+    final bytes = result.bytes;
     if (bytes != null) {
+      _workingCourseMaterialCandidate = index;
       await _writeFileAtomically(saveFile, bytes);
       _materialLog('saved', {
         'saved': true,
@@ -539,6 +552,7 @@ Future<bool> _downloadCourseMaterialFile(CourseMaterialEntry entry) async {
       });
       return true;
     }
+    if (result.stop) break;
   }
 
   if (await saveFile.exists()) {
@@ -548,9 +562,19 @@ Future<bool> _downloadCourseMaterialFile(CourseMaterialEntry entry) async {
   return false;
 }
 
-Future<List<int>?> _downloadCourseMaterialCandidate(
+/// Index into [_downloadCandidatesFor] of the endpoint that last delivered
+/// a document in this session.
+int? _workingCourseMaterialCandidate;
+
+/// Requests one endpoint candidate with GET and then POST.
+///
+/// [stop] is set when probing further endpoints cannot help: the session
+/// returned the login page or the network failed.
+Future<({List<int>? bytes, bool stop})> _downloadCourseMaterialCandidate(
   _CourseMaterialDownloadCandidate candidate,
+  String fileName,
 ) async {
+  var stop = false;
   Future<List<int>?> validate(
     String method,
   ) async {
@@ -588,22 +612,28 @@ Future<List<int>?> _downloadCourseMaterialCandidate(
       final bytes = response.data ?? const <int>[];
       final contentType =
           response.headers.value(HttpHeaders.contentTypeHeader) ?? '';
-      if (response.statusCode != 200 ||
-          bytes.isEmpty ||
-          _looksLikeErrorDocument(bytes, contentType)) {
-        _materialLog('rejected', {
-          'method': method,
-          'reason': response.statusCode != 200
-              ? 'http_status'
-              : bytes.isEmpty
-                  ? 'empty_body'
-                  : 'error_document'
-        });
-        return null;
+      final validation = response.statusCode != 200
+          ? null
+          : validateDownloadedDocument(bytes, contentType, fileName);
+      if (validation == DownloadValidation.valid) {
+        return bytes;
       }
-      return bytes;
+      if (validation == DownloadValidation.loginPage) {
+        stop = true;
+      }
+      _materialLog('rejected', {
+        'method': method,
+        'reason': switch (validation) {
+          null => 'http_status',
+          DownloadValidation.loginPage => 'login_page',
+          _ => bytes.isEmpty ? 'empty_body' : 'error_document',
+        },
+      });
+      return null;
     } catch (error) {
       if (error is dio.DioException) {
+        // Without a server response, other endpoints fail the same way.
+        stop = error.type != dio.DioExceptionType.badResponse;
         final response = error.response;
         _materialLog('request_failed', {
           'method': method,
@@ -623,17 +653,9 @@ Future<List<int>?> _downloadCourseMaterialCandidate(
     }
   }
 
-  return await validate('GET') ?? await validate('POST');
-}
-
-bool _looksLikeErrorDocument(List<int> bytes, String contentType) {
-  final normalizedContentType = contentType.toLowerCase();
-  if (normalizedContentType.contains('text/html') ||
-      normalizedContentType.contains('application/json')) {
-    return true;
-  }
-  final prefix = String.fromCharCodes(bytes.take(32)).trimLeft();
-  return prefix.startsWith('<') || prefix.startsWith('{');
+  final bytes = await validate('GET');
+  if (bytes != null || stop) return (bytes: bytes, stop: stop);
+  return (bytes: await validate('POST'), stop: stop);
 }
 
 List<_CourseMaterialDownloadCandidate> _downloadCandidatesFor(
