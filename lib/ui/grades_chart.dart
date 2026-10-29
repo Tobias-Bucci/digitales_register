@@ -78,7 +78,7 @@ class GradesChart extends StatelessWidget {
             UtcDateTime>(
           domainFn: (grade, _) => grade.key,
           measureFn: (grade, _) => grade.value.item1 / 100,
-          data: s.grades.entries.toList(),
+          data: s.grades,
           fillColorFn: colorGrades
               ? (grade, _) {
                   final fill = gradeColor(grade.value.item1)!;
