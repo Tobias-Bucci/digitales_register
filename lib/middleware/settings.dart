@@ -203,10 +203,18 @@ Future<void> _setCalendarSyncEnabled(
     return;
   }
 
-  final success = await CalendarSyncService.reconcile(api.state);
-  if (!success) {
-    showSnackBar(tr('calendarSync.partialSyncFailure'));
-  }
+  await _reconcileCalendarSyncAndReport(api.state);
+}
+
+/// Reconciles the calendar and tells the user why it failed.
+Future<void> _reconcileCalendarSyncAndReport(AppState state) async {
+  final success = await CalendarSyncService.reconcile(state);
+  if (success) return;
+  showSnackBar(
+    await CalendarSyncService.isSelectedCalendarMissing(state)
+        ? tr('calendarSync.calendarMissing')
+        : tr('calendarSync.partialSyncFailure'),
+  );
 }
 
 Map<String, String> _detectPrimaryTeachersFromCalendar(
@@ -469,10 +477,7 @@ Future<void> _setCalendarSyncCalendarId(
   if (!api.state.settingsState.calendarSyncEnabled || !isAndroidPlatform) {
     return;
   }
-  final success = await CalendarSyncService.reconcile(api.state);
-  if (!success) {
-    showSnackBar(tr('calendarSync.partialSyncFailure'));
-  }
+  await _reconcileCalendarSyncAndReport(api.state);
 }
 
 Future<void> _removeCalendarSyncEvents(
@@ -527,9 +532,6 @@ Future<void> _setLanguage(
     }
   }
   if (api.state.settingsState.calendarSyncEnabled && isAndroidPlatform) {
-    final success = await CalendarSyncService.reconcile(api.state);
-    if (!success) {
-      showSnackBar(tr('calendarSync.partialSyncFailure'));
-    }
+    await _reconcileCalendarSyncAndReport(api.state);
   }
 }

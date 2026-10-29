@@ -185,6 +185,14 @@ class _SettingsPageWidgetState extends State<SettingsPageWidget> {
     if (!widget.vm.showCalendarSubstituteSettings) {
       _handledCalendarSubstituteIntent = false;
     }
+    if (oldWidget.vm.calendarSyncEnabled != widget.vm.calendarSyncEnabled ||
+        oldWidget.vm.calendarSyncCalendarId !=
+            widget.vm.calendarSyncCalendarId) {
+      // The open details page shows the new target instead of the old one.
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        _calendarSyncDetailsRoute?.changedExternalState();
+      });
+    }
     _handleScrollIntents();
   }
 
@@ -218,6 +226,7 @@ class _SettingsPageWidgetState extends State<SettingsPageWidget> {
     setState(() {
       _calendarSyncCalendarsFuture = _loadCalendarSyncCalendars();
     });
+    _calendarSyncDetailsRoute?.changedExternalState();
   }
 
   void _showCalendarSyncError(String message) {
@@ -249,7 +258,12 @@ class _SettingsPageWidgetState extends State<SettingsPageWidget> {
       (calendar) => calendar.isPrimary,
       orElse: () => calendars.first,
     );
-    var selectedId = widget.vm.calendarSyncCalendarId ?? defaultCalendar.id;
+    final savedId = widget.vm.calendarSyncCalendarId;
+    final savedMissing =
+        savedId != null && !calendars.any((calendar) => calendar.id == savedId);
+    // A saved calendar that disappeared must not preselect another one: the
+    // user has to choose the new target explicitly.
+    int? selectedId = savedMissing ? null : savedId ?? defaultCalendar.id;
     final l10n = context.l10n;
     return showDialog<CalendarSyncCalendar>(
       context: context,
@@ -265,6 +279,15 @@ class _SettingsPageWidgetState extends State<SettingsPageWidget> {
                   Text(
                     l10n.text('settings.calendarSync.select.subtitle'),
                   ),
+                  if (savedMissing) ...[
+                    const SizedBox(height: 12),
+                    Text(
+                      l10n.text('settings.calendarSync.select.missing'),
+                      style: TextStyle(
+                        color: Theme.of(context).colorScheme.error,
+                      ),
+                    ),
+                  ],
                   const SizedBox(height: 12),
                   RadioGroup<int>(
                     groupValue: selectedId,
@@ -298,9 +321,13 @@ class _SettingsPageWidgetState extends State<SettingsPageWidget> {
               child: Text(l10n.text('common.cancel')),
             ),
             ElevatedButton(
-              onPressed: () => Navigator.of(context).pop(
-                calendars.firstWhere((calendar) => calendar.id == selectedId),
-              ),
+              onPressed: selectedId == null
+                  ? null
+                  : () => Navigator.of(context).pop(
+                        calendars.firstWhere(
+                          (calendar) => calendar.id == selectedId,
+                        ),
+                      ),
               child: Text(l10n.text('common.select')),
             ),
           ],
@@ -453,18 +480,28 @@ class _SettingsPageWidgetState extends State<SettingsPageWidget> {
     );
   }
 
-  Future<void> _openCalendarSyncDetailsPage() {
-    return Navigator.of(context).push(
-      MaterialPageRoute<void>(
-        builder: (context) => _CalendarSyncSettingsDetailPage(
-          calendarSyncEnabled: widget.vm.calendarSyncEnabled,
-          calendarSyncCalendarId: widget.vm.calendarSyncCalendarId,
-          calendarsFuture: _calendarSyncCalendarsFuture,
-          onChangeCalendar: _changeCalendarSyncCalendar,
-          onRemoveCalendarSyncEvents: widget.onRemoveCalendarSyncEvents,
-        ),
+  /// The open calendar synchronization details page, rebuilt when the
+  /// selection or the available calendars change.
+  ModalRoute<void>? _calendarSyncDetailsRoute;
+
+  Future<void> _openCalendarSyncDetailsPage() async {
+    final route = MaterialPageRoute<void>(
+      builder: (context) => _CalendarSyncSettingsDetailPage(
+        calendarSyncEnabled: widget.vm.calendarSyncEnabled,
+        calendarSyncCalendarId: widget.vm.calendarSyncCalendarId,
+        calendarsFuture: _calendarSyncCalendarsFuture,
+        onChangeCalendar: _changeCalendarSyncCalendar,
+        onRemoveCalendarSyncEvents: widget.onRemoveCalendarSyncEvents,
       ),
     );
+    _calendarSyncDetailsRoute = route;
+    try {
+      await Navigator.of(context).push(route);
+    } finally {
+      if (identical(_calendarSyncDetailsRoute, route)) {
+        _calendarSyncDetailsRoute = null;
+      }
+    }
   }
 
   Future<void> _openPlayStoreReview() async {
@@ -887,19 +924,14 @@ class _SettingsPageWidgetState extends State<SettingsPageWidget> {
             future: _calendarSyncCalendarsFuture,
             builder: (context, snapshot) {
               final calendars = snapshot.data ?? <CalendarSyncCalendar>[];
-              CalendarSyncCalendar? selectedCalendar;
-              for (final calendar in calendars) {
-                if (calendar.id == widget.vm.calendarSyncCalendarId) {
-                  selectedCalendar = calendar;
-                  break;
-                }
-              }
-              selectedCalendar ??= calendars.isEmpty
-                  ? null
-                  : calendars.firstWhere(
-                      (calendar) => calendar.isPrimary,
-                      orElse: () => calendars.first,
-                    );
+              final selectedCalendar = _selectedSyncCalendar(
+                calendars,
+                widget.vm.calendarSyncCalendarId,
+              );
+              final missing = _isSyncCalendarMissing(
+                snapshot,
+                widget.vm.calendarSyncCalendarId,
+              );
               return ListTile(
                 key: const Key('settings-calendar-sync-details-tile'),
                 enabled: widget.vm.calendarSyncEnabled,
@@ -907,9 +939,11 @@ class _SettingsPageWidgetState extends State<SettingsPageWidget> {
                 subtitle: Text(
                   !widget.vm.calendarSyncEnabled
                       ? l10n.text('settings.calendarSync.subtitle')
-                      : selectedCalendar == null
-                          ? l10n.text('settings.calendarSync.select.none')
-                          : '${selectedCalendar.displayName}\n${selectedCalendar.accountLabel}',
+                      : missing
+                          ? l10n.text('settings.calendarSync.select.missing')
+                          : selectedCalendar == null
+                              ? l10n.text('settings.calendarSync.select.none')
+                              : '${selectedCalendar.displayName}\n${selectedCalendar.accountLabel}',
                 ),
                 isThreeLine:
                     widget.vm.calendarSyncEnabled && selectedCalendar != null,
@@ -2095,19 +2129,10 @@ class _CalendarSyncSettingsDetailPage extends StatelessWidget {
             future: calendarsFuture,
             builder: (context, snapshot) {
               final calendars = snapshot.data ?? <CalendarSyncCalendar>[];
-              CalendarSyncCalendar? selectedCalendar;
-              for (final calendar in calendars) {
-                if (calendar.id == calendarSyncCalendarId) {
-                  selectedCalendar = calendar;
-                  break;
-                }
-              }
-              selectedCalendar ??= calendars.isEmpty
-                  ? null
-                  : calendars.firstWhere(
-                      (calendar) => calendar.isPrimary,
-                      orElse: () => calendars.first,
-                    );
+              final selectedCalendar =
+                  _selectedSyncCalendar(calendars, calendarSyncCalendarId);
+              final missing =
+                  _isSyncCalendarMissing(snapshot, calendarSyncCalendarId);
               return Column(
                 children: [
                   ListTile(
@@ -2116,9 +2141,11 @@ class _CalendarSyncSettingsDetailPage extends StatelessWidget {
                     title:
                         Text(l10n.text('settings.calendarSync.select.title')),
                     subtitle: Text(
-                      selectedCalendar == null
-                          ? l10n.text('settings.calendarSync.select.none')
-                          : '${selectedCalendar.displayName}\n${selectedCalendar.accountLabel}',
+                      missing
+                          ? l10n.text('settings.calendarSync.select.missing')
+                          : selectedCalendar == null
+                              ? l10n.text('settings.calendarSync.select.none')
+                              : '${selectedCalendar.displayName}\n${selectedCalendar.accountLabel}',
                     ),
                     isThreeLine: selectedCalendar != null,
                     trailing: snapshot.connectionState ==
@@ -2426,4 +2453,32 @@ class _AddSubjectState extends State<AddSubject> {
       ],
     );
   }
+}
+
+/// The calendar synchronization writes to: the explicitly selected one or,
+/// without a selection, the primary calendar. A selected calendar that is no
+/// longer available has no replacement.
+CalendarSyncCalendar? _selectedSyncCalendar(
+  List<CalendarSyncCalendar> calendars,
+  int? selectedId,
+) {
+  if (selectedId != null) {
+    return calendars.where((calendar) => calendar.id == selectedId).firstOrNull;
+  }
+  return calendars.isEmpty
+      ? null
+      : calendars.firstWhere(
+          (calendar) => calendar.isPrimary,
+          orElse: () => calendars.first,
+        );
+}
+
+bool _isSyncCalendarMissing(
+  AsyncSnapshot<List<CalendarSyncCalendar>> snapshot,
+  int? selectedId,
+) {
+  return selectedId != null &&
+      snapshot.connectionState == ConnectionState.done &&
+      !(snapshot.data ?? const <CalendarSyncCalendar>[])
+          .any((calendar) => calendar.id == selectedId);
 }
