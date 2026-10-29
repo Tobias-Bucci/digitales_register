@@ -388,19 +388,7 @@ abstract class Subject implements Built<Subject, SubjectBuilder> {
       cache[semester] = null;
       return null;
     }
-    var sum = 0;
-    var n = 0;
-    for (final grade in grades) {
-      final value = grade.grade;
-      if (grade.cancelled || value == null) continue;
-      sum += value * grade.weightPercentage;
-      n += grade.weightPercentage;
-    }
-    if (n == 0) {
-      cache[semester] = null;
-      return null;
-    }
-    final result = roundedGradeAverage(sum, n);
+    final result = weightedGradeAverage(grades);
     cache[semester] = result;
     return result;
   }
