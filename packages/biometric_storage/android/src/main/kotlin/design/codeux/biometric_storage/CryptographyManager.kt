@@ -21,6 +21,8 @@ package design.codeux.biometric_storage
 import android.security.keystore.KeyGenParameterSpec
 import android.security.keystore.KeyProperties
 import io.github.oshai.kotlinlogging.KotlinLogging
+import java.io.DataInputStream
+import java.io.EOFException
 import java.io.File
 import java.nio.charset.Charset
 import java.security.KeyStore
@@ -57,6 +59,18 @@ interface CryptographyManager {
      */
     fun decryptData(ciphertext: ByteArray, cipher: Cipher): String
 
+}
+
+/**
+ * Reads the [size] IV bytes stored in front of the ciphertext in [file].
+ * The stream is closed before returning, also when reading fails; a file
+ * shorter than the IV throws an [EOFException] instead of decrypting with a
+ * partially filled IV.
+ */
+internal fun readInitializationVector(file: File, size: Int): ByteArray {
+    val iv = ByteArray(size)
+    file.inputStream().use { DataInputStream(it).readFully(iv) }
+    return iv
 }
 
 fun CryptographyManager(configure: KeyGenParameterSpec.Builder.() -> Unit): CryptographyManagerImpl = CryptographyManagerImpl(configure)
@@ -108,9 +122,7 @@ class CryptographyManagerImpl(
         keyName: String,
         encryptedDataFile: File,
     ): Cipher {
-        val iv = ByteArray(IV_SIZE_IN_BYTES)
-        val count = encryptedDataFile.inputStream().read(iv)
-        assert(count == IV_SIZE_IN_BYTES)
+        val iv = readInitializationVector(encryptedDataFile, IV_SIZE_IN_BYTES)
         return getInitializedCipherForDecryption(keyName, iv)
     }
 
