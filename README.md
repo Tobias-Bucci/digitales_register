@@ -38,7 +38,7 @@ Fehler gefunden oder eine Idee? Erstelle ein [Issue](https://github.com/Tobias-B
 
 ## Entwicklung & Datenschutz
 
-Technische Details stehen in der Dokumentation: [iOS](docs/IOS_RELEASE_READINESS.md), [Linux](docs/LINUX_RELEASE_READINESS.md) und [Windows-Buildskript](tool/build_windows_store.ps1).
+Technische Details stehen in der Dokumentation: [Android](docs/ANDROID_BUILD.md), [iOS](docs/IOS_RELEASE_READINESS.md), [Linux](docs/LINUX_RELEASE_READINESS.md) und [Windows-Buildskript](tool/build_windows_store.ps1).
 
 Informationen zum Umgang mit Daten findest du in der [Datenschutz-Dokumentation](docs/PRIVACY_AUDIT_V4.md) und der [Datenübersicht](docs/PRIVACY_DATA_INVENTORY.md).
 
