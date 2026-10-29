@@ -1,7 +1,10 @@
 import 'package:built_collection/built_collection.dart';
+import 'package:built_redux/built_redux.dart';
+import 'package:dr/actions/app_actions.dart';
 import 'package:dr/app_state.dart';
 import 'package:dr/data.dart';
 import 'package:dr/ui/target_grade_calculator.dart';
+import 'package:dr/utc_date_time.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import '../support/fixtures.dart';
@@ -40,4 +43,70 @@ void main() {
       });
     }
   }
+
+  group('refreshed subject list', () {
+    final date = UtcDateTime(2026, 10, 5);
+    Subject math(List<int> values, {int? id = 7, String name = 'Mathematik'}) =>
+        buildSubject(id: id, name: name, gradesAll: {
+          Semester.first: BuiltList<GradeAll>([
+            for (final value in values) buildGradeAll(date: date, grade: value),
+          ]),
+        });
+    AppState stateWith(List<Subject> subjects) => AppState((b) => b
+      ..gradesState.subjects = ListBuilder<Subject>(subjects)
+      ..gradesState.semester = Semester.first.toBuilder());
+
+    Future<Store<AppState, AppStateBuilder, AppActions>> selectMath(
+        WidgetTester tester, List<Subject> subjects) async {
+      final store = createStore(initialState: stateWith(subjects));
+      addTearDown(store.dispose);
+      await pumpApp(tester, store: store, home: const TargetGradeCalculator());
+      await tester.tap(find.byKey(const Key('target-calculator-subject')));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('Mathematik').last);
+      await tester.pumpAndSettle();
+      expect(find.textContaining('Aktueller Durchschnitt: 6'), findsOneWidget);
+      return store;
+    }
+
+    Subject? selectedSubject(WidgetTester tester) => tester
+        .widget<DropdownButton<Subject>>(find.byType(DropdownButton<Subject>))
+        .value;
+
+    for (final (label, id) in [('id', 7), ('name', null)]) {
+      testWidgets('a refreshed subject with the same $label stays selected',
+          (tester) async {
+        final store = await selectMath(tester, [
+          math([600], id: id)
+        ]);
+
+        final refreshed = math([600, 800], id: id);
+        store.replaceState(
+            stateWith([buildSubject(name: 'Deutsch'), refreshed]));
+        await tester.pumpAndSettle();
+
+        expect(tester.takeException(), isNull);
+        expect(selectedSubject(tester), refreshed);
+        // The calculation uses the refreshed grades, not the stale instance.
+        expect(
+            find.textContaining('Aktueller Durchschnitt: 7'), findsOneWidget);
+        expect(find.textContaining('· 100%'), findsNWidgets(2));
+      });
+    }
+
+    testWidgets('a removed subject clears the selection and its grades',
+        (tester) async {
+      final store = await selectMath(tester, [
+        math([600]),
+        buildSubject(id: 8, name: 'Deutsch')
+      ]);
+
+      store.replaceState(stateWith([buildSubject(id: 8, name: 'Deutsch')]));
+      await tester.pumpAndSettle();
+
+      expect(tester.takeException(), isNull);
+      expect(selectedSubject(tester), isNull);
+      expect(find.textContaining('Aktueller Durchschnitt'), findsNothing);
+    });
+  });
 }

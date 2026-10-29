@@ -80,6 +80,18 @@ class _TargetGradeCalculatorPageState
       _calculation = null;
       _error = null;
     }
+    final selected = _subject;
+    if (selected != null) {
+      // A refresh replaces the immutable subjects. Keep the selection on the
+      // current instance so the dropdown value matches one of its items and
+      // the calculation uses the refreshed grades; drop it if the subject is
+      // gone.
+      _subject = _subjects
+          .where((subject) => selected.id != null
+              ? subject.id == selected.id
+              : equalsIgnoreCase(subject.name, selected.name))
+          .firstOrNull;
+    }
   }
 
   @override
