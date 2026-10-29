@@ -86,74 +86,77 @@ class AbsencesBody extends StatelessWidget {
   Widget build(BuildContext context) {
     final statsVm =
         state.statistic != null ? appSelectors.absenceStatistics(state) : null;
+    // The creation action and statistics do not depend on existing entries:
+    // without them nobody could record a first future absence.
     return state.statistic != null
-        ? state.absences.isEmpty && state.futureAbsences.isEmpty
-            ? Center(
-                child: Text(
-                  context.t('absences.noneYet'),
-                  style: Theme.of(context).textTheme.headlineMedium,
-                  textAlign: TextAlign.center,
-                ),
-              )
-            : ListView(
-                children: <Widget>[
-                  if (state.canEdit)
-                    Padding(
-                      padding: const EdgeInsets.all(8.0),
-                      child: Align(
-                        alignment: Alignment.centerLeft,
-                        child: FilledButton.icon(
-                          onPressed: noInternet
-                              ? null
-                              : () async {
-                                  final payload =
-                                      await showDialog<Map<String, dynamic>>(
-                                    context: context,
-                                    builder: (_) =>
-                                        const _FutureAbsenceDialogContainer(),
-                                  );
-                                  if (payload != null) {
-                                    onAddFutureAbsence(payload);
-                                  }
-                                },
-                          icon: const Icon(Icons.event_available_outlined),
-                          label: Text(context.t('absences.addFutureAbsence')),
-                        ),
-                      ),
+        ? ListView(
+            children: <Widget>[
+              if (state.canEdit)
+                Padding(
+                  padding: const EdgeInsets.all(8.0),
+                  child: Align(
+                    alignment: Alignment.centerLeft,
+                    child: FilledButton.icon(
+                      onPressed: noInternet
+                          ? null
+                          : () async {
+                              final payload =
+                                  await showDialog<Map<String, dynamic>>(
+                                context: context,
+                                builder: (_) =>
+                                    const _FutureAbsenceDialogContainer(),
+                              );
+                              if (payload != null) {
+                                onAddFutureAbsence(payload);
+                              }
+                            },
+                      icon: const Icon(Icons.event_available_outlined),
+                      label: Text(context.t('absences.addFutureAbsence')),
                     ),
-                  AbsencesStatisticWidget(vm: statsVm!),
-                  const Divider(height: 0),
-                  if (state.futureAbsences.isNotEmpty)
-                    Padding(
-                      padding: const EdgeInsets.all(8.0).copyWith(top: 16),
-                      child: Text(
-                        context.t('absences.futureRecorded'),
-                        style: Theme.of(context).textTheme.titleMedium,
-                      ),
-                    ),
-                  for (final futureAbsence in state.futureAbsences)
-                    FutureAbsenceWidget(
-                      absence: futureAbsence,
-                      onRemove: state.canEdit &&
-                              futureAbsence.justified ==
-                                  AbsenceJustified.notYetJustified
-                          ? () => onRemoveFutureAbsence(futureAbsence)
-                          : null,
-                    ),
-                  if (state.absences.isNotEmpty)
-                    Padding(
-                      padding: const EdgeInsets.all(8.0).copyWith(top: 16),
-                      child: Text(
-                        context.t('absences.listTitle'),
-                        style: Theme.of(context).textTheme.titleMedium,
-                      ),
-                    ),
-                  ...List.generate(
-                    state.absences.length,
-                    (n) => AbsenceGroupContainer(group: n),
                   ),
-                ],
-              )
+                ),
+              AbsencesStatisticWidget(vm: statsVm!),
+              const Divider(height: 0),
+              if (state.absences.isEmpty && state.futureAbsences.isEmpty)
+                Padding(
+                  padding: const EdgeInsets.all(32),
+                  child: Text(
+                    context.t('absences.noneYet'),
+                    style: Theme.of(context).textTheme.headlineMedium,
+                    textAlign: TextAlign.center,
+                  ),
+                ),
+              if (state.futureAbsences.isNotEmpty)
+                Padding(
+                  padding: const EdgeInsets.all(8.0).copyWith(top: 16),
+                  child: Text(
+                    context.t('absences.futureRecorded'),
+                    style: Theme.of(context).textTheme.titleMedium,
+                  ),
+                ),
+              for (final futureAbsence in state.futureAbsences)
+                FutureAbsenceWidget(
+                  absence: futureAbsence,
+                  onRemove: state.canEdit &&
+                          futureAbsence.justified ==
+                              AbsenceJustified.notYetJustified
+                      ? () => onRemoveFutureAbsence(futureAbsence)
+                      : null,
+                ),
+              if (state.absences.isNotEmpty)
+                Padding(
+                  padding: const EdgeInsets.all(8.0).copyWith(top: 16),
+                  child: Text(
+                    context.t('absences.listTitle'),
+                    style: Theme.of(context).textTheme.titleMedium,
+                  ),
+                ),
+              ...List.generate(
+                state.absences.length,
+                (n) => AbsenceGroupContainer(group: n),
+              ),
+            ],
+          )
         : noInternet
             ? const NoInternet()
             : const Center(
