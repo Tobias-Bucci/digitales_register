@@ -83,8 +83,8 @@ class _StoreConnectorState<StoreState, Actions extends ReduxActions, LocalState>
   StreamSubscription<SubstateChange<LocalState>>? _storeSub;
 
   /// [LocalState] is an object that contains the subset of the redux state tree that this component
-  /// cares about.
-  LocalState? _state;
+  /// cares about. [LocalState] may itself be nullable.
+  late LocalState _state;
 
   Store get _store {
     // get the store from the ReduxProvider ancestor
@@ -131,6 +131,18 @@ class _StoreConnectorState<StoreState, Actions extends ReduxActions, LocalState>
     });
   }
 
+  /// Recomputes the local state when the widget's own configuration changes,
+  /// e.g. a row that now shows another index. Without this, the previous
+  /// projection would be shown until the next store change.
+  @override
+  void didUpdateWidget(
+      covariant StoreConnector<StoreState, Actions, LocalState> oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (_storeSub != null) {
+      _state = widget.connect(_store.state as StoreState);
+    }
+  }
+
   /// Cancels the store subscription.
   @override
   @mustCallSuper
@@ -141,7 +153,7 @@ class _StoreConnectorState<StoreState, Actions extends ReduxActions, LocalState>
 
   @override
   Widget build(BuildContext context) =>
-      widget.build(context, _state!, _store.actions as Actions);
+      widget.build(context, _state, _store.actions as Actions);
 }
 
 /// [ReduxProvider] provides access to the redux store to descendant widgets.

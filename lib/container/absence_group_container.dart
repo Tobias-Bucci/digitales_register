@@ -31,8 +31,9 @@ class AbsenceGroupContainer extends StatelessWidget {
   const AbsenceGroupContainer({super.key, required this.group});
   @override
   Widget build(BuildContext context) {
-    return StoreConnection<AppState, AppActions, _AbsenceGroupViewModel>(
+    return StoreConnection<AppState, AppActions, _AbsenceGroupViewModel?>(
       builder: (context, vm, actions) {
+        if (vm == null) return const SizedBox.shrink();
         final l10n = context.l10n;
         final localeTag = Localizations.localeOf(context).toLanguageTag();
         final absenceGroup = vm.group;
@@ -134,7 +135,11 @@ class AbsenceGroupContainer extends StatelessWidget {
         );
       },
       connect: (state) {
-        final absenceGroup = state.absencesState.absences[group];
+        final absences = state.absencesState.absences;
+        // Refreshed absences can be regrouped into fewer groups before the
+        // parent list is rebuilt without this row.
+        if (group >= absences.length) return null;
+        final absenceGroup = absences[group];
         final canJustify =
             state.absencesState.canEdit &&
             absenceGroup.justified == AbsenceJustified.notYetJustified &&
