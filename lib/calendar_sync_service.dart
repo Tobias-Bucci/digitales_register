@@ -663,19 +663,39 @@ extension CalendarSyncService on Never {
         .toList(growable: false);
   }
 
+  /// The calendar to write to, or `null` when nothing may be written.
+  ///
+  /// An explicitly selected calendar that is no longer writable (removed,
+  /// its account signed out or its permission revoked) is never replaced by
+  /// another calendar: that one could belong to a different account. The
+  /// user has to choose a new target first.
   static Future<int?> _resolveCalendarId(int? preferredCalendarId) async {
     final calendars = await _getWritableCalendars();
     if (calendars.isEmpty) {
       return null;
     }
     if (preferredCalendarId != null) {
-      for (final calendar in calendars) {
-        if (calendar.id == preferredCalendarId) {
-          return calendar.id;
-        }
+      if (calendars.any((calendar) => calendar.id == preferredCalendarId)) {
+        return preferredCalendarId;
       }
+      privacyLog('technical_operation');
+      return null;
     }
     return _getDefaultCalendarId();
+  }
+
+  /// Whether the explicitly selected target calendar of [state] is no
+  /// longer writable, so synchronization stays paused until the user picks
+  /// a new one.
+  static Future<bool> isSelectedCalendarMissing(AppState state) async {
+    final selected = state.settingsState.calendarSyncCalendarId;
+    if (!isAndroidPlatform ||
+        !state.settingsState.calendarSyncEnabled ||
+        selected == null) {
+      return false;
+    }
+    final calendars = await _getWritableCalendars();
+    return !calendars.any((calendar) => calendar.id == selected);
   }
 
   static Future<int?> _upsertEvent(CalendarSyncUpsertRequest request) {
