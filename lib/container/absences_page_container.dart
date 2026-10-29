@@ -38,6 +38,7 @@ class AbsencesPageContainer extends StatelessWidget {
           onRemoveFutureAbsence: (absence) {
             actions.absencesActions.removeFutureAbsence(absence);
           },
+          onRetry: actions.absencesActions.load.call,
         );
       },
       connect: (state) {
