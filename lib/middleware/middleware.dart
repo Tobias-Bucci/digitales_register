@@ -1106,6 +1106,7 @@ void resetNoInternetRetryForTest() {
 @visibleForTesting
 void resetMiddlewareStateForTest() {
   schoolNotificationStartupReady.value = false;
+  _unreadableStorageKeys.clear();
   resetNoInternetRetryForTest();
   _clearRuntimeCaches();
 }
@@ -1464,20 +1465,48 @@ String escapeKey(String key) {
   return key;
 }
 
+/// Storage keys whose saved state could not be read in this session.
+///
+/// A failed read does not prove that the entry is damaged: the keystore or
+/// keyring may only be unavailable for a moment. The entry is therefore kept
+/// and, until a later read succeeds, not overwritten with the state of this
+/// session, which started without the saved data.
+final Set<String> _unreadableStorageKeys = <String>{};
+
+@visibleForTesting
+Duration storageReadRetryDelay = const Duration(milliseconds: 200);
+
 Future<void> _writeToStorage(String key, String txt) async {
+  if (_unreadableStorageKeys.contains(key) && !deletedData) {
+    privacyLog('technical_operation');
+    return;
+  }
   await secureStorage.write(key: escapeKey(key), value: txt);
 }
 
+/// Reads the saved state of [key].
+///
+/// A read error never deletes stored data: other accounts, saved
+/// credentials and the unreadable entry itself are kept. The read is retried
+/// once; if it still fails the user is told that the data was kept and will
+/// be loaded again on the next start.
 Future<String?> _readFromStorage(String key) async {
-  try {
-    return await secureStorage.read(key: escapeKey(key));
-  } catch (e) {
+  for (var attempt = 0;; attempt++) {
     try {
-      await secureStorage.deleteAll();
-    } catch (e) {
-      showSnackBar(tr('error.reinstallSuggestedDetailed'));
+      final value = await secureStorage.read(key: escapeKey(key));
+      _unreadableStorageKeys.remove(key);
+      return value;
+    } catch (e, stack) {
+      privacyLog('technical_operation');
+      if (attempt == 0) {
+        await Future<void>.delayed(storageReadRetryDelay);
+        continue;
+      }
+      diagnostics.report(e, stack, DiagnosticError.storage);
+      _unreadableStorageKeys.add(key);
+      showSnackBar(tr('error.savedDataUnreadable'));
+      return null;
     }
-    return null;
   }
 }
 

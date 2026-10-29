@@ -628,6 +628,7 @@
   "files.overwrite.keep": "Adora le file presënt",
   "files.overwrite.redownload": "Desćariëia d'agof",
   "error.savedDataLoadFailed": "Fal pro le ćarié dles dades salvades",
+  "error.savedDataUnreadable": "Les dades salvades de chësc account ne pó momentanamënter nia gnì lites. Ares vëgn tegnüdes y ćariades indô al proscim inviamënt. Cina inlaota ne vëgn les mudaziuns de chësc account nia salvades.",
   "error.reinstallSuggested": "Por plajëir, pröia de reinstallè l'app.",
   "error.reinstallSuggestedDetailed": "Fal: Por plajëir, pröia de reinstallè l'app.",
   "about.welcome.title": "Bënvegnü!",
