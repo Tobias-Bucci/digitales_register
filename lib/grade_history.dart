@@ -2,6 +2,7 @@ import 'package:dr/app_clock.dart';
 import 'package:dr/app_state.dart';
 import 'package:dr/calendar_date.dart';
 import 'package:dr/data.dart';
+import 'package:dr/grade_average.dart';
 
 class GradeHistorySubjectComparison {
   const GradeHistorySubjectComparison({
@@ -76,20 +77,11 @@ Map<String, double> _averagesBySubject(
   final result = <String, double>{};
   for (final subject in subjects) {
     if (ignored.contains(subject.name.toLowerCase())) continue;
-    var sum = 0;
-    var weight = 0;
-    for (final grade in subject.basicGrades(semester) ?? const <GradeAll>[]) {
-      if (grade.grade == null ||
-          grade.cancelled ||
-          calendarDate(grade.date).isAfter(asOf)) {
-        continue;
-      }
-      final gradeWeight =
-          grade.weightPercentage > 0 ? grade.weightPercentage : 1;
-      sum += grade.grade! * gradeWeight;
-      weight += gradeWeight;
-    }
-    if (weight > 0) result[subject.name] = sum / weight;
+    final average = weightedGradeAverage(
+      (subject.basicGrades(semester) ?? const <GradeAll>[])
+          .where((grade) => !calendarDate(grade.date).isAfter(asOf)),
+    );
+    if (average != null) result[subject.name] = average.toDouble();
   }
   return result;
 }

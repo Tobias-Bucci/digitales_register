@@ -56,9 +56,7 @@ GradeForecast? calculateGradeForecast({
     if (ignored.contains(subject.name.toLowerCase())) continue;
     final grades = <GradeAll>[];
     for (final grade in subject.basicGrades(semester) ?? const <GradeAll>[]) {
-      if (grade.grade != null &&
-          !grade.cancelled &&
-          grade.weightPercentage > 0 &&
+      if (countsTowardAverage(grade) &&
           !calendarDate(grade.date).isBefore(calendarDate(schoolYearStart)) &&
           !calendarDate(grade.date).isAfter(asOf)) {
         grades.add(grade);
