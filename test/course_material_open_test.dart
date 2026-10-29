@@ -52,6 +52,7 @@ void main() {
       expect(await File(path).exists(), isTrue);
       return OpenResult(type: ResultType.done, message: 'done');
     };
+    clearRuntimeCaches();
     previousPrint = debugPrint;
     logs = [];
     debugPrint = (message, {wrapWidth}) {
@@ -151,6 +152,92 @@ void main() {
     respond();
     expect(await openCourseMaterialEntry(entry()), isTrue);
     expect(logs.where((l) => l.contains('[CourseMaterial]')), isEmpty);
+  });
+
+  for (final (name, type, body) in [
+    (
+      'diagram.svg',
+      'image/svg+xml',
+      '<svg xmlns="http://www.w3.org/2000/svg" width="1" height="1"/>'
+    ),
+    ('exercise.xml', 'application/xml', '<?xml version="1.0"?><exercise/>'),
+    (
+      'notes.html',
+      'text/html; charset=utf-8',
+      '<html><head><title>Notes</title></head><body>Bruch</body></html>'
+    ),
+    ('data.json', 'application/json', '{"values":[1,2,3]}'),
+  ]) {
+    test('valid $name course files download with a single request', () async {
+      courseMaterialFileOpenerOverride = (path) async {
+        opens++;
+        return OpenResult(type: ResultType.done, message: 'done');
+      };
+      respond(type: type, bytes: utf8.encode(body));
+      expect(await openCourseMaterialEntry(entry(name)), isTrue);
+      expect(requests, 1);
+      expect(
+          await File('${directory.path}/${entry(name).uniqueName}')
+              .readAsString(),
+          body);
+    });
+  }
+
+  test('a login page stops probing further endpoints', () async {
+    respond(
+        type: 'text/html',
+        bytes: utf8.encode('<!DOCTYPE html><html><head><title>Login</title>'
+            '</head><body><form></form></body></html>'));
+    expect(await openCourseMaterialEntry(entry()), isFalse);
+    expect(requests, 1);
+    expect(logs.join('\n'), contains('login_page'));
+    expect(await File('${directory.path}/${entry().uniqueName}').exists(),
+        isFalse);
+  });
+
+  test('a JSON error response is still rejected for other file types',
+      () async {
+    respond(type: 'application/json', bytes: utf8.encode('{"error":"x"}'));
+    expect(await openCourseMaterialEntry(entry()), isFalse);
+    expect(await File('${directory.path}/${entry().uniqueName}').exists(),
+        isFalse);
+  });
+
+  test('network failures do not probe every endpoint', () async {
+    var attempts = 0;
+    client.interceptors.add(InterceptorsWrapper(onRequest: (options, handler) {
+      attempts++;
+      handler.reject(DioException(
+          requestOptions: options, type: DioExceptionType.connectionError));
+    }));
+    expect(await openCourseMaterialEntry(entry()), isFalse);
+    expect(attempts, 1);
+  });
+
+  test('the working endpoint is remembered for later downloads', () async {
+    client.interceptors.add(InterceptorsWrapper(onRequest: (options, handler) {
+      requests++;
+      final works = options.method == 'GET' &&
+          options.path.endsWith('api/courseContent/downloadFile') &&
+          options.queryParameters.containsKey('entryId');
+      handler.resolve(Response<List<int>>(
+          requestOptions: options,
+          statusCode: works ? 200 : 404,
+          data: works ? [37, 80, 68, 70] : const [],
+          headers: Headers.fromMap({
+            'content-type': ['application/pdf']
+          })));
+    }));
+    courseMaterialFileOpenerOverride = (path) async {
+      opens++;
+      return OpenResult(type: ResultType.done, message: 'done');
+    };
+    expect(await openCourseMaterialEntry(entry()), isTrue);
+    expect(requests, greaterThan(1));
+
+    requests = 0;
+    expect(await openCourseMaterialEntry(entry('Zweites Blatt.pdf')), isTrue);
+    expect(requests, 1);
   });
 
   test('retains POST fallback after rejected GET', () async {
