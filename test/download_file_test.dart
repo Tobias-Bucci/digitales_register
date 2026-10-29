@@ -2,7 +2,10 @@ import 'dart:convert';
 import 'dart:io';
 
 import 'package:dio/dio.dart';
+import 'package:dr/data.dart';
 import 'package:dr/middleware/middleware.dart';
+import 'package:dr/utc_date_time.dart';
+import 'package:dr/util.dart';
 import 'package:dr/wrapper.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:mocktail/mocktail.dart';
@@ -165,5 +168,111 @@ void main() {
     requests = 0;
     expect(await download('data.json'), isTrue);
     expect(await saved('data.json').readAsString(), json);
+  });
+
+  group('attachment names cannot leave the download directory', () {
+    const hostileNames = [
+      '../../../escaped.txt',
+      r'..\..\escaped.txt',
+      '/etc/passwd',
+      r'C:\Windows\escaped.txt',
+      r'\server\share\escaped.txt',
+      'line\nbreak\u0000.txt',
+      '..',
+      '.',
+      'trailing. . ',
+      '',
+    ];
+
+    for (final name in hostileNames) {
+      test('sanitizes ${jsonEncode(name)} to a single segment', () {
+        final safe = safeFileNameSegment(name);
+        expect(isSafeFileNameSegment(safe), isTrue);
+        expect(safe, isNot(anyOf('.', '..')));
+        expect(safe, isNot(contains('/')));
+        expect(safe, isNot(contains(r'\')));
+        expect(safe, isNot(contains(':')));
+        expect(safe.codeUnits.every((c) => c >= 0x20 && c != 0x7F), isTrue);
+      });
+
+      if (name.isNotEmpty) {
+        test('rejects the raw name ${jsonEncode(name)} for file operations',
+            () async {
+          expect(isSafeFileNameSegment(name), isFalse);
+          replies = [reply(_pdf)];
+          expect(await downloadFile(_url, name, const {}), isFalse);
+          expect(requests, 0);
+          expect(await canOpenFile(name), isFalse);
+        });
+      }
+    }
+
+    test('keeps ordinary names readable', () {
+      expect(safeFileNameSegment('Aufgabe 1.pdf'), 'Aufgabe 1.pdf');
+    });
+
+    test('backend submission labels stay inside the download directory',
+        () async {
+      final outside = File(
+          '${directory.parent.path}/escaped_${directory.uri.pathSegments.where((s) => s.isNotEmpty).last}.txt');
+      final submission = GradeGroupSubmission((b) => b
+        ..timestamp = UtcDateTime(2026, 10, 1)
+        ..file = 'abc'
+        ..originalName = '../${outside.uri.pathSegments.last}'
+        ..typeName = 'file'
+        ..id = 1
+        ..gradeGroupId = 2
+        ..userId = 3);
+      final message = MessageAttachmentFile((b) => b
+        ..type = 'file'
+        ..originalName = 'x'
+        ..file = r'..\..\escaped.txt'
+        ..messageId = 4
+        ..id = 5
+        ..fileAvailable = true);
+      final lesson = LessonContentSubmission((b) => b
+        ..originalName = '/etc/escaped.txt'
+        ..type = 'file'
+        ..id = '6'
+        ..lessonContentId = '7'
+        ..date = UtcDateTime(2026, 10, 1));
+
+      for (final name in [
+        submission.uniqueName,
+        message.uniqueName,
+        lesson.uniqueName,
+      ]) {
+        expect(isSafeFileNameSegment(name), isTrue, reason: name);
+        replies = [reply(_pdf)];
+        requests = 0;
+        expect(await download(name), isTrue);
+        expect(await canOpenFile(name), isTrue);
+        expect(await saved(name).readAsBytes(), _pdf);
+      }
+      expect(await outside.exists(), isFalse);
+      expect(
+        directory.listSync().map((e) => e.parent.path),
+        everyElement(directory.path),
+      );
+    });
+
+    test('does not write through a link planted in the download directory',
+        () async {
+      final target = File('${directory.path}_link_target.txt');
+      await target.writeAsString('untouched');
+      addTearDown(() async {
+        if (await target.exists()) await target.delete();
+      });
+      try {
+        await Link('${directory.path}/a.pdf').create(target.path);
+      } on FileSystemException {
+        markTestSkipped('Creating links is not permitted here');
+        return;
+      }
+      replies = [reply(_pdf)];
+      expect(await download('a.pdf'), isFalse);
+      expect(await canOpenFile('a.pdf'), isFalse);
+      expect(await target.readAsString(), 'untouched');
+    });
   });
 }

@@ -327,6 +327,31 @@ String fixupUrl(String enteredUrl) {
   return url;
 }
 
+final _unsafeFileNameCharacters = RegExp(r'[\x00-\x1F\x7F\\/:*?"<>|]');
+final _trailingDotsOrSpaces = RegExp(r'[. ]+$');
+
+/// Turns an untrusted (e.g. backend-provided) file label into a single,
+/// portable path segment.
+///
+/// Separators of both styles, drive colons, control characters and other
+/// characters reserved on Windows are replaced, and trailing dots/spaces
+/// (which Windows silently drops) are removed, so the result can never be
+/// `.`/`..` or address anything but a file inside the directory it is
+/// joined to.
+String safeFileNameSegment(String name) {
+  final safe = name
+      .replaceAll(_unsafeFileNameCharacters, '_')
+      .replaceFirst(_trailingDotsOrSpaces, '');
+  return safe.isEmpty ? 'file' : safe;
+}
+
+/// Whether [name] is already a single path segment as produced by
+/// [safeFileNameSegment].
+bool isSafeFileNameSegment(String name) =>
+    name.isNotEmpty &&
+    !_unsafeFileNameCharacters.hasMatch(name) &&
+    !_trailingDotsOrSpaces.hasMatch(name);
+
 Future<bool> cannotConnectTo(String url) async {
   final uri = Uri.parse(url);
   if (uri.scheme != 'https') {

@@ -469,9 +469,9 @@ Future<bool> openCourseMaterialEntry(CourseMaterialEntry entry) async {
       if (!await _downloadCourseMaterialFile(entry)) return false;
     }
     stage = 'open';
-    final path =
-        '${await _getAttachmentDownloadDirectory()}/${entry.uniqueName}';
-    final file = File(path);
+    final file = await _attachmentFile(entry.uniqueName);
+    if (file == null) return false;
+    final path = file.path;
     final exists = await file.exists();
     _materialLog(stage, {'path': file.absolute.path, 'exists': exists});
     if (!exists) return false;
@@ -513,8 +513,10 @@ Future<bool> _downloadCourseMaterialFile(CourseMaterialEntry entry) async {
     return false;
   }
 
-  final saveFile =
-      File("${await _getAttachmentDownloadDirectory()}/${entry.uniqueName}");
+  final saveFile = await _attachmentFile(entry.uniqueName);
+  if (saveFile == null) {
+    return false;
+  }
   _materialLog('destination', {'path': saveFile.absolute.path});
   if (await saveFile.exists()) {
     final shouldOverwrite = await askShouldOverwriteFile(entry.uniqueName);
@@ -1555,6 +1557,23 @@ Future<String> _getAttachmentDownloadDirectory() {
   return future;
 }
 
+/// Resolves [fileName] inside the attachment download directory.
+///
+/// Attachment names are derived from backend metadata, so anything that is
+/// not a single plain file name, or that is a link which could redirect the
+/// access elsewhere, is rejected with `null` instead of being allowed to
+/// leave the directory.
+Future<File?> _attachmentFile(String fileName) async {
+  if (!isSafeFileNameSegment(fileName)) {
+    return null;
+  }
+  final file = File("${await _getAttachmentDownloadDirectory()}/$fileName");
+  if (await FileSystemEntity.isLink(file.path)) {
+    return null;
+  }
+  return file;
+}
+
 /// Downloads a file.
 ///
 /// Returns true on success and false on a failure. The file is only written
@@ -1570,7 +1589,11 @@ Future<bool> downloadFile(
     return false;
   }
 
-  final saveFile = File("${await _getAttachmentDownloadDirectory()}/$fileName");
+  final saveFile = await _attachmentFile(fileName);
+  if (saveFile == null) {
+    privacyLog('technical_operation');
+    return false;
+  }
   if (await saveFile.exists()) {
     final shouldOverwrite = await askShouldOverwriteFile(fileName);
     if (shouldOverwrite == null) {
@@ -1676,6 +1699,9 @@ DownloadValidation validateDownloadedDocument(
 Future<void> _writeFileAtomically(File file, List<int> bytes) async {
   await file.parent.create(recursive: true);
   final partial = File('${file.path}.part');
+  if (await FileSystemEntity.isLink(partial.path)) {
+    throw FileSystemException('Refusing to write through a link', partial.path);
+  }
   try {
     await partial.writeAsBytes(bytes, flush: true);
     await partial.rename(file.path);
@@ -1712,24 +1738,28 @@ Future<Uint8List> fetchAuthenticatedBytes(String url) async {
 }
 
 Future<bool> canOpenFile(String fileName) async {
-  return File("${await _getAttachmentDownloadDirectory()}/$fileName").exists();
+  return await (await _attachmentFile(fileName))?.exists() ?? false;
 }
 
 Future<void> openFile(String fileName) async {
   privacyLog('technical_operation');
+  final file = await _attachmentFile(fileName);
+  if (file == null) {
+    showSnackBar(tr('courseMaterials.openFailed'));
+    return;
+  }
   if (Platform.isLinux) {
-    if (!await _openLinuxDownloadedFile(fileName)) {
+    if (!await _openLinuxDownloadedFile(file)) {
       showSnackBar(tr('courseMaterials.openFailed'));
     }
     return;
   }
-  await OpenFile.open("${await _getAttachmentDownloadDirectory()}/$fileName");
+  await OpenFile.open(file.path);
 }
 
-Future<bool> _openLinuxDownloadedFile(String fileName) async {
+Future<bool> _openLinuxDownloadedFile(File file) async {
   try {
-    final result = await OpenFile.open(
-        "${await _getAttachmentDownloadDirectory()}/$fileName");
+    final result = await OpenFile.open(file.path);
     return result.type == ResultType.done;
   } catch (_) {
     return false;
