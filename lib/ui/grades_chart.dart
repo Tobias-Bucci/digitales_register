@@ -354,7 +354,9 @@ class SelectionWidget extends StatelessWidget {
                     color: Colors.black,
                   ),
                   child: Text(
-                    DateFormat.MMMMd("de").format(date!),
+                    DateFormat.MMMMd(
+                      Localizations.localeOf(context).toLanguageTag(),
+                    ).format(date!),
                     style: const TextStyle(color: Colors.white),
                   ),
                 ),

@@ -152,9 +152,9 @@ void _repliedMessage(MessagesState state, Action<ReplyMessagePayload> action,
       ..badge = action.payload.response == "agree"
           ? "agree"
           : "not_agree" // Restore badge logic
-      ..historyString = action.payload.response == "agree"
-          ? "Mit \"Stimme zu\" beantwortet."
-          : "Mit \"Stimme nicht zu\" beantwortet.",
+      // The badge records the response; the confirmation is rendered from it
+      // in the selected language (see messageHistoryText).
+      ..historyString = null,
   );
 }
 

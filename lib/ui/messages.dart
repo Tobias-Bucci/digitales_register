@@ -43,6 +43,36 @@ const _messageDeltaCacheLimit = 200;
 
 enum _MessageFolder { incoming, outgoing, archived, all }
 
+/// Reply confirmations that older versions stored as German text after a
+/// local reply, mapped to the response they describe.
+const _legacyLocalReplyHistory = <String, String>{
+  'Mit "Stimme zu" beantwortet.': 'agree',
+  'Mit "Stimme nicht zu" beantwortet.': 'not_agree',
+};
+
+/// The history line shown below [message], or null when there is none.
+///
+/// Server-provided history text is shown unchanged. A reply given in the app
+/// is described from the stored response in the selected language, including
+/// confirmations that older versions saved as German text.
+String? messageHistoryText(AppLocalizations l10n, Message message) {
+  final history = message.historyString;
+  var response = history == null ? null : _legacyLocalReplyHistory[history];
+  if (history != null && history.isNotEmpty && response == null) {
+    return history;
+  }
+  if (response == null &&
+      message.needsResponse == false &&
+      (message.badge == 'agree' || message.badge == 'not_agree')) {
+    response = message.badge;
+  }
+  if (response == null) return null;
+  return l10n.text(
+    'messages.repliedWith',
+    args: {'response': l10n.text('messages.$response')},
+  );
+}
+
 class MessagesPage extends StatefulWidget {
   final MessagesState? state;
   final bool noInternet;
@@ -499,14 +529,14 @@ class _MessageWidgetState extends State<MessageWidget> {
                     ),
                   ]
               ].intersperse(const Divider()),
-              if (widget.message.historyString != null &&
-                  widget.message.historyString!.isNotEmpty) ...[
+              if (messageHistoryText(context.l10n, widget.message)
+                  case final history?) ...[
                 const Divider(),
                 Center(
                   child: Padding(
                     padding: const EdgeInsets.symmetric(vertical: 8.0),
                     child: Text(
-                      widget.message.historyString!,
+                      history,
                       style: const TextStyle(fontStyle: FontStyle.italic),
                       textAlign: TextAlign.center,
                     ),

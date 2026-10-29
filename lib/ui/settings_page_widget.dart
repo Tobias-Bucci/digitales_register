@@ -491,12 +491,16 @@ class _SettingsPageWidgetState extends State<SettingsPageWidget> {
     return widget.vm.favoriteSubjects.join(', ');
   }
 
-  String _gradesSummary() {
+  String _gradesSummary(AppLocalizations l10n) {
     return [
-      if (widget.vm.showGradesDiagram) 'Diagramm',
-      if (widget.vm.showAllSubjectsAverage) 'Durchschnitt',
+      if (widget.vm.showGradesDiagram)
+        l10n.text('settings.grades.summary.diagram'),
+      if (widget.vm.showAllSubjectsAverage)
+        l10n.text('settings.grades.summary.average'),
       if (widget.vm.ignoreForGradesAverage.isNotEmpty)
-        '${widget.vm.ignoreForGradesAverage.length} ausgeblendet',
+        l10n.text('settings.grades.summary.hidden', args: {
+          'count': widget.vm.ignoreForGradesAverage.length.toString(),
+        }),
     ].join(' | ');
   }
 
@@ -836,9 +840,9 @@ class _SettingsPageWidgetState extends State<SettingsPageWidget> {
           key: const Key('settings-grades-tile'),
           title: Text(l10n.text('settings.section.grades')),
           subtitle: Text(
-            _gradesSummary().isEmpty
+            _gradesSummary(l10n).isEmpty
                 ? l10n.text('settings.grades.noExcludedSubject')
-                : _gradesSummary(),
+                : _gradesSummary(l10n),
           ),
           trailing: const Icon(Icons.chevron_right),
           onTap: () async {
