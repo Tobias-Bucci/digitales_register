@@ -34,7 +34,7 @@ class CourseMaterialsPage extends StatefulWidget {
     this.loader,
     this.cachedLoader = loadCachedCourseMaterialsPayload,
     this.refreshLoader = refreshCourseMaterialsPayload,
-    this.entryOpener = openCourseMaterialEntry,
+    this.entryOpener = openCourseMaterialEntryWithStatus,
   });
 
   final Future<List<CourseMaterialCourse>> Function()? loader;
@@ -42,7 +42,8 @@ class CourseMaterialsPage extends StatefulWidget {
       cachedLoader;
   final Future<PagePayloadSnapshot<List<Map<String, dynamic>>>?> Function()
       refreshLoader;
-  final Future<bool> Function(CourseMaterialEntry entry) entryOpener;
+  final Future<CourseMaterialOpenResult> Function(CourseMaterialEntry entry)
+      entryOpener;
 
   @override
   State<CourseMaterialsPage> createState() => _CourseMaterialsPageState();
@@ -217,9 +218,15 @@ class _CourseMaterialsPageState extends State<CourseMaterialsPage> {
       _openingEntryId = entry.id;
     });
     try {
-      final success = await widget.entryOpener(entry);
-      if (!success && mounted) {
-        showSnackBar(context.t('courseMaterials.openFailed'));
+      final result = await widget.entryOpener(entry);
+      if (!mounted) return;
+      switch (result) {
+        case CourseMaterialOpenResult.opened:
+          break;
+        case CourseMaterialOpenResult.openedOutdated:
+          showSnackBar(context.t('courseMaterials.openedOutdated'));
+        case CourseMaterialOpenResult.failed:
+          showSnackBar(context.t('courseMaterials.openFailed'));
       }
     } finally {
       if (mounted) {

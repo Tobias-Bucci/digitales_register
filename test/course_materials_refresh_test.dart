@@ -26,6 +26,7 @@ Map<String, Object?> _course(int id, String title) => {
               'courseContentId': id,
               'type': 'file',
               'file': 'f.pdf',
+              'title': '$title file',
               'originalName': '$title.pdf',
             },
           ],
@@ -187,6 +188,31 @@ void main() {
       expect(
         find.text('Course materials could not be updated. '
             'Showing the last saved version.'),
+        findsOneWidget,
+      );
+    });
+
+    testWidgets('opening an outdated saved version tells the user',
+        (tester) async {
+      final store = createStore(
+        initialState: AppState((b) => b..settingsState.languageCode = 'en'),
+      );
+      await tester.pumpWidget(buildTestApp(
+        store: store,
+        home: CourseMaterialsPage(
+          cachedLoader: () async => snapshot(),
+          refreshLoader: () async => snapshot(),
+          entryOpener: (_) async => CourseMaterialOpenResult.openedOutdated,
+        ),
+      ));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('Topic'));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('Math course file'));
+      await tester.pumpAndSettle();
+      expect(
+        find.text('The current version could not be downloaded. '
+            'The last saved version was opened.'),
         findsOneWidget,
       );
     });

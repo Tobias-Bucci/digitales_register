@@ -459,6 +459,7 @@
   "courseMaterials.loadFailed": "Course materials could not be loaded.",
   "courseMaterials.retry": "Try again",
   "courseMaterials.openFailed": "Material could not be opened.",
+  "courseMaterials.openedOutdated": "The current version could not be downloaded. The last saved version was opened.",
   "courseMaterials.refreshFailed": "Course materials could not be updated. Showing the last saved version.",
   "courseMaterials.refreshIncomplete": "Not all courses could be loaded. Showing the last completely loaded version.",
   "courseMaterials.incomplete": "Not all courses could be loaded.",

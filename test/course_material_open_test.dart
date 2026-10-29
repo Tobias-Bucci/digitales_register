@@ -11,16 +11,20 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:mocktail/mocktail.dart';
 import 'package:open_file/open_file.dart';
 import 'package:open_file/src/platform/linux_open_file.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 class _Wrapper extends Mock implements Wrapper {}
 
-CourseMaterialEntry entry([String name = 'Prüfung mit Leerzeichen.pdf']) =>
+CourseMaterialEntry entry(
+        [String name = 'Prüfung mit Leerzeichen.pdf',
+        String lastModified = '2026-10-01 08:00:00']) =>
     CourseMaterialEntry.fromJson({
       'id': 657,
       'courseContentId': 83,
       'type': 'file',
       'file': 'server.pdf',
       'originalName': name,
+      'lastmodified': lastModified,
     });
 
 void main() {
@@ -34,6 +38,7 @@ void main() {
   late int opens;
 
   setUp(() async {
+    SharedPreferences.setMockInitialValues({});
     directory = await Directory.systemTemp.createTemp('course-material-');
     previousWrapper = wrapper;
     final mock = _Wrapper();
@@ -294,6 +299,7 @@ void main() {
       courseMaterialPlatformOverride = platform;
       await File('${directory.path}/${entry().uniqueName}')
           .writeAsBytes([1, 2]);
+      await rememberCourseMaterialVersion(entry());
       expect(await openCourseMaterialEntry(entry()), isTrue);
       verifyNever(() => wrapper.ensureLoggedIn());
       expect(requests, 0);
@@ -361,5 +367,115 @@ void main() {
     expect(await openCourseMaterialEntry(entry()), isFalse);
     expect(logs.join('\n'), contains('StateError'));
     expect(logs.join('\n'), isNot(contains('SECRET')));
+  });
+  group('updated documents', () {
+    final old = entry('lesson.pdf', '2026-10-01 08:00:00');
+    final updated = entry('lesson.pdf', '2026-10-18 09:30:00');
+    late File saved;
+    late List<List<int>> openedBytes;
+
+    setUp(() async {
+      saved = File('${directory.path}/${old.uniqueName}');
+      await saved.writeAsBytes([1, 2, 3]);
+      await rememberCourseMaterialVersion(old);
+      openedBytes = [];
+      courseMaterialFileOpenerOverride = (path) async {
+        openedBytes.add(await File(path).readAsBytes());
+        return OpenResult(type: ResultType.done, message: 'done');
+      };
+    });
+
+    test('keep the file name', () {
+      expect(updated.uniqueName, old.uniqueName);
+      expect(updated.contentVersion, isNot(old.contentVersion));
+    });
+
+    test('a new server version replaces the saved file', () async {
+      respond();
+      expect(await openCourseMaterialEntryWithStatus(updated),
+          CourseMaterialOpenResult.opened);
+      verify(() => wrapper.ensureLoggedIn()).called(1);
+      expect(requests, 1);
+      expect(openedBytes, [
+        [37, 80, 68, 70, 45, 49]
+      ]);
+      expect(await saved.readAsBytes(), [37, 80, 68, 70, 45, 49]);
+
+      // The new version is now current and opens without a download.
+      expect(await openCourseMaterialEntryWithStatus(updated),
+          CourseMaterialOpenResult.opened);
+      expect(requests, 1);
+    });
+
+    test('a changed server file id also counts as a new version', () async {
+      respond();
+      final replaced = CourseMaterialEntry.fromJson({
+        ...old.toJson(),
+        'file': 'replacement.pdf',
+      });
+      expect(await openCourseMaterialEntryWithStatus(replaced),
+          CourseMaterialOpenResult.opened);
+      expect(requests, 1);
+    });
+
+    test('the unchanged version opens without a download', () async {
+      expect(await openCourseMaterialEntryWithStatus(old),
+          CourseMaterialOpenResult.opened);
+      verifyNever(() => wrapper.ensureLoggedIn());
+      expect(requests, 0);
+    });
+
+    for (final failure in ['http', 'html', 'network']) {
+      test('a failed $failure update keeps and opens the previous file',
+          () async {
+        if (failure == 'network') {
+          client.interceptors
+              .add(InterceptorsWrapper(onRequest: (options, handler) {
+            handler.reject(DioException(
+                requestOptions: options,
+                type: DioExceptionType.connectionError));
+          }));
+        } else {
+          respond(
+              status: failure == 'http' ? 403 : 200,
+              type: failure == 'html' ? 'text/html' : 'application/pdf',
+              bytes: [60, 104, 116, 109, 108, 62]);
+        }
+        expect(await openCourseMaterialEntryWithStatus(updated),
+            CourseMaterialOpenResult.openedOutdated);
+        expect(await saved.readAsBytes(), [1, 2, 3]);
+        expect(openedBytes, [
+          [1, 2, 3]
+        ]);
+        expect(await File('${saved.path}.part').exists(), isFalse);
+
+        // The update is retried on the next open.
+        client.interceptors.clear();
+        respond();
+        expect(await openCourseMaterialEntryWithStatus(updated),
+            CourseMaterialOpenResult.opened);
+        expect(await saved.readAsBytes(), [37, 80, 68, 70, 45, 49]);
+      });
+    }
+
+    test('a failed login keeps the previous file', () async {
+      when(() => wrapper.ensureLoggedIn()).thenAnswer((_) async => false);
+      expect(await openCourseMaterialEntryWithStatus(updated),
+          CourseMaterialOpenResult.openedOutdated);
+      expect(await saved.readAsBytes(), [1, 2, 3]);
+      expect(requests, 0);
+    });
+
+    test('a file saved before versions were recorded is revalidated once',
+        () async {
+      SharedPreferences.setMockInitialValues({});
+      respond();
+      expect(await openCourseMaterialEntryWithStatus(old),
+          CourseMaterialOpenResult.opened);
+      expect(requests, 1);
+      expect(await openCourseMaterialEntryWithStatus(old),
+          CourseMaterialOpenResult.opened);
+      expect(requests, 1);
+    });
   });
 }
