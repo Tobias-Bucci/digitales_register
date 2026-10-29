@@ -62,7 +62,6 @@ void main() {
     });
     await settleFor(tester);
     expect(find.text('9 Absenzen'), findsOneWidget);
-    expect(find.text('2 nicht entschuldigt'), findsOneWidget);
     verify(() => mock.send('api/student/dashboard/absences')).called(1);
   });
 
@@ -316,7 +315,6 @@ void main() {
       if (entry.key == 'empty') expect(find.text('0 Absenzen'), findsOneWidget);
       if (entry.key == 'populated') {
         expect(find.text('12 Absenzen'), findsOneWidget);
-        expect(find.text('3 nicht entschuldigt'), findsOneWidget);
       }
     });
   }

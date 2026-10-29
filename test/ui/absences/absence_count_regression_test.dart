@@ -60,7 +60,6 @@ void main() {
         home: DashboardAbsencesCard(state: store.state.absencesState));
     await settleFor(tester);
     expect(find.text('4 Absenzen'), findsOneWidget);
-    expect(find.text('2 nicht entschuldigt'), findsOneWidget);
     expect(tester.takeException(), isNull);
   });
 }

@@ -37,7 +37,7 @@ void main() {
     );
   }
 
-  testWidgets('shows counters, rate and the next planned absence',
+  testWidgets('shows the total, rate and the next planned absence',
       (tester) async {
     await pumpApp(
       tester,
@@ -47,9 +47,11 @@ void main() {
     await settleFor(tester);
 
     expect(find.text('9 Absenzen'), findsOneWidget);
-    expect(find.text('2 nicht entschuldigt'), findsOneWidget);
-    expect(find.text('1 Verspätung'), findsOneWidget);
-    expect(find.text('3 für die Schule'), findsOneWidget);
+    // The card only shows the total, the rate and the status line; the
+    // per-status chips were removed when it was aligned with the holiday card.
+    expect(find.text('2 nicht entschuldigt'), findsNothing);
+    expect(find.text('1 Verspätung'), findsNothing);
+    expect(find.text('3 für die Schule'), findsNothing);
     expect(find.text('4,5 % abwesend'), findsOneWidget);
     expect(find.textContaining('Geplant:'), findsOneWidget);
     expect(find.textContaining('Arzt'), findsOneWidget);
