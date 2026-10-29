@@ -273,64 +273,83 @@ Future<void> _doForSemester(
   final current = _gradesLock.current;
   if (ordered.remove(current)) ordered.insert(0, current!);
   for (final semester in ordered) {
-    final completed = Completer<void>();
-    unawaited(_gradesLock.synchronized(semester, () async {
-      try {
-        await f(semester);
-        completed.complete();
-      } catch (error, stack) {
-        completed.completeError(error, stack);
-      }
-    }).catchError((Object error, StackTrace stack) {
-      if (!completed.isCompleted) completed.completeError(error, stack);
-    }));
-    await completed.future;
+    await _gradesLock.synchronized(semester, () => f(semester));
   }
 }
 
 typedef SemesterChangeCallback = Future<void> Function(Semester semester);
-typedef AsyncVoidCallback = Future<void> Function();
 
+/// Serializes work that depends on the server-side semester selection.
+///
+/// Any number of callers may run concurrently for the [current] semester;
+/// callers for another semester wait until it is idle and then switch. Every
+/// caller's future completes with the result of its own work (or of a failed
+/// switch), and failures always release the lock so later work can proceed.
 class SemesterLock {
+  /// The semester the server is known to be switched to, or `null` while it
+  /// is unknown (initially, after [reset] and after a failed switch).
   Semester? current;
   int usersOfCurrent = 0;
   final SemesterChangeCallback semesterChangeCallback;
   SemesterLock(this.semesterChangeCallback);
   final _mutex = Mutex();
-  Map<Semester, List<AsyncVoidCallback>> waitlist = {};
+  final Map<Semester, List<Completer<void>>> waitlist = {};
 
   Future<void> synchronized(
     Semester semester,
     Future<void> Function() f,
   ) async {
-    await _mutex.acquire();
-    bool mutexAcquired = true;
-    if (usersOfCurrent == 0 || semester == current) {
-      usersOfCurrent++;
-      if (semester != current) {
-        await semesterChangeCallback(semester);
-        current = semester;
-      }
-      _mutex.release();
-      mutexAcquired = false;
+    await _enter(semester);
+    try {
       await f();
-      if (usersOfCurrent == 1 && waitlist.isNotEmpty) {
-        final last = waitlist.entries.first;
-        waitlist.remove(last.key);
-        for (final f in last.value) {
-          unawaited(synchronized(last.key, f));
-        }
-      }
+    } finally {
       usersOfCurrent--;
-    } else {
-      if (waitlist.containsKey(semester)) {
-        waitlist[semester]!.add(f);
-      } else {
-        waitlist[semester] = [f];
-      }
+      _wakeWaitersIfIdle();
     }
-    if (mutexAcquired) {
-      _mutex.release();
+  }
+
+  /// Forgets the known server semester, e.g. because the session changed.
+  /// The next caller switches again.
+  void reset() {
+    current = null;
+  }
+
+  Future<void> _enter(Semester semester) async {
+    while (true) {
+      final Future<void> turn;
+      await _mutex.acquire();
+      try {
+        if (usersOfCurrent == 0 || semester == current) {
+          if (semester != current) {
+            current = null;
+            try {
+              await semesterChangeCallback(semester);
+            } catch (_) {
+              _wakeWaitersIfIdle();
+              rethrow;
+            }
+            current = semester;
+          }
+          usersOfCurrent++;
+          return;
+        }
+        final waiter = Completer<void>();
+        (waitlist[semester] ??= []).add(waiter);
+        turn = waiter.future;
+      } finally {
+        _mutex.release();
+      }
+      await turn;
+    }
+  }
+
+  /// Lets the callers for the next waiting semester retry once nobody uses
+  /// the current one anymore.
+  void _wakeWaitersIfIdle() {
+    if (usersOfCurrent != 0 || waitlist.isEmpty) return;
+    final next = waitlist.keys.first;
+    for (final waiter in waitlist.remove(next)!) {
+      waiter.complete();
     }
   }
 }

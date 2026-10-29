@@ -192,6 +192,9 @@ void _clearRuntimeCaches() {
   _runtimeCacheTimes.clear();
   _staleCacheKeys.clear();
   _authenticatedBytesInFlight.clear();
+  // A new session (or regenerated demo data) starts on an unknown server-side
+  // semester, so the next grades request has to switch explicitly.
+  _gradesLock.reset();
 }
 
 /// Invalidates only in-memory response caches. Used after demo data changes so
