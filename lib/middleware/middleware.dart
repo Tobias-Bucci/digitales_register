@@ -430,6 +430,10 @@ Future<OpenResult> Function(String)? courseMaterialFileOpenerOverride;
 @visibleForTesting
 TargetPlatform? courseMaterialPlatformOverride;
 
+/// Replaces [OpenFile.open] for downloaded attachments in tests.
+@visibleForTesting
+Future<OpenResult> Function(String)? downloadedFileOpenerOverride;
+
 /// Overrides whether local course material diagnostics are printed; they
 /// are only printed in debug builds.
 @visibleForTesting
@@ -477,11 +481,13 @@ Future<bool> openCourseMaterialEntry(CourseMaterialEntry entry) async {
     final exists = await file.exists();
     _materialLog(stage, {'exists': exists});
     if (!exists) return false;
+    // Every platform reports whether a viewer opened the file: on Android
+    // and iOS a missing app or an error must not pass for success either.
+    final result =
+        await (courseMaterialFileOpenerOverride ?? OpenFile.open)(path);
     final platform = courseMaterialPlatformOverride ?? defaultTargetPlatform;
     if (platform == TargetPlatform.windows ||
         platform == TargetPlatform.linux) {
-      final result =
-          await (courseMaterialFileOpenerOverride ?? OpenFile.open)(path);
       _materialLog('open_result', {
         'result': result.type.name,
         if (const {
@@ -492,15 +498,8 @@ Future<bool> openCourseMaterialEntry(CourseMaterialEntry entry) async {
         }.contains(result.message))
           'reason': result.message,
       });
-      return result.type == ResultType.done;
     }
-    // Preserve the existing mobile/macOS opening behavior.
-    if (courseMaterialFileOpenerOverride != null) {
-      await courseMaterialFileOpenerOverride!(path);
-    } else {
-      await openFile(entry.uniqueName);
-    }
-    return true;
+    return result.type == ResultType.done;
   } catch (error) {
     _materialLog(
         'failed', {'at': stage, 'errorType': error.runtimeType.toString()});
@@ -1757,25 +1756,22 @@ Future<bool> canOpenFile(String fileName) async {
   return await (await _attachmentFile(fileName))?.exists() ?? false;
 }
 
+/// Opens a downloaded attachment and tells the user when that fails.
 Future<void> openFile(String fileName) async {
   privacyLog('technical_operation');
   final file = await _attachmentFile(fileName);
-  if (file == null) {
+  if (file == null || !await _openDownloadedFile(file)) {
     showSnackBar(tr('courseMaterials.openFailed'));
-    return;
   }
-  if (Platform.isLinux) {
-    if (!await _openLinuxDownloadedFile(file)) {
-      showSnackBar(tr('courseMaterials.openFailed'));
-    }
-    return;
-  }
-  await OpenFile.open(file.path);
 }
 
-Future<bool> _openLinuxDownloadedFile(File file) async {
+/// Opens [file] with the platform's viewer. Only [ResultType.done] counts as
+/// success; no app, a denied permission, an error code or an exception from
+/// the plugin all report failure.
+Future<bool> _openDownloadedFile(File file) async {
   try {
-    final result = await OpenFile.open(file.path);
+    final result =
+        await (downloadedFileOpenerOverride ?? OpenFile.open)(file.path);
     return result.type == ResultType.done;
   } catch (_) {
     return false;

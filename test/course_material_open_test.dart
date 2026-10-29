@@ -335,6 +335,19 @@ void main() {
     expect(logs.join('\n'), isNot(contains('SECRET')));
   });
 
+  for (final platform in [TargetPlatform.android, TargetPlatform.iOS]) {
+    test('$platform open failures return false instead of success', () async {
+      courseMaterialPlatformOverride = platform;
+      respond();
+      courseMaterialFileOpenerOverride = (_) async =>
+          OpenResult(type: ResultType.noAppToOpen, message: 'No APP found');
+      expect(await openCourseMaterialEntry(entry()), isFalse);
+      courseMaterialFileOpenerOverride =
+          (_) async => OpenResult(type: ResultType.done, message: 'done');
+      expect(await openCourseMaterialEntry(entry()), isTrue);
+    });
+  }
+
   test('storage and opener exceptions are contained', () async {
     attachmentDownloadDirectoryOverride =
         () => Future.error(FileSystemException('SECRET'));
