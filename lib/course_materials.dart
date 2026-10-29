@@ -264,8 +264,7 @@ class CourseMaterialEntry {
 
   String get uniqueName {
     final name = originalName.isNotEmpty ? originalName : file ?? '$title.bin';
-    final safeName = name.replaceAll(RegExp(r'[\\/:*?"<>|]'), '_');
-    return 'course_${courseContentId}_${id}_$safeName';
+    return 'course_${courseContentId}_${id}_${safeFileNameSegment(name)}';
   }
 
   Map<String, Object?> toJson() => <String, Object?>{
