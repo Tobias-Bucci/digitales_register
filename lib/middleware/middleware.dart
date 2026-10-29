@@ -479,7 +479,24 @@ void _materialLog(String stage, Map<String, Object?> fields) {
   }
 }
 
+/// How [openCourseMaterialEntryWithStatus] ended.
+enum CourseMaterialOpenResult {
+  opened,
+
+  /// A newer version exists on the server but could not be downloaded, so
+  /// the previously saved version was opened.
+  openedOutdated,
+  failed,
+}
+
 Future<bool> openCourseMaterialEntry(CourseMaterialEntry entry) async {
+  return await openCourseMaterialEntryWithStatus(entry) !=
+      CourseMaterialOpenResult.failed;
+}
+
+Future<CourseMaterialOpenResult> openCourseMaterialEntryWithStatus(
+    CourseMaterialEntry entry) async {
+  const failed = CourseMaterialOpenResult.failed;
   var stage = 'entry';
   try {
     _materialLog(stage, {
@@ -491,26 +508,34 @@ Future<bool> openCourseMaterialEntry(CourseMaterialEntry entry) async {
     if (entry.isLink) {
       final link = entry.link;
       if (link == null || link.trim().isEmpty) {
-        return false;
+        return failed;
       }
       return await launchUrl(Uri.parse(link),
-          mode: LaunchMode.externalApplication);
+              mode: LaunchMode.externalApplication)
+          ? CourseMaterialOpenResult.opened
+          : failed;
     }
 
     stage = 'local_check';
     final local = await canOpenFile(entry.uniqueName);
-    _materialLog(stage, {'exists': local});
-    if (!local) {
+    final current = local && await _isCurrentCourseMaterialVersion(entry);
+    _materialLog(stage, {'exists': local, 'current': current});
+    var outdated = false;
+    if (!current) {
       stage = 'download';
-      if (!await _downloadCourseMaterialFile(entry)) return false;
+      if (!await _downloadCourseMaterialFile(entry, replaceOutdated: local)) {
+        // A failed update keeps the previously saved file usable.
+        if (!local || !await canOpenFile(entry.uniqueName)) return failed;
+        outdated = true;
+      }
     }
     stage = 'open';
     final file = await _attachmentFile(entry.uniqueName);
-    if (file == null) return false;
+    if (file == null) return failed;
     final path = file.path;
     final exists = await file.exists();
     _materialLog(stage, {'exists': exists});
-    if (!exists) return false;
+    if (!exists) return failed;
     // Every platform reports whether a viewer opened the file: on Android
     // and iOS a missing app or an error must not pass for success either.
     final result =
@@ -529,15 +554,62 @@ Future<bool> openCourseMaterialEntry(CourseMaterialEntry entry) async {
           'reason': result.message,
       });
     }
-    return result.type == ResultType.done;
+    if (result.type != ResultType.done) return failed;
+    return outdated
+        ? CourseMaterialOpenResult.openedOutdated
+        : CourseMaterialOpenResult.opened;
   } catch (error) {
     _materialLog(
         'failed', {'at': stage, 'errorType': error.runtimeType.toString()});
+    return failed;
+  }
+}
+
+const _courseMaterialVersionsKey = 'courseMaterialFileVersions';
+
+/// The [CourseMaterialEntry.contentVersion] of every saved course file, by
+/// [CourseMaterialEntry.uniqueName].
+Future<Map<String, dynamic>> _loadCourseMaterialVersions() async {
+  final prefs = await SharedPreferences.getInstance();
+  final raw = prefs.getString(_courseMaterialVersionsKey);
+  final decoded = raw == null ? null : jsonDecode(raw);
+  return decoded is Map ? Map<String, dynamic>.from(decoded) : {};
+}
+
+/// Whether the saved file of [entry] is the version the server lists. Files
+/// saved without a recorded version are revalidated once.
+Future<bool> _isCurrentCourseMaterialVersion(CourseMaterialEntry entry) async {
+  try {
+    final versions = await _loadCourseMaterialVersions();
+    return versions[entry.uniqueName] == entry.contentVersion;
+  } catch (_) {
+    privacyLog('technical_operation');
     return false;
   }
 }
 
-Future<bool> _downloadCourseMaterialFile(CourseMaterialEntry entry) async {
+@visibleForTesting
+Future<void> rememberCourseMaterialVersion(CourseMaterialEntry entry) async {
+  try {
+    final versions = await _loadCourseMaterialVersions();
+    versions[entry.uniqueName] = entry.contentVersion;
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setString(_courseMaterialVersionsKey, jsonEncode(versions));
+  } catch (_) {
+    // The file is revalidated on the next open.
+    privacyLog('technical_operation');
+  }
+}
+
+/// Downloads [entry] into its saved file.
+///
+/// With [replaceOutdated], an existing file is a previous version of the same
+/// document: it is replaced without asking, and only once the new content
+/// has been validated, so a failed update keeps it.
+Future<bool> _downloadCourseMaterialFile(
+  CourseMaterialEntry entry, {
+  bool replaceOutdated = false,
+}) async {
   final loggedIn = await wrapper.ensureLoggedIn();
   _materialLog('authentication', {'loggedIn': loggedIn});
   if (!loggedIn) {
@@ -549,7 +621,7 @@ Future<bool> _downloadCourseMaterialFile(CourseMaterialEntry entry) async {
     return false;
   }
   _materialLog('destination', {'exists': await saveFile.exists()});
-  if (await saveFile.exists()) {
+  if (!replaceOutdated && await saveFile.exists()) {
     final shouldOverwrite = await askShouldOverwriteFile(entry.uniqueName);
     if (shouldOverwrite == null) {
       return false;
@@ -575,6 +647,7 @@ Future<bool> _downloadCourseMaterialFile(CourseMaterialEntry entry) async {
     if (bytes != null) {
       _workingCourseMaterialCandidate = index;
       await _writeFileAtomically(saveFile, bytes);
+      await rememberCourseMaterialVersion(entry);
       _materialLog('saved', {
         'saved': true,
         'bytes': await saveFile.length(),
@@ -584,7 +657,7 @@ Future<bool> _downloadCourseMaterialFile(CourseMaterialEntry entry) async {
     if (result.stop) break;
   }
 
-  if (await saveFile.exists()) {
+  if (!replaceOutdated && await saveFile.exists()) {
     await saveFile.delete();
   }
   _materialLog('download_failed', {'saved': false});

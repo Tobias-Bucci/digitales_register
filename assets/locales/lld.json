@@ -459,6 +459,7 @@
   "courseMaterials.loadFailed": "I materiai por l'insegnamënt n'é nia podü gnì ćariá.",
   "courseMaterials.retry": "Pröia d'agof",
   "courseMaterials.openFailed": "Al ne se nia podü davrì le material.",
+  "courseMaterials.openedOutdated": "Al ne se nia podü ciarié la versiun atuala. Al é gnü davert la versiun salvada l'ultima öta.",
   "courseMaterials.refreshFailed": "Al ne se nia podü atualisé i materiai por l'insegnamënt. Al vëgn mostrè i dac salvá l'ultima öta.",
   "courseMaterials.refreshIncomplete": "Al ne se nia podü ciarié düć i corsc. Al vëgn mostrè i dac ciariá dl dut l'ultima öta.",
   "courseMaterials.incomplete": "Al ne se nia podü ciarié düć i corsc.",

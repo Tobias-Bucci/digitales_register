@@ -15,6 +15,8 @@
 // You should have received a copy of the GNU General Public License
 // along with digitales_register.  If not, see <http://www.gnu.org/licenses/>.
 
+import 'dart:convert';
+
 import 'package:dr/util.dart';
 
 class CourseMaterialsLoadException implements Exception {
@@ -275,6 +277,11 @@ class CourseMaterialEntry {
     final name = originalName.isNotEmpty ? originalName : file ?? '$title.bin';
     return 'course_${courseContentId}_${id}_${safeFileNameSegment(name)}';
   }
+
+  /// Identifies the server revision of the document. Schools replace a
+  /// document's content without changing its id or name, so a file saved
+  /// under [uniqueName] is only current while this value is unchanged.
+  String get contentVersion => jsonEncode([lastModified, file]);
 
   Map<String, Object?> toJson() => <String, Object?>{
         'id': id,
