@@ -209,7 +209,10 @@ Subject? _findSubject(AppState state, int? subjectId) {
 }
 
 bool _hasFreshBasicGrades(AppState state, Semester semester) {
-  final subjects = state.gradesState.subjects;
+  // Subjects that only belong to the other semester carry no timestamp for
+  // this one and must not make it look stale forever.
+  final subjects = state.gradesState.subjects
+      .where((subject) => subject.gradesAll.containsKey(semester));
   if (subjects.isEmpty) {
     return false;
   }

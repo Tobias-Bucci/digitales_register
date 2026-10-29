@@ -62,11 +62,29 @@ void _loadFailed(
   builder.loading = false;
 }
 
-void _updateSubjects(BuiltList<Subject> oldSubjects,
+void _updateSubjects(BuiltList<Subject> previousSubjects,
     ListBuilder<Subject> subjectsBuilder, Map data, Semester semester) {
   final newSubjects = List<Map<String, dynamic>>.from(
     getList(data["subjects"])!,
   );
+  final loadedSchoolYear = _latestSchoolYear(
+    newSubjects.expand(
+      (subject) => getList(subject["grades"])!
+          .map((dynamic g) => getString(getMap(g)!["date"]))
+          .whereType<String>()
+          .map(UtcDateTime.tryParse)
+          .whereType<UtcDateTime>(),
+    ),
+  );
+  var oldSubjects = previousSubjects;
+  if (loadedSchoolYear != null &&
+      _containsEarlierSchoolYear(oldSubjects, semester, loadedSchoolYear)) {
+    // The snapshot proves that a new school year has started: data kept for
+    // the other semester belongs to the previous year and must not be merged
+    // into the new one.
+    oldSubjects = BuiltList<Subject>();
+    subjectsBuilder.clear();
+  }
   final removedIds = oldSubjects.map((s) => s.id).toSet();
   for (final subject in newSubjects) {
     final nestedSubject = getMap(subject["subject"])!;
@@ -109,11 +127,66 @@ void _updateSubjects(BuiltList<Subject> oldSubjects,
       );
     }
   }
-  // Remove all subjects that no longer exist. The user no longer attends
-  // them in the new school year.
-  for (final subject in removedIds) {
-    subjectsBuilder.removeWhere((s) => s.id == subject);
+  // The snapshot only lists the subjects of [semester]. A subject missing
+  // from it is no longer attended in this semester, but it may still belong
+  // to the other one, so only its membership in [semester] is dropped. The
+  // subject itself disappears once it belongs to no semester at all.
+  for (final id in removedIds) {
+    final index = subjectsBuilder.build().indexWhere((s) => s.id == id);
+    if (index == -1) continue;
+    final remaining = _withoutSemester(subjectsBuilder[index], semester);
+    if (remaining.gradesAll.isEmpty) {
+      subjectsBuilder.removeAt(index);
+    } else {
+      subjectsBuilder[index] = remaining;
+    }
   }
+}
+
+Subject _withoutSemester(Subject subject, Semester semester) {
+  return subject.rebuild(
+    (b) {
+      b
+        ..gradesAll.remove(semester)
+        ..grades.remove(semester)
+        ..observations.remove(semester)
+        ..absences.remove(semester);
+      if (subject.lastFetchedBasic != null) {
+        b.lastFetchedBasic.remove(semester);
+      }
+      if (subject.lastFetchedDetailed != null) {
+        b.lastFetchedDetailed.remove(semester);
+      }
+    },
+  );
+}
+
+/// The school year (identified by the calendar year it starts in) a date
+/// belongs to. School years start in September; August is counted towards
+/// the upcoming year.
+int _schoolYearOf(UtcDateTime date) =>
+    date.month >= DateTime.august ? date.year : date.year - 1;
+
+int? _latestSchoolYear(Iterable<UtcDateTime> dates) {
+  int? latest;
+  for (final date in dates) {
+    final year = _schoolYearOf(date);
+    if (latest == null || year > latest) latest = year;
+  }
+  return latest;
+}
+
+bool _containsEarlierSchoolYear(
+    BuiltList<Subject> subjects, Semester loaded, int schoolYear) {
+  for (final subject in subjects) {
+    for (final entry in subject.gradesAll.entries) {
+      if (entry.key == loaded) continue;
+      if (entry.value.any((g) => _schoolYearOf(g.date) < schoolYear)) {
+        return true;
+      }
+    }
+  }
+  return false;
 }
 
 void _detailsLoaded(GradesState state,
