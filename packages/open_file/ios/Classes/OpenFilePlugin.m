@@ -32,13 +32,15 @@ static NSString *const CHANNEL_NAME = @"open_file";
 
 - (void)handleMethodCall:(FlutterMethodCall*)call result:(FlutterResult)result {
     if ([@"open_file" isEqualToString:call.method]) {
-        _result = result;
+        if (_result != nil) {
+            // One document controller is shown at a time; the pending call
+            // completes when it is dismissed.
+            result([self resultJsonWithType:-4 message:@"Another file is still being opened."]);
+            return;
+        }
         NSString *msg = call.arguments[@"file_path"];
         if(msg==nil){
-            NSDictionary * dict = @{@"message":@"the file path cannot be null", @"type":@-4};
-            NSData * jsonData = [NSJSONSerialization dataWithJSONObject:dict options:NSJSONWritingPrettyPrinted error:nil];
-            NSString * json = [[NSString alloc] initWithData:jsonData encoding:NSUTF8StringEncoding];
-            result(json);
+            result([self resultJsonWithType:-4 message:@"the file path cannot be null"]);
             return;
         }
         NSFileManager *fileManager=[NSFileManager defaultManager];
@@ -114,43 +116,51 @@ static NSString *const CHANNEL_NAME = @"open_file";
 //                     NSLog(@"%@", exestr);
 //                 }
 //             }
+            // The dismissal delegates complete this call once a preview or
+            // menu is shown; every other path completes it right here.
+            _result = result;
             @try {
                 BOOL previewSucceeded = [_documentController presentPreviewAnimated:YES];
                 if(!previewSucceeded){
-                    [_documentController presentOpenInMenuFromRect:CGRectMake(500,20,100,100) inView:[UIApplication sharedApplication].delegate.window.rootViewController.view animated:YES];
+                    BOOL menuSucceeded = [_documentController presentOpenInMenuFromRect:CGRectMake(500,20,100,100) inView:[UIApplication sharedApplication].delegate.window.rootViewController.view animated:YES];
+                    if(!menuSucceeded){
+                        [self finishWithType:-1 message:@"No APP found to open this file。"];
+                    }
                 }
             }@catch (NSException *exception) {
-                NSDictionary * dict = @{@"message":@"File opened incorrectly。", @"type":@-4};
-                NSData * jsonData = [NSJSONSerialization dataWithJSONObject:dict options:NSJSONWritingPrettyPrinted error:nil];
-                NSString * json = [[NSString alloc] initWithData:jsonData encoding:NSUTF8StringEncoding];
-                result(json);
+                [self finishWithType:-4 message:@"File opened incorrectly。"];
             }
         }else{
-            NSDictionary * dict = @{@"message":@"the file does not exist", @"type":@-2};
-            NSData * jsonData = [NSJSONSerialization dataWithJSONObject:dict options:NSJSONWritingPrettyPrinted error:nil];
-            NSString * json = [[NSString alloc] initWithData:jsonData encoding:NSUTF8StringEncoding];
-
-            result(json);
+            result([self resultJsonWithType:-2 message:@"the file does not exist"]);
         }
     } else {
         result(FlutterMethodNotImplemented);
     }
 }
 
-- (void)documentInteractionControllerDidEndPreview:(UIDocumentInteractionController *)controller {
-    NSDictionary * dict = @{@"message":@"done", @"type":@0};
+- (NSString *)resultJsonWithType:(int)type message:(NSString *)message {
+    NSDictionary * dict = @{@"message":message, @"type":@(type)};
     NSData * jsonData = [NSJSONSerialization dataWithJSONObject:dict options:NSJSONWritingPrettyPrinted error:nil];
-    NSString * json = [[NSString alloc] initWithData:jsonData encoding:NSUTF8StringEncoding];
+    return [[NSString alloc] initWithData:jsonData encoding:NSUTF8StringEncoding];
+}
 
-    _result(json);
+/// Completes the pending open_file call exactly once so the next call can
+/// start. The controller stays referenced: after the Open In menu closes it
+/// may still be handing the file to the chosen app.
+- (void)finishWithType:(int)type message:(NSString *)message {
+    FlutterResult result = _result;
+    _result = nil;
+    if (result != nil) {
+        result([self resultJsonWithType:type message:message]);
+    }
+}
+
+- (void)documentInteractionControllerDidEndPreview:(UIDocumentInteractionController *)controller {
+    [self finishWithType:0 message:@"done"];
 }
 
 - (void)documentInteractionControllerDidDismissOpenInMenu:(UIDocumentInteractionController *)controller {
-      NSDictionary * dict = @{@"message":@"done", @"type":@0};
-      NSData * jsonData = [NSJSONSerialization dataWithJSONObject:dict options:NSJSONWritingPrettyPrinted error:nil];
-      NSString * json = [[NSString alloc] initWithData:jsonData encoding:NSUTF8StringEncoding];
-
-      _result(json);
+    [self finishWithType:0 message:@"done"];
 }
 
 - (UIViewController *)documentInteractionControllerViewControllerForPreview:(UIDocumentInteractionController *)controller {
