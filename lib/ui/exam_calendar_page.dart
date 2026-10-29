@@ -22,9 +22,15 @@ class ExamCalendarPage extends StatefulWidget {
     required this.onPhasesChanged,
     required this.onNoteChanged,
     required this.onAttachmentsChanged,
+    this.weekViewBuilder,
   });
 
   final bool calendarView;
+
+  /// Builds the week view route. It should subscribe to the current state so
+  /// that details reopened from the week view never show an older snapshot;
+  /// without it, the week view reuses this page's callbacks.
+  final WidgetBuilder? weekViewBuilder;
   final List<ExamAssessment> assessments;
   final DateTime now;
   final Set<String> Function(String id) completedFor;
@@ -84,7 +90,7 @@ class _ExamCalendarPageState extends State<ExamCalendarPage> {
             tooltip: context.l10n.text('exam.calendarView'),
             icon: const Icon(Icons.calendar_month_outlined),
             onPressed: () => Navigator.of(context).push(MaterialPageRoute<void>(
-              builder: (_) => weekCalendar,
+              builder: widget.weekViewBuilder ?? (_) => weekCalendar,
             )),
           ),
         ],
@@ -459,6 +465,15 @@ class _ExamWeekCalendar extends StatefulWidget {
 class _ExamWeekCalendarState extends State<_ExamWeekCalendar> {
   late DateTime _monday = _mondayOf(widget.now);
   final Map<String, List<StudyPhase>> _phaseOverrides = {};
+
+  @override
+  void didUpdateWidget(_ExamWeekCalendar oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    // Fresh callbacks resolve the current state, which already contains
+    // phases edited here; local overrides would otherwise shadow later
+    // changes made elsewhere.
+    _phaseOverrides.clear();
+  }
 
   @override
   Widget build(BuildContext context) {
