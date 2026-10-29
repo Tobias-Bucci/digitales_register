@@ -256,7 +256,7 @@ String _formatShortDate(BuildContext context, DateTime date) =>
     DateFormat.MMMEd(Localizations.localeOf(context).toLanguageTag())
         .format(date);
 
-/// The absences card body: total, absence rate and per-status counters.
+/// The absences card body: the total number of absences.
 class _AbsencesSummary extends StatelessWidget {
   const _AbsencesSummary({
     required this.counterText,
