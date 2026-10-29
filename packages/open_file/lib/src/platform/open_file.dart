@@ -2,6 +2,7 @@ import 'dart:async';
 import 'dart:convert';
 import 'dart:io';
 
+import 'package:flutter/foundation.dart';
 import 'package:flutter/services.dart';
 import 'package:open_file/src/common/open_result.dart';
 import 'package:open_file/src/platform/linux_open_file.dart';
@@ -11,17 +12,23 @@ import 'package:open_file/src/platform/windows_open_file.dart';
 class OpenFile {
   static const MethodChannel _channel = MethodChannel('open_file');
 
+  /// Replaces [Platform.operatingSystem] in tests so the platform dispatch
+  /// can be exercised on any host.
+  @visibleForTesting
+  static String? debugOperatingSystemOverride;
+
   ///linuxDesktopName like 'xdg'/'gnome'
   static Future<OpenResult> open(String filePath,
       {String? type, String? uti, String linuxDesktopName = "xdg"}) async {
-    if (!Platform.isIOS && !Platform.isAndroid) {
+    final os = debugOperatingSystemOverride ?? Platform.operatingSystem;
+    if (os != 'ios' && os != 'android') {
       late final int resultCode;
-      if (Platform.isWindows) {
+      if (os == 'windows') {
         return openWindowsFile(filePath);
-      } else if (Platform.isMacOS) {
+      } else if (os == 'macos') {
         final process = await Process.start("open", [filePath]);
         resultCode = await process.exitCode;
-      } else if (Platform.isLinux) {
+      } else if (os == 'linux') {
         return openLinuxFile(filePath);
       } else {
         throw UnsupportedError("Unsupported platform");

@@ -1,5 +1,3 @@
-import 'dart:io';
-
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:open_file/open_file.dart';
@@ -11,7 +9,10 @@ void main() {
   final messenger =
       TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger;
 
-  tearDown(() => messenger.setMockMethodCallHandler(channel, null));
+  tearDown(() {
+    messenger.setMockMethodCallHandler(channel, null);
+    OpenFile.debugOperatingSystemOverride = null;
+  });
 
   test('passes local paths unchanged to the Linux runner', () async {
     const path = '/tmp/Prüfung mit Leerzeichen #1.pdf';
@@ -24,10 +25,11 @@ void main() {
   });
 
   test('OpenFile dispatches Linux calls to the portal handler', () async {
+    OpenFile.debugOperatingSystemOverride = 'linux';
     messenger.setMockMethodCallHandler(
         channel, (_) async => {'type': 0, 'message': 'done'});
     expect((await OpenFile.open('/tmp/file.txt')).type, ResultType.done);
-  }, skip: !Platform.isLinux);
+  });
 
   test('preserves portal errors, cancellation and file errors', () async {
     for (final code in [-1, -2, -3, -4]) {
