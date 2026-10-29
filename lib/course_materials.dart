@@ -24,6 +24,15 @@ class CourseMaterialsLoadException implements Exception {
   String toString() => 'Course materials request returned no calendar data.';
 }
 
+/// Thrown when a refresh could not load every known course. Its partial
+/// result must not replace the last complete snapshot.
+class CourseMaterialsIncompleteException implements Exception {
+  const CourseMaterialsIncompleteException();
+
+  @override
+  String toString() => 'Course materials refresh was incomplete.';
+}
+
 class CourseMaterialSource {
   const CourseMaterialSource({
     required this.classId,
