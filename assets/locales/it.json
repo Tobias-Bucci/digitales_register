@@ -295,6 +295,7 @@
   "gradeCalculator.selectSubject": "Seleziona materia",
   "gradeCalculator.import": "Importa",
   "gradeCalculator.noGradesAvailable": "Nessun voto disponibile per questa materia in questo periodo",
+  "gradeCalculator.skippedNonNumeric": "{count} voci senza un voto numerico non sono state importate",
   "gradeCalculator.invalidValue": "Valore non valido",
   "gradeCalculator.grade": "Voto",
   "gradeCalculator.weight": "Peso",

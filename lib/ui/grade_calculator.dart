@@ -521,26 +521,52 @@ class _ImportGradesState extends State<_ImportGrades> {
   Semester? selectedSemester;
   List<_Grade>? grades;
 
+  /// Uncancelled entries that were left out because they have no numeric
+  /// value (the backend may report unknown or non-numeric grades).
+  int skippedGrades = 0;
+
+  @override
+  void didUpdateWidget(_ImportGrades oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    final selected = selectedSubject;
+    if (selected == null) return;
+    // The subject list may be refreshed while this page is open; keep the
+    // selection pointing at the current instance (or drop it if the subject
+    // disappeared) so the dropdown value always matches one of its items.
+    selectedSubject = widget.subjects
+        .where((s) => selected.id != null
+            ? s.id == selected.id
+            : equalsIgnoreCase(s.name, selected.name))
+        .firstOrNull;
+    _computeGrades();
+  }
+
   void _recalculateGrades() {
-    setState(() {
-      if (selectedSemester != null && selectedSubject != null) {
-        grades = selectedSubject!
-                .basicGrades(selectedSemester!)
-                ?.where((e) => !e.cancelled)
-                .map(
-                  (e) => _Grade(
-                    grade: e.grade!,
-                    weightPercentage: e.weightPercentage,
-                    description:
-                        "${context.l10n.translateSubjectName(selectedSubject!.name)} · ${context.l10n.translateSchoolTerm(e.type)}",
-                  ),
-                )
-                .toList() ??
-            [];
-      } else {
-        grades = [];
-      }
-    });
+    setState(_computeGrades);
+  }
+
+  void _computeGrades() {
+    final subject = selectedSubject;
+    final semester = selectedSemester;
+    if (subject == null || semester == null) {
+      grades = [];
+      skippedGrades = 0;
+      return;
+    }
+    final uncancelled =
+        subject.basicGrades(semester)?.where((e) => !e.cancelled).toList() ??
+            const <GradeAll>[];
+    grades = [
+      for (final e in uncancelled)
+        if (e.grade case final grade?)
+          _Grade(
+            grade: grade,
+            weightPercentage: e.weightPercentage,
+            description:
+                "${context.l10n.translateSubjectName(subject.name)} · ${context.l10n.translateSchoolTerm(e.type)}",
+          ),
+    ];
+    skippedGrades = uncancelled.length - grades!.length;
   }
 
   @override
@@ -619,6 +645,16 @@ class _ImportGradesState extends State<_ImportGrades> {
               child: Text(context.t('gradeCalculator.import')),
             ),
           ),
+          if (skippedGrades > 0)
+            Padding(
+              padding: const EdgeInsets.all(8.0),
+              child: Text(
+                context.t(
+                  'gradeCalculator.skippedNonNumeric',
+                  args: {'count': '$skippedGrades'},
+                ),
+              ),
+            ),
           if (selectedSemester != null &&
               selectedSubject != null &&
               grades!.isEmpty)

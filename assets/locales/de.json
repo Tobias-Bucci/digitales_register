@@ -295,6 +295,7 @@
   "gradeCalculator.selectSubject": "Fach auswählen",
   "gradeCalculator.import": "Importieren",
   "gradeCalculator.noGradesAvailable": "Für dieses Fach sind in diesem Zeitraum keine Noten verfügbar",
+  "gradeCalculator.skippedNonNumeric": "{count} Einträge ohne Zahlenwert wurden nicht importiert",
   "gradeCalculator.invalidValue": "Ungültiger Wert",
   "gradeCalculator.grade": "Note",
   "gradeCalculator.weight": "Gewichtung",
