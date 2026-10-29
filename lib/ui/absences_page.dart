@@ -39,6 +39,7 @@ class AbsencesPage extends StatelessWidget {
   final bool noInternet;
   final void Function(Map<String, dynamic>) onAddFutureAbsence;
   final void Function(FutureAbsence) onRemoveFutureAbsence;
+  final VoidCallback onRetry;
 
   const AbsencesPage({
     super.key,
@@ -46,6 +47,7 @@ class AbsencesPage extends StatelessWidget {
     required this.noInternet,
     required this.onAddFutureAbsence,
     required this.onRemoveFutureAbsence,
+    required this.onRetry,
   });
 
   @override
@@ -62,6 +64,7 @@ class AbsencesPage extends StatelessWidget {
           noInternet: noInternet,
           onAddFutureAbsence: onAddFutureAbsence,
           onRemoveFutureAbsence: onRemoveFutureAbsence,
+          onRetry: onRetry,
         ),
       ),
     );
@@ -73,6 +76,7 @@ class AbsencesBody extends StatelessWidget {
   final bool noInternet;
   final void Function(Map<String, dynamic>) onAddFutureAbsence;
   final void Function(FutureAbsence) onRemoveFutureAbsence;
+  final VoidCallback? onRetry;
 
   const AbsencesBody({
     super.key,
@@ -80,7 +84,11 @@ class AbsencesBody extends StatelessWidget {
     required this.noInternet,
     required this.onAddFutureAbsence,
     required this.onRemoveFutureAbsence,
+    this.onRetry,
   });
+
+  /// The last request finished with an error rather than still running.
+  bool get _loadFailed => state.loadFailed && !state.loading;
 
   @override
   Widget build(BuildContext context) {
@@ -91,6 +99,10 @@ class AbsencesBody extends StatelessWidget {
     return state.statistic != null
         ? ListView(
             children: <Widget>[
+              // Earlier data stays visible, but a failed refresh must not
+              // pass for current data.
+              if (_loadFailed && !noInternet)
+                _AbsencesRefreshFailedBanner(onRetry: onRetry),
               if (state.canEdit)
                 Padding(
                   padding: const EdgeInsets.all(8.0),
@@ -159,9 +171,89 @@ class AbsencesBody extends StatelessWidget {
           )
         : noInternet
             ? const NoInternet()
-            : const Center(
-                child: CircularProgressIndicator(),
-              );
+            : _loadFailed
+                ? _AbsencesLoadFailed(onRetry: onRetry)
+                : const Center(
+                    child: CircularProgressIndicator(),
+                  );
+  }
+}
+
+class _AbsencesLoadFailed extends StatelessWidget {
+  const _AbsencesLoadFailed({required this.onRetry});
+
+  final VoidCallback? onRetry;
+
+  @override
+  Widget build(BuildContext context) {
+    final l10n = context.l10n;
+    return Center(
+      child: Padding(
+        padding: const EdgeInsets.all(24),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(
+              Icons.error_outline,
+              size: 48,
+              color: Theme.of(context).colorScheme.error,
+            ),
+            const SizedBox(height: 16),
+            Text(
+              l10n.text('absences.loadFailed'),
+              textAlign: TextAlign.center,
+              style: Theme.of(context).textTheme.titleMedium,
+            ),
+            if (onRetry != null) ...[
+              const SizedBox(height: 16),
+              FilledButton.icon(
+                onPressed: onRetry,
+                icon: const Icon(Icons.refresh),
+                label: Text(l10n.text('absences.retry')),
+              ),
+            ],
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _AbsencesRefreshFailedBanner extends StatelessWidget {
+  const _AbsencesRefreshFailedBanner({required this.onRetry});
+
+  final VoidCallback? onRetry;
+
+  @override
+  Widget build(BuildContext context) {
+    final colorScheme = Theme.of(context).colorScheme;
+    return Container(
+      width: double.infinity,
+      margin: const EdgeInsets.all(8),
+      padding: const EdgeInsets.fromLTRB(12, 8, 8, 8),
+      decoration: BoxDecoration(
+        color: colorScheme.errorContainer,
+        borderRadius: BorderRadius.circular(12),
+      ),
+      child: Row(
+        children: [
+          Icon(Icons.warning_amber_rounded,
+              color: colorScheme.onErrorContainer),
+          const SizedBox(width: 10),
+          Expanded(
+            child: Text(
+              context.t('absences.refreshFailed'),
+              style: TextStyle(color: colorScheme.onErrorContainer),
+            ),
+          ),
+          if (onRetry != null)
+            TextButton(
+              onPressed: onRetry,
+              child: Text(context.t('absences.retry')),
+            ),
+        ],
+      ),
+    );
   }
 }
 

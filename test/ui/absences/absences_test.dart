@@ -228,6 +228,7 @@ void main() {
           submittedPayload = payload;
         },
         onRemoveFutureAbsence: (_) {},
+        onRetry: () {},
       ),
     );
     await settleFor(tester);
