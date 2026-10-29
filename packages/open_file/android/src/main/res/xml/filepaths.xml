@@ -1,7 +1,6 @@
 <paths>
-    <external-path
-            name="external-path"
-            path="."/>
+    <!-- Only the app's own directories. Downloads, course material and
+         attachment copies live in the external files/cache directories. -->
     <external-cache-path
             name="external-cache-path"
             path="."/>
@@ -14,8 +13,4 @@
     <cache-path
             name="cache-path"
             path="."/>
-    <root-path
-            name="root"
-            path="."/>
 </paths>
-
