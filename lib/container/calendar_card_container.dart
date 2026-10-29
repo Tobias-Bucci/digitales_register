@@ -37,8 +37,9 @@ class CalendarCardContainer extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return StoreConnection<AppState, AppActions, CalendarCardViewModel>(
+    return StoreConnection<AppState, AppActions, CalendarCardViewModel?>(
       builder: (context, state, actions) {
+        if (state == null) return const SizedBox.shrink();
         return CalendarCard(
           hour: state.hour,
           theme: state.theme,
@@ -48,9 +49,14 @@ class CalendarCardContainer extends StatelessWidget {
         );
       },
       connect: (state) {
-        final CalendarDay mergedDay =
+        final CalendarDay? mergedDay =
             calendarDayWithLocalReminderAssessments(state, day) ??
-            state.calendarState.days[day]!;
+            state.calendarState.days[day];
+        // A refresh can remove this row (or the whole day) before the parent
+        // list is rebuilt without it; the projection must not index past it.
+        if (mergedDay == null || hourIndex >= mergedDay.hours.length) {
+          return null;
+        }
         final CalendarHour hour = mergedDay.hours[hourIndex];
         final theme =
             state.settingsState.subjectThemes[hour.subject] ??
