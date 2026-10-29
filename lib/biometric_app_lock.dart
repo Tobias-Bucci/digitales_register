@@ -358,7 +358,7 @@ class _AppLockSyncState extends State<AppLockSync> {
   Widget build(BuildContext context) => widget.child;
 }
 
-class BiometricAppLockOverlay extends StatelessWidget {
+class BiometricAppLockOverlay extends StatefulWidget {
   const BiometricAppLockOverlay({
     super.key,
     required this.child,
@@ -367,14 +367,77 @@ class BiometricAppLockOverlay extends StatelessWidget {
   final Widget child;
 
   @override
+  State<BiometricAppLockOverlay> createState() =>
+      _BiometricAppLockOverlayState();
+}
+
+class _BiometricAppLockOverlayState extends State<BiometricAppLockOverlay> {
+  bool _wasLocked = false;
+
+  /// The protected node that had focus when the app locked, restored once the
+  /// app is unlocked again.
+  FocusNode? _focusBeforeLock;
+
+  @override
+  void initState() {
+    super.initState();
+    _wasLocked = biometricAppLockController.isLocked;
+    biometricAppLockController.addListener(_lockChanged);
+  }
+
+  @override
+  void dispose() {
+    biometricAppLockController.removeListener(_lockChanged);
+    super.dispose();
+  }
+
+  void _lockChanged() {
+    final locked = biometricAppLockController.isLocked;
+    if (locked == _wasLocked) {
+      return;
+    }
+    _wasLocked = locked;
+    if (locked) {
+      // Remember the focused protected node before ExcludeFocus drops its
+      // focus in the next build.
+      _focusBeforeLock = FocusManager.instance.primaryFocus;
+      return;
+    }
+    final previous = _focusBeforeLock;
+    _focusBeforeLock = null;
+    if (previous == null) {
+      return;
+    }
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted ||
+          biometricAppLockController.isLocked ||
+          previous.context == null ||
+          !previous.canRequestFocus) {
+        return;
+      }
+      previous.requestFocus();
+    });
+  }
+
+  @override
   Widget build(BuildContext context) {
     return AnimatedBuilder(
       animation: biometricAppLockController,
       builder: (context, _) {
+        final locked = biometricAppLockController.isLocked;
         return Stack(
           children: [
-            child,
-            if (biometricAppLockController.isLocked)
+            // While locked the protected content can neither keep nor gain
+            // focus, so hardware keys, shortcuts and focus traversal cannot
+            // reach it, and pointer input is ignored as well.
+            ExcludeFocus(
+              excluding: locked,
+              child: IgnorePointer(
+                ignoring: locked,
+                child: widget.child,
+              ),
+            ),
+            if (locked)
               Positioned.fill(
                 child: ColoredBox(
                   color: Theme.of(context).colorScheme.surface,
