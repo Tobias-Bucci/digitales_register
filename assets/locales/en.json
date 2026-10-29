@@ -295,6 +295,7 @@
   "gradeCalculator.selectSubject": "Select subject",
   "gradeCalculator.import": "Import",
   "gradeCalculator.noGradesAvailable": "No grades are available for this subject in this period",
+  "gradeCalculator.skippedNonNumeric": "{count} entries without a numeric grade were not imported",
   "gradeCalculator.invalidValue": "Invalid value",
   "gradeCalculator.grade": "Grade",
   "gradeCalculator.weight": "Weight",

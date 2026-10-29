@@ -295,6 +295,7 @@
   "gradeCalculator.selectSubject": "Alza fora la dicipina",
   "gradeCalculator.import": "Importè",
   "gradeCalculator.noGradesAvailable": "Degün pro disponibl por chësta dicipina te chësc tîmp",
+  "gradeCalculator.skippedNonNumeric": "{count} entries zënza valur numerica n'é nia gnüdes importades",
   "gradeCalculator.invalidValue": "Valur nia valid",
   "gradeCalculator.grade": "Pro",
   "gradeCalculator.weight": "Pesanza",
