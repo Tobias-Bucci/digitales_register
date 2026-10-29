@@ -1178,6 +1178,7 @@ class DayWidget extends StatelessWidget {
                                         item: i,
                                         allSubjects: allSubjects,
                                         isDeletedView: true,
+                                        onOpenAttachment: onOpenAttachment,
                                         colorBorder: colorBorders,
                                         subjectThemes: subjectThemes,
                                         colorTestsInRed: colorTestsInRed,
@@ -1337,6 +1338,7 @@ class ItemWidget extends StatelessWidget {
                         item: historyItem,
                         allSubjects: allSubjects,
                         isHistory: true,
+                        onOpenAttachment: onOpenAttachment,
                         colorBorder: colorBorder,
                         subjectThemes: subjectThemes,
                         colorTestsInRed: colorTestsInRed,
@@ -1609,7 +1611,7 @@ class ItemWidget extends StatelessWidget {
                   AttachmentWidget(
                     ggs: attachment,
                     noInternet: noInternet,
-                    openCallback: onOpenAttachment!,
+                    openCallback: onOpenAttachment,
                   )
               ]
             ],
@@ -1636,6 +1638,7 @@ class ItemWidget extends StatelessWidget {
             isCurrent: false,
             item: item.previousVersion!,
             allSubjects: allSubjects,
+            onOpenAttachment: onOpenAttachment,
             colorBorder: colorBorder,
             subjectThemes: subjectThemes,
             colorTestsInRed: colorTestsInRed,
@@ -1677,7 +1680,9 @@ UtcDateTime toDate(UtcDateTime dateTime) {
 
 class AttachmentWidget extends StatelessWidget {
   final GradeGroupSubmission ggs;
-  final AttachmentCallback openCallback;
+
+  /// Opens the attachment; without one the attachment is only listed.
+  final AttachmentCallback? openCallback;
   final bool noInternet;
 
   const AttachmentWidget(
@@ -1698,11 +1703,12 @@ class AttachmentWidget extends StatelessWidget {
           ListTile(title: Text(ggs.originalName)),
           AnimatedLinearProgressIndicator(show: ggs.downloading),
           TextButton(
-            onPressed: !ggs.fileAvailable && noInternet
-                ? null
-                : () {
-                    openCallback(ggs);
-                  },
+            onPressed:
+                openCallback == null || (!ggs.fileAvailable && noInternet)
+                    ? null
+                    : () {
+                        openCallback!(ggs);
+                      },
             child: Text(context.l10n.text('ui.open')),
           )
         ],
