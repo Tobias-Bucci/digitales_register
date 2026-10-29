@@ -326,6 +326,11 @@ Future<PagePayloadSnapshot<List<Map<String, dynamic>>>?>
   );
 }
 
+/// Loads every course and replaces the cached snapshot.
+///
+/// Throws [CourseMaterialsIncompleteException] instead of saving when a
+/// course could not be loaded, so a partial result never replaces the last
+/// complete snapshot.
 Future<PagePayloadSnapshot<List<Map<String, dynamic>>>?>
     refreshCourseMaterialsPayload() async {
   final courses = await _loadCourseMaterialsRemote();
@@ -341,10 +346,26 @@ Future<List<CourseMaterialCourse>> _loadCourseMaterialsRemote() async {
     return const <CourseMaterialCourse>[];
   }
 
-  final sources = await _loadCurrentCourseMaterialSources();
+  final discovery = await _loadCurrentCourseMaterialSources();
+  if (!discovery.complete) {
+    // A failed discovery request only matters when it may have hidden a
+    // course of the last snapshot.
+    final found = {
+      for (final source in discovery.sources)
+        '${source.classId}|${source.subjectId}',
+    };
+    final cached = await loadCachedCourseMaterialsPayload();
+    final lostKnownCourse = cached != null &&
+        courseMaterialCoursesFromPayload(cached.payload).any(
+          (course) => !found.contains('${course.classId}|${course.subjectId}'),
+        );
+    if (lostKnownCourse) {
+      throw const CourseMaterialsIncompleteException();
+    }
+  }
   final courses = <CourseMaterialCourse>[];
   final seenCourseIds = <int>{};
-  for (final source in sources) {
+  for (final source in discovery.sources) {
     final response = await wrapper.send(
       'api/courseContent/getCourse',
       args: <String, Object?>{
@@ -352,10 +373,10 @@ Future<List<CourseMaterialCourse>> _loadCourseMaterialsRemote() async {
         'subjectId': source.subjectId,
       },
     );
-    final map = getMap(response);
-    if (map == null) {
-      continue;
-    }
+    // A failed request: the course is unknown, not absent. Malformed
+    // responses make getMap throw.
+    final map =
+        getMap(response) ?? (throw const CourseMaterialsIncompleteException());
     final course = CourseMaterialCourse.fromJson(map, source);
     if (seenCourseIds.add(course.id)) {
       courses.add(course);
@@ -380,11 +401,15 @@ List<Map<String, dynamic>> courseMaterialCoursesToPayload(
       .toList();
 }
 
-Future<List<CourseMaterialSource>> _loadCurrentCourseMaterialSources() async {
+/// The class/subject pairs found for the course materials. [complete] is
+/// false when a discovery request failed, so pairs may be missing.
+Future<({List<CourseMaterialSource> sources, bool complete})>
+    _loadCurrentCourseMaterialSources() async {
   final sources = <String, CourseMaterialSource>{};
 
   final monday = toMonday(now);
   dynamic response;
+  var complete = true;
   for (final offset in <int>[0, -7, 7, -14, 14]) {
     response = await wrapper.send(
       'api/calendar/student',
@@ -394,19 +419,24 @@ Future<List<CourseMaterialSource>> _loadCurrentCourseMaterialSources() async {
         ),
       },
     );
+    if (response == null) complete = false;
     _addCourseMaterialSources(sources, response);
     if (sources.isNotEmpty) break;
   }
 
   final lessonSnapshot = await refreshClassRegisterLessonPayload();
+  if (lessonSnapshot == null) complete = false;
   _addCourseMaterialSources(sources, lessonSnapshot?.payload);
 
   if (sources.isEmpty && response == null && lessonSnapshot == null) {
     throw const CourseMaterialsLoadException();
   }
 
-  return sources.values.toList()
-    ..sort((a, b) => a.subjectName.compareTo(b.subjectName));
+  return (
+    sources: sources.values.toList()
+      ..sort((a, b) => a.subjectName.compareTo(b.subjectName)),
+    complete: complete,
+  );
 }
 
 void _addCourseMaterialSources(

@@ -53,6 +53,9 @@ class _CourseMaterialsPageState extends State<CourseMaterialsPage> {
   DateTime? _lastFetched;
   String? _fingerprint;
   Object? _loadError;
+
+  /// Why the last refresh failed while saved courses stay visible.
+  Object? _refreshError;
   int? _openingEntryId;
   bool _loading = true;
   Future<void>? _pendingRefresh;
@@ -75,6 +78,7 @@ class _CourseMaterialsPageState extends State<CourseMaterialsPage> {
       _lastFetched = null;
       _fingerprint = null;
       _loadError = null;
+      _refreshError = null;
       _loading = true;
       unawaited(_initialize());
     }
@@ -180,22 +184,23 @@ class _CourseMaterialsPageState extends State<CourseMaterialsPage> {
           _fingerprint = snapshot.fingerprint;
         }
         _loadError = null;
+        _refreshError = null;
         _loading = false;
       });
     } catch (error) {
       if (!mounted) {
         return;
       }
-      if (_courses == null || !silent) {
-        setState(() {
+      setState(() {
+        if (_courses == null) {
           _loadError = error;
-          _loading = false;
-        });
-      } else {
-        setState(() {
-          _loading = false;
-        });
-      }
+        } else {
+          // The saved snapshot stays visible, but the user has to know that
+          // it could not be updated.
+          _refreshError = error;
+        }
+        _loading = false;
+      });
     }
   }
 
@@ -261,6 +266,7 @@ class _CourseMaterialsPageState extends State<CourseMaterialsPage> {
       return _CourseMaterialsContent(
         courses: courses,
         lastFetched: _lastFetched,
+        refreshError: _refreshError,
         openingEntryId: _openingEntryId,
         onRefresh: _refresh,
         onOpenEntry: _openEntry,
@@ -272,7 +278,9 @@ class _CourseMaterialsPageState extends State<CourseMaterialsPage> {
     final error = _loadError;
     if (error != null) {
       return _CourseMaterialsError(
-        error: error.toString(),
+        error: error is CourseMaterialsIncompleteException
+            ? context.t('courseMaterials.incomplete')
+            : error.toString(),
         onRetry: _refresh,
       );
     }
@@ -284,6 +292,7 @@ class _CourseMaterialsContent extends StatelessWidget {
   const _CourseMaterialsContent({
     required this.courses,
     required this.lastFetched,
+    required this.refreshError,
     required this.openingEntryId,
     required this.onRefresh,
     required this.onOpenEntry,
@@ -291,6 +300,7 @@ class _CourseMaterialsContent extends StatelessWidget {
 
   final List<CourseMaterialCourse> courses;
   final DateTime? lastFetched;
+  final Object? refreshError;
   final int? openingEntryId;
   final Future<void> Function() onRefresh;
   final ValueChanged<CourseMaterialEntry> onOpenEntry;
@@ -312,6 +322,11 @@ class _CourseMaterialsContent extends StatelessWidget {
                 totalEntries: totalEntries,
                 lastFetched: lastFetched,
               ),
+              if (refreshError != null)
+                _CourseMaterialsRefreshFailed(
+                  incomplete:
+                      refreshError is CourseMaterialsIncompleteException,
+                ),
               if (totalEntries == 0) const _EmptyCourseMaterials(),
               for (final course in courses)
                 if (course.entryCount > 0)
@@ -662,6 +677,41 @@ class _CourseEntryTile extends StatelessWidget {
               ],
             ),
           ),
+        ),
+      ),
+    );
+  }
+}
+
+class _CourseMaterialsRefreshFailed extends StatelessWidget {
+  const _CourseMaterialsRefreshFailed({required this.incomplete});
+
+  final bool incomplete;
+
+  @override
+  Widget build(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
+    return Card(
+      elevation: 0,
+      margin: const EdgeInsets.only(bottom: 14),
+      color: scheme.errorContainer,
+      child: Padding(
+        padding: const EdgeInsets.all(12),
+        child: Row(
+          children: [
+            Icon(Icons.sync_problem, color: scheme.onErrorContainer),
+            const SizedBox(width: 12),
+            Expanded(
+              child: Text(
+                context.t(
+                  incomplete
+                      ? 'courseMaterials.refreshIncomplete'
+                      : 'courseMaterials.refreshFailed',
+                ),
+                style: TextStyle(color: scheme.onErrorContainer),
+              ),
+            ),
+          ],
         ),
       ),
     );
