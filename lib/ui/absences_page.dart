@@ -267,34 +267,47 @@ class _FutureAbsenceDialogState extends State<_FutureAbsenceDialog> {
 
   Map<int, String> get _fallbackLessonEndTimes => _lessonEndTimes;
 
-  Map<int, String> get _effectiveLessonStartTimes {
-    final dateTimes = widget.lessonStartTimesByDate[
-        UtcDateTime(_startDate.year, _startDate.month, _startDate.day)];
+  /// Lesson times of [date]: its own loaded schedule, else the schedule of the
+  /// same weekday, else the default bell times.
+  Map<int, String> _lessonTimesFor(
+    DateTime date, {
+    required Map<UtcDateTime, Map<int, String>> byDate,
+    required Map<int, Map<int, String>> byWeekday,
+    required Map<int, String> fallback,
+  }) {
+    final dateTimes = byDate[UtcDateTime(date.year, date.month, date.day)];
     if (dateTimes != null && dateTimes.isNotEmpty) {
       return _sortedLessonTimes(dateTimes);
     }
-    final weekdayTimes = widget.lessonStartTimesByWeekday[_startDate.weekday];
+    final weekdayTimes = byWeekday[date.weekday];
     if (weekdayTimes != null && weekdayTimes.isNotEmpty) {
       return _sortedLessonTimes(weekdayTimes);
     }
-    return _fallbackLessonStartTimes;
+    return fallback;
   }
 
-  Map<int, String> get _effectiveLessonEndTimes {
-    final dateTimes = widget.lessonEndTimesByDate[
-        UtcDateTime(_startDate.year, _startDate.month, _startDate.day)];
-    if (dateTimes != null && dateTimes.isNotEmpty) {
-      return _sortedLessonTimes(dateTimes);
-    }
-    final weekdayTimes = widget.lessonEndTimesByWeekday[_startDate.weekday];
-    if (weekdayTimes != null && weekdayTimes.isNotEmpty) {
-      return _sortedLessonTimes(weekdayTimes);
-    }
-    return _fallbackLessonEndTimes;
-  }
+  /// Start times of the lessons on the start date.
+  Map<int, String> get _effectiveLessonStartTimes => _lessonTimesFor(
+        _startDate,
+        byDate: widget.lessonStartTimesByDate,
+        byWeekday: widget.lessonStartTimesByWeekday,
+        fallback: _fallbackLessonStartTimes,
+      );
 
-  List<int> get _availableLessonHours =>
+  /// End times of the lessons on the end date, which can follow a different
+  /// schedule than the start date in a multi-day absence.
+  Map<int, String> get _effectiveLessonEndTimes => _lessonTimesFor(
+        _endDate,
+        byDate: widget.lessonEndTimesByDate,
+        byWeekday: widget.lessonEndTimesByWeekday,
+        fallback: _fallbackLessonEndTimes,
+      );
+
+  List<int> get _availableStartLessonHours =>
       _effectiveLessonStartTimes.keys.toList();
+
+  List<int> get _availableEndLessonHours =>
+      _effectiveLessonEndTimes.keys.toList();
 
   int get _submittedStartTime => _wholeDay ? 1 : _startTime;
 
@@ -430,6 +443,8 @@ class _FutureAbsenceDialogState extends State<_FutureAbsenceDialog> {
                       _endDate.millisecond,
                       _endDate.microsecond,
                     );
+                    _ensureCalendarWeekLoaded();
+                    _syncSelectedHoursToAvailableRange();
                   });
                 }
               },
@@ -477,14 +492,14 @@ class _FutureAbsenceDialogState extends State<_FutureAbsenceDialog> {
                 Expanded(
                   child: DropdownButtonFormField<int>(
                     key: ValueKey<String>(
-                      'start-hour-${_startDate.weekday}-$_startTime-$_wholeDay',
+                      'start-hour-${_dateKey(_startDate)}-$_startTime-$_wholeDay',
                     ),
                     initialValue: _startTime,
                     isExpanded: true,
                     decoration: InputDecoration(
                       labelText: l10n.text('absences.dialog.startHour'),
                     ),
-                    items: _availableLessonHours
+                    items: _availableStartLessonHours
                         .map(
                           (lessonHour) => DropdownMenuItem(
                             value: lessonHour,
@@ -493,7 +508,7 @@ class _FutureAbsenceDialogState extends State<_FutureAbsenceDialog> {
                           ),
                         )
                         .toList(),
-                    selectedItemBuilder: (context) => _availableLessonHours
+                    selectedItemBuilder: (context) => _availableStartLessonHours
                         .map(
                           (lessonHour) => Text(
                             '$lessonHour (${_effectiveLessonStartTimes[lessonHour]})',
@@ -514,14 +529,14 @@ class _FutureAbsenceDialogState extends State<_FutureAbsenceDialog> {
                 Expanded(
                   child: DropdownButtonFormField<int>(
                     key: ValueKey<String>(
-                      'end-hour-${_startDate.weekday}-$_endTime-$_wholeDay',
+                      'end-hour-${_dateKey(_endDate)}-$_endTime-$_wholeDay',
                     ),
                     initialValue: _endTime,
                     isExpanded: true,
                     decoration: InputDecoration(
                       labelText: l10n.text('absences.dialog.endHour'),
                     ),
-                    items: _availableLessonHours
+                    items: _availableEndLessonHours
                         .map(
                           (lessonHour) => DropdownMenuItem(
                             value: lessonHour,
@@ -530,7 +545,7 @@ class _FutureAbsenceDialogState extends State<_FutureAbsenceDialog> {
                           ),
                         )
                         .toList(),
-                    selectedItemBuilder: (context) => _availableLessonHours
+                    selectedItemBuilder: (context) => _availableEndLessonHours
                         .map(
                           (lessonHour) => Text(
                             '$lessonHour (${_effectiveLessonEndTimes[lessonHour]})',
@@ -589,21 +604,25 @@ class _FutureAbsenceDialogState extends State<_FutureAbsenceDialog> {
     );
   }
 
+  /// Keeps both selections valid for their own date, e.g. after a date change
+  /// or when a loaded week replaces the fallback schedule.
   void _syncSelectedHoursToAvailableRange() {
-    final availableHours = _availableLessonHours;
-    if (availableHours.isEmpty) {
+    final startHours = _availableStartLessonHours;
+    if (startHours.isEmpty) {
       _startTime = 1;
-      _endTime = 1;
-      return;
+    } else if (!startHours.contains(_startTime)) {
+      _startTime = startHours.first;
     }
 
-    if (!availableHours.contains(_startTime)) {
-      _startTime = availableHours.first;
-    }
-    if (!availableHours.contains(_endTime)) {
-      _endTime = availableHours.last;
+    final endHours = _availableEndLessonHours;
+    if (endHours.isEmpty) {
+      _endTime = 1;
+    } else if (!endHours.contains(_endTime)) {
+      _endTime = endHours.last;
     }
   }
+
+  String _dateKey(DateTime date) => '${date.year}-${date.month}-${date.day}';
 
   Map<int, String> _sortedLessonTimes(Map<int, String> lessonTimes) {
     final sortedEntries = lessonTimes.entries.toList()
@@ -611,12 +630,14 @@ class _FutureAbsenceDialogState extends State<_FutureAbsenceDialog> {
     return Map<int, String>.fromEntries(sortedEntries);
   }
 
+  /// Requests the weeks of both endpoints, which differ for an absence that
+  /// spans more than one week.
   void _ensureCalendarWeekLoaded() {
-    final monday = toMonday(
-      UtcDateTime(_startDate.year, _startDate.month, _startDate.day),
-    );
-    if (_requestedMondays.add(monday)) {
-      widget.onLoadCalendarWeek(_startDate);
+    for (final date in [_startDate, _endDate]) {
+      final monday = toMonday(UtcDateTime(date.year, date.month, date.day));
+      if (_requestedMondays.add(monday)) {
+        widget.onLoadCalendarWeek(date);
+      }
     }
   }
 }
