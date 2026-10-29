@@ -137,6 +137,42 @@ void main() {
     expect(find.text('Noch keine Absenzen'), findsOneWidget);
   });
 
+  for (final canEdit in [true, false]) {
+    testWidgets(
+        'empty absences ${canEdit ? 'offer' : 'hide'} creating the first one',
+        (tester) async {
+      final store = createStore(
+        initialState: AppState(
+          (b) => b.absencesState
+            ..absences = ListBuilder<AbsenceGroup>()
+            ..futureAbsences = ListBuilder<FutureAbsence>()
+            ..statistic = AbsenceStatisticBuilder()
+            ..canEdit = canEdit,
+        ),
+      );
+
+      await pumpApp(
+        tester,
+        store: store,
+        home: const AbsencesPageContainer(),
+      );
+      await settleFor(tester);
+
+      expect(find.text('Noch keine Absenzen'), findsOneWidget);
+      expect(find.text('Statistik'), findsOneWidget);
+      final add = find.widgetWithText(FilledButton, 'Voraus-Absenz');
+      if (!canEdit) {
+        expect(add, findsNothing);
+        return;
+      }
+      expect(add, findsOneWidget);
+      await tester.tap(add);
+      await settleFor(tester);
+      expect(find.byType(Dialog), findsOneWidget);
+      expect(tester.takeException(), isNull);
+    });
+  }
+
   testWidgets('future absence dialog shows end hour with end time',
       (tester) async {
     final store = createStore(
@@ -327,7 +363,6 @@ void main() {
 
     expect(find.text('Absenz entschuldigen'), findsNothing);
   });
-
 }
 
 AppState _buildAbsencesState({
