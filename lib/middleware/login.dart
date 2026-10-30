@@ -106,7 +106,7 @@ Future<void> _logout(
     statePersistenceService.clear();
     _clearRuntimeCaches();
     await bestEffort(androidWidgetSnapshotService.clear);
-    wrapper = Wrapper();
+    _replaceWrapper();
     await api.actions.mountAppState(_emptyAppStateKeepingSettings(api.state));
     // Do not reload credentials after a failed storage write: it would log the
     // user straight back in. The explicit logout owns the in-memory state.
@@ -211,7 +211,11 @@ Future<void> _login(
       relogin: api.actions.loginActions.automaticallyReloggedIn.call,
       addProtocolItem: api.actions.addNetworkProtocolItem.call,
     );
-    if (await wrapper.loggedIn) {
+    final signedIn = await loginWrapper.loggedIn;
+    // The account was switched while signing in: the retired session's
+    // outcome belongs to nobody, and must not show up as this account's.
+    if (!identical(wrapper, loginWrapper)) return;
+    if (signedIn) {
       if (!wrapper.config.isStudentOrParent) {
         wrapper.logout(hard: true);
         final unsupportedMessage = await _loginText(
@@ -572,7 +576,7 @@ Future<void> _removeCurrentAccount(
   _clearRuntimeCaches();
   await androidWidgetSnapshotService.clear();
   wrapper.logout(hard: true);
-  wrapper = Wrapper();
+  _replaceWrapper();
   await api.actions.mountAppState(_emptyAppStateKeepingSettings(api.state));
   await api.actions.loginActions.setAvailableAccounts(
     otherAccounts is List

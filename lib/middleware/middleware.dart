@@ -277,6 +277,17 @@ Future<void> _runCoalescedLoad(String key, Future<void> Function() load) async {
 @visibleForTesting
 Wrapper wrapper = Wrapper();
 
+/// Installs a fresh [Wrapper] (which also starts without cookies).
+///
+/// The old instance is retired first: its refresh timer, requests and
+/// credentials must not outlive the session the app has left. With
+/// [keepMock], tests that injected a mock keep it.
+void _replaceWrapper({bool keepMock = false}) {
+  if (keepMock && wrapper is Mock) return;
+  wrapper.retire();
+  wrapper = Wrapper();
+}
+
 bool isOffline() => wrapper.noInternet;
 
 Future<String?> loadHomeworkSummaryHtml() async {
@@ -1174,9 +1185,7 @@ Future<void> _loadAccounts(
 }) async {
   // By resetting the wrapper we clear all cookies.
   // However we don't want to reset the wrapper in tests
-  if (wrapper is! Mock) {
-    wrapper = Wrapper();
-  }
+  _replaceWrapper(keepMock: true);
   _cancelNoInternetRetry();
   _noInternetRetryInFlight = false;
   _clearRuntimeCaches();
