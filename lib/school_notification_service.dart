@@ -3,6 +3,7 @@ import 'dart:convert';
 import 'dart:io';
 
 import 'package:dio/dio.dart';
+import 'package:dr/account_scope.dart';
 import 'package:dr/app_language_controller.dart';
 import 'package:dr/desktop.dart';
 import 'package:dr/i18n/app_localizations.dart';
@@ -152,14 +153,7 @@ class SchoolNotificationService extends ChangeNotifier
   bool get mobileBackgroundSupported => Platform.isAndroid || Platform.isIOS;
   bool get androidBackgroundSupported => Platform.isAndroid;
   String accountKey(String server, String user) {
-    final uri = Uri.parse(server.replaceAll(RegExp(r'/+$'), ''));
-    return notificationDigest([
-      uri
-          .replace(
-              scheme: uri.scheme.toLowerCase(), host: uri.host.toLowerCase())
-          .toString(),
-      user,
-    ]);
+    return notificationDigest([canonicalSchoolServer(server), user]);
   }
 
   SchoolNotificationEngine get _engine => SchoolNotificationEngine(
