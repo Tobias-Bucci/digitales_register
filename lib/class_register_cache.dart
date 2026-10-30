@@ -18,6 +18,7 @@
 import 'dart:convert';
 
 import 'package:dr/diagnostics_service.dart';
+import 'package:dr/local_data_inventory.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 class ClassRegisterPayloadSnapshot {
@@ -103,6 +104,8 @@ class ClassRegisterCacheService {
   }
 
   Future<void> save(String key, ClassRegisterPayloadSnapshot snapshot) async {
+    // A cache is not kept while saving of data is off or data is deleted.
+    if (!localDataPolicy.mayStoreCaches) return;
     final prefs = await SharedPreferences.getInstance();
     try {
       if (!await prefs.setString(key, json.encode(snapshot.toJson()))) {

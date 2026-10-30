@@ -595,33 +595,15 @@ Future<void> _deleteLocalAccountData({
   required String user,
   required String url,
 }) async {
-  await schoolNotificationOperation(
-      () => schoolNotifications.forgetAccount(url, user));
   // The same scope the account's session has once it is signed in.
-  final scope = AccountScope(fixupUrl(url), user);
-  final loginAddress = '${fixupUrl(url)}/v2/api/auth/login';
-  final storageKey = getStorageKey(user, loginAddress);
+  final account = LocalDataAccount(
+    scope: AccountScope(fixupUrl(url), user),
+    storageKey: getStorageKey(user, '${fixupUrl(url)}/v2/api/auth/login'),
+  );
   // Behind every write already started: a slow older write must not put the
   // deleted state back.
-  await statePersistenceService.runExclusive(() async {
-    await secureStorage.delete(key: escapeKey(storageKey));
-
-    final prefs = await SharedPreferences.getInstance();
-    for (final namespace in <String>[
-      'classRegisterLessons',
-      'courseMaterials',
-      'homeworkSummary',
-      'gradeDeadlineOverrides',
-    ]) {
-      await prefs.remove('$namespace:$storageKey');
-    }
-    await prefs.remove(_courseMaterialVersionsKeyFor(scope));
-    if (_studyDataScope == scope) _studyDataScope = null;
-    await studyDataService.delete(scope);
-    await deleteAssessmentAttachmentFolder(scope);
-  });
-  // Downloaded documents, homework, calendar and message files of the account.
-  await _deleteAccountDownloads(scope);
+  await statePersistenceService.runExclusive(() => localDataInventory
+      .deleteForAccount(account, LocalDataTrigger.removeAccount));
 }
 
 AppState _emptyAppStateKeepingSettings(AppState state) {

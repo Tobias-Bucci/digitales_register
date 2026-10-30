@@ -576,7 +576,7 @@
   "login.otherAccounts": "Altri account",
   "login.removeAccount": "Rimuovi account",
   "login.removeAccount.title": "Rimuovere l'account?",
-  "login.removeAccount.body": "L'account “{account}” e tutti i relativi dati locali verranno eliminati definitivamente.",
+  "login.removeAccount.body": "L'account “{account}” verrà rimosso. Tutti i relativi dati in questa app verranno eliminati definitivamente: pagine salvate, appunti e file di studio personali, scadenze e file scaricati. Le voci esportate nel calendario del dispositivo restano.",
   "login.demoHint": "Accesso demo: lascia la scuola vuota e usa demo / demo.",
   "login.noConnectionHint": "Impossibile connettersi a \"{url}\". Controlla la tua connessione internet.\nSe hai selezionato \"{otherSchool}\", devi inserire un indirizzo valido.",
   "login.noConnectionWithUrl": "Nessuna connessione possibile con \"{url}\"",
@@ -1031,5 +1031,10 @@
   "studyData.legacy.discarded": "Appunti meno recenti eliminati.",
   "studyData.legacy.discardFailed": "Non è stato possibile eliminare gli appunti meno recenti. Restano salvati.",
   "studyData.legacy.setting.title": "Appunti di studio meno recenti senza account",
-  "studyData.legacy.setting.subtitle": "{exams} verifiche ({notes} note, {files} file). Tocca per assegnarli o eliminarli."
+  "studyData.legacy.setting.subtitle": "{exams} verifiche ({notes} note, {files} file). Tocca per assegnarli o eliminarli.",
+  "settings.deleteDataOnLogout.subtitle": "Al logout vengono eliminati i dati salvati di questo account: pagine caricate di recente, appunti e file di studio personali e scadenze. I file scaricati e le voci esportate nel calendario del dispositivo restano.",
+  "settings.storeData.confirm.title": "Eliminare i dati salvati?",
+  "settings.storeData.confirm.body": "I dati salvati di questo account (pagine caricate di recente come dashboard, voti, compiti, registro di classe e materiale dei corsi) verranno eliminati da questo dispositivo e non saranno più salvati. Gli appunti e i file di studio personali, le scadenze, i file scaricati e le voci esportate nel calendario del dispositivo restano.",
+  "settings.storeData.confirm.confirm": "Disattiva ed elimina",
+  "settings.storeData.deleteFailed": "Non è stato possibile eliminare completamente i dati salvati."
 }

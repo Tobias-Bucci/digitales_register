@@ -576,7 +576,7 @@
   "login.otherAccounts": "Other accounts",
   "login.removeAccount": "Remove account",
   "login.removeAccount.title": "Remove account?",
-  "login.removeAccount.body": "The account “{account}” and all of its local data will be permanently deleted.",
+  "login.removeAccount.body": "The account “{account}” will be removed. All of its data in this app will be permanently deleted: saved pages, your own study notes and files, deadlines and downloaded files. Entries exported to the device calendar are kept.",
   "login.demoHint": "Demo sign-in: leave school empty and use demo / demo.",
   "login.noConnectionHint": "No connection to \"{url}\". Please check your internet connection.\nIf you selected \"{otherSchool}\", you must enter a valid address.",
   "login.noConnectionWithUrl": "No connection to \"{url}\"",
@@ -1031,5 +1031,10 @@
   "studyData.legacy.discarded": "Older study notes deleted.",
   "studyData.legacy.discardFailed": "The older study notes could not be deleted. They stay stored.",
   "studyData.legacy.setting.title": "Older study notes without an account",
-  "studyData.legacy.setting.subtitle": "{exams} exams ({notes} notes, {files} files). Tap to assign or delete them."
+  "studyData.legacy.setting.subtitle": "{exams} exams ({notes} notes, {files} files). Tap to assign or delete them.",
+  "settings.deleteDataOnLogout.subtitle": "On logout, the saved data of this account is deleted: recently loaded pages, your own study notes and files, and deadlines. Downloaded files and entries exported to the device calendar are kept.",
+  "settings.storeData.confirm.title": "Delete saved data?",
+  "settings.storeData.confirm.body": "The saved data of this account (recently loaded pages such as dashboard, grades, homework, class register and course material) will be deleted from this device and no longer saved. Your own study notes and files, deadlines, downloaded files and entries exported to the device calendar are kept.",
+  "settings.storeData.confirm.confirm": "Turn off and delete",
+  "settings.storeData.deleteFailed": "The saved data could not be deleted completely."
 }

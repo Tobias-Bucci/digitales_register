@@ -576,7 +576,7 @@
   "login.otherAccounts": "Atri account",
   "login.removeAccount": "Eliminé l'account",
   "login.removeAccount.title": "Eliminé l'account?",
-  "login.removeAccount.body": "L'account “{account}” y düc i si dac locai gnará eliminé definitif.",
+  "login.removeAccount.body": "L'account “{account}” vëgn tut demez. Düc i si dac te chësta app vëgn sodé definitif: les plates salvades, les notes y i files de stude personai, les dates de scadënza y i files desćariés. Les scrites esportedes tl calender dl aparat resta.",
   "login.demoHint": "Login demo: lassa la scola voda y adora demo / demo.",
   "login.noConnectionHint": "Degüna conessiun possibla cun \"{url}\". Controlëia tüa conessiun internet.\nSce t'as alté fora \"{otherSchool}\", dësses scrie ite n indriz valid.",
   "login.noConnectionWithUrl": "Degüna conessiun possibla cun \"{url}\"",
@@ -1031,5 +1031,10 @@
   "studyData.legacy.discarded": "Dades de stude plü vedles sodedes.",
   "studyData.legacy.discardFailed": "Les dades de stude plü vedles ne pó nia gnì sodedes. Eres resta salvades.",
   "studyData.legacy.setting.title": "Dades de stude plü vedles zënza account",
-  "studyData.legacy.setting.subtitle": "{exams} verifiches ({notes} notes, {files} files). Tocia por les assegnè o sodè."
+  "studyData.legacy.setting.subtitle": "{exams} verifiches ({notes} notes, {files} files). Tocia por les assegnè o sodè.",
+  "settings.deleteDataOnLogout.subtitle": "Pro le logout vëgnel sodé les dades salvades de chësc account: les plates ćiariades defin ora, les notes y i files de stude personai y les dates de scadënza. I files desćariés y les scrites esportedes tl calender dl aparat resta.",
+  "settings.storeData.confirm.title": "Sodè les dades salvades?",
+  "settings.storeData.confirm.body": "Les dades salvades de chësc account (plates ćiariades defin ora desche dashboard, notes, dovei, registre y material di cursc) vëgn sodedes da chësc aparat y ne vëgn nia plü salvades. Les notes y i files de stude personai, les dates de scadënza, i files desćariés y les scrites esportedes tl calender dl aparat resta.",
+  "settings.storeData.confirm.confirm": "Stlüje y sodè",
+  "settings.storeData.deleteFailed": "Les dades salvades ne podova nia gnì sodedes dal dut."
 }

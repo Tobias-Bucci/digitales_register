@@ -576,7 +576,7 @@
   "login.otherAccounts": "Weitere Konten",
   "login.removeAccount": "Konto entfernen",
   "login.removeAccount.title": "Konto entfernen?",
-  "login.removeAccount.body": "Das Konto „{account}“ und alle dazugehörigen lokalen Daten werden unwiderruflich gelöscht.",
+  "login.removeAccount.body": "Das Konto „{account}“ wird entfernt. Alle dazugehörigen Daten in dieser App werden unwiderruflich gelöscht: gespeicherte Seiten, eigene Lernnotizen und -dateien, Fristen und heruntergeladene Dateien. In den Gerätekalender exportierte Einträge bleiben erhalten.",
   "login.demoHint": "Demo-Login: Schule leer lassen und demo / demo verwenden.",
   "login.noConnectionHint": "Keine Verbindung mit \"{url}\" möglich. Bitte überprüfe deine Internetverbindung.\nWenn du \"{otherSchool}\" ausgewählt hast, musst du eine gültige Adresse eingeben.",
   "login.noConnectionWithUrl": "Keine Verbindung mit \"{url}\" möglich",
@@ -1031,5 +1031,10 @@
   "studyData.legacy.discarded": "Ältere Lerndaten gelöscht.",
   "studyData.legacy.discardFailed": "Die älteren Lerndaten konnten nicht gelöscht werden. Sie bleiben gespeichert.",
   "studyData.legacy.setting.title": "Ältere Lerndaten ohne Konto",
-  "studyData.legacy.setting.subtitle": "{exams} Prüfungen ({notes} Notizen, {files} Dateien). Tippen, um sie zuzuordnen oder zu löschen."
+  "studyData.legacy.setting.subtitle": "{exams} Prüfungen ({notes} Notizen, {files} Dateien). Tippen, um sie zuzuordnen oder zu löschen.",
+  "settings.deleteDataOnLogout.subtitle": "Beim Ausloggen werden die gespeicherten Daten dieses Kontos gelöscht: zuletzt geladene Seiten, eigene Lernnotizen und -dateien sowie Fristen. Heruntergeladene Dateien und in den Gerätekalender exportierte Einträge bleiben erhalten.",
+  "settings.storeData.confirm.title": "Gespeicherte Daten löschen?",
+  "settings.storeData.confirm.body": "Die gespeicherten Daten dieses Kontos (zuletzt geladene Seiten wie Dashboard, Noten, Hausaufgaben, Klassenbuch und Kursmaterial) werden von diesem Gerät gelöscht und künftig nicht mehr gespeichert. Eigene Lernnotizen und -dateien, Fristen, heruntergeladene Dateien und in den Gerätekalender exportierte Einträge bleiben erhalten.",
+  "settings.storeData.confirm.confirm": "Ausschalten und löschen",
+  "settings.storeData.deleteFailed": "Die gespeicherten Daten konnten nicht vollständig gelöscht werden."
 }
