@@ -61,6 +61,7 @@ import 'package:dr/data.dart';
 import 'package:dr/diagnostics_service.dart';
 import 'package:dr/i18n/app_language.dart';
 import 'package:dr/i18n/app_localizations.dart';
+import 'package:dr/local_data_inventory.dart';
 import 'package:dr/main.dart';
 import 'package:dr/page_payload_cache.dart';
 import 'package:dr/platform_adapter.dart';
@@ -99,6 +100,7 @@ part 'calendar.dart';
 part 'certificate.dart';
 part 'dashboard.dart';
 part 'grades.dart';
+part 'local_data.dart';
 part 'login.dart';
 part 'messages.dart';
 part 'notifications.dart';
@@ -1209,6 +1211,7 @@ void resetNoInternetRetryForTest() {
 void resetMiddlewareStateForTest() {
   schoolNotificationStartupReady.value = false;
   _unreadableStorageKeys.clear();
+  localDataPolicy.reset();
   _studyDataScope = null;
   resetNoInternetRetryForTest();
   _clearRuntimeCaches();
@@ -1779,11 +1782,23 @@ bool _studyDataChanged(SettingsState before, SettingsState after) =>
     before.assessmentStudyPhases != after.assessmentStudyPhases;
 
 // This is to avoid saving data in an action right after deleting data,
-// which would restore it.
+// which would restore it. Caches ask the same flag where they write.
 @visibleForTesting
-bool deletedData = false;
+bool get deletedData => localDataPolicy.dataDeletionActive;
+
+@visibleForTesting
+set deletedData(bool value) => localDataPolicy.dataDeletionActive = value;
 
 NextActionHandler _saveStateMiddleware(
+  MiddlewareApi<AppState, AppStateBuilder, AppActions> api,
+) {
+  // Caches decide at the place they write whether the user turned saving off.
+  localDataPolicy.noDataSavingReader =
+      () => api.state.settingsState.noDataSaving;
+  return _saveStateHandler(api);
+}
+
+NextActionHandler _saveStateHandler(
   MiddlewareApi<AppState, AppStateBuilder, AppActions> api,
 ) =>
     (ActionHandler next) => (Action action) async {
@@ -1916,6 +1931,16 @@ Future<void> _saveNoData(
   Action<void> action,
 ) async {
   await next(action);
+  if (api.state.settingsState.noDataSaving) {
+    // Turning saving off removes the caches that are there. Confirmed by the
+    // user in the settings before this action is dispatched.
+    try {
+      await _deleteCurrentAccountData(api.state, LocalDataTrigger.stopSaving);
+    } catch (error, stack) {
+      diagnostics.report(error, stack, DiagnosticError.storage);
+      showSnackBar(tr('settings.storeData.deleteFailed'));
+    }
+  }
   await api.actions.saveState();
 }
 
@@ -1926,16 +1951,8 @@ Future<void> _deleteData(
 ) async {
   await next(action);
   deletedData = true;
-  final scope = _studyScopeOf(api.state.loginState.username);
-  if (api.state.loginState.loggedIn && scope.user != null) {
-    // Own notes and files go with the account's data; no later write can
-    // bring them back while data deletion is active.
-    if (_studyDataScope == scope) _studyDataScope = null;
-    await statePersistenceService.runExclusive(() async {
-      await studyDataService.delete(scope);
-      await deleteAssessmentAttachmentFolder(scope);
-    });
-  }
+  // No later write can bring the data back while deletion is active.
+  await _deleteCurrentAccountData(api.state, LocalDataTrigger.deleteData);
   await androidWidgetSnapshotService.clear();
   await api.actions.saveState();
 }

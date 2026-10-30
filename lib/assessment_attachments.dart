@@ -152,10 +152,8 @@ Future<String?> openAssessmentAttachment(
 Future<String?> _copyToExternalCacheForOpening(
     AssessmentAttachment attachment, File stored) async {
   try {
-    final directories = await getExternalCacheDirectories();
-    if (directories == null || directories.isEmpty) return null;
-    final folder = Directory(
-        '${directories.first.path}${Platform.pathSeparator}assessment_open');
+    final folder = await _openCopiesFolder();
+    if (folder == null) return null;
     await folder.create(recursive: true);
     final safeName = attachment.name.replaceAll(RegExp('[^A-Za-z0-9._-]'), '_');
     final destination = File(
@@ -164,6 +162,32 @@ Future<String?> _copyToExternalCacheForOpening(
     return destination.path;
   } catch (_) {
     return null;
+  }
+}
+
+/// Replaces the folder of the copies made for opening, in tests.
+@visibleForTesting
+Future<Directory?> Function()? assessmentOpenCopiesFolderOverride;
+
+Future<Directory?> _openCopiesFolder() async {
+  final override = assessmentOpenCopiesFolderOverride;
+  if (override != null) return override();
+  if (!Platform.isAndroid) return null;
+  final directories = await getExternalCacheDirectories();
+  if (directories == null || directories.isEmpty) return null;
+  return Directory(
+      '${directories.first.path}${Platform.pathSeparator}assessment_open');
+}
+
+/// Deletes the copies of attachments that Android makes to hand them to a
+/// viewer. They are never needed again once the viewer has them.
+Future<void> deleteAssessmentOpenCopies() async {
+  final folder = await _openCopiesFolder();
+  if (folder == null) return;
+  if (await FileSystemEntity.isLink(folder.path)) {
+    await Link(folder.path).delete();
+  } else if (await folder.exists()) {
+    await folder.delete(recursive: true);
   }
 }
 

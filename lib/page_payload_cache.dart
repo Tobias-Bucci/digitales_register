@@ -17,6 +17,7 @@
 
 import 'dart:convert';
 import 'package:dr/diagnostics_service.dart';
+import 'package:dr/local_data_inventory.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 class PagePayloadSnapshot<T> {
@@ -98,6 +99,8 @@ class PagePayloadCacheService {
   }
 
   Future<void> save<T>(String key, PagePayloadSnapshot<T> snapshot) async {
+    // A cache is not kept while saving of data is off or data is deleted.
+    if (!localDataPolicy.mayStoreCaches) return;
     final prefs = await SharedPreferences.getInstance();
     diagnostics.update('operation', 'save');
     try {

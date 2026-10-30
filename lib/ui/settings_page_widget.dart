@@ -545,6 +545,29 @@ class _SettingsPageWidgetState extends State<SettingsPageWidget> {
     ].join(' | ');
   }
 
+  /// Turning saving off also deletes what is saved, so the user is asked first.
+  Future<void> _confirmStopSavingData() async {
+    final l10n = context.l10n;
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (context) => InfoDialog(
+        title: Text(l10n.text('settings.storeData.confirm.title')),
+        content: Text(l10n.text('settings.storeData.confirm.body')),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context, false),
+            child: Text(l10n.text('common.cancel')),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.pop(context, true),
+            child: Text(l10n.text('settings.storeData.confirm.confirm')),
+          ),
+        ],
+      ),
+    );
+    if (confirmed == true) widget.onSetNoDataSaving(true);
+  }
+
   Widget _buildAccountSection(AppLocalizations l10n) {
     return _SettingsSectionCard(
       title: l10n.text('settings.section.auth'),
@@ -567,12 +590,17 @@ class _SettingsPageWidgetState extends State<SettingsPageWidget> {
           title: Text(l10n.text('settings.storeData.title')),
           subtitle: Text(l10n.text('settings.storeData.subtitle')),
           onChanged: (bool value) {
-            widget.onSetNoDataSaving(!value);
+            if (value) {
+              widget.onSetNoDataSaving(false);
+            } else {
+              _confirmStopSavingData();
+            }
           },
           value: !widget.vm.noDataSaving,
         ),
         SwitchListTile.adaptive(
           title: Text(l10n.text('settings.deleteDataOnLogout.title')),
+          subtitle: Text(l10n.text('settings.deleteDataOnLogout.subtitle')),
           onChanged: !widget.vm.noPassSaving && !widget.vm.noDataSaving
               ? (bool value) {
                   widget.onSetDeleteDataOnLogout(value);
