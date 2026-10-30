@@ -652,7 +652,11 @@ Future<bool> _downloadCourseMaterialFile(
   CourseMaterialEntry entry, {
   bool replaceOutdated = false,
 }) async {
-  final loggedIn = await wrapper.ensureLoggedIn();
+  // The request goes out on the session that asked, and a document is only
+  // saved while the app is still in that session.
+  final session = _Session.capture();
+  final loggedIn = await session.wrapper.ensureLoggedIn();
+  session.ensureCurrent();
   _materialLog('authentication', {'loggedIn': loggedIn});
   if (!loggedIn) {
     return false;
@@ -665,6 +669,7 @@ Future<bool> _downloadCourseMaterialFile(
   _materialLog('destination', {'exists': await saveFile.exists()});
   if (!replaceOutdated && await saveFile.exists()) {
     final shouldOverwrite = await askShouldOverwriteFile(entry.uniqueName);
+    session.ensureCurrent();
     if (shouldOverwrite == null) {
       return false;
     }
@@ -673,7 +678,7 @@ Future<bool> _downloadCourseMaterialFile(
     }
   }
 
-  final candidates = _downloadCandidatesFor(entry);
+  final candidates = _downloadCandidatesFor(session, entry);
   // Try the endpoint shape that worked last first, so a known server needs a
   // single request instead of probing every historical variant.
   final known = _workingCourseMaterialCandidate;
@@ -684,7 +689,8 @@ Future<bool> _downloadCourseMaterialFile(
   ];
   for (final index in order) {
     final result = await _downloadCourseMaterialCandidate(
-        candidates[index], entry.uniqueName);
+        session, candidates[index], entry.uniqueName);
+    session.ensureCurrent();
     final bytes = result.bytes;
     if (bytes != null) {
       _workingCourseMaterialCandidate = index;
@@ -715,6 +721,7 @@ int? _workingCourseMaterialCandidate;
 /// [stop] is set when probing further endpoints cannot help: the session
 /// returned the login page or the network failed.
 Future<({List<int>? bytes, bool stop})> _downloadCourseMaterialCandidate(
+  _Session session,
   _CourseMaterialDownloadCandidate candidate,
   String fileName,
 ) async {
@@ -746,10 +753,10 @@ Future<({List<int>? bytes, bool stop})> _downloadCourseMaterialCandidate(
 
     try {
       final response = method == 'GET'
-          ? await wrapper.dio.get<List<int>>(candidate.url,
+          ? await session.wrapper.dio.get<List<int>>(candidate.url,
               queryParameters: candidate.parameters,
               options: dio.Options(responseType: dio.ResponseType.bytes))
-          : await wrapper.dio.post<List<int>>(candidate.url,
+          : await session.wrapper.dio.post<List<int>>(candidate.url,
               data: candidate.parameters,
               options: dio.Options(responseType: dio.ResponseType.bytes));
       logResponse(response);
@@ -803,8 +810,10 @@ Future<({List<int>? bytes, bool stop})> _downloadCourseMaterialCandidate(
 }
 
 List<_CourseMaterialDownloadCandidate> _downloadCandidatesFor(
+  _Session session,
   CourseMaterialEntry entry,
 ) {
+  final wrapper = session.wrapper;
   return [
     _CourseMaterialDownloadCandidate(
       '${wrapper.baseAddress}courseContent/downloadEntry',
@@ -1804,7 +1813,12 @@ Future<bool> downloadFile(
   String fileName,
   Map<String, dynamic> parameters,
 ) async {
-  if (!await wrapper.ensureLoggedIn()) {
+  // The request goes out on the session that asked, and a document is only
+  // saved while the app is still in that session.
+  final session = _Session.capture();
+  final loggedIn = await session.wrapper.ensureLoggedIn();
+  session.ensureCurrent();
+  if (!loggedIn) {
     privacyLog('technical_operation');
     return false;
   }
@@ -1816,6 +1830,7 @@ Future<bool> downloadFile(
   }
   if (await saveFile.exists()) {
     final shouldOverwrite = await askShouldOverwriteFile(fileName);
+    session.ensureCurrent();
     if (shouldOverwrite == null) {
       return false;
     } else if (!shouldOverwrite) {
@@ -1826,29 +1841,37 @@ Future<bool> downloadFile(
   // Mirrors Wrapper.send: one background relogin, then one forced relogin.
   const maxLoginRetries = 2;
   for (var attempt = 0; attempt <= maxLoginRetries; attempt++) {
-    if (attempt > 0 &&
-        !await wrapper.ensureLoggedIn(
-          isRetryAfterUnexpectedLogout: true,
-          forceRelogin: attempt > 1,
-        )) {
-      privacyLog('technical_operation');
-      return false;
+    if (attempt > 0) {
+      final relogin = await session.wrapper.ensureLoggedIn(
+        isRetryAfterUnexpectedLogout: true,
+        forceRelogin: attempt > 1,
+      );
+      session.ensureCurrent();
+      if (!relogin) {
+        privacyLog('technical_operation');
+        return false;
+      }
     }
     final List<int> bytes;
     final String contentType;
     try {
-      final result = await wrapper.dio.get<List<int>>(
+      final result = await session.wrapper.dio.get<List<int>>(
         url,
         queryParameters: parameters,
         options: dio.Options(responseType: dio.ResponseType.bytes),
       );
+      session.ensureCurrent();
       if (result.statusCode != 200) {
         privacyLog('technical_operation');
         return false;
       }
       bytes = result.data ?? const <int>[];
       contentType = result.headers.value(HttpHeaders.contentTypeHeader) ?? '';
+    } on StaleSessionException {
+      rethrow;
     } catch (_) {
+      // A request that failed because the session was retired is no failure.
+      session.ensureCurrent();
       privacyLog('technical_operation');
       return false;
     }
@@ -1934,24 +1957,30 @@ Future<void> _writeFileAtomically(File file, List<int> bytes) async {
 }
 
 Future<Uint8List> fetchAuthenticatedBytes(String url) async {
-  final existing = _authenticatedBytesInFlight[url];
+  final session = _Session.capture();
+  // One request per session: another account must not share this answer.
+  final key = '${session.generation}|$url';
+  final existing = _authenticatedBytesInFlight[key];
   if (existing != null) {
     return existing;
   }
   final request = () async {
-    await wrapper.ensureLoggedIn();
-    final response = await wrapper.dio.get<List<int>>(
+    await session.wrapper.ensureLoggedIn();
+    session.ensureCurrent();
+    final response = await session.wrapper.dio.get<List<int>>(
       url,
       options: dio.Options(responseType: dio.ResponseType.bytes),
     );
+    // Bytes fetched for an account the app has left are not for the next one.
+    session.ensureCurrent();
     return Uint8List.fromList(response.data ?? const <int>[]);
   }();
-  _authenticatedBytesInFlight[url] = request;
+  _authenticatedBytesInFlight[key] = request;
   try {
     return await request;
   } finally {
-    if (identical(_authenticatedBytesInFlight[url], request)) {
-      final removed = _authenticatedBytesInFlight.remove(url);
+    if (identical(_authenticatedBytesInFlight[key], request)) {
+      final removed = _authenticatedBytesInFlight.remove(key);
       assert(identical(removed, request));
     }
   }

@@ -13,7 +13,11 @@ import 'package:open_file/open_file.dart';
 import 'package:open_file/src/platform/linux_open_file.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
-class _Wrapper extends Mock implements Wrapper {}
+class _Wrapper extends Mock implements Wrapper {
+  // Downloads capture the session they run in, which asks the wrapper.
+  @override
+  bool get isRetired => false;
+}
 
 CourseMaterialEntry entry(
         [String name = 'Prüfung mit Leerzeichen.pdf',

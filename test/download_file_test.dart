@@ -10,7 +10,11 @@ import 'package:dr/wrapper.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:mocktail/mocktail.dart';
 
-class _Wrapper extends Mock implements Wrapper {}
+class _Wrapper extends Mock implements Wrapper {
+  // Downloads capture the session they run in, which asks the wrapper.
+  @override
+  bool get isRetired => false;
+}
 
 const _url = 'https://school.example/v2/api/message/download';
 const _loginPage = '<!DOCTYPE html><html><head><title>Login</title></head>'

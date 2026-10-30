@@ -64,7 +64,7 @@ Future<void> _loadGrades(
 
   final session = _Session.capture();
   await next(action);
-  await _doForSemester(staleSemesters, (s) async {
+  await _doForSemester(session, staleSemesters, (s) async {
     final product = AnalyticsService.product;
     final localOwner = jsonEncode([wrapper.url, api.state.loginState.username]);
     final epoch = product.sessionEpoch;
@@ -134,7 +134,7 @@ Future<void> _loadGradesDetails(
   final session = _Session.capture();
   await next(action);
 
-  await _doForSemester(staleSemesters, (s) async {
+  await _doForSemester(session, staleSemesters, (s) async {
     dynamic data = await session.send(
       _subjectsDetail,
       args: {
@@ -252,7 +252,7 @@ Future<void> _loadCancelledDescription(
 
   final session = _Session.capture();
   await next(action);
-  await _doForSemester([action.payload.semester], (s) async {
+  await _doForSemester(session, [action.payload.semester], (s) async {
     final dynamic data = await session.send(
       _grade,
       args: {"gradeId": action.payload.grade.id},
@@ -272,6 +272,7 @@ Future<void> _loadCancelledDescription(
 }
 
 Future<void> _doForSemester(
+  _Session session,
   List<Semester> semesters,
   Future<void> Function(Semester s) f,
 ) async {
@@ -279,7 +280,13 @@ Future<void> _doForSemester(
   final current = _gradesLock.current;
   if (ordered.remove(current)) ordered.insert(0, current!);
   for (final semester in ordered) {
-    await _gradesLock.synchronized(semester, () => f(semester));
+    await _gradesLock.synchronized(
+      semester,
+      () => f(semester),
+      // A job that waited for its turn may belong to an account the app has
+      // left: it must not switch the semester of whoever is signed in now.
+      beforeSwitch: session.ensureCurrent,
+    );
   }
 }
 
@@ -301,11 +308,17 @@ class SemesterLock {
   final _mutex = Mutex();
   final Map<Semester, List<Completer<void>>> waitlist = {};
 
+  /// Runs [f] while the server is on [semester].
+  ///
+  /// [beforeSwitch] runs right before the server is switched, after any wait
+  /// for other semesters. If it throws, nothing is switched and [f] does not
+  /// run; the error reaches the caller and later callers proceed.
   Future<void> synchronized(
     Semester semester,
-    Future<void> Function() f,
-  ) async {
-    await _enter(semester);
+    Future<void> Function() f, {
+    void Function()? beforeSwitch,
+  }) async {
+    await _enter(semester, beforeSwitch);
     try {
       await f();
     } finally {
@@ -320,13 +333,19 @@ class SemesterLock {
     current = null;
   }
 
-  Future<void> _enter(Semester semester) async {
+  Future<void> _enter(Semester semester, void Function()? beforeSwitch) async {
     while (true) {
       final Future<void> turn;
       await _mutex.acquire();
       try {
         if (usersOfCurrent == 0 || semester == current) {
           if (semester != current) {
+            try {
+              beforeSwitch?.call();
+            } catch (_) {
+              _wakeWaitersIfIdle();
+              rethrow;
+            }
             current = null;
             try {
               await semesterChangeCallback(semester);

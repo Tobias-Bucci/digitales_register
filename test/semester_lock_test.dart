@@ -132,6 +132,33 @@ void main() {
       expect(lock.waitlist, isEmpty);
     });
 
+    test('a caller that is refused before switching changes nothing', () async {
+      final release = Completer<void>();
+      final running = lock.synchronized(Semester.first, () => release.future);
+      await Future<void>.delayed(Duration.zero);
+      var refusedRan = false;
+      final refused = lock.synchronized(
+        Semester.second,
+        () async => refusedRan = true,
+        beforeSwitch: () => throw StateError('left the account'),
+      );
+      var laterRan = false;
+      final later =
+          lock.synchronized(Semester.all, () async => laterRan = true);
+      await Future<void>.delayed(Duration.zero);
+
+      release.complete();
+      await running.timeout(_timeout);
+      await expectLater(refused.timeout(_timeout), throwsStateError);
+      await later.timeout(_timeout);
+
+      expect(refusedRan, isFalse);
+      expect(laterRan, isTrue);
+      expect(switches, [Semester.first, Semester.all]);
+      expect(lock.usersOfCurrent, 0);
+      expect(lock.waitlist, isEmpty);
+    });
+
     test('reset forces a new switch for the next session', () async {
       expect(await runs(Semester.first), isTrue);
       expect(await runs(Semester.first), isTrue);
