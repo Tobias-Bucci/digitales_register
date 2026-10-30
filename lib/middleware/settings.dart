@@ -514,13 +514,14 @@ Future<void> _setLanguage(
     MiddlewareApi<AppState, AppStateBuilder, AppActions> api,
     ActionHandler next,
     Action<String> action) async {
+  final session = _Session.capture();
   await next(action);
   await appLanguageController.setLanguage(AppLanguage.fromCode(action.payload));
   if (api.state.loginState.loggedIn) {
     final targetLanguage = _preferredServerLanguageForApp(action.payload);
     if (targetLanguage != null) {
       try {
-        await wrapper.send(
+        await session.send(
           'api/profile/updateLanguage',
           args: <String, Object?>{
             'language': targetLanguage,

@@ -62,13 +62,14 @@ Future<void> _loadGrades(
     return;
   }
 
+  final session = _Session.capture();
   await next(action);
   await _doForSemester(staleSemesters, (s) async {
     final product = AnalyticsService.product;
     final localOwner = jsonEncode([wrapper.url, api.state.loginState.username]);
     final epoch = product.sessionEpoch;
     final stopwatch = Stopwatch()..start();
-    final dynamic data = await wrapper.send(
+    final dynamic data = await session.send(
       _subjects,
       args: {"studentId": api.state.config!.userId},
     );
@@ -130,10 +131,11 @@ Future<void> _loadGradesDetails(
     return;
   }
 
+  final session = _Session.capture();
   await next(action);
 
   await _doForSemester(staleSemesters, (s) async {
-    dynamic data = await wrapper.send(
+    dynamic data = await session.send(
       _subjectsDetail,
       args: {
         "studentId": api.state.config!.userId,
@@ -248,9 +250,10 @@ Future<void> _loadCancelledDescription(
 ) async {
   if (api.state.noInternet) return;
 
+  final session = _Session.capture();
   await next(action);
   await _doForSemester([action.payload.semester], (s) async {
-    final dynamic data = await wrapper.send(
+    final dynamic data = await session.send(
       _grade,
       args: {"gradeId": action.payload.grade.id},
     );

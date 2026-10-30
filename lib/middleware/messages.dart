@@ -40,12 +40,13 @@ Future<void> _archiveMessage(
       message.archiving) {
     return;
   }
+  final session = _Session.capture();
   await next(action);
   final archived = !message.archived;
   final failureKey =
       archived ? 'messages.archiveFailed' : 'messages.unarchiveFailed';
   try {
-    final dynamic response = await wrapper.send(
+    final dynamic response = await session.send(
       'api/message/archiveMessage',
       args: {'messageId': action.payload, 'archiveType': archived ? 1 : 2},
       acceptEmptyResponse: true,
@@ -74,6 +75,8 @@ Future<void> _archiveMessage(
     } catch (e, stack) {
       diagnostics.report(e, stack, DiagnosticError.http);
     }
+  } on StaleSessionException {
+    rethrow;
   } catch (e, stack) {
     await api.actions.messagesActions.archiveMessageFailed(action.payload);
     diagnostics.report(e, stack, DiagnosticError.http);
@@ -166,11 +169,12 @@ Future<void> _loadMessages(
     return;
   }
   await _runCoalescedLoad(_messagesCacheKey, () async {
+    final session = _Session.capture();
     await next(action);
-    final dynamic response = await wrapper.send("api/message/getMyMessages");
+    final dynamic response = await session.send("api/message/getMyMessages");
     if (response != null) {
       await api.actions.messagesActions.loaded(response as List);
-      _markRuntimeCacheFresh(_messagesCacheKey);
+      _markRuntimeCacheFresh(_messagesCacheKey, session);
     }
   });
 }
@@ -234,10 +238,11 @@ Future<void> _markAsRead(
               }
             ]));
   }
+  final session = _Session.capture();
   await next(action);
   _markRuntimeCacheStale(_messagesCacheKey);
   _markRuntimeCacheStale(_notificationsCacheKey);
-  await wrapper.send(
+  await session.send(
     "api/message/markAsRead",
     args: {"messageId": action.payload},
   );

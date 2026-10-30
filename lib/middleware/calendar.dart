@@ -219,11 +219,12 @@ Future<void> _loadCalendar(
   }
 
   await _runCoalescedLoad(cacheKey, () async {
+    final guard = _Session.capture();
     await next(action);
-    final session = wrapper;
+    final session = guard.wrapper;
     final owner = (api.state.url, api.state.loginState.username);
     final data = await _requestCalendarWeek(session, action.payload);
-    if (!identical(wrapper, session) ||
+    if (!guard.isCurrent ||
         (api.state.url, api.state.loginState.username) != owner) {
       logCalendarLoad(CalendarLoadEvent.cancelled);
       return;
@@ -245,7 +246,7 @@ Future<void> _loadCalendar(
           ),
         ),
       );
-      _markRuntimeCacheFresh(cacheKey);
+      _markRuntimeCacheFresh(cacheKey, guard);
       logCalendarLoad(CalendarLoadEvent.weekApplied,
           elapsedMs: timer.elapsedMilliseconds, days: data.length);
     }

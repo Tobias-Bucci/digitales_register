@@ -33,29 +33,34 @@ Future<void> _loadCertificate(
     return;
   }
   await _runCoalescedLoad(_certificateCacheKey, () async {
+    final session = _Session.capture();
     await next(action);
-    await _syncCertificateLanguageToApp(api);
-    final dynamic response = await wrapper.send(
+    await _syncCertificateLanguageToApp(api, session);
+    final dynamic response = await session.send(
       "student/certificate",
       method: "GET",
     );
     if (response != null) {
       await api.actions.certificateActions.loaded(response as String);
-      _markRuntimeCacheFresh(_certificateCacheKey);
+      _markRuntimeCacheFresh(_certificateCacheKey, session);
     }
   });
 }
 
 Future<void> _syncCertificateLanguageToApp(
   MiddlewareApi<AppState, AppStateBuilder, AppActions> api,
+  _Session session,
 ) async {
   try {
-    final profile = await wrapper.send("api/profile/get");
+    final profile = await session.send("api/profile/get");
     final profileMap = getMap(profile);
     if (profileMap == null) {
       return;
     }
-    await _syncServerLanguageToApp(api: api, profile: profileMap);
+    await _syncServerLanguageToApp(
+        api: api, profile: profileMap, session: session);
+  } on StaleSessionException {
+    rethrow;
   } catch (_) {
     // Best effort only. Certificate loading should continue even if the sync
     // attempt fails.

@@ -24,6 +24,7 @@ import 'dart:typed_data';
 import 'package:built_collection/built_collection.dart';
 import 'package:built_redux/built_redux.dart';
 import 'package:dio/dio.dart' as dio;
+import 'package:dr/account_scope.dart';
 import 'package:dr/actions/absences_actions.dart';
 import 'package:dr/actions/app_actions.dart';
 import 'package:dr/actions/calendar_actions.dart';
@@ -101,6 +102,7 @@ part 'notifications.dart';
 part 'pass.dart';
 part 'profile.dart';
 part 'routing.dart';
+part 'session.dart';
 part 'settings.dart';
 
 late FlutterSecureStorage secureStorage;
@@ -173,7 +175,11 @@ bool _isRuntimeCacheFresh(String key, Duration ttl) {
   return fresh;
 }
 
-void _markRuntimeCacheFresh(String key) {
+/// Marks [key] fresh for the session that loaded it. A load that finishes
+/// after the app has switched account must not make the new account's cache
+/// look fresh.
+void _markRuntimeCacheFresh(String key, _Session session) {
+  if (!session.isCurrent) return;
   _runtimeCacheTimes[key] = realNow;
   _staleCacheKeys.remove(key);
 }
@@ -243,6 +249,9 @@ Future<void> _runCoalescedLoad(String key, Future<void> Function() load) async {
           'duration_bucket': AnalyticsSchema.duration(stopwatch.elapsed)
         }));
       }
+    } on StaleSessionException {
+      // The account was left while loading: nothing to report or to retry.
+      return;
     } catch (e, stack) {
       if (feature != null && product.isSession(epoch)) {
         unawaited(product.event('refresh_result', {
@@ -283,6 +292,9 @@ Wrapper wrapper = Wrapper();
 /// credentials must not outlive the session the app has left. With
 /// [keepMock], tests that injected a mock keep it.
 void _replaceWrapper({bool keepMock = false}) {
+  // Everything started before this point belongs to a session we left, even
+  // when a test keeps its mock wrapper.
+  _sessionGeneration++;
   if (keepMock && wrapper is Mock) return;
   wrapper.retire();
   wrapper = Wrapper();
@@ -306,19 +318,27 @@ Future<PagePayloadSnapshot<String>?> refreshHomeworkSummaryHtmlPayload() async {
   if (wrapper.noInternet) {
     return null;
   }
-  // The official frontend sends a Unix timestamp in milliseconds here.
-  final timestamp = DateTime.now().millisecondsSinceEpoch;
-  final response = await wrapper.send(
-    'vorstand/homework&klasse?_=$timestamp',
-    method: 'GET',
-  );
-  final html = response?.toString();
-  if (html == null) {
+  // The cache key belongs to the account that asks, not to whoever is signed
+  // in when the answer arrives.
+  final session = _Session.capture(withStorageKey: true);
+  try {
+    // The official frontend sends a Unix timestamp in milliseconds here.
+    final timestamp = DateTime.now().millisecondsSinceEpoch;
+    final response = await session.send(
+      'vorstand/homework&klasse?_=$timestamp',
+      method: 'GET',
+    );
+    final html = response?.toString();
+    if (html == null) {
+      return null;
+    }
+    final snapshot = PagePayloadSnapshot<String>.fromPayload(html);
+    await pagePayloadCacheService.save(
+        _homeworkSummaryCacheKey(session), snapshot);
+    return snapshot;
+  } on StaleSessionException {
     return null;
   }
-  final snapshot = PagePayloadSnapshot<String>.fromPayload(html);
-  await pagePayloadCacheService.save(_homeworkSummaryCacheKey(), snapshot);
-  return snapshot;
 }
 
 Future<List<CourseMaterialCourse>> loadCourseMaterials() async {
@@ -344,20 +364,28 @@ Future<PagePayloadSnapshot<List<Map<String, dynamic>>>?>
 /// complete snapshot.
 Future<PagePayloadSnapshot<List<Map<String, dynamic>>>?>
     refreshCourseMaterialsPayload() async {
-  final courses = await _loadCourseMaterialsRemote();
-  final payload = courseMaterialCoursesToPayload(courses);
-  final snapshot =
-      PagePayloadSnapshot<List<Map<String, dynamic>>>.fromPayload(payload);
-  await pagePayloadCacheService.save(_courseMaterialsCacheKey(), snapshot);
-  return snapshot;
+  final session = _Session.capture(withStorageKey: true);
+  try {
+    final courses = await _loadCourseMaterialsRemote(session);
+    final payload = courseMaterialCoursesToPayload(courses);
+    final snapshot =
+        PagePayloadSnapshot<List<Map<String, dynamic>>>.fromPayload(payload);
+    session.ensureCurrent();
+    await pagePayloadCacheService.save(
+        _courseMaterialsCacheKey(session), snapshot);
+    return snapshot;
+  } on StaleSessionException {
+    return null;
+  }
 }
 
-Future<List<CourseMaterialCourse>> _loadCourseMaterialsRemote() async {
-  if (wrapper.demoMode) {
+Future<List<CourseMaterialCourse>> _loadCourseMaterialsRemote(
+    _Session session) async {
+  if (session.wrapper.demoMode) {
     return const <CourseMaterialCourse>[];
   }
 
-  final discovery = await _loadCurrentCourseMaterialSources();
+  final discovery = await _loadCurrentCourseMaterialSources(session);
   if (!discovery.complete) {
     // A failed discovery request only matters when it may have hidden a
     // course of the last snapshot.
@@ -365,7 +393,10 @@ Future<List<CourseMaterialCourse>> _loadCourseMaterialsRemote() async {
       for (final source in discovery.sources)
         '${source.classId}|${source.subjectId}',
     };
-    final cached = await loadCachedCourseMaterialsPayload();
+    final cached = await pagePayloadCacheService.load(
+      _courseMaterialsCacheKey(session),
+      parseMapListPayload,
+    );
     final lostKnownCourse = cached != null &&
         courseMaterialCoursesFromPayload(cached.payload).any(
           (course) => !found.contains('${course.classId}|${course.subjectId}'),
@@ -377,7 +408,7 @@ Future<List<CourseMaterialCourse>> _loadCourseMaterialsRemote() async {
   final courses = <CourseMaterialCourse>[];
   final seenCourseIds = <int>{};
   for (final source in discovery.sources) {
-    final response = await wrapper.send(
+    final response = await session.send(
       'api/courseContent/getCourse',
       args: <String, Object?>{
         'classId': source.classId,
@@ -415,14 +446,14 @@ List<Map<String, dynamic>> courseMaterialCoursesToPayload(
 /// The class/subject pairs found for the course materials. [complete] is
 /// false when a discovery request failed, so pairs may be missing.
 Future<({List<CourseMaterialSource> sources, bool complete})>
-    _loadCurrentCourseMaterialSources() async {
+    _loadCurrentCourseMaterialSources(_Session session) async {
   final sources = <String, CourseMaterialSource>{};
 
   final monday = toMonday(now);
   dynamic response;
   var complete = true;
   for (final offset in <int>[0, -7, 7, -14, 14]) {
-    response = await wrapper.send(
+    response = await session.send(
       'api/calendar/student',
       args: {
         'startDate': DateFormat('yyyy-MM-dd').format(
@@ -435,7 +466,7 @@ Future<({List<CourseMaterialSource> sources, bool complete})>
     if (sources.isNotEmpty) break;
   }
 
-  final lessonSnapshot = await refreshClassRegisterLessonPayload();
+  final lessonSnapshot = await _refreshClassRegisterLessonPayload(session);
   if (lessonSnapshot == null) complete = false;
   _addCourseMaterialSources(sources, lessonSnapshot?.payload);
 
@@ -921,18 +952,29 @@ Future<ClassRegisterPayloadSnapshot?> loadCachedClassRegisterLessonPayload() {
 
 Future<ClassRegisterPayloadSnapshot?>
     refreshClassRegisterLessonPayload() async {
-  if (wrapper.demoMode) {
+  try {
+    return await _refreshClassRegisterLessonPayload(
+        _Session.capture(withStorageKey: true));
+  } on StaleSessionException {
+    return null;
+  }
+}
+
+Future<ClassRegisterPayloadSnapshot?> _refreshClassRegisterLessonPayload(
+    _Session session) async {
+  if (session.wrapper.demoMode) {
     final snapshot = ClassRegisterPayloadSnapshot.fromPayload(
       const <Map<String, dynamic>>[],
     );
-    await classRegisterCacheService.save(_classRegisterCacheKey(), snapshot);
+    await classRegisterCacheService.save(
+        _classRegisterCacheKey(session), snapshot);
     return snapshot;
   }
-  await wrapper.send(
+  await session.send(
     'register/student?_=${DateTime.now().millisecondsSinceEpoch}',
     method: 'GET',
   );
-  final response = await wrapper.send('api/lesson/student');
+  final response = await session.send('api/lesson/student');
   final rawLessons = switch (response) {
     final List<dynamic> list => list,
     final Map<dynamic, dynamic> map when map['data'] is List =>
@@ -950,24 +992,27 @@ Future<ClassRegisterPayloadSnapshot?>
     return null;
   }
   final snapshot = ClassRegisterPayloadSnapshot.fromPayload(payload);
-  await classRegisterCacheService.save(_classRegisterCacheKey(), snapshot);
+  await classRegisterCacheService.save(
+      _classRegisterCacheKey(session), snapshot);
   return snapshot;
 }
 
-String _classRegisterCacheKey() {
-  return 'classRegisterLessons:${getStorageKey(wrapper.user, wrapper.loginAddress)}';
-}
+/// Cache keys use the account of [session] when given (a load in progress),
+/// otherwise whoever is signed in now (a plain read).
+String _storageKeyFor(_Session? session) =>
+    session?.storageKey ?? getStorageKey(wrapper.user, wrapper.loginAddress);
 
-String _courseMaterialsCacheKey() {
-  return 'courseMaterials:${getStorageKey(wrapper.user, wrapper.loginAddress)}';
-}
+String _classRegisterCacheKey([_Session? session]) =>
+    'classRegisterLessons:${_storageKeyFor(session)}';
+
+String _courseMaterialsCacheKey([_Session? session]) =>
+    'courseMaterials:${_storageKeyFor(session)}';
 
 String userScopedStorageKey(String namespace) =>
     '$namespace:${getStorageKey(wrapper.user, wrapper.loginAddress)}';
 
-String _homeworkSummaryCacheKey() {
-  return 'homeworkSummary:${getStorageKey(wrapper.user, wrapper.loginAddress)}';
-}
+String _homeworkSummaryCacheKey([_Session? session]) =>
+    'homeworkSummary:${_storageKeyFor(session)}';
 
 List<Middleware<AppState, AppStateBuilder, AppActions>> middleware({
   @visibleForTesting bool includeErrorMiddleware = true,
@@ -977,6 +1022,7 @@ List<Middleware<AppState, AppStateBuilder, AppActions>> middleware({
       _productAnalyticsMiddleware,
       _diagnosticsMiddleware,
       _saveStateMiddleware,
+      _staleSessionMiddleware,
       (MiddlewareBuilder<AppState, AppStateBuilder, AppActions>()
             ..add(LoginActionsNames.updateLogout, _tap)
             ..add(SettingsActionsNames.saveNoData, _saveNoData)
@@ -1296,10 +1342,13 @@ Future<void> _loggedIn(
     await api.actions.savePassActions.save();
   }
   deletedData = false;
+  final session = _Session.capture();
   final key = getStorageKey(action.payload.username, wrapper.loginAddress);
   if (!api.state.loginState.loggedIn && !action.payload.secondaryOnlineLogin) {
     privacyLog('technical_operation');
     final state = await _readFromStorage(key);
+    // The saved state of this account must not be mounted into another one.
+    session.ensureCurrent();
     if (state != null) {
       try {
         final serializedState = serializers.deserialize(
@@ -1309,6 +1358,7 @@ Future<void> _loggedIn(
           final currentSettings = await _settingsForAccountLoad(
             legacySettings: serializedState,
           );
+          session.ensureCurrent();
           await api.actions.mountAppState(
             api.state.rebuild(
               (b) => b..settingsState.replace(currentSettings),
@@ -1319,6 +1369,7 @@ Future<void> _loggedIn(
           final currentSettings = await _settingsForAccountLoad(
             legacySettings: serializedState.settingsState,
           );
+          session.ensureCurrent();
           await api.actions.mountAppState(
             serializedState.rebuild(
               (b) => b
@@ -1339,6 +1390,8 @@ Future<void> _loggedIn(
 
         // next not at the beginning: bug fix (serialization)
         await next(action);
+      } on StaleSessionException {
+        rethrow;
       } catch (e) {
         showSnackBar(tr('error.savedDataLoadFailed'));
         privacyLog('technical_operation');
