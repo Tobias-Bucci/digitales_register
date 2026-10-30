@@ -1,5 +1,6 @@
 import 'dart:io';
 
+import 'package:dr/account_scope.dart';
 import 'package:dr/app_state.dart';
 import 'package:dr/middleware/middleware.dart';
 import 'package:flutter/material.dart';
@@ -12,21 +13,26 @@ const _failure = 'Material could not be opened.';
 const _fileName = 'Prüfung mit Leerzeichen.pdf';
 
 void main() {
+  late Directory base;
   late Directory directory;
   late List<String> openedPaths;
 
   setUp(() async {
     await bootstrapTestEnvironment();
-    directory = Directory.systemTemp.createTempSync('open-file-');
+    base = Directory.systemTemp.createTempSync('open-file-');
+    // Files are kept in a folder of the account that is signed in.
+    directory = Directory(
+        '${base.path}/${AccountScope(wrapper.url, wrapper.user).fileId}')
+      ..createSync();
     File('${directory.path}/$_fileName').writeAsBytesSync([37, 80, 68, 70]);
-    attachmentDownloadDirectoryOverride = () async => directory.path;
+    attachmentDownloadDirectoryOverride = () async => base.path;
     openedPaths = [];
   });
 
   tearDown(() async {
     attachmentDownloadDirectoryOverride = null;
     downloadedFileOpenerOverride = null;
-    directory.deleteSync(recursive: true);
+    base.deleteSync(recursive: true);
     await resetTestState();
   });
 

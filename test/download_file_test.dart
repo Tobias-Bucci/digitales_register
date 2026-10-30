@@ -2,6 +2,7 @@ import 'dart:convert';
 import 'dart:io';
 
 import 'package:dio/dio.dart';
+import 'package:dr/account_scope.dart';
 import 'package:dr/data.dart';
 import 'package:dr/middleware/middleware.dart';
 import 'package:dr/utc_date_time.dart';
@@ -27,6 +28,7 @@ const _pdf = [37, 80, 68, 70, 45, 49];
 typedef _Reply = ({int status, String type, List<int> bytes});
 
 void main() {
+  late Directory base;
   late Directory directory;
   late Dio client;
   late _Wrapper mock;
@@ -35,10 +37,15 @@ void main() {
   late int requests;
 
   setUp(() async {
-    directory = await Directory.systemTemp.createTemp('download-file-');
+    base = await Directory.systemTemp.createTemp('download-file-');
     previousWrapper = wrapper;
     mock = _Wrapper();
     wrapper = mock;
+    when(() => mock.url).thenReturn('https://school.example');
+    when(() => mock.user).thenReturn('max');
+    // Files are kept in a folder of the account that is signed in.
+    directory = Directory(
+        '${base.path}/${AccountScope('https://school.example', 'max').fileId}');
     client = Dio();
     replies = [];
     requests = 0;
@@ -61,14 +68,14 @@ void main() {
               any(named: 'isRetryAfterUnexpectedLogout'),
           forceRelogin: any(named: 'forceRelogin'),
         )).thenAnswer((_) async => true);
-    attachmentDownloadDirectoryOverride = () async => directory.path;
+    attachmentDownloadDirectoryOverride = () async => base.path;
   });
 
   tearDown(() async {
     wrapper = previousWrapper;
     attachmentDownloadDirectoryOverride = null;
     client.close(force: true);
-    await directory.delete(recursive: true);
+    await base.delete(recursive: true);
   });
 
   File saved(String name) => File('${directory.path}/$name');
