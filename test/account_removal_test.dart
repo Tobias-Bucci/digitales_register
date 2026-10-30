@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:convert';
 
 import 'package:dr/app_state.dart';
@@ -98,5 +99,43 @@ void main() {
     );
     expect(await secureStorage.read(key: 'login'), isNull);
     expect(store.state.loginState.loggedIn, isFalse);
+  });
+
+  test(
+      'a slow write that was already running cannot bring a removed account back',
+      () async {
+    const user = 'active-user';
+    const url = 'https://active.digitalesregister.it';
+    const loginAddress = '$url/v2/api/auth/login';
+    final accountStorageKey = getStorageKey(user, loginAddress);
+    await secureStorage.write(
+      key: 'login',
+      value: jsonEncode({'user': user, 'pass': 'active-password', 'url': url}),
+    );
+    final store = createStore(initialState: AppState(), withMiddleware: true);
+    final release = Completer<void>();
+    final write = statePersistenceService.flush(
+      state: AppState((b) => b.loginState
+        ..loggedIn = true
+        ..username = user),
+      deletedData: false,
+      server: loginAddress,
+      writer: (key, value) async {
+        await release.future;
+        await secureStorage.write(key: escapeKey(key), value: value);
+      },
+      keyFactory: getStorageKey,
+    );
+    await Future<void>.delayed(const Duration(milliseconds: 10));
+
+    final removal = store.actions.loginActions.removeCurrentAccount();
+    await Future<void>.delayed(const Duration(milliseconds: 50));
+    release.complete();
+    await Future.wait([write, removal]);
+
+    expect(
+      await secureStorage.read(key: escapeKey(accountStorageKey)),
+      isNull,
+    );
   });
 }

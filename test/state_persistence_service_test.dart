@@ -15,6 +15,7 @@
 // You should have received a copy of the GNU General Public License
 // along with digitales_register.  If not, see <http://www.gnu.org/licenses/>.
 
+import 'dart:async';
 import 'dart:convert';
 
 import 'package:dr/app_state.dart';
@@ -205,5 +206,161 @@ void main() {
     await persist();
 
     expect(writes, hasLength(1));
+  });
+
+  group('ordering of writes', () {
+    AppState signedIn(String user) => AppState(
+          (b) => b.loginState
+            ..loggedIn = true
+            ..username = user,
+        );
+
+    Future<void> persist(
+      AppStatePersistenceService service,
+      PersistStateWriter writer, {
+      AppState? state,
+      bool deletedData = false,
+    }) {
+      return service.flush(
+        state: state ?? signedIn('anna'),
+        deletedData: deletedData,
+        server: 'server',
+        writer: writer,
+        keyFactory: (user, server) => '$user-$server',
+      );
+    }
+
+    test('a deletion never lands before an older write that is still running',
+        () async {
+      final service = AppStatePersistenceService();
+      final stored = <String, String>{};
+      final releaseFirst = Completer<void>();
+      var secondStarted = false;
+
+      final first = persist(service, (key, value) async {
+        await releaseFirst.future;
+        stored[key] = value;
+      });
+      final second = persist(
+        service,
+        (key, value) async {
+          secondStarted = true;
+          stored[key] = value;
+        },
+        state: signedIn('anna')
+            .rebuild((b) => b.settingsState.languageCode = 'it'),
+        deletedData: true,
+      );
+      await Future<void>.delayed(const Duration(milliseconds: 20));
+
+      expect(secondStarted, isFalse);
+      releaseFirst.complete();
+      await Future.wait([first, second]);
+
+      final finalState = serializers.deserialize(
+        json.decode(stored['anna-server']!) as Object,
+      );
+      // The deletion payload (settings only) is what stays behind.
+      expect(finalState, isA<SettingsState>());
+    });
+
+    test(
+        'clearing while a write runs keeps its bookkeeping out of the next account',
+        () async {
+      final service = AppStatePersistenceService();
+      final release = Completer<void>();
+      final writes = <String>[];
+      final state = signedIn('anna');
+
+      final running = persist(service, (key, value) async {
+        await release.future;
+        writes.add(key);
+      }, state: state);
+      await Future<void>.delayed(const Duration(milliseconds: 10));
+      service.clear();
+      release.complete();
+      await running;
+      // The account was cleared: the same state must be written again.
+      await persist(service, (key, value) async => writes.add(key),
+          state: state);
+
+      expect(writes, hasLength(2));
+    });
+
+    test('a write requested before clear but not yet started is dropped',
+        () async {
+      final service = AppStatePersistenceService();
+      final release = Completer<void>();
+      final writes = <String>[];
+
+      final first = persist(service, (key, value) async {
+        await release.future;
+        writes.add('first');
+      });
+      final queued = persist(
+        service,
+        (key, value) async => writes.add('queued'),
+        state: signedIn('berta'),
+      );
+      await Future<void>.delayed(const Duration(milliseconds: 10));
+      service.clear();
+      release.complete();
+      await Future.wait([first, queued]);
+
+      expect(writes, ['first']);
+    });
+
+    test('a failing write does not block the writes behind it', () async {
+      final service = AppStatePersistenceService();
+      final writes = <String>[];
+
+      final failing = persist(service, (key, value) async {
+        throw StateError('disk full');
+      });
+      final following = persist(
+        service,
+        (key, value) async => writes.add(key),
+        state: signedIn('berta'),
+      );
+
+      await expectLater(failing, throwsStateError);
+      await following;
+      expect(writes, ['berta-server']);
+    });
+
+    test('runExclusive and drain wait for every write already requested',
+        () async {
+      final service = AppStatePersistenceService();
+      final release = Completer<void>();
+      final order = <String>[];
+
+      final write = persist(service, (key, value) async {
+        await release.future;
+        order.add('write');
+      });
+      final drained = service.drain().then((_) => order.add('drained'));
+      final exclusive = service.runExclusive(() async => order.add('delete'));
+      await Future<void>.delayed(const Duration(milliseconds: 10));
+      expect(order, isEmpty);
+      release.complete();
+      await Future.wait([write, drained, exclusive]);
+
+      expect(order.first, 'write');
+      expect(order, containsAll(['drained', 'delete']));
+    });
+
+    test('an exclusive action that fails does not block later writes',
+        () async {
+      final service = AppStatePersistenceService();
+      final writes = <String>[];
+
+      final exclusive = service.runExclusive<void>(() async {
+        throw StateError('delete failed');
+      });
+      await persist(service, (key, value) async => writes.add(key));
+
+      await expectLater(exclusive, throwsStateError);
+      expect(writes, ['anna-server']);
+    });
   });
 }
