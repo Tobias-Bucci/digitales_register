@@ -77,6 +77,8 @@ class AppRequestException implements Exception {
   String toString() => message;
 }
 
+const String _serverLogoutExtra = 'serverLogout';
+
 class Wrapper {
   static bool _networkActivityEnabled = true;
   final cookieJar = DefaultCookieJar();
@@ -86,25 +88,70 @@ class Wrapper {
   String get baseAddress => schoolApiBase(url ?? '');
   String? user, pass, _url;
   bool demoMode = false;
-  bool _appInForeground = _networkActivityEnabled;
+  bool _retired = false;
   final Set<CancelToken> _activeRequestTokens = <CancelToken>{};
+
+  // Backgrounding is app-wide: every instance reads the same switch, so an
+  // instance the app no longer references cannot keep working in the
+  // background. A retired instance never works again.
+  bool get _appInForeground => _networkActivityEnabled && !_retired;
   bool get isAppInForeground => _appInForeground;
+  bool get isRetired => _retired;
 
   void pauseNetworkActivity() {
     _networkActivityEnabled = false;
-    _appInForeground = false;
     _sessionRefreshTimer?.cancel();
     _sessionRefreshTimer = null;
-    for (final token in _activeRequestTokens.toList()) {
-      token.cancel('App moved to the background');
-    }
-    _activeRequestTokens.clear();
+    _cancelActiveRequests('App moved to the background');
   }
 
   void resumeNetworkActivity() {
     _networkActivityEnabled = true;
-    _appInForeground = true;
     _scheduleSessionRefresh();
+  }
+
+  void _cancelActiveRequests(String reason) {
+    for (final token in _activeRequestTokens.toList()) {
+      token.cancel(reason);
+    }
+    _activeRequestTokens.clear();
+  }
+
+  /// Ends this session for good: stops the refresh timer and every request,
+  /// asks the server to end the session and forgets the credentials and
+  /// cookies. The app calls it before it replaces this instance.
+  void retire() {
+    if (_retired) return;
+    _sessionRefreshTimer?.cancel();
+    _sessionRefreshTimer = null;
+    _cancelActiveRequests('Session retired');
+    // After the cancellation above, so the logout request itself survives.
+    final serverLogout = _requestServerLogout();
+    _retired = true;
+    _loggedIn = Future.value(false);
+    _url = user = pass = null;
+    _serverLogoutTime = null;
+    onLogout = onRelogin = onConfigLoaded = onAddProtocolItem = null;
+    // The logout request still needs the session cookie.
+    unawaited(serverLogout.whenComplete(() {
+      _clearCookies();
+      return dio.close();
+    }));
+  }
+
+  /// Asks the server to end the session. Never throws; resolves when the
+  /// request is over.
+  Future<void> _requestServerLogout() {
+    if (!_appInForeground || _url == null) return Future<void>.value();
+    return dio
+        .get<dynamic>(
+      "${baseAddress}logout",
+      options: Options(extra: <String, Object?>{_serverLogoutExtra: true}),
+    )
+        .then<void>((_) {}, onError: (Object error, StackTrace stack) {
+      diagnostics.report(error, stack, DiagnosticError.login);
+      privacyLog('technical_operation');
+    });
   }
 
   Wrapper({this.allowInsecureConnections = false}) {
@@ -118,7 +165,11 @@ class Wrapper {
     dio.interceptors.add(CookieManager(cookieJar));
     dio.interceptors.add(DiagnosticsInterceptor());
     dio.interceptors.add(InterceptorsWrapper(onRequest: (options, handler) {
-      if (!_appInForeground) {
+      // Only the logout request of a retiring session may still go out.
+      final allowed = _appInForeground ||
+          (_networkActivityEnabled &&
+              options.extra[_serverLogoutExtra] == true);
+      if (!allowed) {
         handler.reject(DioException(
           requestOptions: options,
           type: DioExceptionType.cancel,
@@ -192,6 +243,7 @@ class Wrapper {
     VoidCallback? relogin,
     AddNetworkProtocolItem? addProtocolItem,
   }) async {
+    if (_retired) return null;
     if (user == 'demo' && pass == 'demo' && (url?.trim().isEmpty ?? true)) {
       demoMode = true;
       appClock.setDemoMode(true);
@@ -279,6 +331,11 @@ class Wrapper {
       error = _mapRequestError(e).message;
       return null;
     }
+    // The app may have replaced this instance while the request was running.
+    if (_retired) {
+      loggedInCompleter.complete(false);
+      return null;
+    }
     if (getBool(response["loggedIn"]) ?? false) {
       privacyLog('technical_operation');
       lastInteraction = DateTime.now();
@@ -288,6 +345,10 @@ class Wrapper {
       try {
         await _loadConfig();
         await onConfigLoaded?.call();
+        if (_retired) {
+          loggedInCompleter.complete(false);
+          return null;
+        }
         _serverLogoutTime =
             DateTime.now().add(Duration(seconds: config.autoLogoutSeconds));
         _scheduleSessionRefresh();
@@ -323,13 +384,13 @@ class Wrapper {
       switch (getString(response["error"])) {
         case "two_factor_needed":
           final tfaCode = await _request2FA();
-          if (tfaCode != null) {
+          if (tfaCode != null && !_retired) {
             return login(user, pass, tfaCode, url);
           }
           return;
         case "two_factor_wrong":
           final tfaCode = await _request2FA(wasWrong: true);
-          if (tfaCode != null) {
+          if (tfaCode != null && !_retired) {
             return login(user, pass, tfaCode, url);
           }
           return;
@@ -679,6 +740,8 @@ class Wrapper {
   }) async {
     await _loginMutex.acquire();
     try {
+      // A retired session must never sign in again with its old credentials.
+      if (_retired) return false;
       // If we somehow did not yet notice that we were logged out set the flag now
       if (_serverLogoutTime != null &&
           DateTime.now().isAfter(_serverLogoutTime!)) {
@@ -708,6 +771,7 @@ class Wrapper {
       if (!await _loggedIn) {
         if (user != null && pass != null) {
           await login(user, pass, null, url);
+          if (_retired) return false;
           if (!await _loggedIn) {
             if (noInternet) {
               await actions.noInternet(true);
@@ -716,7 +780,7 @@ class Wrapper {
             }
             return false;
           } else {
-            onRelogin!();
+            onRelogin?.call();
           }
         } else {
           if (noInternet) {
@@ -786,13 +850,13 @@ class Wrapper {
       }
     } on Exception catch (e) {
       await _handleError(e);
-      onAddProtocolItem!(NetworkProtocolItem((b) => b
+      onAddProtocolItem?.call(NetworkProtocolItem((b) => b
         ..address = DiagnosticSanitizer.endpoint(url)
         ..response = responseData == null ? 'failed' : 'completed'
         ..parameters = '[redacted]'));
       return null;
     }
-    onAddProtocolItem!(NetworkProtocolItem((b) => b
+    onAddProtocolItem?.call(NetworkProtocolItem((b) => b
       ..address = DiagnosticSanitizer.endpoint(url)
       ..response = responseData == null ? 'failed' : 'completed'
       ..parameters = '[redacted]'));
@@ -880,13 +944,13 @@ class Wrapper {
       responseData = response.data;
     } on Exception catch (e) {
       await _handleError(e);
-      onAddProtocolItem!(NetworkProtocolItem((b) => b
+      onAddProtocolItem?.call(NetworkProtocolItem((b) => b
         ..address = DiagnosticSanitizer.endpoint(url)
         ..response = responseData == null ? 'failed' : 'completed'
         ..parameters = '[redacted]'));
       return null;
     }
-    onAddProtocolItem!(NetworkProtocolItem((b) => b
+    onAddProtocolItem?.call(NetworkProtocolItem((b) => b
       ..address = DiagnosticSanitizer.endpoint(url)
       ..response = responseData == null ? 'failed' : 'completed'
       ..parameters = '[redacted]'));
@@ -992,13 +1056,7 @@ class Wrapper {
   void logout({required bool hard, bool logoutForcedByServer = false}) {
     _sessionRefreshTimer?.cancel();
     _sessionRefreshTimer = null;
-    if (_appInForeground && !logoutForcedByServer && _url != null) {
-      unawaited(dio.get<dynamic>("${baseAddress}logout").then<void>((_) {},
-          onError: (Object error, StackTrace stack) {
-        diagnostics.report(error, stack, DiagnosticError.login);
-        privacyLog('technical_operation');
-      }));
-    }
+    if (!logoutForcedByServer) unawaited(_requestServerLogout());
     if (hard) {
       if (logoutForcedByServer) {
         try {
