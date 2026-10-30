@@ -17,19 +17,26 @@
 
 import 'dart:async';
 import 'dart:convert';
+import 'dart:io';
 
 import 'package:built_redux/built_redux.dart';
+import 'package:dio/dio.dart';
 import 'package:dr/actions/app_actions.dart';
 import 'package:dr/actions/dashboard_actions.dart';
+import 'package:dr/actions/login_actions.dart';
 import 'package:dr/app_state.dart';
+import 'package:dr/course_materials.dart';
 import 'package:dr/data.dart';
 import 'package:dr/main.dart';
 import 'package:dr/middleware/middleware.dart';
 import 'package:dr/reducer/reducer.dart';
+import 'package:dr/serializers.dart';
 import 'package:dr/utc_date_time.dart';
 import 'package:dr/wrapper.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:open_file/open_file.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 import 'support/test_harness.dart';
@@ -288,6 +295,164 @@ void main() {
     expect(store.state.dashboardState.allDays, isNull);
   });
 
+  group('downloads', () {
+    const pdf = [37, 80, 68, 70, 45, 49];
+    late Directory directory;
+    late _DownloadingWrapper a;
+
+    setUp(() async {
+      directory = await Directory.systemTemp.createTemp('session-download-');
+      attachmentDownloadDirectoryOverride = () async => directory.path;
+      a = _DownloadingWrapper('a');
+      wrapper = a;
+    });
+
+    tearDown(() async {
+      attachmentDownloadDirectoryOverride = null;
+      courseMaterialFileOpenerOverride = null;
+      courseMaterialPlatformOverride = null;
+      await directory.delete(recursive: true);
+    });
+
+    /// Everything the download wrote, whichever folder it went to.
+    List<String> written() => directory
+        .listSync(recursive: true)
+        .whereType<File>()
+        .map((file) => file.path)
+        .toList();
+
+    test('a file download of a left account is not saved', () async {
+      final store = signedInStore();
+      final download = downloadFile('$_school/file', 'a.pdf', const {})
+          .then<Object?>((value) => value, onError: (Object e) => e);
+      await a.waitForRequest();
+
+      await switchAccount(store);
+      a.answer.complete(pdf);
+
+      expect(await download, isA<StaleSessionException>());
+      expect(written(), isEmpty);
+    });
+
+    test('a file download retries on its own session, not the next account\'s',
+        () async {
+      final store = signedInStore();
+      final download = downloadFile('$_school/file', 'a.pdf', const {})
+          .then<Object?>((value) => value, onError: (Object e) => e);
+      await a.waitForRequest();
+
+      // The login page makes the download sign in again and ask once more.
+      final b = _DownloadingWrapper('b');
+      await switchAccount(store);
+      wrapper = b;
+      b.answer.complete(pdf);
+      a.contentType = 'text/html';
+      a.answer.complete(utf8.encode(
+          '<!DOCTYPE html><html><head><title>Login</title></head>'
+          '<body><form></form></body></html>'));
+      await download;
+
+      expect(b.requests, isEmpty);
+      expect(written(), isEmpty);
+    });
+
+    test('authenticated bytes of a left account are not handed on', () async {
+      final store = signedInStore();
+      final bytes = fetchAuthenticatedBytes('$_school/avatar.png')
+          .then<Object?>((value) => value, onError: (Object e) => e);
+      await a.waitForRequest();
+
+      await switchAccount(store);
+      a.answer.complete(pdf);
+
+      expect(await bytes, isA<StaleSessionException>());
+    });
+
+    test('a course document of a left account is neither saved nor opened',
+        () async {
+      final store = signedInStore();
+      courseMaterialPlatformOverride = TargetPlatform.windows;
+      var opened = 0;
+      courseMaterialFileOpenerOverride = (_) async {
+        opened++;
+        return OpenResult(type: ResultType.done, message: 'done');
+      };
+      final entry = CourseMaterialEntry.fromJson({
+        'id': 657,
+        'courseContentId': 83,
+        'type': 'file',
+        'file': 'server.pdf',
+        'originalName': 'Blatt.pdf',
+        'lastmodified': '2026-10-01 08:00:00',
+      });
+      final open = openCourseMaterialEntryWithStatus(entry);
+      await a.waitForRequest();
+
+      await switchAccount(store);
+      a.answer.complete(pdf);
+
+      expect(await open, CourseMaterialOpenResult.failed);
+      expect(opened, 0);
+      expect(written(), isEmpty);
+    });
+  });
+
+  test('a queued semester switch of a left account is not sent to the next',
+      () async {
+    final store = createStore(
+      withMiddleware: true,
+      initialState: AppState((b) => b
+        ..loginState.loggedIn = true
+        ..loginState.username = 'a'
+        ..url = _school
+        ..config.replace(first.config)),
+    );
+    addTearDown(store.dispose);
+    first.hold('api/student/all_subjects');
+    // The first semester runs and holds the lock; the second has to wait.
+    final running = store.actions.gradesActions.load(Semester.first);
+    await settle();
+    expect(first.count('?semesterWechsel=1'), 1);
+    final queued = store.actions.gradesActions.load(Semester.second);
+    await settle();
+
+    final next = HoldingWrapper('b');
+    wrapper = next;
+    first.release('api/student/all_subjects', <dynamic>[]);
+    await running;
+    await queued;
+    await settle();
+
+    expect(next.sent, isEmpty);
+    expect(first.count('?semesterWechsel=2'), 0);
+  });
+
+  test('a switch while signing in does not mount the saved state', () async {
+    final key = escapeKey(getStorageKey('a', first.loginAddress));
+    final storage = _HoldingStorage(key)
+      ..storage[key] = json.encode(serializers.serialize(AppState(
+          (b) => b.settingsState.languageCode = 'lld')));
+    secureStorage = storage;
+    final store = createStore(
+      withMiddleware: true,
+      initialState: AppState((b) => b..url = _school),
+    );
+    addTearDown(store.dispose);
+    final signIn = store.actions.loginActions.loggedIn(LoggedInPayload((b) => b
+      ..username = 'a'
+      ..fromStorage = true
+      ..offlineOnly = true));
+    await storage.reading.future;
+
+    // The user picks another account before the saved state is read.
+    wrapper = HoldingWrapper('b');
+    storage.release.complete();
+    await signIn;
+    await settle();
+
+    expect(store.state.settingsState.languageCode, isNot('lld'));
+  });
+
   testWidgets('a response of a left account never shows up as an error',
       (tester) async {
     // With the real error middleware, which would push an error page.
@@ -345,5 +510,69 @@ class _AnyPathWrapper extends HoldingWrapper {
       bool acceptEmptyResponse = false}) {
     sent.add(path);
     return answer;
+  }
+}
+
+/// A session whose HTTP answers the test releases by hand.
+class _DownloadingWrapper extends HoldingWrapper {
+  _DownloadingWrapper(super.name) {
+    _dio.interceptors.add(InterceptorsWrapper(onRequest: (options, handler) async {
+      requests.add(options.uri.toString());
+      if (!_requested.isCompleted) _requested.complete();
+      final bytes = await answer.future;
+      handler.resolve(Response<List<int>>(
+        requestOptions: options,
+        statusCode: 200,
+        data: bytes,
+        headers: Headers.fromMap({
+          'content-type': [contentType]
+        }),
+      ));
+    }));
+  }
+
+  final Dio _dio = Dio();
+  final Completer<List<int>> answer = Completer<List<int>>();
+  final Completer<void> _requested = Completer<void>();
+  final List<String> requests = <String>[];
+  String contentType = 'application/pdf';
+
+  Future<void> waitForRequest() =>
+      _requested.future.timeout(const Duration(seconds: 5));
+
+  @override
+  Dio get dio => _dio;
+
+  @override
+  Future<bool> ensureLoggedIn({
+    bool isRetryAfterUnexpectedLogout = false,
+    bool forceRelogin = false,
+  }) async =>
+      true;
+}
+
+/// Secure storage whose read of [heldKey] waits for the test.
+class _HoldingStorage extends TestSecureStorage {
+  _HoldingStorage(this.heldKey);
+
+  final String heldKey;
+  final Completer<void> reading = Completer<void>();
+  final Completer<void> release = Completer<void>();
+
+  @override
+  Future<String?> read({
+    required String key,
+    AppleOptions? iOptions,
+    AndroidOptions? aOptions,
+    LinuxOptions? lOptions,
+    AppleOptions? mOptions,
+    WindowsOptions? wOptions,
+    WebOptions? webOptions,
+  }) async {
+    if (key == heldKey) {
+      reading.complete();
+      await release.future;
+    }
+    return storage[key];
   }
 }
