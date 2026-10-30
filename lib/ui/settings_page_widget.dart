@@ -92,6 +92,9 @@ class SettingsPageWidget extends StatefulWidget {
       onSetDemoAssessmentSettings;
   final Future<void> Function() onClearDemoCache;
 
+  /// A line about older learning notes that belong to no account, if any.
+  final Widget? legacyStudyData;
+
   const SettingsPageWidget({
     super.key,
     required this.onSetNoPassSaving,
@@ -128,6 +131,7 @@ class SettingsPageWidget extends StatefulWidget {
     required this.onSetSimulatedDate,
     required this.onSetDemoAssessmentSettings,
     required this.onClearDemoCache,
+    this.legacyStudyData,
   });
 
   @override
@@ -576,6 +580,7 @@ class _SettingsPageWidgetState extends State<SettingsPageWidget> {
               : null,
           value: widget.vm.deleteDataOnLogout,
         ),
+        if (widget.legacyStudyData != null) widget.legacyStudyData!,
       ],
     );
   }

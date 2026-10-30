@@ -1016,5 +1016,20 @@
   "schoolNotifications.optIn.accept": "Enable notifications",
   "schoolNotifications.optIn.decline": "No, thanks",
   "schoolNotifications.optIn.failed": "Your choice could not be saved. Please try again.",
-  "desktop.keyringUnavailable": "No keyring found. Your sign-in data is stored in a protected file in the app folder."
+  "desktop.keyringUnavailable": "No keyring found. Your sign-in data is stored in a protected file in the app folder.",
+  "studyData.legacy.title": "Older study notes without an account",
+  "studyData.legacy.body": "This device holds older study notes for {exams} exams ({notes} notes, {files} files) that could not be assigned to an account. Do you want to assign them to this account? Until then they stay stored unchanged and are not visible in any account.",
+  "studyData.legacy.assign": "Assign to this account",
+  "studyData.legacy.later": "Later",
+  "studyData.legacy.discard": "Discard …",
+  "studyData.legacy.discardConfirm.title": "Delete older study notes for good?",
+  "studyData.legacy.discardConfirm.body": "The older study notes ({notes} notes, {files} files) will be permanently deleted from this device. This cannot be undone.",
+  "studyData.legacy.discardConfirm.confirm": "Delete for good",
+  "studyData.legacy.assigned": "Older study notes assigned: {notes} notes, {files} files.",
+  "studyData.legacy.assignedPartly": "Assigned: {notes} notes, {files} files. This account already has entries of its own for {exams} exams; the older data for them stays stored unchanged.",
+  "studyData.legacy.assignFailed": "The older study notes could not be assigned. They stay stored unchanged.",
+  "studyData.legacy.discarded": "Older study notes deleted.",
+  "studyData.legacy.discardFailed": "The older study notes could not be deleted. They stay stored.",
+  "studyData.legacy.setting.title": "Older study notes without an account",
+  "studyData.legacy.setting.subtitle": "{exams} exams ({notes} notes, {files} files). Tap to assign or delete them."
 }

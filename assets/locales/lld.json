@@ -1016,5 +1016,20 @@
   "schoolNotifications.optIn.accept": "Ativea les notificazions",
   "schoolNotifications.optIn.decline": "No, de gra",
   "schoolNotifications.optIn.failed": "La scelta ne à nia pudù unì salveda. Prea proa danuef.",
-  "desktop.keyringUnavailable": "Nia de portaclês giaté. Tües dades d’azès vëgn salvades te n file protet tl ordinadù dl’app."
+  "desktop.keyringUnavailable": "Nia de portaclês giaté. Tües dades d’azès vëgn salvades te n file protet tl ordinadù dl’app.",
+  "studyData.legacy.title": "Dades de stude plü vedles zënza account",
+  "studyData.legacy.body": "Su chësc aparat él dades de stude plü vedles por {exams} verifiches ({notes} notes, {files} files) che ne podova nia gnì assegnedes a n account. Vëus tu les assegnè a chësc account? Cina lapró resta eres salvades zënza mudaziuns y ne vëgn mostrades te degun account.",
+  "studyData.legacy.assign": "Assegnè a chësc account",
+  "studyData.legacy.later": "Plü tert",
+  "studyData.legacy.discard": "Sodè …",
+  "studyData.legacy.discardConfirm.title": "Sodè por dërt les dades de stude plü vedles?",
+  "studyData.legacy.discardConfirm.body": "Les dades de stude plü vedles ({notes} notes, {files} files) vëgn sodedes por dërt da chësc aparat. Chësc ne pó nia gnì anulè.",
+  "studyData.legacy.discardConfirm.confirm": "Sodè por dërt",
+  "studyData.legacy.assigned": "Dades de stude plü vedles assegnedes: {notes} notes, {files} files.",
+  "studyData.legacy.assignedPartly": "Assegnà: {notes} notes, {files} files. Por {exams} verifiches à chësc account bëgn sües atres scrites; les dades plü vedles resta salvades zënza mudaziuns.",
+  "studyData.legacy.assignFailed": "Les dades de stude plü vedles ne pó nia gnì assegnedes. Eres resta salvades zënza mudaziuns.",
+  "studyData.legacy.discarded": "Dades de stude plü vedles sodedes.",
+  "studyData.legacy.discardFailed": "Les dades de stude plü vedles ne pó nia gnì sodedes. Eres resta salvades.",
+  "studyData.legacy.setting.title": "Dades de stude plü vedles zënza account",
+  "studyData.legacy.setting.subtitle": "{exams} verifiches ({notes} notes, {files} files). Tocia por les assegnè o sodè."
 }

@@ -1016,5 +1016,20 @@
   "schoolNotifications.optIn.accept": "Attiva le notifiche",
   "schoolNotifications.optIn.decline": "No, grazie",
   "schoolNotifications.optIn.failed": "Non è stato possibile salvare la scelta. Riprova.",
-  "desktop.keyringUnavailable": "Nessun portachiavi trovato. I tuoi dati di accesso vengono salvati in un file protetto nella cartella dell’app."
+  "desktop.keyringUnavailable": "Nessun portachiavi trovato. I tuoi dati di accesso vengono salvati in un file protetto nella cartella dell’app.",
+  "studyData.legacy.title": "Appunti di studio meno recenti senza account",
+  "studyData.legacy.body": "Su questo dispositivo ci sono appunti di studio meno recenti per {exams} verifiche ({notes} note, {files} file) che non è stato possibile assegnare a un account. Vuoi assegnarli a questo account? Fino ad allora restano salvati invariati e non sono visibili in nessun account.",
+  "studyData.legacy.assign": "Assegna a questo account",
+  "studyData.legacy.later": "Più tardi",
+  "studyData.legacy.discard": "Elimina …",
+  "studyData.legacy.discardConfirm.title": "Eliminare definitivamente gli appunti meno recenti?",
+  "studyData.legacy.discardConfirm.body": "Gli appunti di studio meno recenti ({notes} note, {files} file) verranno eliminati definitivamente da questo dispositivo. L’operazione non può essere annullata.",
+  "studyData.legacy.discardConfirm.confirm": "Elimina definitivamente",
+  "studyData.legacy.assigned": "Appunti meno recenti assegnati: {notes} note, {files} file.",
+  "studyData.legacy.assignedPartly": "Assegnati: {notes} note, {files} file. Per {exams} verifiche questo account ha già voci proprie; i dati meno recenti corrispondenti restano salvati invariati.",
+  "studyData.legacy.assignFailed": "Non è stato possibile assegnare gli appunti meno recenti. Restano salvati invariati.",
+  "studyData.legacy.discarded": "Appunti meno recenti eliminati.",
+  "studyData.legacy.discardFailed": "Non è stato possibile eliminare gli appunti meno recenti. Restano salvati.",
+  "studyData.legacy.setting.title": "Appunti di studio meno recenti senza account",
+  "studyData.legacy.setting.subtitle": "{exams} verifiche ({notes} note, {files} file). Tocca per assegnarli o eliminarli."
 }

@@ -8,6 +8,7 @@ import 'package:dr/app_state.dart';
 import 'package:dr/data.dart';
 import 'package:dr/main.dart' show secureStorage;
 import 'package:dr/middleware/middleware.dart';
+import 'package:dr/study_data_migration.dart';
 import 'package:dr/serializers.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
@@ -138,6 +139,8 @@ void main() {
       'login': _loginEntry,
       _accountKey: original,
       'unrelated_account': _unrelated,
+      // The one thing a sign-in adds: nothing was left to migrate.
+      studyDataMigrationMarkerKey: 'done',
     });
   });
 
@@ -224,6 +227,8 @@ void main() {
       'login': _loginEntry,
       _accountKey: original,
       'unrelated_account': _unrelated,
+      // The one thing a sign-in adds: nothing was left to migrate.
+      studyDataMigrationMarkerKey: 'done',
     });
     storage.failWrites = false;
     expect(subjects(await logIn()), ['Synthetic saved subject']);

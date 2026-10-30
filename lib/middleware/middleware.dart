@@ -71,6 +71,7 @@ import 'package:dr/serializers.dart';
 import 'package:dr/settings_persistence_service.dart';
 import 'package:dr/state_persistence_service.dart';
 import 'package:dr/stored_login.dart';
+import 'package:dr/study_data_migration.dart';
 import 'package:dr/study_data_service.dart';
 import 'package:dr/theme_controller.dart';
 import 'package:dr/ui/debug_page.dart';
@@ -112,6 +113,14 @@ final AppStatePersistenceService statePersistenceService =
     AppStatePersistenceService();
 final StudyDataService studyDataService =
     StudyDataService(storage: () => secureStorage);
+final StudyDataMigration studyDataMigration = StudyDataMigration(
+  service: studyDataService,
+  settings: settingsPersistenceService,
+);
+
+/// Changes whenever the older learning notes that belong to no account are
+/// assigned, discarded or found, so that what shows them can ask again.
+final ValueNotifier<int> legacyStudyDataRevision = ValueNotifier<int>(0);
 final AndroidWidgetSnapshotService androidWidgetSnapshotService =
     AndroidWidgetSnapshotService();
 
@@ -1060,6 +1069,9 @@ List<Middleware<AppState, AppStateBuilder, AppActions>> middleware({
             ..add(LoginActionsNames.updateLogout, _tap)
             ..add(SettingsActionsNames.saveNoData, _saveNoData)
             ..add(AppActionsNames.deleteData, _deleteData)
+            ..add(AppActionsNames.assignLegacyStudyData, _assignLegacyStudyData)
+            ..add(AppActionsNames.discardLegacyStudyData,
+                _discardLegacyStudyData)
             ..add(AppActionsNames.load, _load)
             ..add(AppActionsNames.start, _start)
             ..add(DashboardActionsNames.refresh, _refresh)
@@ -1510,6 +1522,19 @@ Future<void> _mountStudyData(
 ) async {
   final scope = _studyScopeOf(username);
   _studyDataScope = null;
+  var unreadable = false;
+  // The notes older versions kept for all accounts are put aside before any
+  // account reads its own. A read that fails postpones this to the next start.
+  try {
+    await studyDataMigration.ensureQuarantined();
+    legacyStudyDataRevision.value++;
+  } on StudyDataUnreadable catch (error, stack) {
+    diagnostics.report(error, stack, DiagnosticError.storage);
+    unreadable = true;
+  } catch (error, stack) {
+    diagnostics.report(error, stack, DiagnosticError.storage);
+  }
+  session.ensureCurrent();
   StudyData data;
   try {
     data = await studyDataService.load(scope);
@@ -1520,24 +1545,228 @@ Future<void> _mountStudyData(
     return;
   }
   session.ensureCurrent();
+  if (unreadable) showSnackBar(tr('error.savedDataUnreadable'));
   await api.actions.mountAppState(
     api.state.rebuild((b) => b..settingsState.replace(
           data.applyTo(api.state.settingsState),
         )),
   );
   _studyDataScope = scope;
+  WidgetsBinding.instance.addPostFrameCallback(
+      (_) => unawaited(_offerLegacyStudyData(api, session)));
+}
+
+const _legacyStudyPromptedKey = 'studyDataLegacyPromptedV1';
+
+/// Once, after the first sign-in that finds older learning notes without an
+/// account, asks what to do with them. Closing the question means later.
+Future<void> _offerLegacyStudyData(
+  MiddlewareApi<AppState, AppStateBuilder, AppActions> api,
+  _Session session,
+) async {
+  try {
+    if (!session.isCurrent ||
+        wrapper.demoMode ||
+        session.scope.user == null) {
+      return;
+    }
+    final prefs = await SharedPreferences.getInstance();
+    if (prefs.getBool(_legacyStudyPromptedKey) ?? false) return;
+    final summary = await studyDataMigration.summary();
+    if (summary == null) return;
+    session.ensureCurrent();
+    await prefs.setBool(_legacyStudyPromptedKey, true);
+    await showLegacyStudyDataDialog(api.actions, summary);
+  } on StaleSessionException {
+    // The account was left before the question was asked.
+  } on StudyDataUnreadable {
+    // Asked at the next start.
+  } catch (error, stack) {
+    diagnostics.report(error, stack, DiagnosticError.storage);
+  }
+}
+
+Map<String, String> _legacyStudyArgs(LegacyStudySummary summary) => {
+      'exams': summary.exams.toString(),
+      'notes': summary.notes.toString(),
+      'files': summary.files.toString(),
+    };
+
+enum _LegacyStudyChoice { assign, later, discard }
+
+/// Asks what to do with the older learning notes: numbers only, never their
+/// content. Closing the dialog keeps them (later); discarding needs a second
+/// confirmation.
+Future<void> showLegacyStudyDataDialog(
+  AppActions actions,
+  LegacyStudySummary summary,
+) async {
+  final navigator = navigatorKey?.currentState;
+  final context = navigatorKey?.currentContext;
+  if (navigator == null || context == null) return;
+  final choice = await navigator.push<_LegacyStudyChoice>(
+    DialogRoute(
+      context: context,
+      builder: (context) => InfoDialog(
+        title: Text(tr('studyData.legacy.title')),
+        content: Text(
+            tr('studyData.legacy.body', args: _legacyStudyArgs(summary))),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context, _LegacyStudyChoice.discard),
+            child: Text(tr('studyData.legacy.discard')),
+          ),
+          TextButton(
+            onPressed: () => Navigator.pop(context, _LegacyStudyChoice.assign),
+            child: Text(tr('studyData.legacy.assign')),
+          ),
+          FilledButton(
+            autofocus: true,
+            onPressed: () => Navigator.pop(context, _LegacyStudyChoice.later),
+            child: Text(tr('studyData.legacy.later')),
+          ),
+        ],
+      ),
+    ),
+  );
+  switch (choice) {
+    case _LegacyStudyChoice.assign:
+      await actions.assignLegacyStudyData();
+    case _LegacyStudyChoice.discard:
+      if (await _confirmDiscardLegacyStudyData(summary) == true) {
+        await actions.discardLegacyStudyData();
+      }
+    case _LegacyStudyChoice.later:
+    case null:
+      break;
+  }
+}
+
+Future<bool?> _confirmDiscardLegacyStudyData(LegacyStudySummary summary) {
+  final context = navigatorKey?.currentContext;
+  if (context == null) return Future.value(false);
+  return navigatorKey!.currentState!.push<bool>(
+    DialogRoute(
+      context: context,
+      builder: (context) => InfoDialog(
+        title: Text(tr('studyData.legacy.discardConfirm.title')),
+        content: Text(tr('studyData.legacy.discardConfirm.body',
+            args: _legacyStudyArgs(summary))),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context, true),
+            child: Text(tr('studyData.legacy.discardConfirm.confirm')),
+          ),
+          FilledButton(
+            autofocus: true,
+            onPressed: () => Navigator.pop(context, false),
+            child: Text(tr('common.cancel')),
+          ),
+        ],
+      ),
+    ),
+  );
+}
+
+/// Gives the older learning notes to the account that is signed in.
+Future<void> _assignLegacyStudyData(
+  MiddlewareApi<AppState, AppStateBuilder, AppActions> api,
+  ActionHandler next,
+  Action<void> action,
+) async {
+  await next(action);
+  final session = _Session.capture();
+  final scope = _studyScopeOf(api.state.loginState.username);
+  // The demo account has no notes of its own to receive them, and an account
+  // whose notes were not read must not be written to.
+  if (!api.state.loginState.loggedIn ||
+      scope.user == null ||
+      wrapper.demoMode ||
+      _studyDataScope != scope) {
+    showSnackBar(tr('studyData.legacy.assignFailed'));
+    return;
+  }
+  try {
+    final outcome = await statePersistenceService.runExclusive(() async {
+      session.ensureCurrent();
+      final result = await studyDataMigration.assign(
+        scope,
+        current: StudyData.fromSettings(api.state.settingsState),
+      );
+      session.ensureCurrent();
+      // With what was typed in the meantime, which replaces nothing.
+      final merged = StudyData.fromSettings(api.state.settingsState)
+          .withMissingFrom(result.moved);
+      await api.actions.mountAppState(
+        api.state.rebuild((b) => b
+          ..settingsState.replace(merged.applyTo(api.state.settingsState))),
+      );
+      return result;
+    });
+    legacyStudyDataRevision.value++;
+    if (outcome.moved.isEmpty && outcome.remaining.isEmpty) return;
+    showSnackBar(outcome.remaining.isEmpty
+        ? tr('studyData.legacy.assigned', args: {
+            'notes': outcome.moved.noteCount.toString(),
+            'files': outcome.moved.fileCount.toString(),
+          })
+        : tr('studyData.legacy.assignedPartly', args: {
+            'notes': outcome.moved.noteCount.toString(),
+            'files': outcome.moved.fileCount.toString(),
+            'exams': outcome.remaining.keys.length.toString(),
+          }));
+  } on StaleSessionException {
+    rethrow;
+  } catch (error, stack) {
+    diagnostics.report(error, stack, DiagnosticError.storage);
+    legacyStudyDataRevision.value++;
+    showSnackBar(tr('studyData.legacy.assignFailed'));
+  }
+}
+
+/// Deletes the older learning notes for good. Asked twice before.
+Future<void> _discardLegacyStudyData(
+  MiddlewareApi<AppState, AppStateBuilder, AppActions> api,
+  ActionHandler next,
+  Action<void> action,
+) async {
+  await next(action);
+  try {
+    await statePersistenceService.runExclusive(studyDataMigration.discard);
+    legacyStudyDataRevision.value++;
+    showSnackBar(tr('studyData.legacy.discarded'));
+  } catch (error, stack) {
+    diagnostics.report(error, stack, DiagnosticError.storage);
+    legacyStudyDataRevision.value++;
+    showSnackBar(tr('studyData.legacy.discardFailed'));
+  }
 }
 
 /// Saves the learning notes of the signed-in account after they changed.
-Future<void> _persistStudyData(AppState state) async {
+Future<void> _persistStudyData(
+  MiddlewareApi<AppState, AppStateBuilder, AppActions> api,
+) async {
+  final state = api.state;
   if (deletedData || !state.loginState.loggedIn) return;
   final scope = _studyScopeOf(state.loginState.username);
   if (_studyDataScope != scope) return;
-  final data = StudyData.fromSettings(state.settingsState);
+  final requested = StudyData.fromSettings(state.settingsState);
   try {
-    // Behind every earlier write and deletion, in the order requested.
-    await statePersistenceService
-        .runExclusive(() => studyDataService.save(scope, data));
+    // Behind every earlier write and deletion, in the order requested. What
+    // is written is what the account has by then, so a save that waited
+    // behind a move of the older notes cannot write them away again.
+    await statePersistenceService.runExclusive(() {
+      final stillSignedIn = !deletedData &&
+          api.state.loginState.loggedIn &&
+          _studyScopeOf(api.state.loginState.username) == scope &&
+          _studyDataScope == scope;
+      return studyDataService.save(
+        scope,
+        stillSignedIn
+            ? StudyData.fromSettings(api.state.settingsState)
+            : requested,
+      );
+    });
   } catch (error, stack) {
     diagnostics.report(error, stack, DiagnosticError.storage);
   }
@@ -1569,7 +1798,7 @@ NextActionHandler _saveStateMiddleware(
           }
           if (action.name != AppActionsNames.mountAppState.name &&
               _studyDataChanged(previousSettings, api.state.settingsState)) {
-            await _persistStudyData(api.state);
+            await _persistStudyData(api);
           }
           if (api.state.loginState.loggedIn &&
               api.state.loginState.username != null) {
