@@ -40,13 +40,14 @@ class SettingsPersistenceService {
   }
 
   /// The learning notes still stored in the shared blob, or null when there
-  /// is no readable blob.
+  /// is no blob. Throws [StudyDataUnreadable] for a blob that is there but
+  /// cannot be read: it may still hold notes.
   Future<StudyData?> legacyStudyData() async {
-    final stored = await _readStored();
+    final stored = await _readStored(throwIfUnreadable: true);
     return stored == null ? null : StudyData.fromSettings(stored);
   }
 
-  Future<SettingsState?> _readStored() async {
+  Future<SettingsState?> _readStored({bool throwIfUnreadable = false}) async {
     final prefs = await SharedPreferences.getInstance();
     final raw = prefs.getString(globalSettingsPreferenceKey);
     if (raw == null || raw.isEmpty) {
@@ -61,6 +62,7 @@ class SettingsPersistenceService {
     } catch (error, stackTrace) {
       diagnostics.report(error, stackTrace, DiagnosticError.storage);
       privacyLog('technical_operation');
+      if (throwIfUnreadable) throw const StudyDataUnreadable();
     }
     return null;
   }

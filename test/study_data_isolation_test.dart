@@ -29,6 +29,7 @@ import 'package:dr/assessment_attachments.dart';
 import 'package:dr/middleware/middleware.dart';
 import 'package:dr/serializers.dart';
 import 'package:dr/settings_persistence_service.dart';
+import 'package:dr/study_data_migration.dart';
 import 'package:dr/study_data_service.dart';
 import 'package:dr/wrapper.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
@@ -274,7 +275,23 @@ void main() {
       expect(settings().assessmentStudyProgress, isEmpty);
     });
 
-    test('stay in the shared settings while other things change', () async {
+    test('stay untouched in the shared settings until they are put aside',
+        () async {
+      await storeLegacyNotes();
+      // Saving settings keeps the notes that are stored there as they are.
+      await settingsPersistenceService.save(SettingsState((b) => b
+        ..amoledMode = true
+        ..assessmentStudyNotes =
+            MapBuilder<String, String>({_exam: 'note of an account'})));
+
+      final blob = await sharedBlob();
+      expect(blob, contains('old note'));
+      expect(blob, isNot(contains('note of an account')));
+      expect((await settingsPersistenceService.load())!.amoledMode, isTrue);
+    });
+
+    test('are in the quarantine, not in the shared settings, after sign-in',
+        () async {
       await storeLegacyNotes();
       await signIn(_schoolA, 'max');
       await writeNotes('note of max');
@@ -284,8 +301,11 @@ void main() {
       await store.actions.settingsActions.amoledMode(false);
 
       final blob = await sharedBlob();
-      expect(blob, contains('old note'));
+      expect(blob, isNot(contains('old note')));
       expect(blob, isNot(contains('note of max')));
+      final quarantine =
+          (secureStorage as TestSecureStorage).storage[studyDataLegacyKey]!;
+      expect(StudyData.decode(quarantine).notes, {_exam: 'old note'});
     });
 
     test('are not lost when the shared settings are first created', () async {

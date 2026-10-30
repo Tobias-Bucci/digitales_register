@@ -53,7 +53,9 @@ String encodeAssessmentAttachments(Iterable<AssessmentAttachment> files) =>
 @visibleForTesting
 Future<Directory> Function()? assessmentAttachmentsRootOverride;
 
-Future<Directory> _attachmentsRoot() async {
+/// The folder the attachments of all accounts are kept in: one folder per
+/// account, and, from older versions, files that lie loose in it.
+Future<Directory> assessmentAttachmentsRoot() async {
   final override = assessmentAttachmentsRootOverride;
   if (override != null) return override();
   final root = await getApplicationSupportDirectory();
@@ -64,7 +66,7 @@ Future<Directory> _attachmentsRoot() async {
 /// The folder of the attachments of one account. Files of other accounts, and
 /// those older versions kept loose in the shared folder, are not in it.
 Future<Directory> assessmentAttachmentFolder(AccountScope scope) async {
-  final root = await _attachmentsRoot();
+  final root = await assessmentAttachmentsRoot();
   return Directory('${root.path}${Platform.pathSeparator}${scope.fileId}');
 }
 

@@ -28,6 +28,7 @@ import 'package:dr/demo.dart';
 import 'package:dr/i18n/app_language.dart';
 import 'package:dr/middleware/middleware.dart';
 import 'package:dr/theme_controller.dart';
+import 'package:dr/ui/legacy_study_data_tile.dart';
 import 'package:dr/ui/settings_page_widget.dart';
 import 'package:dr/util.dart';
 import 'package:flutter/material.dart';
@@ -159,6 +160,9 @@ class SettingsPageContainer extends StatelessWidget {
                 actions.dashboardActions.refresh(),
               ]);
             },
+            legacyStudyData: vm.demoMode
+                ? null
+                : LegacyStudyDataTile(actions: actions),
           ),
         );
       },

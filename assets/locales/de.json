@@ -1016,5 +1016,20 @@
   "schoolNotifications.optIn.accept": "Benachrichtigungen aktivieren",
   "schoolNotifications.optIn.decline": "Nein, danke",
   "schoolNotifications.optIn.failed": "Die Auswahl konnte nicht gespeichert werden. Bitte versuche es erneut.",
-  "desktop.keyringUnavailable": "Kein Schlüsselbund gefunden. Deine Anmeldedaten werden in einer geschützten Datei im App-Ordner gespeichert."
+  "desktop.keyringUnavailable": "Kein Schlüsselbund gefunden. Deine Anmeldedaten werden in einer geschützten Datei im App-Ordner gespeichert.",
+  "studyData.legacy.title": "Ältere Lerndaten ohne Konto",
+  "studyData.legacy.body": "Auf diesem Gerät gibt es ältere Lerndaten für {exams} Prüfungen ({notes} Notizen, {files} Dateien), die keinem Konto zugeordnet werden konnten. Möchtest du sie diesem Konto zuordnen? Bis dahin bleiben sie unverändert gespeichert und sind in keinem Konto sichtbar.",
+  "studyData.legacy.assign": "Diesem Konto zuordnen",
+  "studyData.legacy.later": "Später",
+  "studyData.legacy.discard": "Verwerfen …",
+  "studyData.legacy.discardConfirm.title": "Ältere Lerndaten endgültig löschen?",
+  "studyData.legacy.discardConfirm.body": "Die älteren Lerndaten ({notes} Notizen, {files} Dateien) werden dauerhaft von diesem Gerät gelöscht. Das kann nicht rückgängig gemacht werden.",
+  "studyData.legacy.discardConfirm.confirm": "Endgültig löschen",
+  "studyData.legacy.assigned": "Ältere Lerndaten zugeordnet: {notes} Notizen, {files} Dateien.",
+  "studyData.legacy.assignedPartly": "Zugeordnet: {notes} Notizen, {files} Dateien. Für {exams} Prüfungen hat dieses Konto bereits eigene Einträge; die älteren Daten dazu bleiben unverändert gespeichert.",
+  "studyData.legacy.assignFailed": "Die älteren Lerndaten konnten nicht zugeordnet werden. Sie bleiben unverändert gespeichert.",
+  "studyData.legacy.discarded": "Ältere Lerndaten gelöscht.",
+  "studyData.legacy.discardFailed": "Die älteren Lerndaten konnten nicht gelöscht werden. Sie bleiben gespeichert.",
+  "studyData.legacy.setting.title": "Ältere Lerndaten ohne Konto",
+  "studyData.legacy.setting.subtitle": "{exams} Prüfungen ({notes} Notizen, {files} Dateien). Tippen, um sie zuzuordnen oder zu löschen."
 }

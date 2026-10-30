@@ -87,6 +87,44 @@ class StudyData {
     return count;
   }
 
+  static Map<String, String> _withMissing(
+          Map<String, String> base, Map<String, String> other) =>
+      {...other, ...base};
+
+  /// This data plus every entry of [other] this has no entry for. Nothing that
+  /// this holds is replaced.
+  StudyData withMissingFrom(StudyData other) => StudyData(
+        progress: _withMissing(progress, other.progress),
+        notes: _withMissing(notes, other.notes),
+        attachments: _withMissing(attachments, other.attachments),
+        phases: _withMissing(phases, other.phases),
+      );
+
+  static bool _holds(Map<String, String> whole, Map<String, String> part) =>
+      part.entries.every((entry) => whole[entry.key] == entry.value);
+
+  /// Whether every entry of [other] is in this, with the same value.
+  bool contains(StudyData other) =>
+      _holds(progress, other.progress) &&
+      _holds(notes, other.notes) &&
+      _holds(attachments, other.attachments) &&
+      _holds(phases, other.phases);
+
+  static Map<String, String> _without(
+          Map<String, String> whole, Map<String, String> part) =>
+      {
+        for (final entry in whole.entries)
+          if (part[entry.key] != entry.value) entry.key: entry.value,
+      };
+
+  /// This data without the entries that [other] holds with the same value.
+  StudyData without(StudyData other) => StudyData(
+        progress: _without(progress, other.progress),
+        notes: _without(notes, other.notes),
+        attachments: _without(attachments, other.attachments),
+        phases: _without(phases, other.phases),
+      );
+
   Map<String, Object?> toJson() => <String, Object?>{
         'version': 1,
         'progress': progress,

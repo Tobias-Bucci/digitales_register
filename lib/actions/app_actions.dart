@@ -38,6 +38,8 @@ abstract class AppActions extends ReduxActions {
   abstract final ActionDispatcher<Error> error;
   abstract final VoidActionDispatcher saveState;
   abstract final VoidActionDispatcher deleteData;
+  abstract final VoidActionDispatcher assignLegacyStudyData;
+  abstract final VoidActionDispatcher discardLegacyStudyData;
   abstract final ActionDispatcher<Uri?> start;
   abstract final VoidActionDispatcher load;
   abstract final VoidActionDispatcher refreshNoInternet;
