@@ -16,6 +16,7 @@
 // along with digitales_register.  If not, see <http://www.gnu.org/licenses/>.
 
 import 'package:dr/account_scope.dart';
+import 'package:dr/school_notification_service.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 void main() {
@@ -48,5 +49,64 @@ void main() {
   test('the text form never contains the user name', () {
     expect(AccountScope('https://a.example.org', 'secret-user').toString(),
         isNot(contains('secret-user')));
+  });
+  group('fileId', () {
+    test('is 32 hex digits and the same for every spelling of the server', () {
+      final id = AccountScope('https://School.example.org/', 'max').fileId;
+      expect(id, matches(RegExp(r'^[0-9a-f]{32}$')));
+      expect(AccountScope('https://school.example.org', 'max').fileId, id);
+    });
+
+    test('differs between users, schools and user name spellings', () {
+      final ids = {
+        AccountScope('https://a.example.org', 'max').fileId,
+        AccountScope('https://a.example.org', 'Max').fileId,
+        AccountScope('https://a.example.org', 'anna').fileId,
+        AccountScope('https://b.example.org', 'max').fileId,
+        AccountScope('https://a.example.org', null).fileId,
+        AccountScope.demo().fileId,
+      };
+      expect(ids, hasLength(6));
+    });
+
+    test('does not run server and user together', () {
+      // Without separators these two would hash the same text.
+      expect(
+        AccountScope('https://a.example.org', 'x').fileId,
+        isNot(AccountScope('https://a.example.orgx', '').fileId),
+      );
+    });
+
+    test('is stable: it names folders and keys that outlive an update', () {
+      expect(AccountScope('https://school.example.org', 'max').fileId,
+          '0e6c61c2f9737d7e3518862a7f1f59a5');
+    });
+
+    test('contains neither school nor user name', () {
+      final id = AccountScope('https://school.example.org', 'maxmustermann')
+          .fileId;
+      expect(id, isNot(contains('school')));
+      expect(id, isNot(contains('maxmustermann')));
+    });
+
+    test('the demo account is not an account of any school', () {
+      expect(AccountScope.demo().server, isEmpty);
+      expect(AccountScope.demo(), isNot(AccountScope('', 'other')));
+      expect(AccountScope.demo(), AccountScope(null, 'demo'));
+    });
+  });
+
+  test('notification keys tell servers apart exactly like scopes do', () {
+    final service = SchoolNotificationService();
+    expect(
+      service.accountKey('https://School.Example.org/', 'max'),
+      service.accountKey('https://school.example.org', 'max'),
+    );
+    expect(
+      service.accountKey('https://school.example.org', 'Max'),
+      isNot(service.accountKey('https://school.example.org', 'max')),
+    );
+    expect(canonicalSchoolServer('https://School.Example.org//'),
+        'https://school.example.org');
   });
 }
