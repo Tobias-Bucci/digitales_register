@@ -4,6 +4,7 @@ import 'package:dr/assessment_attachments.dart';
 import 'package:dr/calendar_date.dart';
 import 'package:dr/exam_study_plan.dart';
 import 'package:dr/i18n/app_localizations.dart';
+import 'package:dr/middleware/middleware.dart';
 import 'package:dr/ui/exam_timeline.dart';
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
@@ -396,21 +397,21 @@ class _ExamDetailPageState extends State<_ExamDetailPage> {
   }
 
   Future<void> _addAttachment() async {
-    final attachment = await pickAndStoreAssessmentAttachment();
+    final attachment = await pickAndStoreAssessmentAttachment(currentAccountScope());
     if (!mounted || attachment == null) return;
     setState(() => attachments = [...attachments, attachment]);
     widget.onAttachmentsChanged(attachments);
   }
 
   Future<void> _removeAttachment(AssessmentAttachment attachment) async {
-    await removeAssessmentAttachment(attachment);
+    await removeAssessmentAttachment(attachment, currentAccountScope());
     if (!mounted) return;
     setState(() => attachments.remove(attachment));
     widget.onAttachmentsChanged(attachments);
   }
 
   Future<void> _openAttachment(AssessmentAttachment attachment) async {
-    final error = await openAssessmentAttachment(attachment);
+    final error = await openAssessmentAttachment(attachment, currentAccountScope());
     if (!mounted || error == null) return;
     ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text(context.l10n.text('attachment.openFailed'))));

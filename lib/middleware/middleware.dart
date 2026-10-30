@@ -46,6 +46,7 @@ import 'package:dr/app_clock.dart';
 import 'package:dr/app_language_controller.dart';
 import 'package:dr/app_selectors.dart';
 import 'package:dr/app_state.dart';
+import 'package:dr/assessment_attachments.dart';
 import 'package:dr/calendar_load_log.dart';
 import 'package:dr/calendar_sync_service.dart';
 import 'package:dr/class_register_cache.dart';
@@ -70,6 +71,7 @@ import 'package:dr/serializers.dart';
 import 'package:dr/settings_persistence_service.dart';
 import 'package:dr/state_persistence_service.dart';
 import 'package:dr/stored_login.dart';
+import 'package:dr/study_data_service.dart';
 import 'package:dr/theme_controller.dart';
 import 'package:dr/ui/debug_page.dart';
 import 'package:dr/ui/dialog.dart';
@@ -108,6 +110,8 @@ part 'settings.dart';
 late FlutterSecureStorage secureStorage;
 final AppStatePersistenceService statePersistenceService =
     AppStatePersistenceService();
+final StudyDataService studyDataService =
+    StudyDataService(storage: () => secureStorage);
 final AndroidWidgetSnapshotService androidWidgetSnapshotService =
     AndroidWidgetSnapshotService();
 
@@ -1193,6 +1197,7 @@ void resetNoInternetRetryForTest() {
 void resetMiddlewareStateForTest() {
   schoolNotificationStartupReady.value = false;
   _unreadableStorageKeys.clear();
+  _studyDataScope = null;
   resetNoInternetRetryForTest();
   _clearRuntimeCaches();
 }
@@ -1430,6 +1435,7 @@ Future<void> _loggedIn(
       await next(action);
     }
 
+    await _mountStudyData(api, session, action.payload.username);
     _popAll();
   } else {
     await next(action);
@@ -1480,9 +1486,68 @@ Future<SettingsState> _settingsForAccountLoad({
   if (globalSettings != null) {
     return globalSettings;
   }
-  await settingsPersistenceService.save(legacySettings);
-  return legacySettings;
+  // The first shared settings are the ones this account has saved so far,
+  // learning notes included: they are not lost, and belong to no account yet.
+  await settingsPersistenceService.adopt(legacySettings);
+  return StudyData.empty.applyTo(legacySettings);
 }
+
+/// The account whose learning notes are in the settings of the store, or null
+/// while they are not (not loaded yet, or they could not be read). Notes are
+/// only saved for this account: a failed read must never be followed by a
+/// write that replaces what could not be read.
+AccountScope? _studyDataScope;
+
+AccountScope _studyScopeOf(String? username) =>
+    AccountScope(wrapper.url, username);
+
+/// Puts the learning notes of the account that just signed in into the
+/// settings of the store. Whoever signed in before left none behind.
+Future<void> _mountStudyData(
+  MiddlewareApi<AppState, AppStateBuilder, AppActions> api,
+  _Session session,
+  String? username,
+) async {
+  final scope = _studyScopeOf(username);
+  _studyDataScope = null;
+  StudyData data;
+  try {
+    data = await studyDataService.load(scope);
+  } on StudyDataUnreadable catch (error, stack) {
+    session.ensureCurrent();
+    diagnostics.report(error, stack, DiagnosticError.storage);
+    showSnackBar(tr('error.savedDataUnreadable'));
+    return;
+  }
+  session.ensureCurrent();
+  await api.actions.mountAppState(
+    api.state.rebuild((b) => b..settingsState.replace(
+          data.applyTo(api.state.settingsState),
+        )),
+  );
+  _studyDataScope = scope;
+}
+
+/// Saves the learning notes of the signed-in account after they changed.
+Future<void> _persistStudyData(AppState state) async {
+  if (deletedData || !state.loginState.loggedIn) return;
+  final scope = _studyScopeOf(state.loginState.username);
+  if (_studyDataScope != scope) return;
+  final data = StudyData.fromSettings(state.settingsState);
+  try {
+    // Behind every earlier write and deletion, in the order requested.
+    await statePersistenceService
+        .runExclusive(() => studyDataService.save(scope, data));
+  } catch (error, stack) {
+    diagnostics.report(error, stack, DiagnosticError.storage);
+  }
+}
+
+bool _studyDataChanged(SettingsState before, SettingsState after) =>
+    before.assessmentStudyProgress != after.assessmentStudyProgress ||
+    before.assessmentStudyNotes != after.assessmentStudyNotes ||
+    before.assessmentStudyAttachments != after.assessmentStudyAttachments ||
+    before.assessmentStudyPhases != after.assessmentStudyPhases;
 
 // This is to avoid saving data in an action right after deleting data,
 // which would restore it.
@@ -1501,6 +1566,10 @@ NextActionHandler _saveStateMiddleware(
                   action.name ==
                       SettingsActionsNames.setDashboardConfiguration.name)) {
             await settingsPersistenceService.save(api.state.settingsState);
+          }
+          if (action.name != AppActionsNames.mountAppState.name &&
+              _studyDataChanged(previousSettings, api.state.settingsState)) {
+            await _persistStudyData(api.state);
           }
           if (api.state.loginState.loggedIn &&
               api.state.loginState.username != null) {
@@ -1628,6 +1697,16 @@ Future<void> _deleteData(
 ) async {
   await next(action);
   deletedData = true;
+  final scope = _studyScopeOf(api.state.loginState.username);
+  if (api.state.loginState.loggedIn && scope.user != null) {
+    // Own notes and files go with the account's data; no later write can
+    // bring them back while data deletion is active.
+    if (_studyDataScope == scope) _studyDataScope = null;
+    await statePersistenceService.runExclusive(() async {
+      await studyDataService.delete(scope);
+      await deleteAssessmentAttachmentFolder(scope);
+    });
+  }
   await androidWidgetSnapshotService.clear();
   await api.actions.saveState();
 }
