@@ -39,17 +39,14 @@ Future<void> _loadNotifications(
   }
 
   await _runCoalescedLoad(_notificationsCacheKey, () async {
+    final session = _Session.capture();
     await next(action);
-    final source = wrapper;
+    final source = session.wrapper;
     final server = source.url;
     final user = source.user;
-    final dynamic data =
-        await source.send(schoolUnreadNotificationsEndpoint);
+    final dynamic data = await session.send(schoolUnreadNotificationsEndpoint);
 
-    if (data != null &&
-        identical(source, wrapper) &&
-        server == wrapper.url &&
-        user == wrapper.user) {
+    if (data != null) {
       if (server != null && user != null && !source.demoMode) {
         // Persisted claims still serialize inside the service, including any
         // pending activation. Rendering the feed must not wait for that work.
@@ -57,7 +54,7 @@ Future<void> _loadNotifications(
             () => schoolNotifications.ingest(server, user, data as List)));
       }
       await api.actions.notificationsActions.loaded(data as List);
-      _markRuntimeCacheFresh(_notificationsCacheKey);
+      _markRuntimeCacheFresh(_notificationsCacheKey, session);
     }
   });
 }
@@ -72,10 +69,11 @@ Future<void> _deleteNotification(
       action.payload.type == 'message'
           ? 'general'
           : (action.payload.type ?? 'unknown'));
+  final session = _Session.capture();
   await _rememberViewedSchoolNotifications([action.payload]);
   await next(action);
   _markRuntimeCacheStale(_notificationsCacheKey);
-  await wrapper.send(
+  await session.send(
     "api/notification/markAsRead",
     args: {"id": action.payload.id},
   );
@@ -86,6 +84,7 @@ Future<void> _deleteAllNotifications(
   ActionHandler next,
   Action<void> action,
 ) async {
+  final session = _Session.capture();
   await _rememberViewedSchoolNotifications(
       api.state.notificationState.notifications ?? <Notification>[]);
   await next(action);
@@ -95,7 +94,7 @@ Future<void> _deleteAllNotifications(
   )) {
     await api.actions.messagesActions.markAsRead(n.objectId!);
   }
-  await wrapper.send("api/notification/markAsRead", args: {});
+  await session.send("api/notification/markAsRead", args: {});
 }
 
 Future<void> _rememberViewedSchoolNotifications(

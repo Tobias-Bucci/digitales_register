@@ -60,17 +60,20 @@ Future<void> _loadProfile(
     return;
   }
   await _runCoalescedLoad(_profileCacheKey, () async {
+    final session = _Session.capture();
     await next(action);
-    await _refreshProfile(api);
+    await _refreshProfile(api, session);
   });
 }
 
 Future<void> _refreshProfile(
-  MiddlewareApi<AppState, AppStateBuilder, AppActions> api,
-) async {
+  MiddlewareApi<AppState, AppStateBuilder, AppActions> api, [
+  _Session? startedIn,
+]) async {
+  final session = startedIn ?? _Session.capture();
   dynamic result;
   try {
-    result = await wrapper.send("api/profile/get");
+    result = await session.send("api/profile/get");
   } on UnexpectedLogoutException {
     _showProfileRequestFailedMessage(tr('profile.loadFailed'));
     return;
@@ -78,15 +81,18 @@ Future<void> _refreshProfile(
   if (result == null) return;
   final resultMap = getMap(result);
   if (resultMap != null) {
-    await _syncServerLanguageToApp(api: api, profile: resultMap);
+    await _syncServerLanguageToApp(
+        api: api, profile: resultMap, session: session);
   }
+  session.ensureCurrent();
   unawaited(api.actions.profileActions.loaded(result as Object));
-  _markRuntimeCacheFresh(_profileCacheKey);
+  _markRuntimeCacheFresh(_profileCacheKey, session);
 }
 
 Future<void> _syncServerLanguageToApp({
   required MiddlewareApi<AppState, AppStateBuilder, AppActions> api,
   required Map profile,
+  required _Session session,
 }) async {
   final targetLanguage = _preferredServerLanguageForApp(
     api.state.settingsState.languageCode,
@@ -101,10 +107,12 @@ Future<void> _syncServerLanguageToApp({
   }
 
   try {
-    await wrapper.send(
+    await session.send(
       'api/profile/updateLanguage',
       args: <String, Object?>{'language': targetLanguage},
     );
+  } on StaleSessionException {
+    rethrow;
   } catch (_) {
     // Best effort only. If the server rejects this, keep the local app language.
   }
@@ -129,9 +137,10 @@ Future<void> _setSendNotificationEmails(
   ActionHandler next,
   Action<bool> action,
 ) async {
+  final session = _Session.capture();
   dynamic result;
   try {
-    result = await wrapper.send(
+    result = await session.send(
       "api/profile/updateNotificationSettings",
       args: {"notificationsEnabled": action.payload},
     );
@@ -151,10 +160,11 @@ Future<void> _changeEmail(
   ActionHandler next,
   Action<ChangeEmailPayload> action,
 ) async {
+  final session = _Session.capture();
   await next(action);
   dynamic result;
   try {
-    result = await wrapper.send(
+    result = await session.send(
       "api/profile/updateProfile",
       args: {"email": action.payload.email, "password": action.payload.pass},
     );
@@ -172,7 +182,7 @@ Future<void> _changeEmail(
     showSnackBar(tr('profile.saveFailed'));
   }
   _markRuntimeCacheStale(_profileCacheKey);
-  await _refreshProfile(api);
+  await _refreshProfile(api, session);
 }
 
 Future<void> _pickAndUploadProfilePicture(
@@ -180,6 +190,7 @@ Future<void> _pickAndUploadProfilePicture(
   ActionHandler next,
   Action<void> action,
 ) async {
+  final session = _Session.capture();
   await next(action);
   final selected = await pickProfilePicture();
   if (selected == null) {
@@ -189,7 +200,7 @@ Future<void> _pickAndUploadProfilePicture(
 
   dynamic result;
   try {
-    result = await wrapper.sendBytes(
+    result = await session.sendBytes(
       "api/profile/uploadProfilePicture",
       bytes: upload.bytes,
       contentType: upload.contentType,
@@ -212,7 +223,7 @@ Future<void> _pickAndUploadProfilePicture(
   if (resultMap["error"] == null) {
     showSnackBar(tr('profile.pictureUpdated'));
     _markRuntimeCacheStale(_profileCacheKey);
-    await _refreshProfile(api);
+    await _refreshProfile(api, session);
   } else {
     showSnackBar(tr('profile.saveFailed'));
   }
@@ -223,6 +234,7 @@ Future<void> _updateCodiceFiscale(
   ActionHandler next,
   Action<String> action,
 ) async {
+  final session = _Session.capture();
   await next(action);
   if (api.state.profileState.codiceFiscale?.trim().isNotEmpty ?? false) {
     showSnackBar(tr('profile.taxIdLocked'));
@@ -236,7 +248,7 @@ Future<void> _updateCodiceFiscale(
 
   dynamic result;
   try {
-    result = await wrapper.send(
+    result = await session.send(
       "api/profile/updateCodiceFiscale",
       args: <String, Object?>{"codiceFiscale": codiceFiscale},
     );
@@ -257,7 +269,7 @@ Future<void> _updateCodiceFiscale(
   if (resultMap["error"] == null) {
     showSnackBar(tr('profile.taxIdUpdated'));
     _markRuntimeCacheStale(_profileCacheKey);
-    await _refreshProfile(api);
+    await _refreshProfile(api, session);
   } else {
     showSnackBar(tr('profile.saveFailed'));
   }

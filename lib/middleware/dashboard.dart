@@ -46,8 +46,9 @@ Future<void> _loadDays(
   }
 
   await _runCoalescedLoad(cacheKey, () async {
+    final session = _Session.capture();
     await next(action);
-    final dynamic data = await wrapper.send(
+    final dynamic data = await session.send(
       "api/student/dashboard/dashboard",
       args: {"viewFuture": action.payload},
     );
@@ -67,7 +68,7 @@ Future<void> _loadDays(
               api.state.settingsState.dashboardDeduplicateEntries,
       ),
     );
-    _markRuntimeCacheFresh(cacheKey);
+    _markRuntimeCacheFresh(cacheKey, session);
     // Holidays also need calendar data when the timetable has never been opened.
     _startCalendarBackgroundLoad(api);
   });
@@ -87,9 +88,10 @@ Future<void> _addReminder(
   ActionHandler next,
   Action<AddReminderPayload> action,
 ) async {
+  final session = _Session.capture();
   await next(action);
   _markRuntimeCacheStale(_dashboardCacheKey(api.state.dashboardState.future));
-  final dynamic result = await wrapper.send(
+  final dynamic result = await session.send(
     "api/student/dashboard/save_reminder",
     args: {
       "date": DateFormat("yyyy-MM-dd").format(action.payload.date),
@@ -117,9 +119,10 @@ Future<void> _deleteHomework(
 ) async {
   // Remove the entry from the dashboard immediately and reconcile with the
   // server afterwards, so reminder deletes behave responsively.
+  final session = _Session.capture();
   await next(action);
   _markRuntimeCacheStale(_dashboardCacheKey(api.state.dashboardState.future));
-  final dynamic result = await wrapper.send(
+  final dynamic result = await session.send(
     "api/student/dashboard/delete_reminder",
     args: {"id": action.payload.id},
   );
@@ -137,8 +140,9 @@ Future<void> _editReminder(
   ActionHandler next,
   Action<EditReminderPayload> action,
 ) async {
+  final session = _Session.capture();
   _markRuntimeCacheStale(_dashboardCacheKey(api.state.dashboardState.future));
-  final deleteResult = await wrapper.send(
+  final deleteResult = await session.send(
     "api/student/dashboard/delete_reminder",
     args: {"id": action.payload.previousHomework.id},
   );
@@ -152,7 +156,7 @@ Future<void> _editReminder(
     return;
   }
 
-  final dynamic saveResult = await wrapper.send(
+  final dynamic saveResult = await session.send(
     "api/student/dashboard/save_reminder",
     args: {
       "date": DateFormat("yyyy-MM-dd").format(action.payload.date),
@@ -184,8 +188,9 @@ Future<void> _toggleDone(
   ActionHandler next,
   Action<ToggleDonePayload> action,
 ) async {
+  final session = _Session.capture();
   _markRuntimeCacheStale(_dashboardCacheKey(api.state.dashboardState.future));
-  final dynamic result = await wrapper.send(
+  final dynamic result = await session.send(
     "api/student/dashboard/toggle_reminder",
     args: {
       "id": action.payload.homeworkId,

@@ -37,17 +37,22 @@ Future<void> _loadAbsences(
     return;
   }
   await _runCoalescedLoad(_absencesCacheKey, () async {
+    final session = _Session.capture();
     await next(action);
-    await _refreshAbsences(api);
+    await _refreshAbsences(api, session);
   });
 }
 
 Future<void> _refreshAbsences(
-  MiddlewareApi<AppState, AppStateBuilder, AppActions> api,
-) async {
+  MiddlewareApi<AppState, AppStateBuilder, AppActions> api, [
+  _Session? startedIn,
+]) async {
+  final session = startedIn ?? _Session.capture();
   dynamic response;
   try {
-    response = await wrapper.send("api/student/dashboard/absences");
+    response = await session.send("api/student/dashboard/absences");
+  } on StaleSessionException {
+    rethrow;
   } on UnexpectedLogoutException {
     unawaited(api.actions.absencesActions.notLoaded());
     await _handleUnexpectedLogout(api, 'load');
@@ -64,7 +69,7 @@ Future<void> _refreshAbsences(
   // A middleware action must not await another dispatch on the same store:
   // built_redux serializes dispatches, which otherwise creates a deadlock.
   unawaited(api.actions.absencesActions.loaded(response));
-  _markRuntimeCacheFresh(_absencesCacheKey);
+  _markRuntimeCacheFresh(_absencesCacheKey, session);
 }
 
 Future<void> _addFutureAbsence(
@@ -73,10 +78,11 @@ Future<void> _addFutureAbsence(
   Action<Map<String, dynamic>> action,
 ) async {
   if (api.state.noInternet) return;
+  final session = _Session.capture();
   await next(action);
   dynamic response;
   try {
-    response = await wrapper.send(
+    response = await session.send(
       'api/student/dashboard/absence_future',
       args: action.payload,
     );
@@ -86,7 +92,7 @@ Future<void> _addFutureAbsence(
   }
   if (_responseSucceeded(response)) {
     _markRuntimeCacheStale(_absencesCacheKey);
-    await _refreshAbsences(api);
+    await _refreshAbsences(api, session);
     if (!wrapper.noInternet) {
       showSnackBar((await _loadMiddlewareLocalizations(api.state))
           .text('absences.future.success'));
@@ -103,6 +109,7 @@ Future<void> _removeFutureAbsence(
   Action<FutureAbsence> action,
 ) async {
   if (api.state.noInternet) return;
+  final session = _Session.capture();
   await next(action);
   final payload = _buildRemoveFutureAbsencePayload(action.payload);
   if (payload == null) {
@@ -114,7 +121,7 @@ Future<void> _removeFutureAbsence(
   }
   dynamic response;
   try {
-    response = await wrapper.send(
+    response = await session.send(
       'api/student/dashboard/remove_absence_future',
       args: payload,
     );
@@ -124,7 +131,7 @@ Future<void> _removeFutureAbsence(
   }
   if (_responseSucceeded(response)) {
     _markRuntimeCacheStale(_absencesCacheKey);
-    await _refreshAbsences(api);
+    await _refreshAbsences(api, session);
   } else if (!wrapper.noInternet) {
     showSnackBar((await _loadMiddlewareLocalizations(api.state))
         .text('absences.future.removeFailed'));
@@ -137,6 +144,7 @@ Future<void> _justifyAbsence(
   Action<Map<String, dynamic>> action,
 ) async {
   if (api.state.noInternet) return;
+  final session = _Session.capture();
   await next(action);
   final payload = _buildJustifyAbsencePayload(api.state, action.payload);
   if (payload == null) {
@@ -148,7 +156,7 @@ Future<void> _justifyAbsence(
   }
   dynamic response;
   try {
-    response = await wrapper.send(
+    response = await session.send(
       'api/student/dashboard/absence_reason',
       args: payload,
     );
@@ -158,7 +166,7 @@ Future<void> _justifyAbsence(
   }
   if (_responseSucceeded(response)) {
     _markRuntimeCacheStale(_absencesCacheKey);
-    await _refreshAbsences(api);
+    await _refreshAbsences(api, session);
     if (!wrapper.noInternet) {
       unawaited(_showJustificationSuccess(api.state));
     }

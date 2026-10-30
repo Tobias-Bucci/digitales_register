@@ -151,6 +151,9 @@ class TestSecureStorage extends FlutterSecureStorage {
 class MockWrapper extends Mock implements Wrapper {
   @override
   bool get isAppInForeground => true;
+
+  @override
+  bool get isRetired => false;
 }
 
 class MockDio extends Mock implements Dio {}
