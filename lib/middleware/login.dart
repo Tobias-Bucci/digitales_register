@@ -67,7 +67,7 @@ Future<void> _logout(
           state: api.state,
           deletedData: deletedData,
           server: wrapper.loginAddress,
-          writer: _writeToStorage,
+          writer: _persistWriter(),
           keyFactory: getStorageKey,
         ));
   }
@@ -491,7 +491,7 @@ Future<void> _switchAccountSession(
     state: api.state,
     deletedData: deletedData,
     server: wrapper.loginAddress,
-    writer: _writeToStorage,
+    writer: _persistWriter(),
     keyFactory: getStorageKey,
   );
   wrapper.onLogout = null;
@@ -552,6 +552,8 @@ Future<void> _removeCurrentAccount(
   Action<void> action,
 ) async {
   await next(action);
+  // Nothing pending may be written for this account once its data is gone.
+  statePersistenceService.clear();
 
   final rawLogin = await secureStorage.read(key: 'login');
   final login = rawLogin == null ? null : getMap(rawLogin);
@@ -597,17 +599,21 @@ Future<void> _deleteLocalAccountData({
       () => schoolNotifications.forgetAccount(url, user));
   final loginAddress = '${fixupUrl(url)}/v2/api/auth/login';
   final storageKey = getStorageKey(user, loginAddress);
-  await secureStorage.delete(key: escapeKey(storageKey));
+  // Behind every write already started: a slow older write must not put the
+  // deleted state back.
+  await statePersistenceService.runExclusive(() async {
+    await secureStorage.delete(key: escapeKey(storageKey));
 
-  final prefs = await SharedPreferences.getInstance();
-  for (final namespace in <String>[
-    'classRegisterLessons',
-    'courseMaterials',
-    'homeworkSummary',
-    'gradeDeadlineOverrides',
-  ]) {
-    await prefs.remove('$namespace:$storageKey');
-  }
+    final prefs = await SharedPreferences.getInstance();
+    for (final namespace in <String>[
+      'classRegisterLessons',
+      'courseMaterials',
+      'homeworkSummary',
+      'gradeDeadlineOverrides',
+    ]) {
+      await prefs.remove('$namespace:$storageKey');
+    }
+  });
 }
 
 AppState _emptyAppStateKeepingSettings(AppState state) {

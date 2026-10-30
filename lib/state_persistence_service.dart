@@ -34,6 +34,16 @@ class AppStatePersistenceService {
 
   Timer? _pendingSave;
   _PendingPersistenceRequest? _pendingRequest;
+
+  /// Every write and every deletion runs behind this one, in the order it was
+  /// requested. A native write that has started cannot be taken back, so the
+  /// only way to keep an older write from landing after a newer one (or after
+  /// a deletion) is to not start the newer one before it has finished.
+  Future<void> _queue = Future<void>.value();
+
+  /// Changes with every [clear]: bookkeeping of a write that was running
+  /// while the service was cleared describes a state nobody has any more.
+  int _generation = 0;
   _PersistedStateIdentity? _lastPersistedIdentity;
   String? _lastPersistedKey;
   String? _lastPersistedPayload;
@@ -59,6 +69,19 @@ class AppStatePersistenceService {
     );
   }
 
+  /// Runs [action] after every write requested so far has finished, and
+  /// before any write requested later starts. Deleting stored data goes
+  /// through here, so an older write cannot bring the data back.
+  Future<T> runExclusive<T>(Future<T> Function() action) {
+    final result = _queue.then((_) => action());
+    // A failing action must not block the writes behind it.
+    _queue = result.then<void>((_) {}, onError: (Object _) {});
+    return result;
+  }
+
+  /// Completes once every write requested so far has finished.
+  Future<void> drain() => runExclusive<void>(() async {});
+
   Future<void> flush({
     AppState? state,
     bool? deletedData,
@@ -81,6 +104,19 @@ class AppStatePersistenceService {
     _pendingSave = null;
     _pendingRequest = null;
 
+    final generation = _generation;
+    await runExclusive(() => _write(request, generation));
+  }
+
+  Future<void> _write(
+    _PendingPersistenceRequest request,
+    int generation,
+  ) async {
+    // Cleared while this request was waiting for its turn: the account it was
+    // taken for has been left or deleted.
+    if (generation != _generation) {
+      return;
+    }
     if (!request.state.loginState.loggedIn ||
         request.state.loginState.username == null) {
       return;
@@ -114,9 +150,11 @@ class AppStatePersistenceService {
       rethrow;
     }
     stopwatch.stop();
-    _lastPersistedIdentity = identity;
-    _lastPersistedKey = storageKey;
-    _lastPersistedPayload = toPersist;
+    if (generation == _generation) {
+      _lastPersistedIdentity = identity;
+      _lastPersistedKey = storageKey;
+      _lastPersistedPayload = toPersist;
+    }
     logPerformanceEvent(
       "state_persisted",
       <String, Object?>{
@@ -128,6 +166,7 @@ class AppStatePersistenceService {
   }
 
   void clear() {
+    _generation++;
     _pendingSave?.cancel();
     _pendingSave = null;
     _pendingRequest = null;

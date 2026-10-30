@@ -1486,7 +1486,7 @@ NextActionHandler _saveStateMiddleware(
                 state: api.state,
                 deletedData: deletedData,
                 server: wrapper.loginAddress,
-                writer: _writeToStorage,
+                writer: _persistWriter(),
                 keyFactory: getStorageKey,
               );
               if (deletedData) {
@@ -1500,7 +1500,7 @@ NextActionHandler _saveStateMiddleware(
                 state: api.state,
                 deletedData: deletedData,
                 server: wrapper.loginAddress,
-                writer: _writeToStorage,
+                writer: _persistWriter(),
                 keyFactory: getStorageKey,
               );
               if (deletedData) {
@@ -1538,8 +1538,19 @@ final Set<String> _unreadableStorageKeys = <String>{};
 @visibleForTesting
 Duration storageReadRetryDelay = const Duration(milliseconds: 200);
 
-Future<void> _writeToStorage(String key, String txt) async {
-  if (_unreadableStorageKeys.contains(key) && !deletedData) {
+/// Whether data deletion is active is decided when a write is requested, not
+/// when it finally runs behind the writes in front of it.
+PersistStateWriter _persistWriter() {
+  final deleting = deletedData;
+  return (key, txt) => _writeToStorage(key, txt, deleting: deleting);
+}
+
+Future<void> _writeToStorage(
+  String key,
+  String txt, {
+  required bool deleting,
+}) async {
+  if (_unreadableStorageKeys.contains(key) && !deleting) {
     privacyLog('technical_operation');
     return;
   }
