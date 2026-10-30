@@ -1,6 +1,8 @@
 import 'dart:async';
 import 'dart:convert';
+import 'dart:io';
 
+import 'package:dr/account_scope.dart';
 import 'package:dr/app_state.dart';
 import 'package:dr/middleware/middleware.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -70,6 +72,63 @@ void main() {
     final login = jsonDecode((await secureStorage.read(key: 'login'))!) as Map;
     expect((login['otherAccounts'] as List).single['user'], 'kept-user');
     expect(store.state.loginState.otherAccounts, <String>['kept-user']);
+  });
+
+  test('removing an account deletes its downloads and nothing of another',
+      () async {
+    const user = 'removed-user';
+    const url = 'https://removed.digitalesregister.it';
+    final base = await Directory.systemTemp.createTemp('removal-downloads-');
+    addTearDown(() async {
+      attachmentDownloadDirectoryOverride = null;
+      await base.delete(recursive: true);
+    });
+    attachmentDownloadDirectoryOverride = () async => base.path;
+    await secureStorage.write(
+      key: 'login',
+      value: jsonEncode({
+        'user': 'active-user',
+        'pass': 'active-password',
+        'url': 'https://active.digitalesregister.it',
+        'otherAccounts': [
+          {'user': user, 'pass': 'removed-password', 'url': url},
+          {
+            'user': 'kept-user',
+            'pass': 'kept-password',
+            'url': 'https://kept.digitalesregister.it',
+          },
+        ],
+      }),
+    );
+    final removed = AccountScope(url, user);
+    final kept = AccountScope('https://kept.digitalesregister.it', 'kept-user');
+    final files = <String, File>{
+      'removed': File('${base.path}/${removed.fileId}/course_1_a.pdf'),
+      'removed nested': File('${base.path}/${removed.fileId}/x/msg_1_b.pdf'),
+      'kept': File('${base.path}/${kept.fileId}/course_1_a.pdf'),
+      // Saved before accounts had folders: belongs to no account.
+      'legacy': File('${base.path}/course_1_a.pdf'),
+    };
+    for (final file in files.values) {
+      file.createSync(recursive: true);
+      file.writeAsStringSync('content');
+    }
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setString('courseMaterialFileVersions:${removed.fileId}', '{}');
+    await prefs.setString('courseMaterialFileVersions:${kept.fileId}', '{}');
+    await prefs.setString('courseMaterialFileVersions', '{}');
+
+    final store = createStore(initialState: AppState(), withMiddleware: true);
+    await store.actions.loginActions.removeAccount(0);
+
+    expect(Directory('${base.path}/${removed.fileId}').existsSync(), isFalse);
+    expect(files['kept']!.existsSync(), isTrue);
+    expect(files['legacy']!.existsSync(), isTrue);
+    expect(prefs.getString('courseMaterialFileVersions:${removed.fileId}'),
+        isNull);
+    expect(prefs.getString('courseMaterialFileVersions:${kept.fileId}'),
+        isNotNull);
+    expect(prefs.getString('courseMaterialFileVersions'), isNotNull);
   });
 
   test('removing the active account clears its local state and credentials',

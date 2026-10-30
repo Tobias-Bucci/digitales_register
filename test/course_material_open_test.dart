@@ -2,6 +2,7 @@ import 'dart:convert';
 import 'dart:io';
 
 import 'package:dio/dio.dart';
+import 'package:dr/account_scope.dart';
 import 'package:dr/course_materials.dart';
 import 'package:dr/middleware/middleware.dart';
 import 'package:dr/wrapper.dart';
@@ -33,6 +34,7 @@ CourseMaterialEntry entry(
 
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
+  late Directory base;
   late Directory directory;
   late Dio client;
   late Wrapper previousWrapper;
@@ -43,15 +45,21 @@ void main() {
 
   setUp(() async {
     SharedPreferences.setMockInitialValues({});
-    directory = await Directory.systemTemp.createTemp('course-material-');
+    base = await Directory.systemTemp.createTemp('course-material-');
     previousWrapper = wrapper;
     final mock = _Wrapper();
     wrapper = mock;
+    when(() => mock.url).thenReturn('https://school.example');
+    when(() => mock.user).thenReturn('max');
+    // Files are kept in a folder of the account that is signed in.
+    directory = Directory(
+        '${base.path}/${AccountScope('https://school.example', 'max').fileId}')
+      ..createSync();
     client = Dio();
     when(() => mock.dio).thenReturn(client);
     when(() => mock.baseAddress).thenReturn('https://school.example/v2/');
     when(() => mock.ensureLoggedIn()).thenAnswer((_) async => true);
-    attachmentDownloadDirectoryOverride = () async => directory.path;
+    attachmentDownloadDirectoryOverride = () async => base.path;
     courseMaterialPlatformOverride = TargetPlatform.windows;
     opens = 0;
     requests = 0;
@@ -77,7 +85,7 @@ void main() {
     debugPrint = previousPrint;
     courseMaterialDebugLogsOverride = null;
     client.close(force: true);
-    await directory.delete(recursive: true);
+    await base.delete(recursive: true);
     TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
         .setMockMethodCallHandler(
             const MethodChannel('digitales_register/linux_file_open'), null);
@@ -364,7 +372,7 @@ void main() {
     expect(await openCourseMaterialEntry(entry()), isFalse);
     expect(logs.join('\n'), contains('local_check'));
     expect(logs.join('\n'), isNot(contains('SECRET')));
-    attachmentDownloadDirectoryOverride = () async => directory.path;
+    attachmentDownloadDirectoryOverride = () async => base.path;
     respond();
     courseMaterialFileOpenerOverride =
         (_) => Future.error(StateError('SECRET'));

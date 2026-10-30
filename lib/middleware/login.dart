@@ -597,6 +597,8 @@ Future<void> _deleteLocalAccountData({
 }) async {
   await schoolNotificationOperation(
       () => schoolNotifications.forgetAccount(url, user));
+  // The same scope the account's session has once it is signed in.
+  final scope = AccountScope(fixupUrl(url), user);
   final loginAddress = '${fixupUrl(url)}/v2/api/auth/login';
   final storageKey = getStorageKey(user, loginAddress);
   // Behind every write already started: a slow older write must not put the
@@ -613,7 +615,10 @@ Future<void> _deleteLocalAccountData({
     ]) {
       await prefs.remove('$namespace:$storageKey');
     }
+    await prefs.remove(_courseMaterialVersionsKeyFor(scope));
   });
+  // Downloaded documents, homework, calendar and message files of the account.
+  await _deleteAccountDownloads(scope);
 }
 
 AppState _emptyAppStateKeepingSettings(AppState state) {

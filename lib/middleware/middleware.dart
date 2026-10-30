@@ -540,6 +540,8 @@ Future<CourseMaterialOpenResult> openCourseMaterialEntryWithStatus(
     CourseMaterialEntry entry) async {
   const failed = CourseMaterialOpenResult.failed;
   var stage = 'entry';
+  // Files and their versions belong to the account that opens the document.
+  final session = _Session.capture();
   try {
     _materialLog(stage, {
       'id': entry.id,
@@ -559,20 +561,24 @@ Future<CourseMaterialOpenResult> openCourseMaterialEntryWithStatus(
     }
 
     stage = 'local_check';
-    final local = await canOpenFile(entry.uniqueName);
-    final current = local && await _isCurrentCourseMaterialVersion(entry);
+    final local = await _canOpenFileIn(session, entry.uniqueName);
+    final current =
+        local && await _isCurrentCourseMaterialVersion(session, entry);
     _materialLog(stage, {'exists': local, 'current': current});
     var outdated = false;
     if (!current) {
       stage = 'download';
-      if (!await _downloadCourseMaterialFile(entry, replaceOutdated: local)) {
+      if (!await _downloadCourseMaterialFile(session, entry,
+          replaceOutdated: local)) {
         // A failed update keeps the previously saved file usable.
-        if (!local || !await canOpenFile(entry.uniqueName)) return failed;
+        if (!local || !await _canOpenFileIn(session, entry.uniqueName)) {
+          return failed;
+        }
         outdated = true;
       }
     }
     stage = 'open';
-    final file = await _attachmentFile(entry.uniqueName);
+    final file = await _attachmentFile(entry.uniqueName, session.scope);
     if (file == null) return failed;
     final path = file.path;
     final exists = await file.exists();
@@ -609,20 +615,27 @@ Future<CourseMaterialOpenResult> openCourseMaterialEntryWithStatus(
 
 const _courseMaterialVersionsKey = 'courseMaterialFileVersions';
 
-/// The [CourseMaterialEntry.contentVersion] of every saved course file, by
-/// [CourseMaterialEntry.uniqueName].
-Future<Map<String, dynamic>> _loadCourseMaterialVersions() async {
+/// Where the saved versions of an account's course files are kept. Each
+/// account has its own list, next to its own folder of files.
+String _courseMaterialVersionsKeyFor(AccountScope scope) =>
+    '$_courseMaterialVersionsKey:${scope.fileId}';
+
+/// The [CourseMaterialEntry.contentVersion] of every saved course file of the
+/// account, by [CourseMaterialEntry.uniqueName].
+Future<Map<String, dynamic>> _loadCourseMaterialVersions(
+    AccountScope scope) async {
   final prefs = await SharedPreferences.getInstance();
-  final raw = prefs.getString(_courseMaterialVersionsKey);
+  final raw = prefs.getString(_courseMaterialVersionsKeyFor(scope));
   final decoded = raw == null ? null : jsonDecode(raw);
   return decoded is Map ? Map<String, dynamic>.from(decoded) : {};
 }
 
 /// Whether the saved file of [entry] is the version the server lists. Files
 /// saved without a recorded version are revalidated once.
-Future<bool> _isCurrentCourseMaterialVersion(CourseMaterialEntry entry) async {
+Future<bool> _isCurrentCourseMaterialVersion(
+    _Session session, CourseMaterialEntry entry) async {
   try {
-    final versions = await _loadCourseMaterialVersions();
+    final versions = await _loadCourseMaterialVersions(session.scope);
     return versions[entry.uniqueName] == entry.contentVersion;
   } catch (_) {
     privacyLog('technical_operation');
@@ -630,13 +643,20 @@ Future<bool> _isCurrentCourseMaterialVersion(CourseMaterialEntry entry) async {
   }
 }
 
+/// Records the version of [entry] as saved for the account signed in now.
 @visibleForTesting
-Future<void> rememberCourseMaterialVersion(CourseMaterialEntry entry) async {
+Future<void> rememberCourseMaterialVersion(CourseMaterialEntry entry) =>
+    _rememberCourseMaterialVersion(_Session.capture(), entry);
+
+Future<void> _rememberCourseMaterialVersion(
+    _Session session, CourseMaterialEntry entry) async {
   try {
-    final versions = await _loadCourseMaterialVersions();
+    final scope = session.scope;
+    final versions = await _loadCourseMaterialVersions(scope);
     versions[entry.uniqueName] = entry.contentVersion;
     final prefs = await SharedPreferences.getInstance();
-    await prefs.setString(_courseMaterialVersionsKey, jsonEncode(versions));
+    await prefs.setString(
+        _courseMaterialVersionsKeyFor(scope), jsonEncode(versions));
   } catch (_) {
     // The file is revalidated on the next open.
     privacyLog('technical_operation');
@@ -649,12 +669,12 @@ Future<void> rememberCourseMaterialVersion(CourseMaterialEntry entry) async {
 /// document: it is replaced without asking, and only once the new content
 /// has been validated, so a failed update keeps it.
 Future<bool> _downloadCourseMaterialFile(
+  _Session session,
   CourseMaterialEntry entry, {
   bool replaceOutdated = false,
 }) async {
   // The request goes out on the session that asked, and a document is only
   // saved while the app is still in that session.
-  final session = _Session.capture();
   final loggedIn = await session.wrapper.ensureLoggedIn();
   session.ensureCurrent();
   _materialLog('authentication', {'loggedIn': loggedIn});
@@ -662,7 +682,7 @@ Future<bool> _downloadCourseMaterialFile(
     return false;
   }
 
-  final saveFile = await _attachmentFile(entry.uniqueName);
+  final saveFile = await _attachmentFile(entry.uniqueName, session.scope);
   if (saveFile == null) {
     return false;
   }
@@ -695,7 +715,7 @@ Future<bool> _downloadCourseMaterialFile(
     if (bytes != null) {
       _workingCourseMaterialCandidate = index;
       await _writeFileAtomically(saveFile, bytes);
-      await rememberCourseMaterialVersion(entry);
+      await _rememberCourseMaterialVersion(session, entry);
       _materialLog('saved', {
         'saved': true,
         'bytes': await saveFile.length(),
@@ -1786,21 +1806,44 @@ Future<String> _getAttachmentDownloadDirectory() {
   return future;
 }
 
-/// Resolves [fileName] inside the attachment download directory.
+/// The folder of one account inside the attachment download directory. Files
+/// of other accounts, and files saved before accounts had folders, are not in
+/// it and so are never found, opened or replaced for this account.
+Future<String> _accountDownloadFolder(AccountScope scope) async =>
+    '${await _getAttachmentDownloadDirectory()}/${scope.fileId}';
+
+/// Resolves [fileName] inside the download folder of [scope].
 ///
 /// Attachment names are derived from backend metadata, so anything that is
 /// not a single plain file name, or that is a link which could redirect the
 /// access elsewhere, is rejected with `null` instead of being allowed to
-/// leave the directory.
-Future<File?> _attachmentFile(String fileName) async {
+/// leave the folder.
+Future<File?> _attachmentFile(String fileName, AccountScope scope) async {
   if (!isSafeFileNameSegment(fileName)) {
     return null;
   }
-  final file = File("${await _getAttachmentDownloadDirectory()}/$fileName");
-  if (await FileSystemEntity.isLink(file.path)) {
+  final folder = await _accountDownloadFolder(scope);
+  final file = File('$folder/$fileName');
+  if (await FileSystemEntity.isLink(folder) ||
+      await FileSystemEntity.isLink(file.path)) {
     return null;
   }
   return file;
+}
+
+/// Deletes the download folder of [scope] with everything in it.
+Future<void> _deleteAccountDownloads(AccountScope scope) async {
+  try {
+    final folder = await _accountDownloadFolder(scope);
+    // A link planted in place of the folder is removed, never followed.
+    if (await FileSystemEntity.isLink(folder)) {
+      await Link(folder).delete();
+    } else if (await Directory(folder).exists()) {
+      await Directory(folder).delete(recursive: true);
+    }
+  } catch (_) {
+    privacyLog('technical_operation');
+  }
 }
 
 /// Downloads a file.
@@ -1823,7 +1866,7 @@ Future<bool> downloadFile(
     return false;
   }
 
-  final saveFile = await _attachmentFile(fileName);
+  final saveFile = await _attachmentFile(fileName, session.scope);
   if (saveFile == null) {
     privacyLog('technical_operation');
     return false;
@@ -1986,14 +2029,19 @@ Future<Uint8List> fetchAuthenticatedBytes(String url) async {
   }
 }
 
-Future<bool> canOpenFile(String fileName) async {
-  return await (await _attachmentFile(fileName))?.exists() ?? false;
+/// Whether the account signed in now has [fileName] saved.
+Future<bool> canOpenFile(String fileName) =>
+    _canOpenFileIn(_Session.capture(), fileName);
+
+Future<bool> _canOpenFileIn(_Session session, String fileName) async {
+  return await (await _attachmentFile(fileName, session.scope))?.exists() ??
+      false;
 }
 
 /// Opens a downloaded attachment and tells the user when that fails.
 Future<void> openFile(String fileName) async {
   privacyLog('technical_operation');
-  final file = await _attachmentFile(fileName);
+  final file = await _attachmentFile(fileName, _Session.capture().scope);
   if (file == null || !await _openDownloadedFile(file)) {
     showSnackBar(tr('courseMaterials.openFailed'));
   }
