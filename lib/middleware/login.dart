@@ -616,13 +616,20 @@ Future<void> _deleteLocalAccountData({
       await prefs.remove('$namespace:$storageKey');
     }
     await prefs.remove(_courseMaterialVersionsKeyFor(scope));
+    if (_studyDataScope == scope) _studyDataScope = null;
+    await studyDataService.delete(scope);
+    await deleteAssessmentAttachmentFolder(scope);
   });
   // Downloaded documents, homework, calendar and message files of the account.
   await _deleteAccountDownloads(scope);
 }
 
 AppState _emptyAppStateKeepingSettings(AppState state) {
-  return AppState((b) => b.settingsState.replace(state.settingsState));
+  // The learning notes belong to the account that is left. Nothing may be
+  // saved for the next one until its own have been loaded.
+  _studyDataScope = null;
+  return AppState((b) => b.settingsState
+      .replace(StudyData.empty.applyTo(state.settingsState)));
 }
 
 void _showUserTypeNotSupported(String url) {

@@ -36,6 +36,9 @@ class StaleSessionException implements Exception {
 /// The wrapper of the session the app is in right now.
 Wrapper _currentWrapper() => wrapper;
 
+/// The account the app is signed in to right now.
+AccountScope currentAccountScope() => AccountScope(wrapper.url, wrapper.user);
+
 /// The session an asynchronous operation was started in.
 ///
 /// Capture it before the first `await` of a load or mutation and send through

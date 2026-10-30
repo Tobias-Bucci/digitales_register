@@ -20,6 +20,7 @@ import 'dart:convert';
 import 'package:dr/app_state.dart';
 import 'package:dr/diagnostics_service.dart';
 import 'package:dr/serializers.dart';
+import 'package:dr/study_data_service.dart';
 import 'package:dr/util.dart';
 
 typedef PersistStateWriter = Future<void> Function(String key, String value);
@@ -242,7 +243,11 @@ class _PersistedStateIdentity {
     final settingsOnly = state.settingsState.noDataSaving || deletedData;
     return _PersistedStateIdentity(
       settingsOnly: settingsOnly,
-      settingsState: state.settingsState,
+      // The learning notes have a saved document of their own. Keeping them
+      // out of here means deleting that document deletes them everywhere.
+      settingsState: state.settingsState.hasStudyData
+          ? StudyData.empty.applyTo(state.settingsState)
+          : state.settingsState,
       dashboardState: settingsOnly ? null : state.dashboardState,
       notificationState: settingsOnly ? null : state.notificationState,
       gradesState: settingsOnly ? null : state.gradesState,
@@ -267,7 +272,7 @@ class _PersistedStateIdentity {
 
   bool sameAs(_PersistedStateIdentity other) {
     return settingsOnly == other.settingsOnly &&
-        identical(settingsState, other.settingsState) &&
+        settingsState == other.settingsState &&
         identical(dashboardState, other.dashboardState) &&
         identical(notificationState, other.notificationState) &&
         identical(gradesState, other.gradesState) &&

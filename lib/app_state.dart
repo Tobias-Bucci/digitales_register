@@ -377,6 +377,14 @@ abstract class SettingsState
 
   /// User-edited learning phases, encoded as JSON per assessment.
   BuiltMap<String, String> get assessmentStudyPhases;
+
+  /// Whether any learning notes are set. They belong to the signed-in account
+  /// only, see StudyDataService.
+  bool get hasStudyData =>
+      assessmentStudyProgress.isNotEmpty ||
+      assessmentStudyNotes.isNotEmpty ||
+      assessmentStudyAttachments.isNotEmpty ||
+      assessmentStudyPhases.isNotEmpty;
   BuiltMap<String, SubjectTheme> get subjectThemes;
   BuiltList<String> get ignoreForGradesAverage;
   BuiltList<String> get favoriteSubjects;

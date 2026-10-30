@@ -4,7 +4,9 @@ import 'dart:io';
 
 import 'package:dr/account_scope.dart';
 import 'package:dr/app_state.dart';
+import 'package:dr/assessment_attachments.dart';
 import 'package:dr/middleware/middleware.dart';
+import 'package:dr/study_data_service.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
@@ -113,6 +115,20 @@ void main() {
       file.createSync(recursive: true);
       file.writeAsStringSync('content');
     }
+    // Learning notes and their files.
+    final attachments = await Directory.systemTemp.createTemp('removal-study-');
+    addTearDown(() async {
+      assessmentAttachmentsRootOverride = null;
+      await attachments.delete(recursive: true);
+    });
+    assessmentAttachmentsRootOverride = () async => attachments;
+    for (final scope in [removed, kept]) {
+      await studyDataService.save(
+          scope, const StudyData(notes: {'assessment-1': 'note'}));
+      File('${attachments.path}/${scope.fileId}/1_a.pdf')
+        ..createSync(recursive: true)
+        ..writeAsStringSync('file');
+    }
     final prefs = await SharedPreferences.getInstance();
     await prefs.setString('courseMaterialFileVersions:${removed.fileId}', '{}');
     await prefs.setString('courseMaterialFileVersions:${kept.fileId}', '{}');
@@ -122,6 +138,12 @@ void main() {
     await store.actions.loginActions.removeAccount(0);
 
     expect(Directory('${base.path}/${removed.fileId}').existsSync(), isFalse);
+    expect((await studyDataService.load(removed)).isEmpty, isTrue);
+    expect((await studyDataService.load(kept)).notes, isNotEmpty);
+    expect(Directory('${attachments.path}/${removed.fileId}').existsSync(),
+        isFalse);
+    expect(File('${attachments.path}/${kept.fileId}/1_a.pdf').existsSync(),
+        isTrue);
     expect(files['kept']!.existsSync(), isTrue);
     expect(files['legacy']!.existsSync(), isTrue);
     expect(prefs.getString('courseMaterialFileVersions:${removed.fileId}'),
