@@ -1,12 +1,12 @@
 > Update 2026-10-03: privacy notice version **5** removes the age question, age gating and age storage for new decisions. Explicit purpose consent, default-off startup and platform safeguards remain. The redesigned dialog integrates details and customization into its content and emphasizes the allow-all action. Existing decisions require a new explicit choice. Verification: 337 tests passed, including 24 dialog layout cases; analysis found no issues. The report and v4 audit below describe the earlier implementation.
 
-> Previous privacy audit: [PRIVACY_AUDIT_V4.md](PRIVACY_AUDIT_V4.md). Data inventory and manual cloud tasks are maintained separately.
+> The previous privacy audit is maintained outside this repository. Data inventory and manual cloud tasks are maintained separately.
 
 > Dialog follow-up 2026-10-03: unsaved purpose choices start selected; saving accepts the current selection, while reopening settings preserves saved choices. The title is one short localized word, without the header icon or update wording. About now uses a compact theme-based dialog with expandable project/license details. 65 dialog/settings tests passed and analysis found no issues.
 
 # Analytics implementation report — Digitales Register
 
-Implemented 2026-09-30; privacy hardening reviewed 2026-10-01. Current privacy notice version: **4**. No Firebase Console settings, live BigQuery queries or real-device delivery checks were performed. Companion documents: [Console configuration](FIREBASE_ANALYTICS_CONSOLE_CONFIGURATION.md), [BigQuery examples](ANALYTICS_BIGQUERY_EXAMPLES.md), [school reservations](analytics_school_mapping.csv).
+Implemented 2026-09-30; privacy hardening reviewed 2026-10-01. Current privacy notice version: **4**. No Firebase Console settings, live BigQuery queries or real-device delivery checks were performed. Companion documents: [BigQuery examples](ANALYTICS_BIGQUERY_EXAMPLES.md), [school reservations](analytics_school_mapping.csv).
 
 ## A. Summary
 
@@ -161,7 +161,7 @@ German, Italian and English catalogs include new text. New Ladin privacy text us
 Settings > Datenschutz & Daten shows each purpose's title/explanation/current state, coarse age status and under14 explanation. Purpose/change rows open the same authoritative form; no parallel store exists. Granular switches remain disabled for unknown/under14, and academics require usage. Details remain available. Reopening/changing eligibility never automatically enables optional purposes.
 ## O. Files added/changed
 
-Added: lib/product_analytics.dart, lib/analytics_schema.dart, lib/analytics_school_ids.dart; test/product_analytics_test.dart, test/privacy_granular_ui_test.dart; docs/ANALYTICS_IMPLEMENTATION.md, docs/FIREBASE_ANALYTICS_CONSOLE_CONFIGURATION.md, docs/ANALYTICS_BIGQUERY_EXAMPLES.md and docs/analytics_school_mapping.csv.
+Added: lib/product_analytics.dart, lib/analytics_schema.dart, lib/analytics_school_ids.dart; test/product_analytics_test.dart, test/privacy_granular_ui_test.dart; docs/ANALYTICS_IMPLEMENTATION.md, docs/ANALYTICS_BIGQUERY_EXAMPLES.md and docs/analytics_school_mapping.csv.
 
 Extended: lib/privacy_consent.dart, lib/analytics_service.dart, lib/main.dart, lib/app_selectors.dart, lib/middleware/middleware.dart, lib/middleware/grades.dart, lib/calendar_sync_service.dart, lib/theme_controller.dart, lib/tutorial/tutorial_service.dart, lib/container/grades_history_container.dart, lib/ui/notifications_page.dart, lib/ui/privacy_data_details_page.dart, lib/ui/settings_page_widget.dart; four locale catalogs; Apple plists and Podfiles; test/privacy_consent_test.dart, test/privacy_ui_test.dart; docs/PRIVACY_IMPLEMENTATION.md (v4 addendum preserving history).
 

@@ -10,7 +10,7 @@ den neuen Pluginstart und Lifecyclepfad nicht.
 
 ## iOS-Keychain-Regression (26.10.2026)
 
-Siehe `SCHOOL_NOTIFICATIONS_DEBUG_2026-10-26.md`. Auf einem iPhone mit einem
+Siehe den Debug-Bericht (außerhalb des Repos geführt). Auf einem iPhone mit einem
 Build **vor** dieser Korrektur angemeldete Accounts verwenden, dann auf den neuen
 Build aktualisieren:
 

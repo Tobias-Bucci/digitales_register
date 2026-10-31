@@ -14,7 +14,7 @@ Benachrichtigungen über Noten und Schulmitteilungen und ist offen. Die Umsetzun
 folgt dem Inhalt des Auftrags. Beide Issues wurden unverändert gelassen.
 
 Die früheren Ansätze sind in `SCHOOL_NOTIFICATIONS.md`,
-`SCHOOL_NOTIFICATIONS_OPT_IN.md`, `ISSUE_82_COMPLETION_REPORT.md` und
+`SCHOOL_NOTIFICATIONS_OPT_IN.md` und
 `SCHOOL_NOTIFICATIONS_DEVICE_TESTS.md` dokumentiert. Frühere Build-/Testnachweise
 sind keine Nachweise für die Zustellung mit dieser neuen Version.
 

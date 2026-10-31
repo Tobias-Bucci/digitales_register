@@ -13,7 +13,7 @@ There is still one `PrivacyController` and one atomic `privacyDecision` record. 
 
 Usage revocation closes the app gate synchronously, clears User-ID and every custom Analytics property, disables collection/storage consent and resets local Analytics data. Uploaded history is not automatically deleted. Native bootstrap/default-off behavior and sanitized Crashlytics handlers remain. Apple targets explicitly deny Analytics storage by default and select the Analytics Core dependency without advertising-ID support.
 
-See [the complete implementation report](ANALYTICS_IMPLEMENTATION.md), [manual Firebase configuration](FIREBASE_ANALYTICS_CONSOLE_CONFIGURATION.md), [BigQuery examples](ANALYTICS_BIGQUERY_EXAMPLES.md) and [school ID reservations](analytics_school_mapping.csv). Final verification results are recorded in the new report.
+See [the complete implementation report](ANALYTICS_IMPLEMENTATION.md), [BigQuery examples](ANALYTICS_BIGQUERY_EXAMPLES.md) and [school ID reservations](analytics_school_mapping.csv). Final verification results are recorded in the new report.
 
 ---
 

@@ -3,8 +3,8 @@
 Implementation after the 2026-10-25 reference-based revision. The current German
 comparison and completion report is in `SCHOOL_NOTIFICATIONS_REFERENCE_REBUILD.md`.
 The 2026-10-26 end-to-end debugging report, including the iOS Keychain root
-cause, is in `SCHOOL_NOTIFICATIONS_DEBUG_2026-10-26.md`.
-`ISSUE_82_COMPLETION_REPORT.md` records the earlier implementation; device qualification is in
+cause, is in a debug report maintained outside this repository.
+An earlier completion report, maintained outside this repository, records the earlier implementation; device qualification is in
 `SCHOOL_NOTIFICATIONS_DEVICE_TESTS.md`.
 
 ## Scope and data flow
