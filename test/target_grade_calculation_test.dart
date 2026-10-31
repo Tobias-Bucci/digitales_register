@@ -155,4 +155,104 @@ void main() {
       throwsArgumentError,
     );
   });
+
+  group('input bound', () {
+    test('accepts exactly the maximum number of future assessments', () {
+      final result = calculateTargetGrades(
+        existingGrades: [grade(8)],
+        targetGrade: 800,
+        futureWeights: List<int>.filled(maximumFutureAssessments, 100),
+      );
+
+      expect(result.isReachable, isTrue);
+      expect(result.suggestedGrades,
+          List<int>.filled(maximumFutureAssessments, 800));
+    });
+
+    test('rejects more future assessments before allocating any table', () {
+      // 100 assessments at weight 100 would need about 485 MB of tables.
+      expect(
+        () => calculateTargetGrades(
+          existingGrades: [grade(8)],
+          targetGrade: 800,
+          futureWeights: List<int>.filled(100, 100),
+        ),
+        throwsArgumentError,
+      );
+      expect(
+        () => calculateTargetGrades(
+          existingGrades: [grade(8)],
+          targetGrade: 800,
+          futureWeights:
+              List<int>.filled(maximumFutureAssessments + 1, 1),
+        ),
+        throwsArgumentError,
+      );
+    });
+  });
+
+  group('small cases against an exhaustive reference', () {
+    // Tries every combination of quarter grades and returns the smallest
+    // weighted future score which reaches the target (or the maximum).
+    int? bruteForceScore(
+        List<int> weights, int requiredScore, List<int> scale) {
+      int? best;
+      void walk(int index, int score) {
+        if (index == weights.length) {
+          if (score >= requiredScore && (best == null || score < best!)) {
+            best = score;
+          }
+          return;
+        }
+        for (final value in scale) {
+          walk(index + 1, score + value * weights[index]);
+        }
+      }
+
+      walk(0, 0);
+      return best;
+    }
+
+    final scale = [
+      for (var g = minimumGrade; g <= maximumGrade; g += gradeIncrement) g,
+    ];
+    final cases = <(List<TargetGradeEntry>, List<int>)>[
+      ([grade(8)], [100]),
+      ([grade(6), grade(7, 50)], [100, 100]),
+      ([grade(9, 150), grade(5)], [30, 100, 70]),
+      ([grade(7), grade(10, 0)], [100, 100, 100]),
+    ];
+    for (final (existing, weights) in cases) {
+      for (final target in [400, 575, 650, 725, 800, 850, 925, 1000]) {
+        test('weights $weights target $target', () {
+          final result = calculateTargetGrades(
+            existingGrades: existing,
+            targetGrade: target,
+            futureWeights: weights,
+          );
+          final totalWeight = existing.fold<int>(
+                  0, (sum, e) => sum + e.weightPercentage) +
+              weights.fold<int>(0, (sum, w) => sum + w);
+          final existingScore = existing.fold<int>(
+              0, (sum, e) => sum + e.grade * e.weightPercentage);
+          final required = target * totalWeight - existingScore;
+          final expectedScore = bruteForceScore(weights, required, scale);
+
+          final suggestedScore = [
+            for (var i = 0; i < weights.length; i++)
+              result.suggestedGrades[i] * weights[i],
+          ].fold<int>(0, (sum, v) => sum + v);
+          if (expectedScore == null) {
+            expect(result.isReachable, isFalse);
+            expect(result.suggestedGrades, everyElement(maximumGrade));
+          } else {
+            expect(result.isReachable, isTrue);
+            expect(suggestedScore, expectedScore);
+          }
+          expect(result.suggestedGrades,
+              everyElement(inInclusiveRange(minimumGrade, maximumGrade)));
+        });
+      }
+    }
+  });
 }

@@ -324,6 +324,7 @@
   "targetCalculator.futureGrades": "Zukünftige Noten",
   "targetCalculator.calendarAssessments": "{count} kommende Prüfungen werden automatisch berücksichtigt",
   "targetCalculator.calendarAssessmentsInfo": "Prüfungen aus dem Prüfungskalender werden mit der Standardgewichtung von 100 % einbezogen.",
+  "targetCalculator.calendarAssessmentsLimited": "Aus Rechenaufwand werden nur die nächsten {used} von {total} kommenden Prüfungen berücksichtigt (höchstens {max} zukünftige Noten). Entferne zusätzliche Noten, um Platz für weitere Prüfungen zu schaffen.",
   "targetCalculator.additionalFutureGrades": "Weitere, noch nicht eingetragene Noten",
   "targetCalculator.additionalFutureGrade": "Weitere Note {count}",
   "targetCalculator.ignoreCalendarAssessments": "Ignorieren",

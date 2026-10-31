@@ -76,6 +76,103 @@ void main() {
     expect(find.textContaining('· -50%'), findsNothing);
   });
 
+  group('calendar assessment limit', () {
+    AppState stateWithAssessments(int count) => AppState((b) => b
+      ..gradesState.semester = Semester.first.toBuilder()
+      ..gradesState.subjects = ListBuilder<Subject>([
+        buildSubject(id: 7, name: 'Mathematik', gradesAll: {
+          Semester.first: BuiltList<GradeAll>([
+            buildGradeAll(date: UtcDateTime(2026, 10, 5), grade: 800),
+          ]),
+        }),
+      ])
+      ..dashboardState.allDays = ListBuilder<Day>([
+        for (var i = 0; i < count; i++)
+          buildDay(
+            date: UtcDateTime(2099, 1, 1).add(Duration(days: i)),
+            homework: [
+              buildHomework(
+                id: 100 + i,
+                title: 'Schularbeit',
+                subtitle: 'Thema $i',
+                label: 'Mathematik',
+                type: HomeworkType.gradeGroup,
+              ),
+            ],
+          ),
+      ]));
+
+    Future<void> openWith(WidgetTester tester, AppState state) async {
+      tester.view.physicalSize = const Size(800, 9000);
+      tester.view.devicePixelRatio = 1;
+      addTearDown(tester.view.resetPhysicalSize);
+      addTearDown(tester.view.resetDevicePixelRatio);
+      final store = createStore(initialState: state);
+      addTearDown(store.dispose);
+      await pumpApp(tester, store: store, home: const TargetGradeCalculator());
+      await tester.tap(find.byKey(const Key('target-calculator-subject')));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('Mathematik').last);
+      await tester.pumpAndSettle();
+    }
+
+    int shownAssessments() => find
+        .byWidgetPredicate((w) =>
+            w.key is ValueKey<String> &&
+            (w.key as ValueKey<String>)
+                .value
+                .startsWith('target-calculator-calendar-assessment-'))
+        .evaluate()
+        .length;
+
+    testWidgets('many calendar assessments are cut to the nearest ones and '
+        'the user is told', (tester) async {
+      await openWith(tester, stateWithAssessments(60));
+
+      expect(find.byKey(const Key('target-calculator-calendar-limited')),
+          findsOneWidget);
+      expect(
+          find.textContaining(
+              'nur die nächsten 20 von 60 kommenden Prüfungen'),
+          findsOneWidget);
+      expect(find.textContaining('20 kommende Prüfungen'), findsOneWidget);
+      // The nearest ones are kept, the latest are left out.
+      expect(shownAssessments(), 20);
+
+      await tester.enterText(
+          find.byKey(const Key('target-calculator-target')), '8');
+      await tester.tap(find.byKey(const Key('target-calculator-calculate')));
+      await tester.pumpAndSettle();
+      expect(tester.takeException(), isNull);
+      expect(find.textContaining('Dein Ziel'), findsWidgets);
+    });
+
+    testWidgets('manual grades take their place out of the same limit',
+        (tester) async {
+      await openWith(tester, stateWithAssessments(60));
+      for (var i = 0; i < 3; i++) {
+        await tester.tap(find.byKey(const Key('target-calculator-add-future')));
+        await tester.pumpAndSettle();
+      }
+
+      expect(
+          find.textContaining(
+              'nur die nächsten 17 von 60 kommenden Prüfungen'),
+          findsOneWidget);
+      expect(shownAssessments(), 17);
+    });
+
+    testWidgets('a number of assessments within the limit is not touched',
+        (tester) async {
+      await openWith(tester, stateWithAssessments(20));
+
+      expect(find.byKey(const Key('target-calculator-calendar-limited')),
+          findsNothing);
+      expect(find.textContaining('20 kommende Prüfungen'), findsOneWidget);
+      expect(shownAssessments(), 20);
+    });
+  });
+
   group('refreshed subject list', () {
     final date = UtcDateTime(2026, 10, 5);
     Subject math(List<int> values, {int? id = 7, String name = 'Mathematik'}) =>

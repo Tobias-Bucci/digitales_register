@@ -63,9 +63,14 @@ class _TargetGradeCalculatorPageState
       ? const <ExamAssessment>[]
       : upcomingExamAssessmentsForSubject(widget.state, _subject!, widget.now);
 
+  /// The nearest calendar assessments which still fit next to the manually
+  /// added grades within [maximumFutureAssessments]. The calendar list is
+  /// sorted by date, so later assessments are the ones left out.
   List<ExamAssessment> get _includedCalendarAssessments =>
       _includeCalendarAssessments
           ? _calendarAssessments
+              .take(maximumFutureAssessments - _weightControllers.length)
+              .toList(growable: false)
           : const <ExamAssessment>[];
 
   List<int> get _futureWeights => <int>[
@@ -283,6 +288,9 @@ class _TargetGradeCalculatorPageState
     final l10n = context.l10n;
     final grades = _grades;
     final calendarAssessments = _calendarAssessments;
+    final includedCalendarAssessments = _includedCalendarAssessments;
+    final calendarLimited = _includeCalendarAssessments &&
+        includedCalendarAssessments.length < calendarAssessments.length;
     final existingWeight = _calculationGrades.fold<int>(
       0,
       (sum, grade) => sum + grade.weightPercentage,
@@ -439,7 +447,10 @@ class _TargetGradeCalculatorPageState
                         child: Text(
                           l10n.text('targetCalculator.calendarAssessments',
                               args: {
-                                'count': calendarAssessments.length.toString(),
+                                'count': (calendarLimited
+                                        ? includedCalendarAssessments.length
+                                        : calendarAssessments.length)
+                                    .toString(),
                               }),
                           style: Theme.of(context).textTheme.titleSmall,
                         ),
@@ -460,9 +471,22 @@ class _TargetGradeCalculatorPageState
                     const SizedBox(height: 4),
                     Text(l10n.text('targetCalculator.calendarAssessmentsInfo'),
                         style: Theme.of(context).textTheme.bodySmall),
+                    if (calendarLimited) ...[
+                      const SizedBox(height: 4),
+                      Text(
+                          l10n.text('targetCalculator.calendarAssessmentsLimited',
+                              args: {
+                                'used': includedCalendarAssessments.length
+                                    .toString(),
+                                'total': calendarAssessments.length.toString(),
+                                'max': maximumFutureAssessments.toString(),
+                              }),
+                          key: const Key('target-calculator-calendar-limited'),
+                          style: Theme.of(context).textTheme.bodySmall),
+                    ],
                     const SizedBox(height: 8),
                     if (_includeCalendarAssessments)
-                      for (final assessment in calendarAssessments)
+                      for (final assessment in includedCalendarAssessments)
                         ListTile(
                           key: Key(
                               'target-calculator-calendar-${assessment.id}'),

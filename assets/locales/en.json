@@ -324,6 +324,7 @@
   "targetCalculator.futureGrades": "Future grades",
   "targetCalculator.calendarAssessments": "{count} upcoming assessments are included automatically",
   "targetCalculator.calendarAssessmentsInfo": "Assessments from the exam calendar use the default weight of 100%.",
+  "targetCalculator.calendarAssessmentsLimited": "To keep the calculation fast, only the next {used} of {total} upcoming assessments are included (at most {max} future grades). Remove additional grades to make room for more assessments.",
   "targetCalculator.additionalFutureGrades": "Additional, not yet scheduled grades",
   "targetCalculator.additionalFutureGrade": "Additional grade {count}",
   "targetCalculator.ignoreCalendarAssessments": "Ignore",
