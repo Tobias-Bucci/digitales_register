@@ -65,6 +65,13 @@ Future<void> _showLogin(
     ActionHandler next,
     Action<void> action) async {
   await next(action);
+  // The home route stays below the login page. A drawer left open there (the
+  // logout button is in it) would still be open after the next sign-in, and
+  // _popAll only removes routes. Close it before the login page covers it.
+  final homeScaffold = scaffoldKey?.currentState?.scaffoldKey.currentState;
+  if (homeScaffold != null && homeScaffold.isDrawerOpen) {
+    homeScaffold.closeDrawer();
+  }
   // hack since the current route is not exposed otherwise
   Route? currentRoute;
   navigatorKey!.currentState?.popUntil((route) {
