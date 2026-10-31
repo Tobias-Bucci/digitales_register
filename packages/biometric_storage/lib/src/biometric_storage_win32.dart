@@ -1,13 +1,37 @@
 import 'dart:convert';
 import 'dart:ffi';
+import 'dart:typed_data';
 
 import 'package:ffi/ffi.dart';
+import 'package:flutter/foundation.dart' show visibleForTesting;
 import 'package:logging/logging.dart';
 import 'package:win32/win32.dart';
 
 import './biometric_storage.dart';
 
 final _logger = Logger('biometric_storage_win32');
+
+/// Copies [size] bytes from the native [blob] into Dart-owned memory, then
+/// calls [free] to release the native buffer, and only then decodes the copy.
+///
+/// `asTypedList` only creates a view onto native memory, so decoding it after
+/// the buffer was freed (CredFree) would read released memory.
+@visibleForTesting
+String decodeCredentialBlobAndFree(
+  Pointer<Uint8> blob,
+  int size,
+  void Function() free,
+) {
+  final Uint8List copy;
+  try {
+    copy = Uint8List.fromList(blob.asTypedList(size));
+  } catch (_) {
+    free();
+    rethrow;
+  }
+  free();
+  return utf8.decode(copy);
+}
 
 class Win32BiometricStoragePlugin extends BiometricStorage {
   Win32BiometricStoragePlugin() : super.create();
@@ -80,12 +104,14 @@ class Win32BiometricStoragePlugin extends BiometricStorage {
         return null;
       }
       final cred = credPointer.value.ref;
-      final blob = cred.CredentialBlob.asTypedList(cred.CredentialBlobSize);
-
-      _logger.fine('CredFree()');
-      CredFree(credPointer.value);
-
-      return utf8.decode(blob);
+      return decodeCredentialBlobAndFree(
+        cred.CredentialBlob,
+        cred.CredentialBlobSize,
+        () {
+          _logger.fine('CredFree()');
+          CredFree(credPointer.value);
+        },
+      );
     } finally {
       _logger.fine('free(credPointer)');
       calloc.free(credPointer);
