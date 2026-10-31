@@ -553,9 +553,12 @@ class _ImportGradesState extends State<_ImportGrades> {
       skippedGrades = 0;
       return;
     }
-    final uncancelled =
-        subject.basicGrades(semester)?.where((e) => !e.cancelled).toList() ??
-            const <GradeAll>[];
+    // Invalid negative weights are left out as in every other average.
+    final uncancelled = subject
+            .basicGrades(semester)
+            ?.where((e) => !e.cancelled && e.weightPercentage >= 0)
+            .toList() ??
+        const <GradeAll>[];
     grades = [
       for (final e in uncancelled)
         if (e.grade case final grade?)
