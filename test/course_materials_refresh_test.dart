@@ -59,7 +59,9 @@ void main() {
     when(() => server.send('api/lesson/student'))
         .thenAnswer((_) async => lessons);
     when(() => server.send('api/courseContent/getCourse',
-        args: any(named: 'args'))).thenAnswer((invocation) async {
+            args: any(named: 'args'),
+            acceptEmptyResponse: any(named: 'acceptEmptyResponse')))
+        .thenAnswer((invocation) async {
       final args = invocation.namedArguments[#args] as Map<String, Object?>;
       return courses[args['subjectId']];
     });
