@@ -27,7 +27,7 @@ Der aktuelle modernisierte Stand baut erfolgreich als Android-Debug-APK mit Andr
 | Android targetSdk | `37` |
 | Android minSdk | Flutter default `24` |
 | Android NDK | `28.2.13676358` |
-| Android SDK Pfad | `C:\Users\mainb\AppData\Local\Android\Sdk` |
+| Android SDK Pfad | `<SDK-Pfad>` |
 | Flutter SDK Pfad | `C:\flutter` |
 | Firebase BoM Android | `34.13.0` |
 | iOS Deployment Target | `14.0` |

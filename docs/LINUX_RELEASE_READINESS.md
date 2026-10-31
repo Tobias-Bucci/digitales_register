@@ -70,7 +70,7 @@ WSL sessions may have no default keyring and may place app windows on a
 secondary monitor. To preview the locally built app, run in PowerShell:
 
 ```powershell
-wsl -d Ubuntu -- bash /mnt/c/Users/mainb/Documents/Projects/digitales_register/tool/run_linux_wsl.sh /home/tobi/.cache/codex-linux/clean-checkout/build/linux/x64/release/bundle/digitales_register
+wsl -d Ubuntu -- bash <Projektordner>/tool/run_linux_wsl.sh ~/.cache/codex-linux/clean-checkout/build/linux/x64/release/bundle/digitales_register
 ```
 
 Adjust the checkout and binary paths if using another machine. The helper uses

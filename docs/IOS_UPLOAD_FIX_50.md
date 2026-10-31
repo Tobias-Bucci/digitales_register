@@ -2,7 +2,7 @@
 
 ## Nachweis am tatsächlichen IPA
 
-Untersucht am 16.10.2026: `C:/Users/mainb/Downloads/Digitales_Register.ipa`.
+Untersucht am 16.10.2026: `<Downloads>/Digitales_Register.ipa`.
 Der zuerst angegebene Name `Digitales Register.ipa` mit Leerzeichen existiert
 nicht. Es wurde ausschließlich das anschließend genannte Artefakt untersucht;
 dessen finale `Payload/Runner.app/Info.plist` bestätigt:
