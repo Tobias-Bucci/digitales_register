@@ -539,9 +539,7 @@ class _SettingsPageWidgetState extends State<SettingsPageWidget> {
       if (widget.vm.showAllSubjectsAverage)
         l10n.text('settings.grades.summary.average'),
       if (widget.vm.ignoreForGradesAverage.isNotEmpty)
-        l10n.text('settings.grades.summary.hidden', args: {
-          'count': widget.vm.ignoreForGradesAverage.length.toString(),
-        }),
+        l10n.hiddenSubjectsLabel(widget.vm.ignoreForGradesAverage.length),
     ].join(' | ');
   }
 

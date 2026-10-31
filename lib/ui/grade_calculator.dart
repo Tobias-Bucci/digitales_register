@@ -651,12 +651,7 @@ class _ImportGradesState extends State<_ImportGrades> {
           if (skippedGrades > 0)
             Padding(
               padding: const EdgeInsets.all(8.0),
-              child: Text(
-                context.t(
-                  'gradeCalculator.skippedNonNumeric',
-                  args: {'count': '$skippedGrades'},
-                ),
-              ),
+              child: Text(context.l10n.skippedGradesLabel(skippedGrades)),
             ),
           if (selectedSemester != null &&
               selectedSubject != null &&

@@ -241,7 +241,7 @@ void main() {
       await openImport(tester, [grade(null), grade(400, cancelled: true)]);
 
       expect(tester.takeException(), isNull);
-      expect(find.text('1 Einträge ohne Zahlenwert wurden nicht importiert'),
+      expect(find.text('1 Eintrag ohne Zahlenwert wurde nicht importiert'),
           findsOneWidget);
       expect(
         find.text('Für dieses Fach sind in diesem Zeitraum keine Noten '
@@ -260,7 +260,7 @@ void main() {
       ]);
 
       expect(tester.takeException(), isNull);
-      expect(find.text('1 Einträge ohne Zahlenwert wurden nicht importiert'),
+      expect(find.text('1 Eintrag ohne Zahlenwert wurde nicht importiert'),
           findsOneWidget);
       await tester.tap(find.widgetWithText(ElevatedButton, 'Importieren'));
       await tester.pumpAndSettle();
