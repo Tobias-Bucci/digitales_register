@@ -7,6 +7,8 @@ import 'package:dr/app_state.dart';
 import 'package:dr/assessment_attachments.dart';
 import 'package:dr/middleware/middleware.dart';
 import 'package:dr/study_data_service.dart';
+import 'package:dr/util.dart';
+import 'package:dr/wrapper.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
@@ -74,6 +76,41 @@ void main() {
     final login = jsonDecode((await secureStorage.read(key: 'login'))!) as Map;
     expect((login['otherAccounts'] as List).single['user'], 'kept-user');
     expect(store.state.loginState.otherAccounts, <String>['kept-user']);
+  });
+
+  test('removing an account entered with the browser login address',
+      () async {
+    const user = 'removed-user';
+    // Copying the address of the web app's login page leaves a trailing
+    // slash in the saved URL.
+    final url = fixupUrl('https://removed.digitalesregister.it/v2/login');
+    // The key the account's state was saved under while it was signed in.
+    final session = Wrapper()..url = url;
+    final accountStorageKey = getStorageKey(user, session.loginAddress);
+    await secureStorage.write(
+      key: 'login',
+      value: jsonEncode({
+        'user': 'active-user',
+        'pass': 'active-password',
+        'url': 'https://active.digitalesregister.it',
+        'otherAccounts': [
+          {'user': user, 'pass': 'removed-password', 'url': url},
+        ],
+      }),
+    );
+    await secureStorage.write(
+      key: escapeKey(accountStorageKey),
+      value: 'account-state',
+    );
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setString('courseMaterials:$accountStorageKey', 'cached-data');
+
+    final store = createStore(initialState: AppState(), withMiddleware: true);
+    await store.actions.loginActions.removeAccount(0);
+
+    expect(await secureStorage.read(key: escapeKey(accountStorageKey)),
+        isNull);
+    expect(prefs.getString('courseMaterials:$accountStorageKey'), isNull);
   });
 
   test('removing an account deletes its downloads and nothing of another',
