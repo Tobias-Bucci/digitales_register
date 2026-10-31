@@ -324,6 +324,7 @@
   "targetCalculator.futureGrades": "Proi fuć",
   "targetCalculator.calendarAssessments": "{count} proi fuć vëgnel tignì n cont automaticamënter",
   "targetCalculator.calendarAssessmentsInfo": "I proi dal calënder vëgnel calcolé cun na pesanza standard de 100%.",
+  "targetCalculator.calendarAssessmentsLimited": "Per tignì svelt la calcolazion vëgnel tignì n cont mé i proscims {used} de {total} proi fuć (al plü {max} proi fuć). Tol demez proi nce per fé spaz a plü proi fuć.",
   "targetCalculator.additionalFutureGrades": "Autri proi nia ciamò pianifiché",
   "targetCalculator.additionalFutureGrade": "Autra pro {count}",
   "targetCalculator.ignoreCalendarAssessments": "Ignoré",

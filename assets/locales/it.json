@@ -324,6 +324,7 @@
   "targetCalculator.futureGrades": "Voti futuri",
   "targetCalculator.calendarAssessments": "{count} verifiche future vengono incluse automaticamente",
   "targetCalculator.calendarAssessmentsInfo": "Le verifiche del calendario usano il peso predefinito del 100%.",
+  "targetCalculator.calendarAssessmentsLimited": "Per mantenere veloce il calcolo vengono considerate solo le prossime {used} di {total} verifiche future (al massimo {max} voti futuri). Rimuovi i voti aggiuntivi per fare spazio a più verifiche.",
   "targetCalculator.additionalFutureGrades": "Altri voti non ancora pianificati",
   "targetCalculator.additionalFutureGrade": "Altro voto {count}",
   "targetCalculator.ignoreCalendarAssessments": "Ignora",

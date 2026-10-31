@@ -5,6 +5,15 @@ const minimumGrade = 400;
 const maximumGrade = 1000;
 const gradeIncrement = 25;
 
+/// The most future assessments one calculation accepts.
+///
+/// The dynamic programming below keeps three Int32 tables of
+/// `(n + 1) * (40 * sum(weights) + 1)` cells. With weights up to 100 that is
+/// about 20 MB for 20 assessments, but already about 485 MB for 100, so the
+/// bound is enforced before any table is allocated. 20 leaves room for the ten
+/// manual grades plus at least ten calendar assessments.
+const maximumFutureAssessments = 20;
+
 /// A grade as used by the school API: 400 to 1000 represents 4.00 to 10.00.
 class TargetGradeEntry {
   const TargetGradeEntry({required this.grade, required this.weightPercentage});
@@ -52,6 +61,10 @@ TargetGradeCalculation calculateTargetGrades({
   if (targetGrade < minimumGrade || targetGrade > maximumGrade) {
     throw ArgumentError.value(
         targetGrade, 'targetGrade', 'must be between 400 and 1000');
+  }
+  if (futureWeights.length > maximumFutureAssessments) {
+    throw ArgumentError.value(futureWeights, 'futureWeights',
+        'must contain at most $maximumFutureAssessments weights');
   }
   if (futureWeights.isEmpty ||
       futureWeights.any((weight) => weight <= 0 || weight > 100)) {
