@@ -106,7 +106,12 @@ class _TargetGradeCalculatorPageState
   List<GradeAll> get _grades =>
       _subject
           ?.basicGrades(_semester)
-          ?.where((grade) => !grade.cancelled && grade.grade != null)
+          // Grades weighted 0 % add nothing; invalid negative weights are left
+          // out as in every other average.
+          ?.where((grade) =>
+              !grade.cancelled &&
+              grade.grade != null &&
+              grade.weightPercentage >= 0)
           .toList() ??
       <GradeAll>[];
 

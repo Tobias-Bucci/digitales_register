@@ -271,6 +271,29 @@ void main() {
       expect(find.text('7,00'), findsOneWidget);
     });
 
+    testWidgets('imported grades average like the subject average',
+        (tester) async {
+      GradeAll weighted(int value, int weight) => buildGradeAll(
+            date: UtcDateTime(2026, 4, 1),
+            grade: value,
+            weightPercentage: weight,
+          );
+      // (8.00 * 100 + 6.50 * 50) / 150 = 7.50 in every other view.
+      final store = await openImport(tester, [
+        weighted(800, 100),
+        weighted(650, 50),
+        weighted(1000, 0),
+        weighted(400, -50),
+      ]);
+      expect(store.state.gradesState.subjects.single.average(Semester.first),
+          750);
+      await tester.tap(find.widgetWithText(ElevatedButton, 'Importieren'));
+      await tester.pumpAndSettle();
+
+      expect(tester.takeException(), isNull);
+      expect(find.text('7,50'), findsOneWidget);
+    });
+
     testWidgets('refreshed and removed subjects keep the page usable',
         (tester) async {
       final store = await openImport(tester, [grade(null)]);
