@@ -219,6 +219,27 @@ void main() {
       );
     });
 
+    testWidgets('a document of a left account opens no message',
+        (tester) async {
+      final store = createStore(
+        initialState: AppState((b) => b..settingsState.languageCode = 'en'),
+      );
+      await tester.pumpWidget(buildTestApp(
+        store: store,
+        home: CourseMaterialsPage(
+          cachedLoader: () async => snapshot(),
+          refreshLoader: () async => snapshot(),
+          entryOpener: (_) async => CourseMaterialOpenResult.abandoned,
+        ),
+      ));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('Topic'));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('Math course file'));
+      await tester.pumpAndSettle();
+      expect(find.byType(SnackBar), findsNothing);
+    });
+
     testWidgets('an incomplete first load is reported as an error',
         (tester) async {
       await pumpPage(tester, error: const CourseMaterialsIncompleteException());

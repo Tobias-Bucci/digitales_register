@@ -549,6 +549,10 @@ enum CourseMaterialOpenResult {
   /// the previously saved version was opened.
   openedOutdated,
   failed,
+
+  /// The app left the account while the document was loading. Nothing was
+  /// saved or opened, and nothing may be shown in the account it is in now.
+  abandoned,
 }
 
 Future<bool> openCourseMaterialEntry(CourseMaterialEntry entry) async {
@@ -626,6 +630,9 @@ Future<CourseMaterialOpenResult> openCourseMaterialEntryWithStatus(
     return outdated
         ? CourseMaterialOpenResult.openedOutdated
         : CourseMaterialOpenResult.opened;
+  } on StaleSessionException {
+    _materialLog('abandoned', {'at': stage});
+    return CourseMaterialOpenResult.abandoned;
   } catch (error) {
     _materialLog(
         'failed', {'at': stage, 'errorType': error.runtimeType.toString()});
