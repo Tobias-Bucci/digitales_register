@@ -429,7 +429,12 @@ Future<List<CourseMaterialCourse>> _loadCourseMaterialsRemote(
         'classId': source.classId,
         'subjectId': source.subjectId,
       },
+      // The server answers a subject without a course with an empty body.
+      acceptEmptyResponse: true,
     );
+    if (response == true) {
+      continue;
+    }
     // A failed request: the course is unknown, not absent. Malformed
     // responses make getMap throw.
     final map =
