@@ -595,10 +595,12 @@ Future<void> _deleteLocalAccountData({
   required String user,
   required String url,
 }) async {
-  // The same scope the account's session has once it is signed in.
+  // The same scope and storage key the account's session has once it is
+  // signed in (Wrapper.loginAddress): a saved URL may end with a slash.
   final account = LocalDataAccount(
     scope: AccountScope(fixupUrl(url), user),
-    storageKey: getStorageKey(user, '${fixupUrl(url)}/v2/api/auth/login'),
+    storageKey: getStorageKey(
+        user, '${schoolApiBase(fixupUrl(url))}$schoolLoginEndpoint'),
   );
   // Behind every write already started: a slow older write must not put the
   // deleted state back.
