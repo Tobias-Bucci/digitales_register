@@ -227,6 +227,9 @@ class _CourseMaterialsPageState extends State<CourseMaterialsPage> {
           showSnackBar(context.t('courseMaterials.openedOutdated'));
         case CourseMaterialOpenResult.failed:
           showSnackBar(context.t('courseMaterials.openFailed'));
+        case CourseMaterialOpenResult.abandoned:
+          // The document belonged to the account the app has left.
+          break;
       }
     } finally {
       if (mounted) {

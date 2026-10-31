@@ -391,7 +391,8 @@ void main() {
       await switchAccount(store);
       a.answer.complete(pdf);
 
-      expect(await open, CourseMaterialOpenResult.failed);
+      // Not a failure the next account would be told about.
+      expect(await open, CourseMaterialOpenResult.abandoned);
       expect(opened, 0);
       expect(written(), isEmpty);
     });
