@@ -39,7 +39,7 @@ Die vollständige Dateiliste steht im Anhang. Wesentliche Gruppen: bestehende Te
 
 Eine zentrale lokale Entscheidung bleibt die einzige Autorisierung. Keine neue vorausgewählte Option oder implizite Zustimmung. Die UI zeigt spätere Änderungsmöglichkeit und bei bestehenden Nutzern den aktualisierten Hinweis. Keine Zustimmung aus Info-Seiten oder Dialog-Abbruch. Die gespeicherte lokale Altersentscheidung ist nur `unknown`, `atLeast14` oder `under14`.
 
-Verantwortlicher und Kontakt wurden vom Eigentümer bestätigt und in allen Sprachen ergänzt: **Tobias Bucci, Mühlenweg 51, St. Sigmund, Italien (Bozen)**; **buccitobias774@gmail.com**. Kein automatischer serverseitiger Löschablauf wird behauptet.
+Verantwortlicher und Kontakt wurden vom Eigentümer bestätigt und in allen Sprachen ergänzt: siehe Datenschutzhinweis in der App. Kein automatischer serverseitiger Löschablauf wird behauptet.
 
 ## F. Android
 

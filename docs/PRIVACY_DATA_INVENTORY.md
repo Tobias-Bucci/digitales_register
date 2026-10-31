@@ -6,7 +6,7 @@
 
 # Privacy data inventory — version 4 (historical audit)
 
-Audited 2026-10-01 against this repository. Controller for this app fork, confirmed by the owner: **Tobias Bucci, Mühlenweg 51, St. Sigmund, Italy (Bolzano)**; privacy contact **buccitobias774@gmail.com**. The school/register provider's roles and necessary-processing legal bases require legal review. This is an implementation inventory, not a legal compliance guarantee.
+Audited 2026-10-01 against this repository. Controller for this app fork, confirmed by the owner: see the privacy notice in the app. The school/register provider's roles and necessary-processing legal bases require legal review. This is an implementation inventory, not a legal compliance guarantee.
 
 The app uses the selected school's existing API, not a newly introduced first-party telemetry backend. “Local” does not imply anonymous or that OS backups cannot exist. Android app backup is disabled in the manifest; platform/keychain and calendar retention must be considered separately.
 
