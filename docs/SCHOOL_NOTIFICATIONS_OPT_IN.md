@@ -1,7 +1,7 @@
 # Issue #82 — Einmaliger Opt-in
 
 Stand: 25.10.2026. Dieser Nachtrag beschreibt die Erweiterung nach dem
-ursprünglichen `ISSUE_82_COMPLETION_REPORT.md`; dessen Testzahlen beziehen sich
+ursprünglichen Abschlussbericht (außerhalb des Repos geführt); dessen Testzahlen beziehen sich
 auf den vorherigen Implementierungsstand.
 
 ## Verhalten

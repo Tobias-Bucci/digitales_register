@@ -8,7 +8,7 @@ Identity method C is used: a cryptographically random installation-local account
 
 The current implementation uses the app's 0–10 numeric representation and equal weighting of non-ignored subject averages; subject averages retain their existing assessment weights. There is no reliable named grading-scale metadata. The query restricts provider category to `digital_register_api`. Do not merge a future different provider/scale into this cohort. Future incompatible scale support needs an explicit reliable scale field and a new schema/report design. Local subject exclusions can affect comparability; describe results as participating installations' app-computed averages.
 
-School IDs are now submitted only under additional academic consent, including on ordinary usage events. See [retention tasks](BIGQUERY_RETENTION.md): GA4 retention does not remove exported raw data.
+School IDs are now submitted only under additional academic consent, including on ordinary usage events. The BigQuery retention tasks are maintained outside this repository: GA4 retention does not remove exported raw data.
 
 ## Export structure
 

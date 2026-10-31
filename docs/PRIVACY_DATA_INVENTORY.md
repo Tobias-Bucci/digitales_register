@@ -41,7 +41,7 @@ The app uses the selected school's existing API, not a newly introduced first-pa
 - Google contract applicability, international transfer safeguards, necessary-processing bases and handling of health-related register data require legal review. EU BigQuery location does not prove EU-only Firebase processing.
 - Secure local account ID lookup and normalized fingerprints are not sent to Firebase. A person on multiple devices can count as multiple pseudonymous users.
 
-References: [Firebase privacy](https://firebase.google.com/support/privacy), [BigQuery retention](BIGQUERY_RETENTION.md), [Store checklist](STORE_PRIVACY_CHECKLIST.md). App notice exists in de/it/en/lld catalogs and includes the confirmed contact.
+References: [Firebase privacy](https://firebase.google.com/support/privacy), [Store checklist](STORE_PRIVACY_CHECKLIST.md). App notice exists in de/it/en/lld catalogs and includes the confirmed contact.
 
 ## Native exports (Issue #12)
 
