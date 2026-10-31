@@ -74,11 +74,12 @@ class _LegacyStudyDataTileState extends State<LegacyStudyDataTile> {
         return ListTile(
           leading: const Icon(Icons.inventory_2_outlined),
           title: Text(l10n.text('studyData.legacy.setting.title')),
-          subtitle: Text(l10n.text('studyData.legacy.setting.subtitle', args: {
-            'exams': summary.exams.toString(),
-            'notes': summary.notes.toString(),
-            'files': summary.files.toString(),
-          })),
+          subtitle: Text(l10n.text('studyData.legacy.setting.subtitle',
+              args: l10n.legacyStudyCounts(
+                exams: summary.exams,
+                notes: summary.notes,
+                files: summary.files,
+              ))),
           trailing: const Icon(Icons.chevron_right),
           onTap: () => showLegacyStudyDataDialog(widget.actions, summary),
         );

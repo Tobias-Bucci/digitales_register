@@ -178,7 +178,7 @@ void main() {
     expect(raw(studyDataMigrationMarkerKey), 'quarantined');
     expect(find.text('Older study notes without an account'), findsOneWidget);
     // Numbers only: neither the note nor the file name is shown.
-    expect(find.textContaining('1 exams (1 notes, 1 files)'), findsOneWidget);
+    expect(find.textContaining('1 exam (1 note, 1 file)'), findsOneWidget);
     expect(find.textContaining('private old note'), findsNothing);
     expect(find.textContaining('secret-name'), findsNothing);
 
@@ -233,7 +233,7 @@ void main() {
     await settle(tester);
     expect(find.text('Delete older study notes for good?'), findsOneWidget);
     // The second question names numbers only, too.
-    expect(find.textContaining('1 notes, 1 files'), findsOneWidget);
+    expect(find.textContaining('(1 note, 1 file)'), findsOneWidget);
     expect(find.textContaining('private old note'), findsNothing);
     // Backing out keeps everything and discards nothing.
     await tester.tap(find.text('Cancel'));
@@ -276,7 +276,7 @@ void main() {
 
     expect(find.text('Older study notes without an account'), findsOneWidget);
     expect(
-        find.text('1 exams (1 notes, 1 files). Tap to assign or delete them.'),
+        find.text('1 exam (1 note, 1 file). Tap to assign or delete them.'),
         findsOneWidget);
     expect(find.textContaining('private old note'), findsNothing);
 

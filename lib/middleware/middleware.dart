@@ -1601,11 +1601,16 @@ Future<void> _offerLegacyStudyData(
   }
 }
 
-Map<String, String> _legacyStudyArgs(LegacyStudySummary summary) => {
-      'exams': summary.exams.toString(),
-      'notes': summary.notes.toString(),
-      'files': summary.files.toString(),
-    };
+Map<String, String> _legacyStudyArgs({int? exams, int? notes, int? files}) {
+  final context = navigatorKey?.currentContext;
+  if (context == null) return const {};
+  return AppLocalizations.of(context)
+      .legacyStudyCounts(exams: exams, notes: notes, files: files);
+}
+
+Map<String, String> _legacyStudySummaryArgs(LegacyStudySummary summary) =>
+    _legacyStudyArgs(
+        exams: summary.exams, notes: summary.notes, files: summary.files);
 
 enum _LegacyStudyChoice { assign, later, discard }
 
@@ -1625,7 +1630,7 @@ Future<void> showLegacyStudyDataDialog(
       builder: (context) => InfoDialog(
         title: Text(tr('studyData.legacy.title')),
         content: Text(
-            tr('studyData.legacy.body', args: _legacyStudyArgs(summary))),
+            tr('studyData.legacy.body', args: _legacyStudySummaryArgs(summary))),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context, _LegacyStudyChoice.discard),
@@ -1666,7 +1671,7 @@ Future<bool?> _confirmDiscardLegacyStudyData(LegacyStudySummary summary) {
       builder: (context) => InfoDialog(
         title: Text(tr('studyData.legacy.discardConfirm.title')),
         content: Text(tr('studyData.legacy.discardConfirm.body',
-            args: _legacyStudyArgs(summary))),
+            args: _legacyStudySummaryArgs(summary))),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context, true),
@@ -1721,15 +1726,17 @@ Future<void> _assignLegacyStudyData(
     legacyStudyDataRevision.value++;
     if (outcome.moved.isEmpty && outcome.remaining.isEmpty) return;
     showSnackBar(outcome.remaining.isEmpty
-        ? tr('studyData.legacy.assigned', args: {
-            'notes': outcome.moved.noteCount.toString(),
-            'files': outcome.moved.fileCount.toString(),
-          })
-        : tr('studyData.legacy.assignedPartly', args: {
-            'notes': outcome.moved.noteCount.toString(),
-            'files': outcome.moved.fileCount.toString(),
-            'exams': outcome.remaining.keys.length.toString(),
-          }));
+        ? tr('studyData.legacy.assigned',
+            args: _legacyStudyArgs(
+              notes: outcome.moved.noteCount,
+              files: outcome.moved.fileCount,
+            ))
+        : tr('studyData.legacy.assignedPartly',
+            args: _legacyStudyArgs(
+              notes: outcome.moved.noteCount,
+              files: outcome.moved.fileCount,
+              exams: outcome.remaining.keys.length,
+            )));
   } on StaleSessionException {
     rethrow;
   } catch (error, stack) {
