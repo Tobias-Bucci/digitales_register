@@ -1,4 +1,4 @@
-﻿// Copyright (C) 2021 Michael Debertol
+// Copyright (C) 2021 Michael Debertol
 // Copyright (C) 2026 Tobias Bucci
 //
 // This file is part of digitales_register.
@@ -16,6 +16,9 @@
 // You should have received a copy of the GNU General Public License
 // along with digitales_register.  If not, see <http://www.gnu.org/licenses/>.
 
+import 'package:dr/ui/launch/app_launch_animation.dart';
+import 'package:dr/ui/launch/launch_logo_painter.dart';
+import 'package:dr/ui/launch/launch_tokens.dart';
 import 'package:flutter/material.dart';
 
 class SplashScreen extends StatelessWidget {
@@ -32,9 +35,15 @@ class SplashScreen extends StatelessWidget {
       children: [
         child,
         IgnorePointer(
-          child: AnimatedOpacity(
-            opacity: splash ? 1 : 0,
-            duration: const Duration(milliseconds: 250),
+          child: ValueListenableBuilder<bool>(
+            valueListenable: appLaunchInProgress,
+            // Under the launch animation the fade would only delay its reveal.
+            builder: (context, launching, splashWidget) => AnimatedOpacity(
+              opacity: splash ? 1 : 0,
+              duration:
+                  launching ? Duration.zero : const Duration(milliseconds: 250),
+              child: splashWidget,
+            ),
             child: _SplashWidget(),
           ),
         ),
@@ -46,10 +55,18 @@ class SplashScreen extends StatelessWidget {
 class _SplashWidget extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
+    // The static logo of the launch animation, so a later visit (e.g. after
+    // logging out) looks like the start of the app.
     return Scaffold(
-      body: Center(
-        child: Image.asset(
-          "assets/transparent.png",
+      body: LayoutBuilder(
+        builder: (context, constraints) => CustomPaint(
+          size: constraints.biggest,
+          painter: LaunchLogoPainter(
+            frame: StaticLaunchFrame(),
+            palette: LaunchPalette.of(Theme.of(context).brightness),
+            logoExtent: launchLogoExtent(constraints.biggest),
+            paintBackground: false,
+          ),
         ),
       ),
     );

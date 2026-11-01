@@ -1,4 +1,4 @@
-// Regenerate native iOS assets from the existing app artwork; no app build.
+// Regenerate the iOS app icons from the existing app artwork; no app build.
 import 'dart:convert';
 import 'dart:io';
 
@@ -25,19 +25,7 @@ void main() {
         .writeAsBytesSync(img.encodePng(resized));
   }
 
-  final logo =
-      img.decodePng(File('assets/4.0x/transparent.png').readAsBytesSync())!;
-  for (var scale = 1; scale <= 3; scale++) {
-    final suffix = scale == 1 ? '' : '@${scale}x';
-    final resized = img.copyResize(logo,
-        width: 144 * scale,
-        height: (144 * scale * logo.height / logo.width).round(),
-        interpolation: img.Interpolation.average);
-    for (final appearance in ['', 'Dark']) {
-      File('$root/LaunchImage.imageset/LaunchImage$appearance$suffix.png')
-          .writeAsBytesSync(img.encodePng(resized));
-    }
-  }
-  stdout.writeln(
-      'Regenerated iOS icons and light/dark launch logos. No build started.');
+  // The launch images are generated with the launch animation by
+  // `flutter test tool/launch_assets/generate_test.dart`.
+  stdout.writeln('Regenerated iOS icons. No build started.');
 }

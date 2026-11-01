@@ -1,0 +1,5 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Must match LaunchLayout.mobileExtent in lib/ui/launch/launch_tokens.dart. -->
+    <dimen name="launch_logo_size">160dp</dimen>
+</resources>

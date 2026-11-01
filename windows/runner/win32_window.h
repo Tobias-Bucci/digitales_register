@@ -38,6 +38,9 @@ class Win32Window {
                      const Point& origin,
                      const Size& size);
 
+  // Shows the window created by CreateAndShow.
+  bool Show();
+
   // Release OS resources associated with window.
   void Destroy();
 

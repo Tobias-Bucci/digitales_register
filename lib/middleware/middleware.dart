@@ -77,6 +77,7 @@ import 'package:dr/study_data_service.dart';
 import 'package:dr/theme_controller.dart';
 import 'package:dr/ui/debug_page.dart';
 import 'package:dr/ui/dialog.dart';
+import 'package:dr/ui/launch/app_launch_animation.dart';
 import 'package:dr/ui/school_notification_opt_in.dart';
 import 'package:dr/utc_date_time.dart';
 import 'package:dr/util.dart';
@@ -1361,6 +1362,10 @@ Future<void> _loadAccounts(
       await api.actions.routingActions.showLogin();
     }
   }
+
+  // Login or dashboard is decided; the launch animation may uncover it. It
+  // covers the app, so it must open before the dialogs below wait for input.
+  appLaunchGate.open();
 
   // The first-run dialogs must be pushed after the login or dashboard route is
   // visible. On Windows, pushing them while the opaque splash is still the

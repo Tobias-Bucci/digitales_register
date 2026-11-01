@@ -1,9 +1,12 @@
 <?xml version="1.0" encoding="utf-8"?>
+<!-- Launch screen before Android 12. Colour and logo resolve to their night
+     variants in dark mode and match the first frame of the Flutter launch
+     animation (lib/ui/launch). -->
 <layer-list xmlns:android="http://schemas.android.com/apk/res/android">
-    <item>
-        <bitmap android:gravity="fill" android:src="@drawable/background"/>
-    </item>
-    <item>
-        <bitmap android:gravity="center" android:src="@drawable/splash"/>
-    </item>
+    <item android:drawable="@color/splash_color" />
+    <item
+        android:width="@dimen/launch_logo_size"
+        android:height="@dimen/launch_logo_size"
+        android:drawable="@drawable/launch_logo"
+        android:gravity="center" />
 </layer-list>

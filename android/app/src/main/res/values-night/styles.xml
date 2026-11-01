@@ -16,6 +16,8 @@
          
          This Theme is only used starting with V2 of Flutter's Android embedding. -->
     <style name="NormalTheme" parent="Theme.AppCompat.NoActionBar">
-        <item name="android:windowBackground">?android:colorBackground</item>
+        <!-- Same colour as the launch screen, so nothing flashes before the
+             Flutter launch animation has drawn its first frame. -->
+        <item name="android:windowBackground">@color/splash_color</item>
     </style>
 </resources>

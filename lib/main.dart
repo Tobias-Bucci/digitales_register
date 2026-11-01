@@ -51,6 +51,7 @@ import 'package:dr/settings_persistence_service.dart';
 import 'package:dr/theme_controller.dart';
 import 'package:dr/ui/grade_calculator.dart';
 import 'package:dr/ui/grades_chart_page.dart';
+import 'package:dr/ui/launch/app_launch_animation.dart';
 import 'package:dr/util.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_built_redux/flutter_built_redux.dart';
@@ -103,15 +104,28 @@ Future<void> main() async {
       deferUntilLogin: !store.state.loginState.loggedIn,
     ),
   );
-  runApp(RegisterApp(store: store));
+  runApp(RegisterApp(store: store, launchTargetReady: _launchTargetReady()));
   WidgetsBinding.instance.addPostFrameCallback(
     (_) => unawaited(
       _initializeAfterFirstFrame(
         store: store,
         startupStopwatch: startupStopwatch,
-      ),
+      ).whenComplete(appLaunchGate.open),
     ),
   );
+}
+
+/// Completes when the launch animation may uncover the start-up route.
+Future<void> _launchTargetReady() async {
+  await appLaunchGate.opened;
+  // `--dart-define=DR_LAUNCH_EXTRA_WAIT_MS=3000` simulates a slow sign-in.
+  final extraWaitMs =
+      int.tryParse(const String.fromEnvironment('DR_LAUNCH_EXTRA_WAIT_MS'));
+  if (extraWaitMs != null && extraWaitMs > 0) {
+    await Future<void>.delayed(Duration(milliseconds: extraWaitMs));
+  }
+  // The reveal must not uncover the login page halfway through its push.
+  await waitForRouteTransition(() => navigatorKey?.currentState);
 }
 
 Future<void> _removeLegacyNotificationData() async {
@@ -296,9 +310,12 @@ Future<void> _loadPackageInfo() async {
 }
 
 class RegisterApp extends StatelessWidget {
-  const RegisterApp({super.key, required this.store});
+  const RegisterApp({super.key, required this.store, this.launchTargetReady});
 
   final Store<AppState, AppStateBuilder, AppActions> store;
+
+  /// Plays the launch animation until this completes; null skips it.
+  final Future<void>? launchTargetReady;
 
   @override
   Widget build(BuildContext context) {
@@ -306,7 +323,8 @@ class RegisterApp extends StatelessWidget {
       store: store,
       child: Listener(
         onPointerDown: (_) => store.actions.loginActions.updateLogout(),
-        child: StoreConnection<AppState, AppActions, _RegisterAppViewModel>(
+        child: _withLaunchAnimation(
+            StoreConnection<AppState, AppActions, _RegisterAppViewModel>(
           connect: (state) => _RegisterAppViewModel(
             amoledMode: state.settingsState.amoledMode,
             biometricAppLockEnabled:
@@ -444,9 +462,17 @@ class RegisterApp extends StatelessWidget {
               debugShowCheckedModeBanner: false,
             ),
           ),
-        ),
+        )),
       ),
     );
+  }
+
+  /// The overlay sits above MaterialApp so the very first frame already shows
+  /// the logo, even while the localizations are still loading.
+  Widget _withLaunchAnimation(Widget app) {
+    final ready = launchTargetReady;
+    if (ready == null) return app;
+    return AppLaunchAnimation(targetReady: ready, child: app);
   }
 }
 

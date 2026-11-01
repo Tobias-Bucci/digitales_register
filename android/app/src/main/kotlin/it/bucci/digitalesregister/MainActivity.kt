@@ -29,6 +29,11 @@ class MainActivity: FlutterFragmentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         enableEdgeToEdge()
         super.onCreate(savedInstanceState)
+        if (Build.VERSION.SDK_INT >= 31) {
+            // The Flutter launch animation starts with the identical frame, so
+            // the system's fade-out would only blur the hand-over.
+            splashScreen.setOnExitAnimationListener { view -> view.remove() }
+        }
         pendingLaunchDestination = extractLaunchDestination(intent)
     }
 
