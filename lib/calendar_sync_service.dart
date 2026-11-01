@@ -161,6 +161,10 @@ typedef CalendarSyncUpsertOverride = Future<int?> Function(
   CalendarSyncUpsertRequest request,
 );
 typedef CalendarSyncDeleteOverride = Future<void> Function(int eventId);
+typedef CalendarSyncExistingEventsOverride = Future<List<int>?> Function(
+  int calendarId,
+  List<int> eventIds,
+);
 
 extension CalendarSyncService on Never {
   static Future<void> _operationTail = Future<void>.value();
@@ -219,6 +223,13 @@ extension CalendarSyncService on Never {
   static CalendarSyncCalendarsOverride? getWritableCalendarsOverride;
   static CalendarSyncUpsertOverride? upsertEventOverride;
   static CalendarSyncDeleteOverride? deleteEventOverride;
+  static CalendarSyncExistingEventsOverride? findExistingEventsOverride;
+
+  /// Number of unchanged entries whose event the last reconcile found
+  /// missing from the target calendar, for example because the user deleted
+  /// it there. They are only created again by [recreateMissingEvents]. Zero
+  /// when nothing is missing or the calendar could not be checked.
+  static final missingEventCount = ValueNotifier<int>(0);
 
   static Future<CalendarSyncEnableResult> prepareForEnable({
     int? preferredCalendarId,
@@ -251,11 +262,23 @@ extension CalendarSyncService on Never {
     return _getWritableCalendars();
   }
 
+  /// Writes the current entries of [state] into the target calendar.
+  ///
+  /// Returns false if not everything could be written or if tracked events
+  /// are missing from the calendar ([missingEventCount]).
   static Future<bool> reconcile(AppState state) =>
       _serialize(() => _reconcile(state));
 
-  static Future<bool> _reconcile(AppState state) async {
+  /// Like [reconcile], but also creates the missing events again.
+  static Future<bool> recreateMissingEvents(AppState state) =>
+      _serialize(() => _reconcile(state, recreateMissing: true));
+
+  static Future<bool> _reconcile(
+    AppState state, {
+    bool recreateMissing = false,
+  }) async {
     if (!isAndroidPlatform || !state.settingsState.calendarSyncEnabled) {
+      missingEventCount.value = 0;
       return true;
     }
 
@@ -265,6 +288,7 @@ extension CalendarSyncService on Never {
       state.settingsState.calendarSyncCalendarId,
     );
     if (calendarId == null) {
+      missingEventCount.value = 0;
       return false;
     }
 
@@ -291,16 +315,34 @@ extension CalendarSyncService on Never {
       }
     }
 
+    bool unchanged(CalendarSyncDesiredItem item) {
+      final existing = updatedRecords[item.syncKey];
+      return existing != null &&
+          existing.calendarId == calendarId &&
+          existing.fingerprint == item.fingerprint;
+    }
+
+    final missing = await _findMissingEvents(calendarId, [
+      for (final item in desiredItems)
+        if (unchanged(item)) updatedRecords[item.syncKey]!,
+    ]);
+    var stillMissing = 0;
+
     for (final item in desiredItems) {
       final existing = updatedRecords[item.syncKey];
-      if (existing != null &&
-          existing.calendarId == calendarId &&
-          existing.fingerprint == item.fingerprint) {
+      final isMissing = missing.contains(item.syncKey);
+      if (unchanged(item) && !(isMissing && recreateMissing)) {
+        if (isMissing) {
+          stillMissing++;
+          success = false;
+        }
         continue;
       }
 
       try {
-        var existingEventId = existing?.eventId;
+        // A deleted event can remain as a hidden row until the calendar
+        // account syncs, and updating it would not make it visible again.
+        var existingEventId = isMissing ? null : existing?.eventId;
         if (existing != null && existing.calendarId != calendarId) {
           await _deleteEvent(existing.eventId);
           existingEventId = null;
@@ -338,12 +380,37 @@ extension CalendarSyncService on Never {
     }
 
     await _writeRecords(updatedRecords);
+    missingEventCount.value = stillMissing;
     return success;
+  }
+
+  /// The sync keys of [records] whose event [calendarId] certainly no longer
+  /// contains. Empty when the calendar cannot be checked, so that an unknown
+  /// state never leads to events being created again.
+  static Future<Set<String>> _findMissingEvents(
+    int calendarId,
+    List<CalendarSyncRecord> records,
+  ) async {
+    if (records.isEmpty) {
+      return const <String>{};
+    }
+    final existing = await _findExistingEventIds(
+      calendarId,
+      [for (final record in records) record.eventId],
+    );
+    if (existing == null) {
+      return const <String>{};
+    }
+    return {
+      for (final record in records)
+        if (!existing.contains(record.eventId)) record.syncKey,
+    };
   }
 
   static Future<bool> deleteTrackedEvents() => _serialize(_deleteTrackedEvents);
 
   static Future<bool> _deleteTrackedEvents() async {
+    missingEventCount.value = 0;
     final records = await _readRecords();
     if (records.isEmpty) {
       return true;
@@ -728,6 +795,28 @@ extension CalendarSyncService on Never {
     );
   }
 
+  /// The ids out of [eventIds] that are visible events of [calendarId], in a
+  /// single query, or `null` when the calendar cannot be queried (missing
+  /// permission, unavailable provider or any other failure).
+  static Future<Set<int>?> _findExistingEventIds(
+    int calendarId,
+    List<int> eventIds,
+  ) async {
+    try {
+      final existing = findExistingEventsOverride != null
+          ? await findExistingEventsOverride!(calendarId, eventIds)
+          : await _calendarSyncMethodChannel.invokeListMethod<int>(
+              'findExistingCalendarEvents',
+              <String, Object>{'calendarId': calendarId, 'eventIds': eventIds},
+            );
+      return existing?.toSet();
+    } catch (e, trace) {
+      diagnostics.report(e, trace, DiagnosticError.background);
+      privacyLog('technical_operation');
+      return null;
+    }
+  }
+
   static Future<Map<String, CalendarSyncRecord>> _readRecords() async {
     final prefs = await SharedPreferences.getInstance();
     final raw = prefs.getString(_calendarSyncRecordsKey);
@@ -793,6 +882,8 @@ extension CalendarSyncService on Never {
     getWritableCalendarsOverride = null;
     upsertEventOverride = null;
     deleteEventOverride = null;
+    findExistingEventsOverride = null;
+    missingEventCount.value = 0;
     final prefs = await SharedPreferences.getInstance();
     await prefs.remove(_calendarSyncRecordsKey);
   }

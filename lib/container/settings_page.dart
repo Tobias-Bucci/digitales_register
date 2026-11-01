@@ -123,6 +123,8 @@ class SettingsPageContainer extends StatelessWidget {
                 actions.settingsActions.calendarSyncCalendarId.call,
             onRemoveCalendarSyncEvents:
                 actions.settingsActions.removeCalendarSyncEvents.call,
+            onRecreateMissingCalendarSyncEvents:
+                actions.settingsActions.recreateMissingCalendarSyncEvents.call,
             onSetAmoledMode: actions.settingsActions.amoledMode.call,
             onSetAccent: (accent) =>
                 unawaited(themeController.setAccent(accent)),

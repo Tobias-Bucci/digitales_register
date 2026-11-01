@@ -693,6 +693,9 @@ class AppLocalizations {
   String hiddenSubjectsLabel(int count) =>
       _counted('settings.grades.summary.hidden', count);
 
+  String missingCalendarEventsLabel(int count) =>
+      _counted('settings.calendarSync.missing.count', count);
+
   /// The numbers of the older learning data, each with its noun in singular
   /// or plural ("1 Datei", "2 Dateien"), for the `studyData.legacy` texts.
   Map<String, String> legacyStudyCounts({int? exams, int? notes, int? files}) =>
