@@ -7,8 +7,7 @@ import 'package:file_picker/src/platform/file_picker_platform_interface.dart';
 import 'package:file_picker/src/api/file_picker_result.dart';
 import 'package:file_picker/src/api/platform_file.dart';
 import 'package:file_picker/src/file_picker_utils.dart';
-import 'package:file_picker/src/platform/linux/xdp_filechooser.dart';
-import 'package:file_picker/src/platform/linux/xdp_request.dart';
+import 'package:file_picker/src/platform/linux/xdp_portal_connection.dart';
 import 'package:file_picker/src/platform/linux/filters.dart';
 import 'package:dbus/dbus.dart';
 
@@ -17,15 +16,25 @@ class FilePickerLinux extends FilePickerPlatform {
     FilePickerPlatform.instance = FilePickerLinux();
   }
 
-  final destination = "org.freedesktop.portal.Desktop";
-  late final DBusClient _client;
-  late final OrgFreedesktopPortalFileChooser _xdpChooser;
+  /// Upper bound for one dialog. Afterwards the dialog is closed and the
+  /// request ends as if it had been cancelled.
+  static const defaultResponseTimeout = Duration(minutes: 30);
 
-  FilePickerLinux() : super() {
-    _client = DBusClient.session();
-    _xdpChooser = OrgFreedesktopPortalFileChooser(_client, destination,
-        path: DBusObjectPath("/org/freedesktop/portal/desktop"));
-  }
+  /// Bound for each cleanup step, so a broken bus cannot block the result.
+  static const _cleanupTimeout = Duration(seconds: 5);
+
+  static int _nextToken = 0;
+
+  /// Opens a new connection for each dialog. Defaults to the session bus.
+  final XdpPortalConnection Function() _connectionFactory;
+  final Duration responseTimeout;
+
+  FilePickerLinux({
+    XdpPortalConnection Function()? connectionFactory,
+    this.responseTimeout = defaultResponseTimeout,
+  })  : _connectionFactory = connectionFactory ??
+            (() => DBusXdpPortalConnection(DBusClient.session())),
+        super();
 
   @override
   Future<FilePickerResult?> pickFiles({
@@ -44,7 +53,6 @@ class FilePickerLinux extends FilePickerPlatform {
   }) async {
     final filter = Filter(type, allowedExtensions);
     Map<String, DBusValue> xdpOption = {
-      'handle_token': DBusString('flutter_picker'),
       'multiple': DBusBoolean(allowMultiple),
       'modal': DBusBoolean(lockParentWindow),
       'filters': filter.toDBusArray(),
@@ -54,28 +62,15 @@ class FilePickerLinux extends FilePickerPlatform {
       DBusArray directory = DBusArray.byte(tmp);
       xdpOption["current_folder"] = directory;
     }
-    final replyPath = await _xdpChooser.callOpenFile(
-        "", dialogTitle ?? "flutter picker", xdpOption);
-
-    List<Uri> uriPaths = [];
-
-    final request =
-        OrgFreedesktopPortalRequest(_client, destination, path: replyPath);
-
-    await for (var response in request.response) {
-      final status = response.response;
-      // Maybe cancelled
-      if (status != 0) {
-        return null;
-      }
-      final result = response.results;
-      uriPaths = result["uris"]
-              ?.asArray()
-              .map((data) => Uri.parse(data.asString()))
-              .toList() ??
-          [];
-      break;
+    final response = await _request(
+        xdpOption,
+        (connection, options) => connection.callOpenFile(
+            "", dialogTitle ?? "flutter picker", options));
+    // Maybe cancelled
+    if (response == null || response.status != 0) {
+      return null;
     }
+    final uriPaths = _uris(response) ?? [];
 
     final filePaths = uriPaths.map((uri) => uri.toFilePath()).toList();
 
@@ -96,7 +91,6 @@ class FilePickerLinux extends FilePickerPlatform {
     String? initialDirectory,
   }) async {
     Map<String, DBusValue> xdpOption = {
-      'handle_token': DBusString('flutter_picker'),
       'directory': DBusBoolean(true),
       'modal': DBusBoolean(lockParentWindow),
     };
@@ -105,28 +99,15 @@ class FilePickerLinux extends FilePickerPlatform {
       DBusArray directory = DBusArray.byte(tmp);
       xdpOption["current_folder"] = directory;
     }
-    final replyPath = await _xdpChooser.callOpenFile(
-        "", dialogTitle ?? "flutter picker", xdpOption);
-
-    List<Uri> uriPaths = [];
-
-    final request =
-        OrgFreedesktopPortalRequest(_client, destination, path: replyPath);
-
-    await for (var response in request.response) {
-      final status = response.response;
-      // Maybe cancelled
-      if (status != 0) {
-        return null;
-      }
-      final result = response.results;
-      uriPaths = result["uris"]
-              ?.asArray()
-              .map((data) => Uri.parse(data.asString()))
-              .toList() ??
-          [];
-      break;
+    final response = await _request(
+        xdpOption,
+        (connection, options) => connection.callOpenFile(
+            "", dialogTitle ?? "flutter picker", options));
+    // Maybe cancelled
+    if (response == null || response.status != 0) {
+      return null;
     }
+    final uriPaths = _uris(response) ?? [];
 
     final filePaths = uriPaths.map((uri) => uri.toFilePath()).toList();
 
@@ -151,7 +132,6 @@ class FilePickerLinux extends FilePickerPlatform {
     bool lockParentWindow = false,
   }) async {
     Map<String, DBusValue> xdpOption = {
-      'handle_token': DBusString('flutter_picker'),
       'current_name': DBusString(fileName ?? ''),
       'modal': DBusBoolean(lockParentWindow),
     };
@@ -161,26 +141,15 @@ class FilePickerLinux extends FilePickerPlatform {
       xdpOption["current_folder"] = directory;
     }
 
-    final replyPath = await _xdpChooser.callSaveFile(
-        "", dialogTitle ?? "flutter picker", xdpOption);
-    final request =
-        OrgFreedesktopPortalRequest(_client, destination, path: replyPath);
-
-    List<Uri> saveUris = [];
-    await for (var response in request.response) {
-      final status = response.response;
-      // Maybe cancelled
-      if (status != 0) {
-        return null;
-      }
-      final result = response.results;
-      saveUris = result["uris"]
-              ?.asArray()
-              .map((data) => Uri.parse(data.asString()))
-              .toList() ??
-          saveUris;
-      break;
+    final response = await _request(
+        xdpOption,
+        (connection, options) => connection.callSaveFile(
+            "", dialogTitle ?? "flutter picker", options));
+    // Maybe cancelled
+    if (response == null || response.status != 0) {
+      return null;
     }
+    final saveUris = _uris(response) ?? [];
 
     final savedFilePaths = saveUris.map((uri) => uri.toFilePath()).toList();
     final savedFilePath = savedFilePaths.firstOrNull;
@@ -188,6 +157,83 @@ class FilePickerLinux extends FilePickerPlatform {
     await FilePickerUtils.saveBytesToFile(bytes, savedFilePath);
 
     return savedFilePath;
+  }
+
+  List<Uri>? _uris(XdpResponse response) => response.results["uris"]
+      ?.asArray()
+      .map((data) => Uri.parse(data.asString()))
+      .toList();
+
+  /// Runs one portal request and returns its response, or null if it did not
+  /// end within [responseTimeout].
+  ///
+  /// The portal may emit the Response before the method reply arrives, so the
+  /// handle is derived from the unique name and handle_token and subscribed
+  /// before [call] (see org.freedesktop.portal.Request).
+  Future<XdpResponse?> _request(
+    Map<String, DBusValue> options,
+    Future<DBusObjectPath> Function(
+            XdpPortalConnection connection, Map<String, DBusValue> options)
+        call,
+  ) async {
+    final stopwatch = Stopwatch()..start();
+    Duration remaining() => responseTimeout - stopwatch.elapsed;
+    final token = 'flutter_picker_${_nextToken++}';
+    final received = Completer<XdpResponse>();
+    // A signal error may arrive while the method call fails as well; only the
+    // await below reports it.
+    received.future.ignore();
+    void onResponse(XdpResponse response) {
+      if (!received.isCompleted) received.complete(response);
+    }
+
+    void onError(Object error, StackTrace stackTrace) {
+      if (!received.isCompleted) received.completeError(error, stackTrace);
+    }
+
+    final connection = _connectionFactory();
+    final subscriptions = <StreamSubscription<XdpResponse>>[];
+    DBusObjectPath? handle;
+    try {
+      final sender = await connection.connect().timeout(remaining());
+      final expected = DBusObjectPath('/org/freedesktop/portal/desktop/request/'
+          '${sender.replaceFirst(':', '').replaceAll('.', '_')}/$token');
+      subscriptions.add(await connection
+          .listenForResponse(expected, onResponse, onError)
+          .timeout(remaining()));
+      handle = expected;
+      final returned = await call(
+              connection, {...options, 'handle_token': DBusString(token)})
+          .timeout(remaining());
+      if (returned != expected) {
+        // Portals before version 0.9 ignore handle_token. A response that
+        // already arrived on the expected handle stays in [received].
+        handle = returned;
+        subscriptions.add(await connection
+            .listenForResponse(returned, onResponse, onError)
+            .timeout(remaining()));
+      }
+      return await received.future.timeout(remaining());
+    } on TimeoutException {
+      final open = handle;
+      if (open != null) {
+        await _bestEffort(() => connection.closeRequest(open));
+      }
+      return null;
+    } finally {
+      for (final subscription in subscriptions) {
+        await _bestEffort(subscription.cancel);
+      }
+      await _bestEffort(connection.close);
+    }
+  }
+
+  Future<void> _bestEffort(Future<void> Function() step) async {
+    try {
+      await step().timeout(_cleanupTimeout);
+    } catch (_) {
+      // Cleanup must not replace the result of the dialog.
+    }
   }
 
   Uint8List _encodeDirectory(String initialDirectory) {
