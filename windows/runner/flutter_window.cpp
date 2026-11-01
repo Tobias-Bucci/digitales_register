@@ -72,6 +72,14 @@ bool FlutterWindow::OnCreate() {
              flutter::EncodableValue(code == 0 ? "done" : "Windows shell could not open file")}}));
       });
   SetChildContent(flutter_controller_->view()->GetNativeWindow());
+
+  // Show the window only once Flutter has drawn the first frame of the launch
+  // animation, so it never appears empty.
+  flutter_controller_->engine()->SetNextFrameCallback([&]() { this->Show(); });
+
+  // Flutter can complete the first frame before the "show window" callback is
+  // registered. Ensure a frame is pending so the window is shown.
+  flutter_controller_->ForceRedraw();
   return true;
 }
 

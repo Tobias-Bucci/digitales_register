@@ -15,6 +15,30 @@ struct _MyApplication {
 
 G_DEFINE_TYPE(MyApplication, my_application, GTK_TYPE_APPLICATION)
 
+// Launch background of lib/ui/launch/launch_tokens.dart (LaunchPalette).
+static const char* kLaunchBackgroundLight = "#F7F8FA";
+static const char* kLaunchBackgroundDark = "#121418";
+
+// Best-effort guess whether the desktop uses a dark theme.
+static gboolean prefers_dark_theme() {
+  GtkSettings* settings = gtk_settings_get_default();
+  if (settings == nullptr) return FALSE;
+  gboolean prefer_dark = FALSE;
+  g_autofree gchar* theme_name = nullptr;
+  g_object_get(settings, "gtk-application-prefer-dark-theme", &prefer_dark,
+               "gtk-theme-name", &theme_name, nullptr);
+  if (prefer_dark) return TRUE;
+  if (theme_name == nullptr) return FALSE;
+  g_autofree gchar* lower = g_ascii_strdown(theme_name, -1);
+  return g_str_has_suffix(lower, "-dark") || g_str_has_suffix(lower, ":dark");
+}
+
+// Shows the window once Flutter has drawn the first frame of the launch
+// animation, so it never appears empty or black (X11 and Wayland).
+static void first_frame_cb(MyApplication* self, FlView* view) {
+  gtk_widget_show(gtk_widget_get_toplevel(GTK_WIDGET(view)));
+}
+
 // Implements GApplication::activate.
 static void my_application_activate(GApplication* application) {
   MyApplication* self = MY_APPLICATION(application);
@@ -59,14 +83,24 @@ static void my_application_activate(GApplication* application) {
     gtk_window_set_icon_from_file(window, icon, nullptr);
   }
   gtk_window_set_default_size(window, 1280, 720);
-  gtk_widget_show(GTK_WIDGET(window));
 
   g_autoptr(FlDartProject) project = fl_dart_project_new();
   fl_dart_project_set_dart_entrypoint_arguments(project, self->dart_entrypoint_arguments);
 
   FlView* view = fl_view_new(project);
+  // Fills gaps while the window is resized faster than Flutter redraws.
+  GdkRGBA background_color;
+  gdk_rgba_parse(&background_color, prefers_dark_theme()
+                                        ? kLaunchBackgroundDark
+                                        : kLaunchBackgroundLight);
+  fl_view_set_background_color(view, &background_color);
   gtk_widget_show(GTK_WIDGET(view));
   gtk_container_add(GTK_CONTAINER(window), GTK_WIDGET(view));
+
+  // The window stays hidden until the first frame; the view must be realized
+  // to start rendering without being shown.
+  g_signal_connect_swapped(view, "first-frame", G_CALLBACK(first_frame_cb), self);
+  gtk_widget_realize(GTK_WIDGET(view));
 
   fl_register_plugins(FL_PLUGIN_REGISTRY(view));
   register_file_open_portal(fl_engine_get_binary_messenger(fl_view_get_engine(view)));

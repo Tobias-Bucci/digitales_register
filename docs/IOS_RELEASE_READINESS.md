@@ -29,11 +29,13 @@ Run from the repository root with dependencies installed:
 
 ```sh
 dart run tool/prepare_ios_assets.dart
+flutter test tool/launch_assets/generate_test.dart
 python3 tool/check_ios_release.py
 ```
 
-The first command resizes the existing artwork into the native assets; the second
-only reads files. Neither builds the app. The checker expects the name Register,
+The first command resizes the existing artwork into the app icons, the second
+renders the launch screen images from the launch animation (see
+`docs/LAUNCH_ANIMATION.md`); the third only reads files. Neither builds the app. The checker expects the name Register,
 and checks the Runner app and the PlanningWidgets extension configurations
 (Debug, Release, Profile) for consistent versions, bundle IDs, deployment target
 and entitlements; `python3 tool/test_check_ios_release.py` runs it against the
