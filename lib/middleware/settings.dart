@@ -38,7 +38,9 @@ final _settingsMiddleware = MiddlewareBuilder<AppState, AppStateBuilder,
   ..add(SettingsActionsNames.calendarSyncEnabled, _setCalendarSyncEnabled)
   ..add(SettingsActionsNames.calendarSyncCalendarId, _setCalendarSyncCalendarId)
   ..add(
-      SettingsActionsNames.removeCalendarSyncEvents, _removeCalendarSyncEvents);
+      SettingsActionsNames.removeCalendarSyncEvents, _removeCalendarSyncEvents)
+  ..add(SettingsActionsNames.recreateMissingCalendarSyncEvents,
+      _recreateMissingCalendarSyncEvents);
 
 final _substituteTeacherHistoryMutex = Mutex();
 final Set<String> _substituteTeacherHistoryAttemptedKeys = <String>{};
@@ -210,10 +212,22 @@ Future<void> _setCalendarSyncEnabled(
 Future<void> _reconcileCalendarSyncAndReport(AppState state) async {
   final success = await CalendarSyncService.reconcile(state);
   if (success) return;
+  await _reportCalendarSyncFailure(state);
+}
+
+Future<void> _reportCalendarSyncFailure(AppState state) async {
+  final missing = CalendarSyncService.missingEventCount.value;
   showSnackBar(
     await CalendarSyncService.isSelectedCalendarMissing(state)
         ? tr('calendarSync.calendarMissing')
-        : tr('calendarSync.partialSyncFailure'),
+        : missing > 0
+            ? tr(
+                missing == 1
+                    ? 'calendarSync.missingEvents.one'
+                    : 'calendarSync.missingEvents.other',
+                args: {'count': '$missing'},
+              )
+            : tr('calendarSync.partialSyncFailure'),
   );
 }
 
@@ -488,6 +502,22 @@ Future<void> _removeCalendarSyncEvents(
   final success = await CalendarSyncService.deleteTrackedEvents();
   if (!success) {
     showSnackBar(tr('calendarSync.partialDeleteFailure'));
+  }
+}
+
+/// Creates the events again that the user removed from the calendar. Only
+/// this explicit action does so; a normal reconcile just reports them.
+Future<void> _recreateMissingCalendarSyncEvents(
+    MiddlewareApi<AppState, AppStateBuilder, AppActions> api,
+    ActionHandler next,
+    Action<void> action) async {
+  await next(action);
+  if (!api.state.settingsState.calendarSyncEnabled || !isAndroidPlatform) {
+    return;
+  }
+  final success = await CalendarSyncService.recreateMissingEvents(api.state);
+  if (!success) {
+    await _reportCalendarSyncFailure(api.state);
   }
 }
 

@@ -113,6 +113,7 @@ class MainActivity: FlutterFragmentActivity() {
                 "getWritableCalendars" -> result.success(listWritableCalendars())
                 "upsertCalendarEvent" -> upsertCalendarEvent(call, result)
                 "deleteCalendarEvent" -> deleteCalendarEvent(call, result)
+                "findExistingCalendarEvents" -> findExistingCalendarEvents(call, result)
                 else -> result.notImplemented()
             }
         }
@@ -261,6 +262,60 @@ class MainActivity: FlutterFragmentActivity() {
             result.success(null)
         } catch (t: Throwable) {
             result.error("delete_failed", "Calendar event could not be removed.", t.message)
+        }
+    }
+
+    // Returns which of the given event ids are still visible events of the
+    // calendar, in one query. An event deleted by the user can remain as a
+    // row marked DELETED until its account syncs, so it counts as missing.
+    private fun findExistingCalendarEvents(
+        call: io.flutter.plugin.common.MethodCall,
+        result: MethodChannel.Result,
+    ) {
+        val calendarId = call.argument<Int>("calendarId")
+        val eventIds = call.argument<List<Int>>("eventIds")
+        if (calendarId == null || eventIds == null) {
+            result.error("invalid_args", "Missing calendar or event ids.", null)
+            return
+        }
+
+        if (!hasCalendarPermissions()) {
+            result.error("missing_permission", "Calendar permission has not been granted.", null)
+            return
+        }
+
+        if (eventIds.isEmpty()) {
+            result.success(emptyList<Int>())
+            return
+        }
+
+        try {
+            // The ids are integers, so listing them directly is safe and
+            // avoids the limit on the number of selection arguments.
+            val selection = "${CalendarContract.Events.CALENDAR_ID} = ? AND " +
+                "${CalendarContract.Events.DELETED} = 0 AND " +
+                "${CalendarContract.Events._ID} IN (${eventIds.joinToString(",")})"
+            val cursor = contentResolver.query(
+                CalendarContract.Events.CONTENT_URI,
+                arrayOf(CalendarContract.Events._ID),
+                selection,
+                arrayOf(calendarId.toString()),
+                null,
+            )
+            if (cursor == null) {
+                result.error("query_failed", "Calendar events could not be checked.", null)
+                return
+            }
+            val existing = mutableListOf<Int>()
+            cursor.use {
+                val idIndex = it.getColumnIndexOrThrow(CalendarContract.Events._ID)
+                while (it.moveToNext()) {
+                    existing.add(it.getLong(idIndex).toInt())
+                }
+            }
+            result.success(existing)
+        } catch (t: Throwable) {
+            result.error("query_failed", "Calendar events could not be checked.", t.message)
         }
     }
 

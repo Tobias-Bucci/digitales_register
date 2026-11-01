@@ -77,6 +77,7 @@ class SettingsPageWidget extends StatefulWidget {
   final Future<void> Function(bool enabled) onSetCalendarSyncEnabled;
   final Future<void> Function(int? calendarId) onSetCalendarSyncCalendarId;
   final Future<void> Function() onRemoveCalendarSyncEvents;
+  final Future<void> Function() onRecreateMissingCalendarSyncEvents;
   final OnSettingChanged<bool> onSetAmoledMode;
   final OnSettingChanged<AppAccent> onSetAccent;
   final OnSettingChanged<MapEntry<String, SubjectTheme>> onSetSubjectTheme;
@@ -124,6 +125,7 @@ class SettingsPageWidget extends StatefulWidget {
     required this.onSetCalendarSyncEnabled,
     required this.onSetCalendarSyncCalendarId,
     required this.onRemoveCalendarSyncEvents,
+    required this.onRecreateMissingCalendarSyncEvents,
     required this.onSetAmoledMode,
     required this.onSetAccent,
     required this.onSetFavoriteSubjects,
@@ -496,6 +498,7 @@ class _SettingsPageWidgetState extends State<SettingsPageWidget> {
         calendarsFuture: _calendarSyncCalendarsFuture,
         onChangeCalendar: _changeCalendarSyncCalendar,
         onRemoveCalendarSyncEvents: widget.onRemoveCalendarSyncEvents,
+        onRecreateMissingEvents: widget.onRecreateMissingCalendarSyncEvents,
       ),
     );
     _calendarSyncDetailsRoute = route;
@@ -992,6 +995,23 @@ class _SettingsPageWidgetState extends State<SettingsPageWidget> {
                     : null,
               );
             },
+          ),
+        if (isAndroidPlatform && widget.vm.calendarSyncEnabled)
+          ValueListenableBuilder<int>(
+            valueListenable: CalendarSyncService.missingEventCount,
+            builder: (context, missing, _) => missing == 0
+                ? const SizedBox.shrink()
+                : ListTile(
+                    key: const Key('settings-calendar-sync-missing-tile'),
+                    leading: const Icon(Icons.event_busy_outlined),
+                    title: Text(l10n.missingCalendarEventsLabel(missing)),
+                    subtitle:
+                        Text(l10n.text('settings.calendarSync.missing.body')),
+                    trailing: const Icon(Icons.chevron_right),
+                    onTap: () async {
+                      await _openCalendarSyncDetailsPage();
+                    },
+                  ),
           ),
         ListTile(
           key: const Key('settings-subject-nicks-tile'),
@@ -2139,6 +2159,7 @@ class _CalendarSyncSettingsDetailPage extends StatelessWidget {
     required this.calendarsFuture,
     required this.onChangeCalendar,
     required this.onRemoveCalendarSyncEvents,
+    required this.onRecreateMissingEvents,
   });
 
   final bool calendarSyncEnabled;
@@ -2146,6 +2167,7 @@ class _CalendarSyncSettingsDetailPage extends StatelessWidget {
   final Future<List<CalendarSyncCalendar>> calendarsFuture;
   final Future<void> Function() onChangeCalendar;
   final Future<void> Function() onRemoveCalendarSyncEvents;
+  final Future<void> Function() onRecreateMissingEvents;
 
   @override
   Widget build(BuildContext context) {
@@ -2192,6 +2214,33 @@ class _CalendarSyncSettingsDetailPage extends StatelessWidget {
                             await onChangeCalendar();
                           }
                         : null,
+                  ),
+                  ValueListenableBuilder<int>(
+                    valueListenable: CalendarSyncService.missingEventCount,
+                    builder: (context, missing, _) => missing == 0 ||
+                            !calendarSyncEnabled
+                        ? const SizedBox.shrink()
+                        : Column(
+                            children: [
+                              ListTile(
+                                key: const Key('calendar-sync-missing-events'),
+                                leading: const Icon(Icons.event_busy_outlined),
+                                title: Text(
+                                    l10n.missingCalendarEventsLabel(missing)),
+                                subtitle: Text(l10n.text(
+                                    'settings.calendarSync.missing.body')),
+                              ),
+                              ListTile(
+                                key: const Key(
+                                    'calendar-sync-recreate-missing-events'),
+                                title: Text(l10n.text(
+                                    'settings.calendarSync.missing.recreate')),
+                                onTap: () async {
+                                  await onRecreateMissingEvents();
+                                },
+                              ),
+                            ],
+                          ),
                   ),
                   ListTile(
                     title:
