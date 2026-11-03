@@ -147,6 +147,49 @@ void main() {
     expect(find.text('Ohne Fach'), findsNothing);
   });
 
+  testWidgets('favorite subject filter is restored after a restart',
+      (tester) async {
+    final now = UtcDateTime(2050);
+    AppState buildState() => AppState(
+          (b) {
+            b.settingsState.favoriteSubjects =
+                ListBuilder<String>(const <String>['Fach1', 'Fach3']);
+            b.dashboardState.allDays = ListBuilder<Day>(<Day>[
+              buildDay(
+                date: now,
+                homework: <Homework>[
+                  buildHomework(title: 'Titel Fach1', label: 'Fach1'),
+                  buildHomework(id: 2, title: 'Titel Fach2', label: 'Fach2'),
+                ],
+              ),
+            ]);
+          },
+        );
+
+    await pumpApp(
+      tester,
+      store: createStore(initialState: buildState()),
+      home: DaysContainer(),
+    );
+    await settleFor(tester);
+    await tester.tap(find.widgetWithText(ChoiceChip, 'Fach1'));
+    await tester.pump();
+    await settleFor(tester);
+    expect(find.text('Titel Fach2'), findsNothing);
+
+    // Simulates closing and reopening the app with a fresh widget tree.
+    await tester.pumpWidget(const SizedBox());
+    await pumpApp(
+      tester,
+      store: createStore(initialState: buildState()),
+      home: DaysContainer(),
+    );
+    await settleFor(tester);
+
+    expect(find.text('Titel Fach1'), findsOneWidget);
+    expect(find.text('Titel Fach2'), findsNothing);
+  });
+
   testWidgets('empty days filter hides empty days and updates the counter',
       (tester) async {
     final now = UtcDateTime(2050);
