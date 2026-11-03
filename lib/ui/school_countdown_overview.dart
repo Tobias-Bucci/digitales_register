@@ -178,9 +178,12 @@ class DashboardSummaryCard extends StatelessWidget {
     this.progress,
     this.progressLabel,
     this.progressColor,
+    this.compactSecondary = false,
     this.onTap,
   });
 
+  /// Shows each line of [secondaryText] on its own single, ellipsized line.
+  final bool compactSecondary;
   final IconData icon;
   final String title;
   final String primaryText;
@@ -252,14 +255,27 @@ class DashboardSummaryCard extends StatelessWidget {
                           ),
                         ),
                     const SizedBox(height: 2),
-                    Text(
-                      secondaryText,
-                      maxLines: 4,
-                      overflow: TextOverflow.ellipsis,
-                      style: theme.textTheme.bodySmall?.copyWith(
-                        color: scheme.onSurfaceVariant,
+                    if (compactSecondary)
+                      // One ellipsized line per entry keeps the card height
+                      // independent of long subject names.
+                      for (final line in secondaryText.split('\n'))
+                        Text(
+                          line,
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: theme.textTheme.bodySmall?.copyWith(
+                            color: scheme.onSurfaceVariant,
+                          ),
+                        )
+                    else
+                      Text(
+                        secondaryText,
+                        maxLines: 4,
+                        overflow: TextOverflow.ellipsis,
+                        style: theme.textTheme.bodySmall?.copyWith(
+                          color: scheme.onSurfaceVariant,
+                        ),
                       ),
-                    ),
                     if (progressValue != null) ...[
                       const SizedBox(height: 8),
                       if (constraints.hasBoundedHeight) const Spacer(),

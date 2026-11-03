@@ -166,6 +166,31 @@ void main() {
         {'recentGrade': 2, 'gradeAverage': 1});
   });
 
+  test('latestGrade skips cancelled grades and returns null without grades',
+      () {
+    final state = gradeState();
+    final latest = latestGrade(state.gradesState)!;
+    expect(latest.subject.name, 'Mathematik');
+    expect(latest.grade.grade, 600);
+    expect(latestGrade(AppState().gradesState), isNull);
+  });
+
+  testWidgets('long subject name stays on one line in the recent grade card',
+      (tester) async {
+    final long = 'Sehr langer Fachname ' * 6;
+    final store = createStore(
+        initialState: gradeState().rebuild((b) {
+      b.gradesState.subjects[0] =
+          b.gradesState.subjects[0].rebuild((s) => s.name = long);
+    }));
+    await pumpApp(tester,
+        store: store,
+        home: const Scaffold(body: DashboardGradeCard(recent: true)));
+    final line = tester.widget<Text>(find.textContaining('Sehr langer'));
+    expect(line.maxLines, 1);
+    expect(tester.takeException(), isNull);
+  });
+
   for (final language in ['de', 'it', 'en', 'lld']) {
     testWidgets('populated grade cards fit narrow enlarged text in $language',
         (tester) async {
