@@ -1376,7 +1376,7 @@ class ItemWidget extends StatelessWidget {
       return Theme.of(context).colorScheme.success;
     }
     if (displayedHomeworkWarning(item, allSubjects) && colorTestsInRed) {
-      return Theme.of(context).colorScheme.error;
+      return Theme.of(context).colorScheme.exam;
     }
     final displayLabel = displayedHomeworkLabel(item, allSubjects);
     if (colorBorder &&

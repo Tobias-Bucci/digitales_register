@@ -299,6 +299,11 @@ extension AppStatusColors on ColorScheme {
   Color get onSuccessContainer =>
       _isDark ? const Color(0xFFD7F0DA) : const Color(0xFF0B3A12);
 
+  /// Outline and marker for tests and exams. A saturated red in both modes:
+  /// [error] turns a pale salmon in dark mode and the coral marker reads as
+  /// orange next to the amber substitute marker.
+  Color get exam => _isDark ? const Color(0xFFFF5449) : const Color(0xFFC62828);
+
   Color get warning =>
       _isDark ? const Color(0xFFF5BF5B) : const Color(0xFF9A5B00);
   Color get onWarning =>

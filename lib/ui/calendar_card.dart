@@ -124,7 +124,7 @@ class CalendarCard extends StatelessWidget {
         content: homeworkExam.name,
         icon: homeworkExam.warning ? Icons.grade : Icons.assignment,
         iconColor: homeworkExam.warning
-            ? Theme.of(context).colorScheme.error
+            ? Theme.of(context).colorScheme.exam
             : Theme.of(context).colorScheme.onSurfaceVariant,
       );
       if (isLocalReminderAssessmentHomeworkExam(homeworkExam)) {
