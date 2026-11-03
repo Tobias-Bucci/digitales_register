@@ -172,6 +172,10 @@ abstract class DashboardState
 
   BuiltList<HomeworkType>? get blacklist;
 
+  /// Dashboard filters, kept per account so they survive an app restart.
+  String? get favoriteSubject;
+  bool get showEmptyDays;
+
   BuiltList<Day>? get allDays;
   static Serializer<DashboardState> get serializer =>
       _$dashboardStateSerializer;
@@ -183,6 +187,7 @@ abstract class DashboardState
     builder
       ..future = true
       ..loading = false
+      ..showEmptyDays = true
       ..blacklist = ListBuilder();
   }
 }

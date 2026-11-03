@@ -40,6 +40,10 @@ class DaysContainer extends StatelessWidget {
           vm: vm,
           onSwitchFuture: actions.dashboardActions.switchFuture.call,
           refresh: actions.dashboardActions.refresh.call,
+          onFavoriteSubjectChanged:
+              actions.dashboardActions.setFavoriteSubject.call,
+          onShowEmptyDaysChanged:
+              actions.dashboardActions.setShowEmptyDays.call,
           addReminderCallback: (day, msg) {
             actions.dashboardActions.addReminder(
               AddReminderPayload(
@@ -127,10 +131,14 @@ abstract class DaysViewModel
   BuiltList<CalendarDay> get schoolTimelineCalendarDays;
   BuiltList<String> get favoriteSubjects;
   BuiltList<String> get allSubjects;
+  String? get favoriteSubject;
+  bool get showEmptyDays;
 
   factory DaysViewModel([void Function(DaysViewModelBuilder)? updates]) =
       _$DaysViewModel;
   DaysViewModel._();
+  static void _initializeBuilder(DaysViewModelBuilder builder) =>
+      builder.showEmptyDays = true;
 
   factory DaysViewModel.from(AppState state) {
     return DaysViewModel(
@@ -151,6 +159,8 @@ abstract class DaysViewModel
             (state.notificationState.notifications?.length ?? 0) > 0
         ..favoriteSubjects = state.settingsState.favoriteSubjects.toBuilder()
         ..allSubjects = state.extractAllSubjects().toBuiltList().toBuilder()
+        ..favoriteSubject = state.dashboardState.favoriteSubject
+        ..showEmptyDays = state.dashboardState.showEmptyDays
         ..colorBorders = state.settingsState.dashboardColorBorders
         ..colorTestsInRed = state.settingsState.dashboardColorTestsInRed
         ..subjectThemes = state.settingsState.subjectThemes.toBuilder(),

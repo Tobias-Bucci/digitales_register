@@ -71,7 +71,6 @@ typedef OpenCalendarAtCallback = Future<void> Function(DateTime date);
 
 const _localReminderAssessmentHintKey = 'localReminderAssessmentHintShown';
 const _gradeDeadlineOverridesKey = 'gradeDeadlineOverrides';
-const _dashboardFiltersKey = 'dashboardFilters';
 
 class DaysWidget extends StatefulWidget {
   final DaysViewModel vm;
@@ -89,6 +88,8 @@ class DaysWidget extends StatefulWidget {
   final VoidCallback refreshNoInternet;
   final AttachmentCallback onOpenAttachment;
   final OpenCalendarAtCallback openCalendarAt;
+  final ValueChanged<String?>? onFavoriteSubjectChanged;
+  final ValueChanged<bool>? onShowEmptyDaysChanged;
 
   const DaysWidget({
     super.key,
@@ -106,6 +107,8 @@ class DaysWidget extends StatefulWidget {
     required this.refreshNoInternet,
     required this.onOpenAttachment,
     required this.openCalendarAt,
+    this.onFavoriteSubjectChanged,
+    this.onShowEmptyDaysChanged,
   });
   @override
   _DaysWidgetState createState() => _DaysWidgetState();
@@ -113,8 +116,8 @@ class DaysWidget extends StatefulWidget {
 
 class _DaysWidgetState extends State<DaysWidget> {
   final controller = AutoScrollController(suggestedRowHeight: 100);
-  String? _favoriteSubject;
-  bool _showEmptyDays = true;
+  late String? _favoriteSubject = widget.vm.favoriteSubject;
+  late bool _showEmptyDays = widget.vm.showEmptyDays;
   Map<String, DateTime> _gradeDeadlineOverrides = <String, DateTime>{};
   int _gradeDeadlineCount = 2;
 
@@ -147,42 +150,6 @@ class _DaysWidgetState extends State<DaysWidget> {
         _gradeDeadlineCount = storedCount == 1 ? 1 : 2;
       });
     }
-  }
-
-  String _dashboardFiltersStorageKey() {
-    try {
-      return userScopedStorageKey(_dashboardFiltersKey);
-    } catch (_) {
-      return _dashboardFiltersKey;
-    }
-  }
-
-  Future<void> _loadDashboardFilters() async {
-    final raw = (await SharedPreferences.getInstance())
-        .getString(_dashboardFiltersStorageKey());
-    if (raw == null) return;
-    final decoded = getMap(raw);
-    if (decoded == null) return;
-    final subject = decoded['favoriteSubject'];
-    final showEmptyDays = decoded['showEmptyDays'];
-    if (!mounted) return;
-    setState(() {
-      _favoriteSubject = subject is String ? subject : null;
-      _showEmptyDays = showEmptyDays != false;
-      updateValues(_filteredDays(
-        _resolvedFavoriteSubject(_availableFavoriteSubjects()),
-      ));
-    });
-  }
-
-  Future<void> _saveDashboardFilters() async {
-    await (await SharedPreferences.getInstance()).setString(
-      _dashboardFiltersStorageKey(),
-      jsonEncode(<String, Object?>{
-        'favoriteSubject': _favoriteSubject,
-        'showEmptyDays': _showEmptyDays,
-      }),
-    );
   }
 
   String _gradeDeadlinePreferenceStorageKey() {
@@ -464,7 +431,6 @@ class _DaysWidgetState extends State<DaysWidget> {
   void initState() {
     super.initState();
     unawaited(_loadGradeDeadlineOverrides());
-    unawaited(_loadDashboardFilters());
     updateValues(widget.vm.days.toList());
     controller.addListener(update);
     WidgetsBinding.instance.addPostFrameCallback((_) {
@@ -485,6 +451,13 @@ class _DaysWidgetState extends State<DaysWidget> {
 
   @override
   void didUpdateWidget(DaysWidget oldWidget) {
+    // A saved state mounted after the first build brings the stored filters.
+    if (oldWidget.vm.favoriteSubject != widget.vm.favoriteSubject) {
+      _favoriteSubject = widget.vm.favoriteSubject;
+    }
+    if (oldWidget.vm.showEmptyDays != widget.vm.showEmptyDays) {
+      _showEmptyDays = widget.vm.showEmptyDays;
+    }
     final availableFavoriteSubjects = _availableFavoriteSubjects();
     updateValues(
         _filteredDays(_resolvedFavoriteSubject(availableFavoriteSubjects)));
@@ -514,7 +487,7 @@ class _DaysWidgetState extends State<DaysWidget> {
         onFavoriteSubjectChanged: (favoriteSubject) {
           setState(() {
             _favoriteSubject = favoriteSubject;
-            unawaited(_saveDashboardFilters());
+            widget.onFavoriteSubjectChanged?.call(favoriteSubject);
             updateValues(_filteredDays(favoriteSubject));
             update();
           });
@@ -523,7 +496,7 @@ class _DaysWidgetState extends State<DaysWidget> {
         onShowEmptyDaysChanged: (value) {
           setState(() {
             _showEmptyDays = value;
-            unawaited(_saveDashboardFilters());
+            widget.onShowEmptyDaysChanged?.call(value);
             updateValues(_filteredDays(activeFavoriteSubject));
             update();
           });
@@ -624,7 +597,8 @@ class _DaysWidgetState extends State<DaysWidget> {
             onFavoriteSubjectChanged: (favoriteSubject) {
               setState(() {
                 _favoriteSubject = favoriteSubject;
-                unawaited(_saveDashboardFilters());
+                widget.onFavoriteSubjectChanged?.call(favoriteSubject);
+                widget.onFavoriteSubjectChanged?.call(favoriteSubject);
                 updateValues(_filteredDays(favoriteSubject));
                 update();
               });
@@ -633,7 +607,7 @@ class _DaysWidgetState extends State<DaysWidget> {
             onShowEmptyDaysChanged: (value) {
               setState(() {
                 _showEmptyDays = value;
-                unawaited(_saveDashboardFilters());
+                widget.onShowEmptyDaysChanged?.call(value);
                 updateValues(_filteredDays(activeFavoriteSubject));
                 update();
               });
