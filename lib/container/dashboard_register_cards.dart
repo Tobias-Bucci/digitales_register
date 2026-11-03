@@ -28,60 +28,86 @@ class DashboardGradeCard extends StatelessWidget {
           if (grades.loading && grades.subjects.isEmpty) {
             return DashboardLoadingCard(title: title);
           }
-          Subject? latestSubject;
-          GradeAll? latest;
-          if (recent) {
-            for (final subject in grades.subjects) {
-              for (final grade in subject.basicGrades(grades.semester) ??
-                  const <GradeAll>[]) {
-                if (!grade.cancelled &&
-                    grade.grade != null &&
-                    (latest == null || grade.date.isAfter(latest.date))) {
-                  latest = grade;
-                  latestSubject = subject;
-                }
-              }
-            }
-          }
+          final latest = recent ? latestGrade(grades) : null;
           final average = recent ? null : overallGradeAverage(state);
           final hundredths = recent
-              ? latest?.grade
+              ? latest?.grade.grade
               : average == null
                   ? null
                   : average * 100;
           final text = recent
               ? latest == null
                   ? null
-                  : formatGradeFromInt(latest.grade)
+                  : formatGradeFromInt(latest.grade.grade)
               : average == null
                   ? null
                   : appSelectors.allSubjectsAverage(state);
           final semester = context.l10n.semesterLabel(grades.semester);
-          final details = recent && latest != null
-              ? '${context.l10n.translateSubjectName(latestSubject!.name)} · '
-                  '${MaterialLocalizations.of(context).formatMediumDate(latest.date)}\n$semester'
-              : semester;
+          final offline = state.noInternet
+              ? context.t('dashboard.customize.offline')
+              : null;
+          final theme = Theme.of(context);
+          // Value first; subject, date and semester are single-line extras.
+          final String secondary;
+          if (text == null) {
+            secondary = context.t('dashboard.grades.open');
+          } else if (latest != null) {
+            secondary = [
+              context.l10n.translateSubjectName(latest.subject.name),
+              [
+                MaterialLocalizations.of(context)
+                    .formatMediumDate(latest.grade.date),
+                semester,
+                if (offline != null) offline,
+              ].join(' · '),
+            ].join('\n');
+          } else {
+            secondary = [semester, if (offline != null) offline].join(' · ');
+          }
+          final emptyText = context.t('dashboard.grades.empty');
           return DashboardSummaryCard(
             icon: recent ? Icons.history_edu_rounded : Icons.calculate_outlined,
             title: title,
-            primaryText: text ?? context.t('dashboard.grades.empty'),
+            primaryText: text ?? emptyText,
             primaryContent: text == null
-                ? null
+                ? Text(
+                    emptyText,
+                    maxLines: 2,
+                    overflow: TextOverflow.ellipsis,
+                    style: theme.textTheme.titleMedium?.copyWith(
+                      fontWeight: FontWeight.w600,
+                      color: theme.colorScheme.onSurfaceVariant,
+                    ),
+                  )
                 : GradeBadge(
                     text: text,
                     hundredths: hundredths,
                     colorized: state.settingsState.colorGrades,
-                    style: Theme.of(context).textTheme.titleLarge,
+                    style: theme.textTheme.titleLarge,
                   ),
-            secondaryText: [
-              details,
-              if (text == null) context.t('dashboard.grades.open'),
-              if (state.noInternet) context.t('dashboard.customize.offline'),
-            ].join('\n'),
+            secondaryText: secondary,
+            compactSecondary: true,
             onTap: actions.routingActions.showGrades.call,
           );
         },
       );
+}
+
+/// The most recent counted grade of the selected semester. Cancelled and
+/// missing grades are skipped; on the same date the first one wins.
+({Subject subject, GradeAll grade})? latestGrade(GradesState grades) {
+  ({Subject subject, GradeAll grade})? latest;
+  for (final subject in grades.subjects) {
+    for (final grade
+        in subject.basicGrades(grades.semester) ?? const <GradeAll>[]) {
+      if (!grade.cancelled &&
+          grade.grade != null &&
+          (latest == null || grade.date.isAfter(latest.grade.date))) {
+        latest = (subject: subject, grade: grade);
+      }
+    }
+  }
+  return latest;
 }
 
 /// Reuses the assessment projection shared by the calendar and study plan.
