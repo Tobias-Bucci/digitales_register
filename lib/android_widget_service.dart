@@ -154,9 +154,7 @@ class AndroidWidgetSnapshotService {
   }
 
   void scheduleSync(AppState state, {String reason = 'state-change'}) {
-    if (!state.loginState.loggedIn ||
-        state.settingsState.noDataSaving ||
-        state.settingsState.biometricAppLockEnabled) {
+    if (!state.loginState.loggedIn || state.settingsState.noDataSaving) {
       unawaited(flush(state: state, reason: reason)
           .catchError((Object error, StackTrace stack) {
         diagnostics.report(error, stack, DiagnosticError.storage);

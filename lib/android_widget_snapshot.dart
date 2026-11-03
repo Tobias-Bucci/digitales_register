@@ -268,9 +268,6 @@ AndroidWidgetSnapshotStatus _statusForState(AppState state) {
   if (state.settingsState.noDataSaving) {
     return AndroidWidgetSnapshotStatus.dataSavingDisabled;
   }
-  if (state.settingsState.biometricAppLockEnabled) {
-    return AndroidWidgetSnapshotStatus.appLocked;
-  }
   return AndroidWidgetSnapshotStatus.ready;
 }
 

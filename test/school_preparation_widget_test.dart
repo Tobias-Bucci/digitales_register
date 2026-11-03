@@ -153,13 +153,11 @@ void main() {
         isTrue);
   });
 
-  test('logout, storage restriction and app lock redact populated snapshots',
-      () {
+  test('logout and storage restriction redact populated snapshots', () {
     final state = planningState(tasks: [buildHomework(title: 'SECRET')]);
     for (final blocked in [
       state.rebuild((b) => b.loginState.loggedIn = false),
       state.rebuild((b) => b.settingsState.noDataSaving = true),
-      state.rebuild((b) => b.settingsState.biometricAppLockEnabled = true),
     ]) {
       final snapshot = buildAndroidWidgetSnapshot(blocked);
       expect(snapshot.schoolBag.items, isEmpty);

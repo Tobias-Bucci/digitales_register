@@ -35,17 +35,11 @@ void main() {
     ..loggedIn = true
     ..username = 'old');
 
-  for (final status in [
-    'ready',
-    'appLocked',
-    'dataSavingDisabled',
-    'loggedOut'
-  ]) {
+  for (final status in ['ready', 'dataSavingDisabled', 'loggedOut']) {
     test(
         '$status ignores generation time but refreshes changed content and date',
         () async {
       final state = loggedIn.rebuild((b) {
-        b.settingsState.biometricAppLockEnabled = status == 'appLocked';
         b.settingsState.noDataSaving = status == 'dataSavingDisabled';
         b.loginState.loggedIn = status != 'loggedOut';
       });
@@ -76,20 +70,13 @@ void main() {
     });
   }
 
-  test('repeated immediate privacy syncs refresh only once', () async {
+  test('app lock does not change what the widgets receive', () async {
     final bridge = RecordingWidgetBridge();
     final service = AndroidWidgetSnapshotService(bridge: bridge);
     final locked =
         loggedIn.rebuild((b) => b.settingsState.biometricAppLockEnabled = true);
-    for (var i = 0; i < 20; i++) {
-      mockNow = mockNow!.add(const Duration(milliseconds: 1));
-      service.scheduleSync(locked, reason: 'test-action');
-    }
     await service.flush(state: locked);
-    expect(bridge.snapshots, hasLength(1));
-    await service.flush(state: loggedIn);
-    expect(bridge.snapshots, hasLength(2));
-    expect(jsonDecode(bridge.snapshots.last!)['meta']['status'], 'ready');
+    expect(jsonDecode(bridge.snapshots.single!)['meta']['status'], 'ready');
   });
 
   test('normal flush and repeated clear refresh after deletion', () async {
@@ -104,22 +91,23 @@ void main() {
     expect(bridge.planningSnapshots.skip(1), everyElement(isNull));
   });
 
-  test('privacy changes cancel pending content without waiting for debounce',
+  test(
+      'data saving changes cancel pending content without waiting for debounce',
       () async {
     final bridge = RecordingWidgetBridge();
     final service = AndroidWidgetSnapshotService(
       bridge: bridge,
       debounce: const Duration(days: 1),
     );
+    final restricted =
+        loggedIn.rebuild((b) => b.settingsState.noDataSaving = true);
     service.scheduleSync(loggedIn);
-    service.scheduleSync(loggedIn
-        .rebuild((b) => b.settingsState.biometricAppLockEnabled = true));
+    service.scheduleSync(restricted);
     // A subsequent flush waits behind the immediate redaction operation.
-    await service.flush(
-        state: loggedIn
-            .rebuild((b) => b.settingsState.biometricAppLockEnabled = true));
+    await service.flush(state: restricted);
     expect(bridge.snapshots, hasLength(1));
-    expect(jsonDecode(bridge.snapshots.single!)['meta']['status'], 'appLocked');
+    expect(jsonDecode(bridge.snapshots.single!)['meta']['status'],
+        'dataSavingDisabled');
     expect(bridge.planningSnapshots, bridge.snapshots);
     await service.clear();
   });
