@@ -198,95 +198,104 @@ class DashboardSummaryCard extends StatelessWidget {
     final theme = Theme.of(context);
     final scheme = theme.colorScheme;
     final progressValue = progress?.clamp(0.0, 1.0);
-    return Material(
-      color: Colors.transparent,
-      child: InkWell(
-        onTap: onTap == null ? null : () => onTap!(),
-        borderRadius: BorderRadius.circular(14),
-        child: Container(
-          padding: const EdgeInsets.all(11),
-          decoration: BoxDecoration(
-            color: scheme.primaryContainer.withValues(alpha: 0.36),
-            borderRadius: BorderRadius.circular(14),
-            border: Border.all(color: scheme.primary.withValues(alpha: 0.16)),
-          ),
-          child: LayoutBuilder(
-            builder: (context, constraints) {
-              return Column(
-                mainAxisSize: MainAxisSize.min,
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Row(
-                    children: [
-                      Icon(
-                        icon,
-                        size: 20,
-                        color: scheme.primary,
-                      ),
-                      const SizedBox(width: 6),
-                      Expanded(
-                        child: Text(
-                          title,
-                          softWrap: true,
-                          style: theme.textTheme.titleSmall?.copyWith(
+    // Long texts are cut off in the card; the tooltip keeps the full text.
+    return Tooltip(
+      message: [title, primaryText, secondaryText]
+          .where((text) => text.isNotEmpty)
+          .join('\n'),
+      child: Material(
+        color: Colors.transparent,
+        child: InkWell(
+          onTap: onTap == null ? null : () => onTap!(),
+          borderRadius: BorderRadius.circular(14),
+          child: Container(
+            padding: const EdgeInsets.all(11),
+            decoration: BoxDecoration(
+              color: scheme.primaryContainer.withValues(alpha: 0.36),
+              borderRadius: BorderRadius.circular(14),
+              border: Border.all(color: scheme.primary.withValues(alpha: 0.16)),
+            ),
+            child: LayoutBuilder(
+              builder: (context, constraints) {
+                return Column(
+                  mainAxisSize: MainAxisSize.min,
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Row(
+                      children: [
+                        Icon(
+                          icon,
+                          size: 20,
+                          color: scheme.primary,
+                        ),
+                        const SizedBox(width: 6),
+                        Expanded(
+                          child: Text(
+                            title,
+                            maxLines: 2,
+                            overflow: TextOverflow.ellipsis,
+                            style: theme.textTheme.titleSmall?.copyWith(
+                              fontWeight: FontWeight.w700,
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 4),
+                    primaryContent ??
+                        Text(
+                          primaryText,
+                          maxLines: 2,
+                          overflow: TextOverflow.ellipsis,
+                          style: theme.textTheme.titleLarge?.copyWith(
                             fontWeight: FontWeight.w700,
                           ),
                         ),
+                    const SizedBox(height: 2),
+                    Text(
+                      secondaryText,
+                      maxLines: 4,
+                      overflow: TextOverflow.ellipsis,
+                      style: theme.textTheme.bodySmall?.copyWith(
+                        color: scheme.onSurfaceVariant,
+                      ),
+                    ),
+                    if (progressValue != null) ...[
+                      const SizedBox(height: 8),
+                      if (constraints.hasBoundedHeight) const Spacer(),
+                      Semantics(
+                        label: context.l10n.text('schoolCountdown.progress'),
+                        value: '${(progressValue * 100).round()} %',
+                        child: ClipRRect(
+                          borderRadius: BorderRadius.circular(20),
+                          child: LinearProgressIndicator(
+                            minHeight: 4,
+                            value: progressValue,
+                            color: progressColor,
+                            backgroundColor: scheme.surfaceContainerHighest,
+                          ),
+                        ),
+                      ),
+                      const SizedBox(height: 3),
+                      Align(
+                        alignment: Alignment.centerRight,
+                        child: Text(
+                          progressLabel ??
+                              context.l10n.text(
+                                'schoolCountdown.progressValue',
+                                args: {
+                                  'percent': '${(progressValue * 100).round()}',
+                                },
+                              ),
+                          softWrap: true,
+                          style: theme.textTheme.labelSmall,
+                        ),
                       ),
                     ],
-                  ),
-                  const SizedBox(height: 4),
-                  primaryContent ??
-                      Text(
-                        primaryText,
-                        softWrap: true,
-                        style: theme.textTheme.titleLarge?.copyWith(
-                          fontWeight: FontWeight.w700,
-                        ),
-                      ),
-                  const SizedBox(height: 2),
-                  Text(
-                    secondaryText,
-                    softWrap: true,
-                    style: theme.textTheme.bodySmall?.copyWith(
-                      color: scheme.onSurfaceVariant,
-                    ),
-                  ),
-                  if (progressValue != null) ...[
-                    const SizedBox(height: 8),
-                    if (constraints.hasBoundedHeight) const Spacer(),
-                    Semantics(
-                      label: context.l10n.text('schoolCountdown.progress'),
-                      value: '${(progressValue * 100).round()} %',
-                      child: ClipRRect(
-                        borderRadius: BorderRadius.circular(20),
-                        child: LinearProgressIndicator(
-                          minHeight: 4,
-                          value: progressValue,
-                          color: progressColor,
-                          backgroundColor: scheme.surfaceContainerHighest,
-                        ),
-                      ),
-                    ),
-                    const SizedBox(height: 3),
-                    Align(
-                      alignment: Alignment.centerRight,
-                      child: Text(
-                        progressLabel ??
-                            context.l10n.text(
-                              'schoolCountdown.progressValue',
-                              args: {
-                                'percent': '${(progressValue * 100).round()}',
-                              },
-                            ),
-                        softWrap: true,
-                        style: theme.textTheme.labelSmall,
-                      ),
-                    ),
                   ],
-                ],
-              );
-            },
+                );
+              },
+            ),
           ),
         ),
       ),

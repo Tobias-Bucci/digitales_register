@@ -3,8 +3,10 @@
 import 'package:dr/app_clock.dart';
 import 'package:dr/app_state.dart';
 import 'package:dr/school_timeline.dart';
+import 'package:dr/dashboard_items.dart';
+import 'package:dr/ui/dashboard_card_layout.dart';
 import 'package:dr/ui/school_countdown_overview.dart';
-import 'package:flutter/widgets.dart';
+import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 import '../../support/test_harness.dart';
@@ -114,5 +116,54 @@ void main() {
     await settleFor(tester);
 
     expect(tester.takeException(), isNull);
+  });
+
+  testWidgets('long card texts are limited and keep the cards the same size',
+      (tester) async {
+    tester.view.physicalSize = const Size(360, 1200);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.resetPhysicalSize);
+    addTearDown(tester.view.resetDevicePixelRatio);
+    final longText = List.filled(60, 'sehr langer Text').join(' ');
+
+    await pumpApp(
+      tester,
+      store: createStore(initialState: AppState()),
+      home: MediaQuery(
+        data: const MediaQueryData(textScaler: TextScaler.linear(2)),
+        child: SingleChildScrollView(
+          child: DashboardCardLayout(
+            widths: const [
+              DashboardItemWidth.automatic,
+              DashboardItemWidth.automatic,
+            ],
+            textScale: 2,
+            children: [
+              DashboardSummaryCard(
+                icon: Icons.event_note_rounded,
+                title: longText,
+                primaryText: longText,
+                secondaryText: longText,
+                progress: 0.5,
+              ),
+              const DashboardSummaryCard(
+                icon: Icons.event_note_rounded,
+                title: 'Kurz',
+                primaryText: '1',
+                secondaryText: 'ok',
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+    await settleFor(tester);
+
+    expect(tester.takeException(), isNull);
+    final cards = find.byType(DashboardSummaryCard);
+    expect(
+        tester.getSize(cards.at(0)).height, tester.getSize(cards.at(1)).height);
+    // 2 title + 2 primary + 4 secondary lines at most, regardless of length.
+    expect(tester.getSize(cards.at(0)).height, lessThan(600));
   });
 }

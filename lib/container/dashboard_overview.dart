@@ -283,7 +283,8 @@ class _AbsencesSummary extends StatelessWidget {
             Flexible(
               child: Text(
                 counterText,
-                softWrap: true,
+                maxLines: 2,
+                overflow: TextOverflow.ellipsis,
                 style: theme.textTheme.titleLarge?.copyWith(
                   fontWeight: FontWeight.w700,
                 ),
