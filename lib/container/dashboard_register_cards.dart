@@ -132,12 +132,12 @@ class DashboardNextAssessmentCard extends StatelessWidget {
             return DashboardSummaryCard(
               icon: Icons.event_note_rounded,
               title: title,
-              primaryText:
-                  next?.title ?? context.t('dashboard.studyPlan.empty'),
+              primaryText: next == null
+                  ? context.t('dashboard.studyPlan.empty')
+                  : context.l10n.translateSubjectName(next.dashboardHeading),
               secondaryText: [
                 if (next != null) ...[
-                  if (next.subject != null)
-                    context.l10n.translateSubjectName(next.subject!),
+                  if (next.dashboardType != null) next.dashboardType!,
                   MaterialLocalizations.of(context).formatMediumDate(next.date),
                   context.l10n.assessmentCountdown(days!),
                 ] else

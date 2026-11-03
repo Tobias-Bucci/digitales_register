@@ -34,6 +34,7 @@ void main() {
               id: day == 20 ? 7 : day,
               title: 'Test',
               subtitle: 'Prüfung $day',
+              label: 'Mathematik',
               type: HomeworkType.gradeGroup,
             ),
           ]),
@@ -44,9 +45,9 @@ void main() {
         home: const Scaffold(
             body: DashboardOverview(
                 timeline: SchoolTimeline(holidays: [], gradeDeadlines: []))));
-    expect(find.text('Prüfung 20'), findsOneWidget);
+    expect(find.text('Mathematik'), findsOneWidget);
+    expect(find.textContaining('Prüfung 20'), findsNothing);
     expect(find.textContaining('1 von 1 Lernphasen erledigt'), findsOneWidget);
-    expect(find.text('Prüfung 19'), findsNothing);
     await tester.tap(find.text('Lernplan'));
     await settleFor(tester);
     expect(find.byType(ExamCalendarPage), findsOneWidget);

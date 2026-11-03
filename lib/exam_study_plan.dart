@@ -28,6 +28,21 @@ class ExamAssessment {
   final String? type;
 
   int daysUntil(DateTime today) => calendarDaysBetween(date, today);
+
+  /// Short heading for dashboard cards. The title/material is the teacher's
+  /// topic or homework text and can be arbitrarily long, so it is left out.
+  String get dashboardHeading {
+    final subject = this.subject?.trim() ?? '';
+    if (subject.isNotEmpty) return subject;
+    final type = this.type?.trim() ?? '';
+    return type.isNotEmpty ? type : title;
+  }
+
+  /// The assessment type (e.g. test), unless it already is the heading.
+  String? get dashboardType {
+    final type = this.type?.trim() ?? '';
+    return type.isEmpty || type == dashboardHeading ? null : type;
+  }
 }
 
 class StudyPhase {

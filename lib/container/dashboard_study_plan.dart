@@ -39,12 +39,13 @@ class DashboardStudyPlanCard extends StatelessWidget {
             return DashboardSummaryCard(
               icon: Icons.school_outlined,
               title: context.t('exam.plan'),
-              primaryText:
-                  next?.title ?? context.t('dashboard.studyPlan.empty'),
+              primaryText: next == null
+                  ? context.t('dashboard.studyPlan.empty')
+                  : context.l10n.translateSubjectName(next.dashboardHeading),
               secondaryText: next == null
                   ? context.t('dashboard.studyPlan.open')
                   : '${MaterialLocalizations.of(context).formatMediumDate(next.date)}'
-                      '${next.subject == null ? '' : ' · ${next.subject}'}'
+                      '${next.dashboardType == null ? '' : ' · ${next.dashboardType}'}'
                       '\n${context.t('exam.progress', args: {
                           'done': '$done',
                           'total': '${phases.length}'

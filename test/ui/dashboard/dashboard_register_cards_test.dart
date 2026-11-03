@@ -122,7 +122,8 @@ void main() {
             buildHomework(
                 id: day,
                 title: 'Test',
-                subtitle: 'Test $day',
+                subtitle: 'Dezimalzahlen: 1431, 1432, 1454 ($day)',
+                label: 'Mathematik',
                 type: HomeworkType.gradeGroup),
           ]),
       ]);
@@ -130,11 +131,13 @@ void main() {
     await pumpApp(tester,
         store: store,
         home: const Scaffold(body: DashboardNextAssessmentCard()));
-    expect(find.text('Test 20'), findsOneWidget);
+    // Subject and type are shown; the topic/homework text is not.
+    expect(find.text('Mathematik'), findsOneWidget);
+    expect(find.textContaining('Dezimalzahlen'), findsNothing);
     expect(find.textContaining('Heute'), findsOneWidget);
     await appClock.setSimulatedDate(DateTime(2026, 4, 21));
     await tester.pump();
-    expect(find.text('Test 21'), findsOneWidget);
+    expect(find.textContaining('21. Apr'), findsOneWidget);
     await tester.tap(find.byType(DashboardSummaryCard));
     await settleFor(tester);
     expect(find.byType(ExamCalendarPage), findsOneWidget);
