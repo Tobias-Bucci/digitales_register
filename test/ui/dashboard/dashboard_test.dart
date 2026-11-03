@@ -16,12 +16,14 @@
 // along with digitales_register.  If not, see <http://www.gnu.org/licenses/>.
 
 import 'dart:async';
+import 'dart:convert';
 
 import 'package:built_collection/built_collection.dart';
 import 'package:dr/app_state.dart';
 import 'package:dr/container/days_container.dart';
 import 'package:dr/data.dart';
 import 'package:dr/middleware/middleware.dart';
+import 'package:dr/serializers.dart';
 import 'package:dr/ui/days.dart';
 import 'package:dr/ui/favorite_subject_filter.dart';
 import 'package:dr/ui/no_internet.dart';
@@ -166,9 +168,10 @@ void main() {
           },
         );
 
+    final store = createStore(initialState: buildState());
     await pumpApp(
       tester,
-      store: createStore(initialState: buildState()),
+      store: store,
       home: DaysContainer(),
     );
     await settleFor(tester);
@@ -177,11 +180,16 @@ void main() {
     await settleFor(tester);
     expect(find.text('Titel Fach2'), findsNothing);
 
-    // Simulates closing and reopening the app with a fresh widget tree.
+    // Simulates closing and reopening the app: the state is saved and
+    // loaded again through its serializer.
+    final restored = serializers.deserialize(
+      json.decode(json.encode(serializers.serialize(store.state))) as Object,
+    ) as AppState;
+    expect(restored.dashboardState.favoriteSubject, 'Fach1');
     await tester.pumpWidget(const SizedBox());
     await pumpApp(
       tester,
-      store: createStore(initialState: buildState()),
+      store: createStore(initialState: restored),
       home: DaysContainer(),
     );
     await settleFor(tester);

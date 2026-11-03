@@ -43,6 +43,8 @@ abstract class DashboardActions extends ReduxActions {
   abstract final ActionDispatcher<Day> markDeletedHomeworkAsSeen;
   abstract final VoidActionDispatcher markAllAsSeen;
   abstract final ActionDispatcher<BuiltList<HomeworkType>> updateBlacklist;
+  abstract final ActionDispatcher<String?> setFavoriteSubject;
+  abstract final ActionDispatcher<bool> setShowEmptyDays;
   abstract final VoidActionDispatcher refresh;
   abstract final ActionDispatcher<GradeGroupSubmission> downloadAttachment;
   abstract final ActionDispatcher<GradeGroupSubmission> attachmentReady;

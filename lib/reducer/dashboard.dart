@@ -44,6 +44,8 @@ final dashboardReducerBuilder = NestedReducerBuilder<AppState, AppStateBuilder,
       _markDeletedHomeworkAsSeen)
   ..add(DashboardActionsNames.markAllAsSeen, _markAllAsSeen)
   ..add(DashboardActionsNames.updateBlacklist, _updateBlacklist)
+  ..add(DashboardActionsNames.setFavoriteSubject, _setFavoriteSubject)
+  ..add(DashboardActionsNames.setShowEmptyDays, _setShowEmptyDays)
   ..add(DashboardActionsNames.downloadAttachment, _downloadAttachment)
   ..add(DashboardActionsNames.attachmentReady, _attachmentReady);
 
@@ -393,6 +395,16 @@ void _markAllAsSeen(
 void _updateBlacklist(DashboardState state,
     Action<BuiltList<HomeworkType>> action, DashboardStateBuilder builder) {
   builder.blacklist.replace(action.payload);
+}
+
+void _setFavoriteSubject(DashboardState state, Action<String?> action,
+    DashboardStateBuilder builder) {
+  builder.favoriteSubject = action.payload;
+}
+
+void _setShowEmptyDays(
+    DashboardState state, Action<bool> action, DashboardStateBuilder builder) {
+  builder.showEmptyDays = action.payload;
 }
 
 void _downloadAttachment(DashboardState state,
