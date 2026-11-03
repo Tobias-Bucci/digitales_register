@@ -3,6 +3,7 @@ import 'dart:math' as math;
 import 'package:dr/calendar_date.dart';
 import 'package:dr/exam_study_plan.dart';
 import 'package:dr/i18n/app_localizations.dart';
+import 'package:dr/theme/app_palette.dart';
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 
@@ -58,7 +59,7 @@ class _ExamTimelineState extends State<ExamTimeline> {
     final next =
         upcoming.where((exam) => calendarDate(exam.date).isAfter(_selected));
     final todayColor = theme.colorScheme.primary;
-    final examColor = theme.colorScheme.error;
+    final examColor = theme.colorScheme.exam;
     final normalColor = theme.colorScheme.outline;
     final dateFormat = DateFormat.yMMMd(l10n.locale.toLanguageTag());
 

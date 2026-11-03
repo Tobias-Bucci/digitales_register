@@ -492,8 +492,8 @@ class HourWidget extends StatelessWidget {
             decoration: BoxDecoration(
               border: Border(
                 left: hour.warning
-                    ? const BorderSide(
-                        color: AppPalette.markerNegative, width: 5)
+                    ? BorderSide(
+                        color: Theme.of(context).colorScheme.exam, width: 5)
                     : BorderSide.none,
                 right: hour.isDetectedSubstitute
                     ? const BorderSide(
