@@ -72,7 +72,7 @@ void main() {
     );
   });
 
-  test('marks snapshot as app locked when biometric lock is enabled', () {
+  test('biometric app lock does not redact the widget snapshot', () {
     final state = AppState(
       (b) => b
         ..loginState.loggedIn = true
@@ -82,7 +82,7 @@ void main() {
 
     final snapshot = buildAndroidWidgetSnapshot(state);
 
-    expect(snapshot.meta.status, AndroidWidgetSnapshotStatus.appLocked);
+    expect(snapshot.meta.status, AndroidWidgetSnapshotStatus.ready);
   });
 
   test('marks snapshot as logged out when no authenticated user exists', () {
@@ -219,7 +219,6 @@ void main() {
     for (final blocked in [
       state.rebuild((b) => b.loginState.loggedIn = false),
       state.rebuild((b) => b.settingsState.noDataSaving = true),
-      state.rebuild((b) => b.settingsState.biometricAppLockEnabled = true),
     ]) {
       final snapshot = buildAndroidWidgetSnapshot(blocked);
       expect(snapshot.dashboard.items, isEmpty);
