@@ -20,6 +20,7 @@ finish-args:
   - --device=dri
   - --share=network
   - --talk-name=org.freedesktop.secrets
+  - --talk-name=org.freedesktop.Notifications
 modules:
   - name: digitales_register
     buildsystem: simple

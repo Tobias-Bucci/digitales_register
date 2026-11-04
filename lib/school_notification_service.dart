@@ -31,6 +31,24 @@ final schoolNotifications = SchoolNotificationService();
 bool schoolNotificationsSupported() =>
     Platform.isAndroid || Platform.isIOS || Platform.isMacOS;
 
+/// Shared with the reminders, which use the same plugin on every platform.
+const schoolNotificationInitializationSettings = InitializationSettings(
+  android: AndroidInitializationSettings('ic_school_notification'),
+  iOS: DarwinInitializationSettings(
+      requestAlertPermission: false,
+      requestBadgePermission: false,
+      requestSoundPermission: false),
+  macOS: DarwinInitializationSettings(
+      requestAlertPermission: false,
+      requestBadgePermission: false,
+      requestSoundPermission: false),
+  linux: LinuxInitializationSettings(defaultActionName: 'Open Register'),
+  windows: WindowsInitializationSettings(
+      appName: 'Register',
+      appUserModelId: 'it.bucci.digitalesregister',
+      guid: '47d730b5-c496-4a56-a1cd-80f08902cdd4'),
+);
+
 /// Optional native functionality must never break school-data navigation/login.
 Future<void> schoolNotificationOperation(
     Future<void> Function() operation) async {
@@ -145,6 +163,9 @@ class SchoolNotificationService extends ChangeNotifier
       _preserveDestinationOnce = true;
   Future<void> Function()? onTap;
   Future<void> Function()? refresh;
+
+  /// Receives the payload of a tapped notification that is no school alert.
+  Future<void> Function(String? payload)? onReminderTap;
 
   /// Linux and Windows show no system alerts and run no checks for them:
   /// initialization, consent prompts, polling and the settings section are all
@@ -271,26 +292,13 @@ class SchoolNotificationService extends ChangeNotifier
         detail: 'background=$background');
     try {
       await _native.initialize(
-        settings: const InitializationSettings(
-          android: AndroidInitializationSettings('ic_school_notification'),
-          iOS: DarwinInitializationSettings(
-              requestAlertPermission: false,
-              requestBadgePermission: false,
-              requestSoundPermission: false),
-          macOS: DarwinInitializationSettings(
-              requestAlertPermission: false,
-              requestBadgePermission: false,
-              requestSoundPermission: false),
-          linux:
-              LinuxInitializationSettings(defaultActionName: 'Open Register'),
-          windows: WindowsInitializationSettings(
-              appName: 'Register',
-              appUserModelId: 'it.bucci.digitalesregister',
-              guid: '47d730b5-c496-4a56-a1cd-80f08902cdd4'),
-        ),
+        settings: schoolNotificationInitializationSettings,
         onDidReceiveNotificationResponse: (response) {
           pendingDestination =
               SchoolNotificationDestination.decode(response.payload);
+          if (pendingDestination == null) {
+            unawaited(onReminderTap?.call(response.payload));
+          }
           unawaited(schoolNotificationOperation(() async {
             await onTap?.call();
           }));
@@ -305,8 +313,11 @@ class SchoolNotificationService extends ChangeNotifier
             ? null
             : await _native.getNotificationAppLaunchDetails();
         if (launch?.didNotificationLaunchApp ?? false) {
-          pendingDestination = SchoolNotificationDestination.decode(
-              launch?.notificationResponse?.payload);
+          final payload = launch?.notificationResponse?.payload;
+          pendingDestination = SchoolNotificationDestination.decode(payload);
+          if (pendingDestination == null) {
+            unawaited(onReminderTap?.call(payload));
+          }
         }
         try {
           if (mobileBackgroundSupported) {
@@ -675,30 +686,7 @@ class SchoolNotificationService extends ChangeNotifier
     }
     if (canAsk) {
       // Persist before entering native UI: a crash/denial cannot repeat the prompt.
-      await _storage.write(
-          key: 'school-notification-permission-requested-v1', value: 'true');
-      permissionRequested = true;
-      if (_permissionRequest != null) {
-        await _permissionRequest();
-      } else if (Platform.isAndroid) {
-        await _native
-            .resolvePlatformSpecificImplementation<
-                AndroidFlutterLocalNotificationsPlugin>()
-            ?.requestNotificationsPermission();
-      } else if (Platform.isIOS) {
-        await _native
-            .resolvePlatformSpecificImplementation<
-                IOSFlutterLocalNotificationsPlugin>()
-            ?.requestPermissions(alert: true, badge: true, sound: true);
-      } else if (Platform.isMacOS) {
-        await _native
-            .resolvePlatformSpecificImplementation<
-                MacOSFlutterLocalNotificationsPlugin>()
-            ?.requestPermissions(alert: true, badge: true, sound: true);
-      } else {
-        await _storage.write(
-            key: 'school-notification-desktop-consent', value: 'true');
-      }
+      await _showPermissionPrompt();
     } else if (!await _hasPermission()) {
       // A known OS denial is handled only through the voluntary settings link.
       await _storage.write(
@@ -712,6 +700,51 @@ class SchoolNotificationService extends ChangeNotifier
     await schedule();
     await refresh?.call();
   }
+
+  Future<void> _showPermissionPrompt() async {
+    await _storage.write(
+        key: 'school-notification-permission-requested-v1', value: 'true');
+    permissionRequested = true;
+    if (_permissionRequest != null) {
+      await _permissionRequest();
+    } else if (Platform.isAndroid) {
+      await _native
+          .resolvePlatformSpecificImplementation<
+              AndroidFlutterLocalNotificationsPlugin>()
+          ?.requestNotificationsPermission();
+    } else if (Platform.isIOS) {
+      await _native
+          .resolvePlatformSpecificImplementation<
+              IOSFlutterLocalNotificationsPlugin>()
+          ?.requestPermissions(alert: true, badge: true, sound: true);
+    } else if (Platform.isMacOS) {
+      await _native
+          .resolvePlatformSpecificImplementation<
+              MacOSFlutterLocalNotificationsPlugin>()
+          ?.requestPermissions(alert: true, badge: true, sound: true);
+    } else {
+      await _storage.write(
+          key: 'school-notification-desktop-consent', value: 'true');
+    }
+  }
+
+  /// Whether the system would show a notification. Platforms without alerts
+  /// for school news have no permission to ask for.
+  Future<bool> systemPermissionGranted() async {
+    if (!supported) return true;
+    await initialize();
+    return _hasPermission();
+  }
+
+  /// For features with their own switch, such as the reminders: turning one on
+  /// is the consent, independent of the opt-in for school news.
+  Future<bool> ensureSystemPermission() => _permissionMutex.protect(() async {
+        if (!supported) return true;
+        await initialize();
+        if (!await _hasPermission()) await _showPermissionPrompt();
+        await reload();
+        return granted;
+      });
 
   Future<void> setCategory(
       SchoolNotificationCategory category, bool value) async {

@@ -16,6 +16,11 @@ class MainFlutterWindow: NSWindow {
         if call.method == "ready" { result(privacyReady) }
         else { result(FlutterMethodNotImplemented) }
       }
+    FlutterMethodChannel(name: "dr/school_notifications", binaryMessenger: flutterViewController.engine.binaryMessenger)
+      .setMethodCallHandler { call, result in
+        if call.method == "timeZone" { result(TimeZone.current.identifier) }
+        else { result(FlutterMethodNotImplemented) }
+      }
 
     super.awakeFromNib()
   }
