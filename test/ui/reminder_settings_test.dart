@@ -147,12 +147,12 @@ void main() {
     await tester.pumpAndSettle();
     await tester.tap(find.byIcon(Icons.keyboard_outlined));
     await tester.pumpAndSettle();
-    await tester.enterText(find.byType(TextFormField).first, '9');
+    await tester.enterText(find.byType(TextFormField).first, '20');
     await tester.enterText(find.byType(TextFormField).last, '15');
     await tester.tap(find.byType(TextButton).last);
     await tester.pumpAndSettle();
 
-    expect(find.text('09:15'), findsOneWidget);
+    expect(find.text('20:15'), findsOneWidget);
   });
 
   group('assessment reminders', () {

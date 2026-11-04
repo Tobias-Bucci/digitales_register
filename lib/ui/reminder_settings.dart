@@ -112,6 +112,18 @@ class _ReminderSettingsState extends State<ReminderSettings>
         hour: widget.mensaMinuteOfDay ~/ 60,
         minute: widget.mensaMinuteOfDay % 60,
       ),
+      // The dial follows the locale, but the keyboard input only accepts hours
+      // after 12 with this flag, which desktop systems usually do not set.
+      builder: (context, child) {
+        final format = MaterialLocalizations.of(context).timeOfDayFormat();
+        return MediaQuery(
+          data: MediaQuery.of(context).copyWith(
+            alwaysUse24HourFormat: MediaQuery.alwaysUse24HourFormatOf(context) ||
+                hourFormat(of: format) != HourFormat.h,
+          ),
+          child: child!,
+        );
+      },
     );
     if (picked != null) {
       widget.onSetMensaMinuteOfDay(picked.hour * 60 + picked.minute);
