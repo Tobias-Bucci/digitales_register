@@ -1060,5 +1060,21 @@
   "reminders.mensa.settingHint": "Erinnert dich jeden Tag daran, dich auf mensa.franziskanergymnasium.it anzumelden.",
   "reminders.mensa.time": "Uhrzeit",
   "reminders.mensa.title": "Mensa-Anmeldung",
-  "reminders.mensa.body": "Denk daran, dich für die Mensa anzumelden."
+  "reminders.mensa.body": "Denk daran, dich für die Mensa anzumelden.",
+  "reminders.assessment.setting": "Test-Erinnerungen",
+  "reminders.assessment.settingHint": "Erinnert dich automatisch an alle Tests und Prüfungen.",
+  "reminders.assessment.dayBefore": "{days} Tage vorher",
+  "reminders.assessment.dayBeforeOne": "{days} Tag vorher",
+  "reminders.assessment.removeDay": "Tag entfernen",
+  "reminders.assessment.addDay": "Tag hinzufügen",
+  "reminders.assessment.addDayConfirm": "Hinzufügen",
+  "reminders.assessment.dayLabel": "Tage vor dem Test",
+  "reminders.assessment.dayInvalid": "Gib eine ganze Zahl ab 1 ein.",
+  "reminders.assessment.dayTooLarge": "Höchstens {max} Tage vorher.",
+  "reminders.assessment.dayDuplicate": "Dieser Tag ist schon eingetragen.",
+  "reminders.assessment.timeHint": "Die Erinnerungen erscheinen jeweils um {time}.",
+  "reminders.assessment.tomorrow": "Morgen: {type}",
+  "reminders.assessment.inDays": "In {days} Tagen: {type}",
+  "reminders.assessment.fallback": "Prüfung",
+  "reminders.assessment.noSubject": "Details findest du im Register."
 }

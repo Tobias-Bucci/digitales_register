@@ -22,6 +22,7 @@ import 'package:built_value/serializer.dart';
 
 import 'package:dr/dashboard_items.dart';
 import 'package:dr/data.dart';
+import 'package:dr/reminder_schedule.dart';
 import 'package:dr/utc_date_time.dart';
 
 part 'app_state.g.dart';
@@ -375,6 +376,12 @@ abstract class SettingsState
   /// The local time of that reminder, in minutes after midnight.
   int get mensaReminderMinuteOfDay;
 
+  /// Whether notifications remind of every upcoming test and exam.
+  bool get assessmentRemindersEnabled;
+
+  /// How many days before an assessment to remind of it.
+  BuiltList<int> get assessmentReminderDays;
+
   /// Local learning-plan state, keyed by the stable dashboard assessment id.
   /// Values are compact strings of completed phase ids so the state remains
   /// serializable together with the user's other settings.
@@ -452,6 +459,8 @@ abstract class SettingsState
       ..biometricAppLockEnabled = false
       ..mensaReminderEnabled = false
       ..mensaReminderMinuteOfDay = 7 * 60 + 30
+      ..assessmentRemindersEnabled = false
+      ..assessmentReminderDays = ListBuilder<int>(defaultAssessmentReminderDays)
       ..assessmentStudyProgress = MapBuilder<String, String>()
       ..assessmentStudyNotes = MapBuilder<String, String>()
       ..assessmentStudyAttachments = MapBuilder<String, String>()

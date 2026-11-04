@@ -19,7 +19,9 @@ import 'dart:async';
 
 import 'package:dr/i18n/app_localizations.dart';
 import 'package:dr/reminder_notifications.dart';
+import 'package:dr/reminder_schedule.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 
 class ReminderSettings extends StatefulWidget {
   const ReminderSettings({
@@ -28,6 +30,10 @@ class ReminderSettings extends StatefulWidget {
     required this.mensaMinuteOfDay,
     required this.onSetMensaEnabled,
     required this.onSetMensaMinuteOfDay,
+    required this.assessmentsEnabled,
+    required this.assessmentDays,
+    required this.onSetAssessmentsEnabled,
+    required this.onSetAssessmentDays,
     this.service,
   });
 
@@ -35,6 +41,10 @@ class ReminderSettings extends StatefulWidget {
   final int mensaMinuteOfDay;
   final ValueChanged<bool> onSetMensaEnabled;
   final ValueChanged<int> onSetMensaMinuteOfDay;
+  final bool assessmentsEnabled;
+  final List<int> assessmentDays;
+  final ValueChanged<bool> onSetAssessmentsEnabled;
+  final ValueChanged<List<int>> onSetAssessmentDays;
   final ReminderNotificationService? service;
 
   @override
@@ -48,7 +58,7 @@ class _ReminderSettingsState extends State<ReminderSettings>
   ReminderNotificationService get _service =>
       widget.service ?? reminderNotifications;
 
-  bool get _anyEnabled => widget.mensaEnabled;
+  bool get _anyEnabled => widget.mensaEnabled || widget.assessmentsEnabled;
 
   @override
   void initState() {
@@ -106,6 +116,71 @@ class _ReminderSettingsState extends State<ReminderSettings>
     if (picked != null) {
       widget.onSetMensaMinuteOfDay(picked.hour * 60 + picked.minute);
     }
+  }
+
+  Future<void> _addAssessmentDay() async {
+    final day = await showDialog<int>(
+      context: context,
+      builder: (_) => _ReminderDayDialog(existing: widget.assessmentDays),
+    );
+    if (day != null) {
+      widget.onSetAssessmentDays(
+        normalizeReminderDays([...widget.assessmentDays, day]),
+      );
+    }
+  }
+
+  void _removeAssessmentDay(int day) => widget.onSetAssessmentDays(
+        normalizeReminderDays(widget.assessmentDays.where((d) => d != day)),
+      );
+
+  Widget _assessmentDays(BuildContext context) {
+    final l10n = context.l10n;
+    final days = normalizeReminderDays(widget.assessmentDays);
+    final time = _formatMinuteOfDay(context, assessmentReminderHour * 60);
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(16, 4, 16, 12),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Wrap(
+            spacing: 8,
+            runSpacing: 8,
+            children: [
+              for (final day in days)
+                InputChip(
+                  key: Key('assessment-reminder-day-$day'),
+                  label: Text(
+                    l10n.text(
+                      day == 1
+                          ? 'reminders.assessment.dayBeforeOne'
+                          : 'reminders.assessment.dayBefore',
+                      args: {'days': '$day'},
+                    ),
+                  ),
+                  // At least one day has to stay; to stop, use the switch.
+                  onDeleted:
+                      days.length > 1 ? () => _removeAssessmentDay(day) : null,
+                  deleteButtonTooltipMessage:
+                      l10n.text('reminders.assessment.removeDay'),
+                ),
+              if (days.length < maxAssessmentReminderDayCount)
+                ActionChip(
+                  key: const Key('assessment-reminder-add'),
+                  avatar: const Icon(Icons.add),
+                  label: Text(l10n.text('reminders.assessment.addDay')),
+                  onPressed: () => unawaited(_addAssessmentDay()),
+                ),
+            ],
+          ),
+          const SizedBox(height: 8),
+          Text(
+            l10n.text('reminders.assessment.timeHint', args: {'time': time}),
+            style: Theme.of(context).textTheme.bodySmall,
+          ),
+        ],
+      ),
+    );
   }
 
   String _formatMinuteOfDay(BuildContext context, int minuteOfDay) =>
@@ -181,6 +256,21 @@ class _ReminderSettingsState extends State<ReminderSettings>
               ),
               onTap: () => unawaited(_pickMensaTime()),
             ),
+          SwitchListTile.adaptive(
+            key: const Key('assessment-reminder-toggle'),
+            secondary: const Icon(Icons.event_note_outlined),
+            title: Text(l10n.text('reminders.assessment.setting')),
+            subtitle: Text(l10n.text('reminders.assessment.settingHint')),
+            value: widget.assessmentsEnabled,
+            onChanged: (enabled) {
+              if (enabled) {
+                unawaited(_enable(() => widget.onSetAssessmentsEnabled(true)));
+              } else {
+                widget.onSetAssessmentsEnabled(false);
+              }
+            },
+          ),
+          if (widget.assessmentsEnabled) _assessmentDays(context),
           if (_service.onlyWhileRunning)
             Padding(
               padding: const EdgeInsets.fromLTRB(16, 8, 16, 16),
@@ -191,6 +281,81 @@ class _ReminderSettingsState extends State<ReminderSettings>
             ),
         ],
       ),
+    );
+  }
+}
+
+class _ReminderDayDialog extends StatefulWidget {
+  const _ReminderDayDialog({required this.existing});
+
+  final List<int> existing;
+
+  @override
+  State<_ReminderDayDialog> createState() => _ReminderDayDialogState();
+}
+
+class _ReminderDayDialogState extends State<_ReminderDayDialog> {
+  final _controller = TextEditingController();
+  ReminderDayError? _error;
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
+
+  void _submit() {
+    final error = validateReminderDay(_controller.text, widget.existing);
+    if (error == null) {
+      Navigator.of(context).pop(int.parse(_controller.text.trim()));
+    } else {
+      setState(() => _error = error);
+    }
+  }
+
+  String? _errorText(BuildContext context) => switch (_error) {
+        null => null,
+        ReminderDayError.invalid =>
+          context.l10n.text('reminders.assessment.dayInvalid'),
+        ReminderDayError.tooLarge => context.l10n.text(
+            'reminders.assessment.dayTooLarge',
+            args: {'max': '$maxAssessmentReminderDay'},
+          ),
+        ReminderDayError.duplicate =>
+          context.l10n.text('reminders.assessment.dayDuplicate'),
+      };
+
+  @override
+  Widget build(BuildContext context) {
+    final l10n = context.l10n;
+    return AlertDialog(
+      title: Text(l10n.text('reminders.assessment.addDay')),
+      content: TextField(
+        key: const Key('assessment-reminder-day-input'),
+        controller: _controller,
+        autofocus: true,
+        keyboardType: TextInputType.number,
+        inputFormatters: [FilteringTextInputFormatter.digitsOnly],
+        decoration: InputDecoration(
+          labelText: l10n.text('reminders.assessment.dayLabel'),
+          errorText: _errorText(context),
+        ),
+        onChanged: (_) {
+          if (_error != null) setState(() => _error = null);
+        },
+        onSubmitted: (_) => _submit(),
+      ),
+      actions: [
+        TextButton(
+          onPressed: () => Navigator.of(context).pop(),
+          child: Text(l10n.text('common.cancel')),
+        ),
+        FilledButton(
+          key: const Key('assessment-reminder-day-confirm'),
+          onPressed: _submit,
+          child: Text(l10n.text('reminders.assessment.addDayConfirm')),
+        ),
+      ],
     );
   }
 }

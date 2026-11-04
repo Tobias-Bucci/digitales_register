@@ -1060,5 +1060,21 @@
   "reminders.mensa.settingHint": "Ti ricorda ogni giorno di iscriverti su mensa.franziskanergymnasium.it.",
   "reminders.mensa.time": "Ora",
   "reminders.mensa.title": "Iscrizione alla mensa",
-  "reminders.mensa.body": "Ricordati di iscriverti alla mensa."
+  "reminders.mensa.body": "Ricordati di iscriverti alla mensa.",
+  "reminders.assessment.setting": "Promemoria per le verifiche",
+  "reminders.assessment.settingHint": "Ti ricorda automaticamente tutte le verifiche e gli esami.",
+  "reminders.assessment.dayBefore": "{days} giorni prima",
+  "reminders.assessment.dayBeforeOne": "{days} giorno prima",
+  "reminders.assessment.removeDay": "Rimuovi giorno",
+  "reminders.assessment.addDay": "Aggiungi giorno",
+  "reminders.assessment.addDayConfirm": "Aggiungi",
+  "reminders.assessment.dayLabel": "Giorni prima della verifica",
+  "reminders.assessment.dayInvalid": "Inserisci un numero intero a partire da 1.",
+  "reminders.assessment.dayTooLarge": "Al massimo {max} giorni prima.",
+  "reminders.assessment.dayDuplicate": "Questo giorno è già stato aggiunto.",
+  "reminders.assessment.timeHint": "I promemoria vengono mostrati alle {time}.",
+  "reminders.assessment.tomorrow": "Domani: {type}",
+  "reminders.assessment.inDays": "Tra {days} giorni: {type}",
+  "reminders.assessment.fallback": "Verifica",
+  "reminders.assessment.noSubject": "Trovi i dettagli in Register."
 }
