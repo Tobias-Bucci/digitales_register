@@ -34,6 +34,8 @@ class ReminderSettings extends StatefulWidget {
     required this.assessmentDays,
     required this.onSetAssessmentsEnabled,
     required this.onSetAssessmentDays,
+    required this.assessmentMinuteOfDay,
+    required this.onSetAssessmentMinuteOfDay,
     this.service,
   });
 
@@ -45,6 +47,8 @@ class ReminderSettings extends StatefulWidget {
   final List<int> assessmentDays;
   final ValueChanged<bool> onSetAssessmentsEnabled;
   final ValueChanged<List<int>> onSetAssessmentDays;
+  final int assessmentMinuteOfDay;
+  final ValueChanged<int> onSetAssessmentMinuteOfDay;
   final ReminderNotificationService? service;
 
   @override
@@ -105,13 +109,10 @@ class _ReminderSettingsState extends State<ReminderSettings>
     if (mounted) setState(() => _permissionMissing = !granted);
   }
 
-  Future<void> _pickMensaTime() async {
+  Future<void> _pickTime(int minuteOfDay, ValueChanged<int> onPicked) async {
     final picked = await showTimePicker(
       context: context,
-      initialTime: TimeOfDay(
-        hour: widget.mensaMinuteOfDay ~/ 60,
-        minute: widget.mensaMinuteOfDay % 60,
-      ),
+      initialTime: TimeOfDay(hour: minuteOfDay ~/ 60, minute: minuteOfDay % 60),
       // The dial follows the locale, but the keyboard input only accepts hours
       // after 12 with this flag, which desktop systems usually do not set.
       builder: (context, child) {
@@ -125,10 +126,24 @@ class _ReminderSettingsState extends State<ReminderSettings>
         );
       },
     );
-    if (picked != null) {
-      widget.onSetMensaMinuteOfDay(picked.hour * 60 + picked.minute);
-    }
+    if (picked != null) onPicked(picked.hour * 60 + picked.minute);
   }
+
+  Widget _timeTile({
+    required Key key,
+    required int minuteOfDay,
+    required ValueChanged<int> onPicked,
+  }) =>
+      ListTile(
+        key: key,
+        leading: const Icon(Icons.schedule_outlined),
+        title: Text(context.l10n.text('reminders.settings.time')),
+        trailing: Text(
+          _formatMinuteOfDay(context, minuteOfDay),
+          style: Theme.of(context).textTheme.titleMedium,
+        ),
+        onTap: () => unawaited(_pickTime(minuteOfDay, onPicked)),
+      );
 
   Future<void> _addAssessmentDay() async {
     final day = await showDialog<int>(
@@ -149,47 +164,36 @@ class _ReminderSettingsState extends State<ReminderSettings>
   Widget _assessmentDays(BuildContext context) {
     final l10n = context.l10n;
     final days = normalizeReminderDays(widget.assessmentDays);
-    final time = _formatMinuteOfDay(context, assessmentReminderHour * 60);
     return Padding(
       padding: const EdgeInsets.fromLTRB(16, 4, 16, 12),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
+      child: Wrap(
+        spacing: 8,
+        runSpacing: 8,
         children: [
-          Wrap(
-            spacing: 8,
-            runSpacing: 8,
-            children: [
-              for (final day in days)
-                InputChip(
-                  key: Key('assessment-reminder-day-$day'),
-                  label: Text(
-                    l10n.text(
-                      day == 1
-                          ? 'reminders.assessment.dayBeforeOne'
-                          : 'reminders.assessment.dayBefore',
-                      args: {'days': '$day'},
-                    ),
-                  ),
-                  // At least one day has to stay; to stop, use the switch.
-                  onDeleted:
-                      days.length > 1 ? () => _removeAssessmentDay(day) : null,
-                  deleteButtonTooltipMessage:
-                      l10n.text('reminders.assessment.removeDay'),
+          for (final day in days)
+            InputChip(
+              key: Key('assessment-reminder-day-$day'),
+              label: Text(
+                l10n.text(
+                  day == 1
+                      ? 'reminders.assessment.dayBeforeOne'
+                      : 'reminders.assessment.dayBefore',
+                  args: {'days': '$day'},
                 ),
-              if (days.length < maxAssessmentReminderDayCount)
-                ActionChip(
-                  key: const Key('assessment-reminder-add'),
-                  avatar: const Icon(Icons.add),
-                  label: Text(l10n.text('reminders.assessment.addDay')),
-                  onPressed: () => unawaited(_addAssessmentDay()),
-                ),
-            ],
-          ),
-          const SizedBox(height: 8),
-          Text(
-            l10n.text('reminders.assessment.timeHint', args: {'time': time}),
-            style: Theme.of(context).textTheme.bodySmall,
-          ),
+              ),
+              // At least one day has to stay; to stop, use the switch.
+              onDeleted:
+                  days.length > 1 ? () => _removeAssessmentDay(day) : null,
+              deleteButtonTooltipMessage:
+                  l10n.text('reminders.assessment.removeDay'),
+            ),
+          if (days.length < maxAssessmentReminderDayCount)
+            ActionChip(
+              key: const Key('assessment-reminder-add'),
+              avatar: const Icon(Icons.add),
+              label: Text(l10n.text('reminders.assessment.addDay')),
+              onPressed: () => unawaited(_addAssessmentDay()),
+            ),
         ],
       ),
     );
@@ -258,15 +262,10 @@ class _ReminderSettingsState extends State<ReminderSettings>
             },
           ),
           if (widget.mensaEnabled)
-            ListTile(
+            _timeTile(
               key: const Key('mensa-reminder-time'),
-              leading: const Icon(Icons.schedule_outlined),
-              title: Text(l10n.text('reminders.mensa.time')),
-              trailing: Text(
-                _formatMinuteOfDay(context, widget.mensaMinuteOfDay),
-                style: theme.textTheme.titleMedium,
-              ),
-              onTap: () => unawaited(_pickMensaTime()),
+              minuteOfDay: widget.mensaMinuteOfDay,
+              onPicked: widget.onSetMensaMinuteOfDay,
             ),
           SwitchListTile.adaptive(
             key: const Key('assessment-reminder-toggle'),
@@ -282,7 +281,14 @@ class _ReminderSettingsState extends State<ReminderSettings>
               }
             },
           ),
-          if (widget.assessmentsEnabled) _assessmentDays(context),
+          if (widget.assessmentsEnabled) ...[
+            _timeTile(
+              key: const Key('assessment-reminder-time'),
+              minuteOfDay: widget.assessmentMinuteOfDay,
+              onPicked: widget.onSetAssessmentMinuteOfDay,
+            ),
+            _assessmentDays(context),
+          ],
           if (_service.onlyWhileRunning)
             Padding(
               padding: const EdgeInsets.fromLTRB(16, 8, 16, 16),

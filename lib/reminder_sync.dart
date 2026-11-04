@@ -51,7 +51,11 @@ List<PlannedReminder> planAssessmentReminders(
         type.isEmpty ? l10n.text('reminders.assessment.fallback') : type;
     final subject = assessment.subject?.trim() ?? '';
     for (final days in state.settingsState.assessmentReminderDays) {
-      final at = assessmentReminderTime(assessment.date, days);
+      final at = assessmentReminderTime(
+        assessment.date,
+        days,
+        state.settingsState.assessmentReminderMinuteOfDay,
+      );
       if (!at.isAfter(now)) continue;
       final id = reminderNotificationId(
         [state.url, state.loginState.username, assessment.id, days],
@@ -163,6 +167,7 @@ class ReminderSync {
       settings.mensaReminderMinuteOfDay,
       settings.assessmentRemindersEnabled,
       settings.assessmentReminderDays,
+      settings.assessmentReminderMinuteOfDay,
     );
   }
 

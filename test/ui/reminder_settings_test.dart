@@ -25,6 +25,7 @@ class _HostState extends State<_Host> {
   late bool assessments = widget.assessments;
   int minute = 7 * 60 + 30;
   List<int> days = [3, 2, 1];
+  int assessmentMinute = 18 * 60;
 
   @override
   Widget build(BuildContext context) => MaterialApp(
@@ -49,6 +50,9 @@ class _HostState extends State<_Host> {
               onSetAssessmentsEnabled: (value) =>
                   setState(() => assessments = value),
               onSetAssessmentDays: (value) => setState(() => days = value),
+              assessmentMinuteOfDay: assessmentMinute,
+              onSetAssessmentMinuteOfDay: (value) =>
+                  setState(() => assessmentMinute = value),
             ),
           ),
         ),
@@ -185,6 +189,37 @@ void main() {
       expect(find.textContaining('18:00'), findsOneWidget);
     });
 
+    testWidgets('the time can only be chosen while the reminders are on',
+        (tester) async {
+      await pump(tester, _Host(service: service()));
+      expect(find.byKey(const Key('assessment-reminder-time')), findsNothing);
+
+      await tester.tap(find.byKey(toggle));
+      await tester.pumpAndSettle();
+
+      expect(find.byKey(const Key('assessment-reminder-time')), findsOneWidget);
+    });
+
+    testWidgets('choosing a time saves it, apart from the Mensa time',
+        (tester) async {
+      await pump(
+        tester,
+        _Host(service: service(), enabled: true, assessments: true),
+      );
+
+      await tester.tap(find.byKey(const Key('assessment-reminder-time')));
+      await tester.pumpAndSettle();
+      await tester.tap(find.byIcon(Icons.keyboard_outlined));
+      await tester.pumpAndSettle();
+      await tester.enterText(find.byType(TextFormField).first, '16');
+      await tester.enterText(find.byType(TextFormField).last, '45');
+      await tester.tap(find.byType(TextButton).last);
+      await tester.pumpAndSettle();
+
+      expect(find.text('16:45'), findsOneWidget);
+      expect(find.text('07:30'), findsOneWidget);
+    });
+
     testWidgets('a day can be added and is sorted in', (tester) async {
       await pump(tester, _Host(service: service(), assessments: true));
 
@@ -253,7 +288,7 @@ void main() {
     });
 
     testWidgets('the layout fits a narrow phone', (tester) async {
-      tester.view.physicalSize = const Size(320, 800);
+      tester.view.physicalSize = const Size(320, 1200);
       tester.view.devicePixelRatio = 1;
       addTearDown(tester.view.reset);
 

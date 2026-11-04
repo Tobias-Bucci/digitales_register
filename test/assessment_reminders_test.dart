@@ -31,6 +31,7 @@ AppState _state(
   List<Day> days, {
   bool enabled = true,
   List<int> reminderDays = const [3, 2, 1],
+  int minute = 18 * 60,
   String user = 'student',
   String url = 'https://school.example',
 }) =>
@@ -40,7 +41,8 @@ AppState _state(
       ..loginState.username = user
       ..dashboardState.allDays = ListBuilder<Day>(days)
       ..settingsState.assessmentRemindersEnabled = enabled
-      ..settingsState.assessmentReminderDays = ListBuilder<int>(reminderDays));
+      ..settingsState.assessmentReminderDays = ListBuilder<int>(reminderDays)
+      ..settingsState.assessmentReminderMinuteOfDay = minute);
 
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
@@ -89,7 +91,7 @@ void main() {
   group('reminder times', () {
     test('counts back calendar days and uses the fixed time', () {
       expect(
-        [3, 2, 1].map((days) => assessmentReminderTime(examDate, days)),
+        [3, 2, 1].map((days) => assessmentReminderTime(examDate, days, 18 * 60)),
         [
           DateTime(2026, 4, 17, 18),
           DateTime(2026, 4, 18, 18),
@@ -99,14 +101,19 @@ void main() {
     });
 
     test('crosses month and year boundaries', () {
-      expect(assessmentReminderTime(UtcDateTime(2026, 3, 1), 1),
+      expect(assessmentReminderTime(UtcDateTime(2026, 3, 1), 1, 18 * 60),
           DateTime(2026, 2, 28, 18));
-      expect(assessmentReminderTime(UtcDateTime(2027, 1, 1), 2),
+      expect(assessmentReminderTime(UtcDateTime(2027, 1, 1), 2, 18 * 60),
           DateTime(2026, 12, 30, 18));
     });
 
+    test('uses hours and minutes of the chosen time', () {
+      expect(assessmentReminderTime(examDate, 1, 6 * 60 + 45),
+          DateTime(2026, 4, 19, 6, 45));
+    });
+
     test('keeps the time across a change of daylight saving', () {
-      final at = assessmentReminderTime(UtcDateTime(2026, 3, 30), 3);
+      final at = assessmentReminderTime(UtcDateTime(2026, 3, 30), 3, 18 * 60);
 
       expect((at.day, at.hour), (27, 18));
     });
@@ -180,6 +187,33 @@ void main() {
       ));
 
       expect(reminders.single.at, DateTime(2026, 4, 15, 18));
+    });
+
+    test('uses the chosen time', () {
+      final reminder = plan(_state(
+        [_day(examDate, [_test(1)])],
+        reminderDays: [1],
+        minute: 7 * 60 + 5,
+      )).single;
+
+      expect(reminder.at, DateTime(2026, 4, 19, 7, 5));
+    });
+
+    test('whether a time has passed depends on the chosen time', () {
+      final days = [_day(examDate, [_test(1)])];
+      final now = DateTime(2026, 4, 19, 12);
+
+      expect(plan(_state(days, minute: 11 * 60), now: now), isEmpty);
+      expect(plan(_state(days, minute: 13 * 60), now: now), hasLength(1));
+    });
+
+    test('a new time keeps the ids, so that it replaces the reminders', () {
+      final days = [_day(examDate, [_test(1)])];
+      final before = plan(_state(days));
+      final after = plan(_state(days, minute: 7 * 60));
+
+      expect(after.map((r) => r.id), before.map((r) => r.id));
+      expect(after.first.fingerprint(), isNot(before.first.fingerprint()));
     });
 
     test('a moved test keeps its ids, so that it replaces its reminders', () {
@@ -268,23 +302,26 @@ void main() {
   });
 
   group('settings persistence', () {
-    test('defaults to off with three, two and one days', () {
+    test('defaults to off with three, two and one days at 18:00', () {
       final settings = SettingsState();
 
       expect(settings.assessmentRemindersEnabled, isFalse);
       expect(settings.assessmentReminderDays, [3, 2, 1]);
+      expect(settings.assessmentReminderMinuteOfDay, 18 * 60);
     });
 
     test('survives a restart', () async {
       SharedPreferences.setMockInitialValues({});
       await settingsPersistenceService.save(SettingsState((b) => b
         ..assessmentRemindersEnabled = true
-        ..assessmentReminderDays = ListBuilder<int>([7, 1])));
+        ..assessmentReminderDays = ListBuilder<int>([7, 1])
+        ..assessmentReminderMinuteOfDay = 6 * 60 + 45));
 
       final restored = await settingsPersistenceService.load();
 
       expect(restored!.assessmentRemindersEnabled, isTrue);
       expect(restored.assessmentReminderDays, [7, 1]);
+      expect(restored.assessmentReminderMinuteOfDay, 6 * 60 + 45);
     });
   });
 
@@ -337,6 +374,15 @@ void main() {
       await settle();
 
       expect(syncs.single, hasLength(1));
+    });
+
+    test('a changed time plans again', () async {
+      final days = [_day(future, [_test(1)])];
+      sync.attach(states.stream, _state(days));
+      states.add(_state(days, minute: 7 * 60));
+      await settle();
+
+      expect(syncs.single.first.at.hour, 7);
     });
 
     test('another account plans again', () async {

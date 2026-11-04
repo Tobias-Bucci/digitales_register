@@ -382,6 +382,9 @@ abstract class SettingsState
   /// How many days before an assessment to remind of it.
   BuiltList<int> get assessmentReminderDays;
 
+  /// The local time of those reminders, in minutes after midnight.
+  int get assessmentReminderMinuteOfDay;
+
   /// Local learning-plan state, keyed by the stable dashboard assessment id.
   /// Values are compact strings of completed phase ids so the state remains
   /// serializable together with the user's other settings.
@@ -461,6 +464,7 @@ abstract class SettingsState
       ..mensaReminderMinuteOfDay = 7 * 60 + 30
       ..assessmentRemindersEnabled = false
       ..assessmentReminderDays = ListBuilder<int>(defaultAssessmentReminderDays)
+      ..assessmentReminderMinuteOfDay = defaultAssessmentReminderMinuteOfDay
       ..assessmentStudyProgress = MapBuilder<String, String>()
       ..assessmentStudyNotes = MapBuilder<String, String>()
       ..assessmentStudyAttachments = MapBuilder<String, String>()
