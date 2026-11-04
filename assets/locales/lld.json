@@ -1060,5 +1060,21 @@
   "reminders.mensa.settingHint": "Te recorda vignì di de te scrive ite sun mensa.franziskanergymnasium.it.",
   "reminders.mensa.time": "Ora",
   "reminders.mensa.title": "Scrizion ala mensa",
-  "reminders.mensa.body": "Recòrdete de te scrive ite ala mensa."
+  "reminders.mensa.body": "Recòrdete de te scrive ite ala mensa.",
+  "reminders.assessment.setting": "Recordanzes di tesć",
+  "reminders.assessment.settingHint": "Te recorda automaticamënter duc i tesć y les proes.",
+  "reminders.assessment.dayBefore": "{days} dis dan",
+  "reminders.assessment.dayBeforeOne": "{days} di dan",
+  "reminders.assessment.removeDay": "Tò demez l di",
+  "reminders.assessment.addDay": "Jontè n di",
+  "reminders.assessment.addDayConfirm": "Jontè",
+  "reminders.assessment.dayLabel": "Dis dan l test",
+  "reminders.assessment.dayInvalid": "Scrì ite n numer intier da 1 inant.",
+  "reminders.assessment.dayTooLarge": "Al plu {max} dis dan.",
+  "reminders.assessment.dayDuplicate": "Chësc di ie bele scrit ite.",
+  "reminders.assessment.timeHint": "Les recordanzes vën mostrades dales {time}.",
+  "reminders.assessment.tomorrow": "Doman: {type}",
+  "reminders.assessment.inDays": "Danter {days} dis: {type}",
+  "reminders.assessment.fallback": "Proa",
+  "reminders.assessment.noSubject": "I detai ie tl Register."
 }

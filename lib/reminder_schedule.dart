@@ -24,6 +24,43 @@ const maxPendingReminders = 60;
 /// repeat it by itself. Every app start moves this window forward.
 const dailyReminderOccurrences = 14;
 
+/// Reminders of an assessment appear in the evening, when there still is time
+/// to study and school is over.
+const assessmentReminderHour = 18;
+
+const defaultAssessmentReminderDays = [3, 2, 1];
+const maxAssessmentReminderDay = 30;
+const maxAssessmentReminderDayCount = 10;
+
+enum ReminderDayError { invalid, tooLarge, duplicate }
+
+/// Why [input] cannot be added to the [existing] reminder days, if at all.
+ReminderDayError? validateReminderDay(String input, Iterable<int> existing) {
+  final text = input.trim();
+  if (!RegExp(r'^[0-9]+$').hasMatch(text)) return ReminderDayError.invalid;
+  final day = int.tryParse(text);
+  if (day == null) return ReminderDayError.tooLarge;
+  if (day < 1) return ReminderDayError.invalid;
+  if (day > maxAssessmentReminderDay) return ReminderDayError.tooLarge;
+  return existing.contains(day) ? ReminderDayError.duplicate : null;
+}
+
+/// The valid days of [days] without duplicates, the furthest one first.
+List<int> normalizeReminderDays(Iterable<int> days) => days
+    .where((day) => day >= 1 && day <= maxAssessmentReminderDay)
+    .toSet()
+    .toList()
+  ..sort((a, b) => b.compareTo(a));
+
+/// When to remind of an assessment on [date], [daysBefore] days ahead. Counts
+/// calendar days, so the time stays the same across daylight saving changes.
+DateTime assessmentReminderTime(DateTime date, int daysBefore) => DateTime(
+      date.year,
+      date.month,
+      date.day - daysBefore,
+      assessmentReminderHour,
+    );
+
 enum ReminderChannel {
   daily('reminder_daily'),
   assessment('reminder_assessment');

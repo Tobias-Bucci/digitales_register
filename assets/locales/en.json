@@ -1060,5 +1060,21 @@
   "reminders.mensa.settingHint": "Reminds you every day to sign up on mensa.franziskanergymnasium.it.",
   "reminders.mensa.time": "Time",
   "reminders.mensa.title": "Canteen sign-up",
-  "reminders.mensa.body": "Remember to sign up for the canteen."
+  "reminders.mensa.body": "Remember to sign up for the canteen.",
+  "reminders.assessment.setting": "Test reminders",
+  "reminders.assessment.settingHint": "Automatically reminds you of all tests and exams.",
+  "reminders.assessment.dayBefore": "{days} days before",
+  "reminders.assessment.dayBeforeOne": "{days} day before",
+  "reminders.assessment.removeDay": "Remove day",
+  "reminders.assessment.addDay": "Add day",
+  "reminders.assessment.addDayConfirm": "Add",
+  "reminders.assessment.dayLabel": "Days before the test",
+  "reminders.assessment.dayInvalid": "Enter a whole number of 1 or more.",
+  "reminders.assessment.dayTooLarge": "At most {max} days before.",
+  "reminders.assessment.dayDuplicate": "This day has already been added.",
+  "reminders.assessment.timeHint": "Reminders appear at {time}.",
+  "reminders.assessment.tomorrow": "Tomorrow: {type}",
+  "reminders.assessment.inDays": "In {days} days: {type}",
+  "reminders.assessment.fallback": "Exam",
+  "reminders.assessment.noSubject": "You can find the details in Register."
 }

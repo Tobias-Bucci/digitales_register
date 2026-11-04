@@ -129,6 +129,10 @@ class SettingsPageContainer extends StatelessWidget {
                 actions.settingsActions.mensaReminderEnabled.call,
             onSetMensaReminderMinuteOfDay:
                 actions.settingsActions.mensaReminderMinuteOfDay.call,
+            onSetAssessmentRemindersEnabled:
+                actions.settingsActions.assessmentRemindersEnabled.call,
+            onSetAssessmentReminderDays: (days) => actions.settingsActions
+                .assessmentReminderDays(BuiltList<int>.from(days)),
             onSetAmoledMode: actions.settingsActions.amoledMode.call,
             onSetAccent: (accent) =>
                 unawaited(themeController.setAccent(accent)),
@@ -204,6 +208,8 @@ class SettingsViewModel {
   final bool calendarSyncEnabled;
   final bool mensaReminderEnabled;
   final int mensaReminderMinuteOfDay;
+  final bool assessmentRemindersEnabled;
+  final List<int> assessmentReminderDays;
   final int? calendarSyncCalendarId;
   final bool amoledMode;
   final bool demoMode;
@@ -242,6 +248,10 @@ class SettingsViewModel {
         mensaReminderEnabled = state.settingsState.mensaReminderEnabled,
         mensaReminderMinuteOfDay =
             state.settingsState.mensaReminderMinuteOfDay,
+        assessmentRemindersEnabled =
+            state.settingsState.assessmentRemindersEnabled,
+        assessmentReminderDays =
+            state.settingsState.assessmentReminderDays.toList(),
         calendarSyncCalendarId = state.settingsState.calendarSyncCalendarId,
         amoledMode = state.settingsState.amoledMode,
         allSubjects = _sortedIgnoreCase(state.extractAllSubjects()),
@@ -295,6 +305,11 @@ class SettingsViewModel {
             other.calendarSyncEnabled == calendarSyncEnabled &&
             other.mensaReminderEnabled == mensaReminderEnabled &&
             other.mensaReminderMinuteOfDay == mensaReminderMinuteOfDay &&
+            other.assessmentRemindersEnabled == assessmentRemindersEnabled &&
+            _settingsViewModelEquality.equals(
+              other.assessmentReminderDays,
+              assessmentReminderDays,
+            ) &&
             other.calendarSyncCalendarId == calendarSyncCalendarId &&
             other.amoledMode == amoledMode &&
             other.demoMode == demoMode &&
@@ -343,6 +358,8 @@ class SettingsViewModel {
         calendarSyncEnabled,
         mensaReminderEnabled,
         mensaReminderMinuteOfDay,
+        assessmentRemindersEnabled,
+        _settingsViewModelEquality.hash(assessmentReminderDays),
         calendarSyncCalendarId,
         amoledMode,
         demoMode,

@@ -17,7 +17,9 @@
 
 import 'dart:async';
 
+import 'package:dr/app_clock.dart';
 import 'package:dr/app_state.dart';
+import 'package:dr/exam_study_plan.dart';
 import 'package:dr/i18n/app_language.dart';
 import 'package:dr/i18n/app_localizations.dart';
 import 'package:dr/reminder_notifications.dart';
@@ -34,10 +36,57 @@ Future<void> openReminderTarget(String? payload) async {
   }
 }
 
+/// Reminders of all upcoming tests and exams. Ids depend on the assessment and
+/// the day, so a moved assessment replaces its reminders and a deleted one
+/// loses them. Times that have passed are not planned.
+List<PlannedReminder> planAssessmentReminders(
+  AppState state,
+  AppLocalizations l10n,
+  DateTime now,
+) {
+  final reminders = <int, PlannedReminder>{};
+  for (final assessment in examAssessments(state)) {
+    final type = assessment.type?.trim() ?? '';
+    final name =
+        type.isEmpty ? l10n.text('reminders.assessment.fallback') : type;
+    final subject = assessment.subject?.trim() ?? '';
+    for (final days in state.settingsState.assessmentReminderDays) {
+      final at = assessmentReminderTime(assessment.date, days);
+      if (!at.isAfter(now)) continue;
+      final id = reminderNotificationId(
+        [state.url, state.loginState.username, assessment.id, days],
+      );
+      reminders[id] = PlannedReminder(
+        id: id,
+        channel: ReminderChannel.assessment,
+        channelName: l10n.text('reminders.assessment.setting'),
+        at: at,
+        title: l10n.text(
+          days == 1
+              ? 'reminders.assessment.tomorrow'
+              : 'reminders.assessment.inDays',
+          args: {'type': name, 'days': '$days'},
+        ),
+        body: subject.isEmpty
+            ? l10n.text('reminders.assessment.noSubject')
+            : subject,
+      );
+    }
+  }
+  return reminders.values.toList();
+}
+
 /// Everything the user should currently be reminded of.
-List<PlannedReminder> planReminders(AppState state, AppLocalizations l10n) {
+List<PlannedReminder> planReminders(
+  AppState state,
+  AppLocalizations l10n, {
+  DateTime? now,
+}) {
   final settings = state.settingsState;
   return [
+    // The dates of the demo guest are made up.
+    if (settings.assessmentRemindersEnabled && !appClock.isDemoMode)
+      ...planAssessmentReminders(state, l10n, now ?? DateTime.now()),
     if (settings.mensaReminderEnabled)
       PlannedReminder(
         id: reminderNotificationId('mensa'),
@@ -106,9 +155,14 @@ class ReminderSync {
     final settings = state.settingsState;
     return (
       state.loginState.loggedIn,
+      state.loginState.username,
+      state.url,
+      state.dashboardState.allDays,
       settings.languageCode,
       settings.mensaReminderEnabled,
       settings.mensaReminderMinuteOfDay,
+      settings.assessmentRemindersEnabled,
+      settings.assessmentReminderDays,
     );
   }
 

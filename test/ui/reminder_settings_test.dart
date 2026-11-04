@@ -7,9 +7,14 @@ import 'package:flutter_test/flutter_test.dart';
 
 /// Holds the settings like the store does.
 class _Host extends StatefulWidget {
-  const _Host({required this.service, this.enabled = false});
+  const _Host({
+    required this.service,
+    this.enabled = false,
+    this.assessments = false,
+  });
   final ReminderNotificationService service;
   final bool enabled;
+  final bool assessments;
 
   @override
   State<_Host> createState() => _HostState();
@@ -17,7 +22,9 @@ class _Host extends StatefulWidget {
 
 class _HostState extends State<_Host> {
   late bool enabled = widget.enabled;
+  late bool assessments = widget.assessments;
   int minute = 7 * 60 + 30;
+  List<int> days = [3, 2, 1];
 
   @override
   Widget build(BuildContext context) => MaterialApp(
@@ -37,6 +44,11 @@ class _HostState extends State<_Host> {
               mensaMinuteOfDay: minute,
               onSetMensaEnabled: (value) => setState(() => enabled = value),
               onSetMensaMinuteOfDay: (value) => setState(() => minute = value),
+              assessmentsEnabled: assessments,
+              assessmentDays: days,
+              onSetAssessmentsEnabled: (value) =>
+                  setState(() => assessments = value),
+              onSetAssessmentDays: (value) => setState(() => days = value),
             ),
           ),
         ),
@@ -141,6 +153,115 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(find.text('09:15'), findsOneWidget);
+  });
+
+  group('assessment reminders', () {
+    const toggle = Key('assessment-reminder-toggle');
+    const add = Key('assessment-reminder-add');
+    const input = Key('assessment-reminder-day-input');
+    const confirm = Key('assessment-reminder-day-confirm');
+    Finder chip(int day) => find.byKey(Key('assessment-reminder-day-$day'));
+
+    Future<void> addDay(WidgetTester tester, String day) async {
+      await tester.tap(find.byKey(add));
+      await tester.pumpAndSettle();
+      await tester.enterText(find.byKey(input), day);
+      await tester.tap(find.byKey(confirm));
+      await tester.pumpAndSettle();
+    }
+
+    testWidgets('the days appear once the switch is on and it asks to notify',
+        (tester) async {
+      await pump(tester, _Host(service: service()));
+      expect(chip(3), findsNothing);
+
+      await tester.tap(find.byKey(toggle));
+      await tester.pumpAndSettle();
+
+      expect(requests, 1);
+      expect(find.text('3 Tage vorher'), findsOneWidget);
+      expect(find.text('2 Tage vorher'), findsOneWidget);
+      expect(find.text('1 Tag vorher'), findsOneWidget);
+      expect(find.textContaining('18:00'), findsOneWidget);
+    });
+
+    testWidgets('a day can be added and is sorted in', (tester) async {
+      await pump(tester, _Host(service: service(), assessments: true));
+
+      await addDay(tester, '7');
+
+      expect(chip(7), findsOneWidget);
+      expect(
+        tester.getTopLeft(chip(7)).dx,
+        lessThan(tester.getTopLeft(chip(3)).dx),
+      );
+    });
+
+    testWidgets('a duplicate is explained and not added', (tester) async {
+      await pump(tester, _Host(service: service(), assessments: true));
+
+      await addDay(tester, '2');
+
+      expect(find.text('Dieser Tag ist schon eingetragen.'), findsOneWidget);
+      expect(find.byKey(input), findsOneWidget);
+    });
+
+    testWidgets('invalid days are explained and not added', (tester) async {
+      await pump(tester, _Host(service: service(), assessments: true));
+
+      await addDay(tester, '0');
+      expect(find.text('Gib eine ganze Zahl ab 1 ein.'), findsOneWidget);
+
+      await tester.enterText(find.byKey(input), '31');
+      await tester.tap(find.byKey(confirm));
+      await tester.pumpAndSettle();
+      expect(find.text('Höchstens 30 Tage vorher.'), findsOneWidget);
+    });
+
+    testWidgets('the field only takes digits', (tester) async {
+      await pump(tester, _Host(service: service(), assessments: true));
+      await tester.tap(find.byKey(add));
+      await tester.pumpAndSettle();
+
+      await tester.enterText(find.byKey(input), '-1.5a');
+
+      expect(tester.widget<TextField>(find.byKey(input)).controller!.text, '15');
+    });
+
+    testWidgets('a day can be removed, but not the last one', (tester) async {
+      await pump(tester, _Host(service: service(), assessments: true));
+
+      for (final day in [3, 2]) {
+        await tester.tap(
+          find.descendant(of: chip(day), matching: find.byTooltip('Tag entfernen')),
+        );
+        await tester.pumpAndSettle();
+        expect(chip(day), findsNothing);
+      }
+
+      expect(tester.widget<InputChip>(chip(1)).onDeleted, isNull);
+    });
+
+    testWidgets('no more days can be added at the limit', (tester) async {
+      await pump(tester, _Host(service: service(), assessments: true));
+
+      for (final day in [4, 5, 6, 7, 8, 9, 10]) {
+        await addDay(tester, '$day');
+      }
+
+      expect(find.byKey(add), findsNothing);
+    });
+
+    testWidgets('the layout fits a narrow phone', (tester) async {
+      tester.view.physicalSize = const Size(320, 800);
+      tester.view.devicePixelRatio = 1;
+      addTearDown(tester.view.reset);
+
+      await pump(tester, _Host(service: service(), assessments: true));
+      await addDay(tester, '14');
+
+      expect(tester.takeException(), isNull);
+    });
   });
 
   testWidgets('says so where reminders need the app to be open',
