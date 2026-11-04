@@ -24,9 +24,9 @@ const maxPendingReminders = 60;
 /// repeat it by itself. Every app start moves this window forward.
 const dailyReminderOccurrences = 14;
 
-/// Reminders of an assessment appear in the evening, when there still is time
-/// to study and school is over.
-const assessmentReminderHour = 18;
+/// By default, reminders of an assessment appear in the evening, when there
+/// still is time to study and school is over.
+const defaultAssessmentReminderMinuteOfDay = 18 * 60;
 
 const defaultAssessmentReminderDays = [3, 2, 1];
 const maxAssessmentReminderDay = 30;
@@ -52,13 +52,20 @@ List<int> normalizeReminderDays(Iterable<int> days) => days
     .toList()
   ..sort((a, b) => b.compareTo(a));
 
-/// When to remind of an assessment on [date], [daysBefore] days ahead. Counts
-/// calendar days, so the time stays the same across daylight saving changes.
-DateTime assessmentReminderTime(DateTime date, int daysBefore) => DateTime(
+/// When to remind of an assessment on [date], [daysBefore] days ahead, at
+/// [minuteOfDay] minutes after midnight. Counts calendar days, so the time
+/// stays the same across daylight saving changes.
+DateTime assessmentReminderTime(
+  DateTime date,
+  int daysBefore,
+  int minuteOfDay,
+) =>
+    DateTime(
       date.year,
       date.month,
       date.day - daysBefore,
-      assessmentReminderHour,
+      minuteOfDay ~/ 60,
+      minuteOfDay % 60,
     );
 
 enum ReminderChannel {

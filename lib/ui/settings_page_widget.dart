@@ -83,6 +83,7 @@ class SettingsPageWidget extends StatefulWidget {
   final OnSettingChanged<int> onSetMensaReminderMinuteOfDay;
   final OnSettingChanged<bool> onSetAssessmentRemindersEnabled;
   final OnSettingChanged<List<int>> onSetAssessmentReminderDays;
+  final OnSettingChanged<int> onSetAssessmentReminderMinuteOfDay;
   final OnSettingChanged<bool> onSetAmoledMode;
   final OnSettingChanged<AppAccent> onSetAccent;
   final OnSettingChanged<MapEntry<String, SubjectTheme>> onSetSubjectTheme;
@@ -135,6 +136,7 @@ class SettingsPageWidget extends StatefulWidget {
     required this.onSetMensaReminderMinuteOfDay,
     required this.onSetAssessmentRemindersEnabled,
     required this.onSetAssessmentReminderDays,
+    required this.onSetAssessmentReminderMinuteOfDay,
     required this.onSetAmoledMode,
     required this.onSetAccent,
     required this.onSetFavoriteSubjects,
@@ -1216,6 +1218,9 @@ class _SettingsPageWidgetState extends State<SettingsPageWidget> {
             assessmentDays: widget.vm.assessmentReminderDays,
             onSetAssessmentsEnabled: widget.onSetAssessmentRemindersEnabled,
             onSetAssessmentDays: widget.onSetAssessmentReminderDays,
+            assessmentMinuteOfDay: widget.vm.assessmentReminderMinuteOfDay,
+            onSetAssessmentMinuteOfDay:
+                widget.onSetAssessmentReminderMinuteOfDay,
           ),
           const SizedBox(height: 16),
           _SettingsSectionCard(

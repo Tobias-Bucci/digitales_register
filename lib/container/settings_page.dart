@@ -133,6 +133,8 @@ class SettingsPageContainer extends StatelessWidget {
                 actions.settingsActions.assessmentRemindersEnabled.call,
             onSetAssessmentReminderDays: (days) => actions.settingsActions
                 .assessmentReminderDays(BuiltList<int>.from(days)),
+            onSetAssessmentReminderMinuteOfDay:
+                actions.settingsActions.assessmentReminderMinuteOfDay.call,
             onSetAmoledMode: actions.settingsActions.amoledMode.call,
             onSetAccent: (accent) =>
                 unawaited(themeController.setAccent(accent)),
@@ -210,6 +212,7 @@ class SettingsViewModel {
   final int mensaReminderMinuteOfDay;
   final bool assessmentRemindersEnabled;
   final List<int> assessmentReminderDays;
+  final int assessmentReminderMinuteOfDay;
   final int? calendarSyncCalendarId;
   final bool amoledMode;
   final bool demoMode;
@@ -252,6 +255,8 @@ class SettingsViewModel {
             state.settingsState.assessmentRemindersEnabled,
         assessmentReminderDays =
             state.settingsState.assessmentReminderDays.toList(),
+        assessmentReminderMinuteOfDay =
+            state.settingsState.assessmentReminderMinuteOfDay,
         calendarSyncCalendarId = state.settingsState.calendarSyncCalendarId,
         amoledMode = state.settingsState.amoledMode,
         allSubjects = _sortedIgnoreCase(state.extractAllSubjects()),
@@ -306,6 +311,8 @@ class SettingsViewModel {
             other.mensaReminderEnabled == mensaReminderEnabled &&
             other.mensaReminderMinuteOfDay == mensaReminderMinuteOfDay &&
             other.assessmentRemindersEnabled == assessmentRemindersEnabled &&
+            other.assessmentReminderMinuteOfDay ==
+                assessmentReminderMinuteOfDay &&
             _settingsViewModelEquality.equals(
               other.assessmentReminderDays,
               assessmentReminderDays,
@@ -360,6 +367,7 @@ class SettingsViewModel {
         mensaReminderMinuteOfDay,
         assessmentRemindersEnabled,
         _settingsViewModelEquality.hash(assessmentReminderDays),
+        assessmentReminderMinuteOfDay,
         calendarSyncCalendarId,
         amoledMode,
         demoMode,

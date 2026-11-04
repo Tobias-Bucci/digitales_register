@@ -72,6 +72,7 @@ abstract class SettingsActions extends ReduxActions {
   abstract final ActionDispatcher<int> mensaReminderMinuteOfDay;
   abstract final ActionDispatcher<bool> assessmentRemindersEnabled;
   abstract final ActionDispatcher<BuiltList<int>> assessmentReminderDays;
+  abstract final ActionDispatcher<int> assessmentReminderMinuteOfDay;
   abstract final ActionDispatcher<MapEntry<String, String>>
       setAssessmentStudyProgress;
   abstract final ActionDispatcher<MapEntry<String, String>>

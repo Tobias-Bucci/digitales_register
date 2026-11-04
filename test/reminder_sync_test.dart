@@ -93,6 +93,7 @@ void main() {
       expect(restored, isNotNull);
       expect(restored!.mensaReminderEnabled, isFalse);
       expect(restored.mensaReminderMinuteOfDay, 7 * 60 + 30);
+      expect(restored.assessmentReminderMinuteOfDay, 18 * 60);
     });
   });
 
