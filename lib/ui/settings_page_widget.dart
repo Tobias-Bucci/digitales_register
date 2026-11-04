@@ -39,6 +39,7 @@ import 'package:dr/ui/credits_page.dart';
 import 'package:dr/ui/dialog.dart';
 import 'package:dr/ui/network_protocol_page.dart';
 import 'package:dr/ui/privacy_data_details_page.dart';
+import 'package:dr/ui/reminder_settings.dart';
 import 'package:dr/ui/school_notification_settings.dart';
 import 'package:dr/ui/subject_swatch_picker.dart';
 import 'package:dr/util.dart';
@@ -78,6 +79,8 @@ class SettingsPageWidget extends StatefulWidget {
   final Future<void> Function(int? calendarId) onSetCalendarSyncCalendarId;
   final Future<void> Function() onRemoveCalendarSyncEvents;
   final Future<void> Function() onRecreateMissingCalendarSyncEvents;
+  final OnSettingChanged<bool> onSetMensaReminderEnabled;
+  final OnSettingChanged<int> onSetMensaReminderMinuteOfDay;
   final OnSettingChanged<bool> onSetAmoledMode;
   final OnSettingChanged<AppAccent> onSetAccent;
   final OnSettingChanged<MapEntry<String, SubjectTheme>> onSetSubjectTheme;
@@ -126,6 +129,8 @@ class SettingsPageWidget extends StatefulWidget {
     required this.onSetCalendarSyncCalendarId,
     required this.onRemoveCalendarSyncEvents,
     required this.onRecreateMissingCalendarSyncEvents,
+    required this.onSetMensaReminderEnabled,
+    required this.onSetMensaReminderMinuteOfDay,
     required this.onSetAmoledMode,
     required this.onSetAccent,
     required this.onSetFavoriteSubjects,
@@ -1197,6 +1202,13 @@ class _SettingsPageWidgetState extends State<SettingsPageWidget> {
           _buildPrivacySection(l10n),
           const SizedBox(height: 16),
           const SchoolNotificationSettings(),
+          const SizedBox(height: 16),
+          ReminderSettings(
+            mensaEnabled: widget.vm.mensaReminderEnabled,
+            mensaMinuteOfDay: widget.vm.mensaReminderMinuteOfDay,
+            onSetMensaEnabled: widget.onSetMensaReminderEnabled,
+            onSetMensaMinuteOfDay: widget.onSetMensaReminderMinuteOfDay,
+          ),
           const SizedBox(height: 16),
           _SettingsSectionCard(
             title: l10n.text('export.title'),

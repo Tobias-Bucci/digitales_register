@@ -66,6 +66,7 @@ import 'package:dr/main.dart';
 import 'package:dr/page_payload_cache.dart';
 import 'package:dr/platform_adapter.dart';
 import 'package:dr/privacy_log.dart';
+import 'package:dr/reminder_sync.dart';
 import 'package:dr/school_api_endpoints.dart';
 import 'package:dr/school_notification_service.dart';
 import 'package:dr/serializers.dart';
@@ -1993,6 +1994,7 @@ Future<void> _restarted(
   final source = wrapper;
   final server = source.url;
   final user = source.user;
+  unawaited(reminderSync.refresh());
   unawaited(schoolNotificationOperation(() async {
     await schoolNotifications.reload();
     if (api.state.loginState.loggedIn &&

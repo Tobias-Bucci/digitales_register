@@ -1051,5 +1051,14 @@
   "settings.storeData.confirm.title": "Sodè les dades salvades?",
   "settings.storeData.confirm.body": "Les dades salvades de chësc account (plates ćiariades defin ora desche dashboard, notes, dovei, registre y material di cursc) vëgn sodedes da chësc aparat y ne vëgn nia plü salvades. Les notes y i files de stude personai, les dates de scadënza, i files desćariés y les scrites esportedes tl calender dl aparat resta.",
   "settings.storeData.confirm.confirm": "Stlüje y sodè",
-  "settings.storeData.deleteFailed": "Les dades salvades ne podova nia gnì sodedes dal dut."
+  "settings.storeData.deleteFailed": "Les dades salvades ne podova nia gnì sodedes dal dut.",
+  "reminders.settings.title": "Recordanzes",
+  "reminders.settings.subtitle": "Notificazions planificades da chësc dispositiv.",
+  "reminders.settings.permission": "Les notificazions ne ie nia permetudes, perchël ne vëniel mostrà degüna recordanza. Te posses les permëter tla impostazions dl dispositiv: Apps / Register / Notificazions.",
+  "reminders.settings.whileRunning": "Sun chësc sistem vëniel mostrà recordanzes mé canche l’app ie vierta.",
+  "reminders.mensa.setting": "Recordanza mensa",
+  "reminders.mensa.settingHint": "Te recorda vignì di de te scrive ite sun mensa.franziskanergymnasium.it.",
+  "reminders.mensa.time": "Ora",
+  "reminders.mensa.title": "Scrizion ala mensa",
+  "reminders.mensa.body": "Recòrdete de te scrive ite ala mensa."
 }

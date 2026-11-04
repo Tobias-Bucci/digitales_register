@@ -73,6 +73,9 @@ final settingsReducerBuilder = NestedReducerBuilder<AppState, AppStateBuilder,
   ..add(SettingsActionsNames.substitutePrimaryTeachersLockedSubjects,
       _substitutePrimaryTeachersLockedSubjects)
   ..add(SettingsActionsNames.calendarSyncEnabled, _calendarSyncEnabled)
+  ..add(SettingsActionsNames.mensaReminderEnabled, _mensaReminderEnabled)
+  ..add(SettingsActionsNames.mensaReminderMinuteOfDay,
+      _mensaReminderMinuteOfDay)
   ..add(SettingsActionsNames.calendarSyncCalendarId, _calendarSyncCalendarId)
   ..add(SettingsActionsNames.amoledMode, _amoledMode)
   ..add(SettingsActionsNames.biometricAppLockEnabled, _biometricAppLockEnabled)
@@ -249,6 +252,16 @@ void _substituteKnownTeachers(SettingsState state,
 void _substitutePrimaryTeachersLockedSubjects(SettingsState state,
     Action<BuiltList<String>> action, SettingsStateBuilder builder) {
   builder.substitutePrimaryTeachersLockedSubjects.replace(action.payload);
+}
+
+void _mensaReminderEnabled(
+    SettingsState state, Action<bool> action, SettingsStateBuilder builder) {
+  builder.mensaReminderEnabled = action.payload;
+}
+
+void _mensaReminderMinuteOfDay(
+    SettingsState state, Action<int> action, SettingsStateBuilder builder) {
+  builder.mensaReminderMinuteOfDay = action.payload;
 }
 
 void _calendarSyncEnabled(
