@@ -115,7 +115,6 @@ void main() {
 
     expect(tester.takeException(), isNull);
     expect(find.text('Kapitel wiederholen'), findsOneWidget);
-    expect(find.textContaining('Mittel'), findsWidgets);
     expect(savedPhases?.singleWhere((phase) => phase.id == 'start').title,
         'Kapitel wiederholen');
   });

@@ -51,6 +51,22 @@ class ExamCalendarPage extends StatefulWidget {
 class _ExamCalendarPageState extends State<ExamCalendarPage> {
   bool _timeline = false;
 
+  Widget _card(ExamAssessment assessment) => _AssessmentCard(
+        assessment: assessment,
+        now: widget.now,
+        completed: widget.completedFor(assessment.id),
+        customPhases: widget.phasesFor(assessment.id),
+        note: widget.noteFor(assessment.id),
+        attachments: widget.attachmentsFor(assessment.id),
+        onProgressChanged: (value) =>
+            widget.onProgressChanged(assessment.id, value),
+        onPhasesChanged: (value) =>
+            widget.onPhasesChanged(assessment.id, value),
+        onNoteChanged: (value) => widget.onNoteChanged(assessment.id, value),
+        onAttachmentsChanged: (value) =>
+            widget.onAttachmentsChanged(assessment.id, value),
+      );
+
   @override
   Widget build(BuildContext context) {
     final upcoming = widget.assessments
@@ -100,22 +116,7 @@ class _ExamCalendarPageState extends State<ExamCalendarPage> {
           ? ExamTimeline(
               assessments: upcoming,
               now: widget.now,
-              assessmentBuilder: (assessment) => _AssessmentCard(
-                assessment: assessment,
-                now: widget.now,
-                completed: widget.completedFor(assessment.id),
-                customPhases: widget.phasesFor(assessment.id),
-                note: widget.noteFor(assessment.id),
-                attachments: widget.attachmentsFor(assessment.id),
-                onProgressChanged: (value) =>
-                    widget.onProgressChanged(assessment.id, value),
-                onPhasesChanged: (value) =>
-                    widget.onPhasesChanged(assessment.id, value),
-                onNoteChanged: (value) =>
-                    widget.onNoteChanged(assessment.id, value),
-                onAttachmentsChanged: (value) =>
-                    widget.onAttachmentsChanged(assessment.id, value),
-              ),
+              assessmentBuilder: _card,
             )
           : upcoming.isEmpty && past.isEmpty
               ? const _EmptyExamCalendar()
@@ -126,23 +127,7 @@ class _ExamCalendarPageState extends State<ExamCalendarPage> {
                       Text(context.l10n.text('exam.upcoming'),
                           style: Theme.of(context).textTheme.titleLarge),
                       const SizedBox(height: 8),
-                      for (final assessment in upcoming)
-                        _AssessmentCard(
-                          assessment: assessment,
-                          now: widget.now,
-                          completed: widget.completedFor(assessment.id),
-                          customPhases: widget.phasesFor(assessment.id),
-                          note: widget.noteFor(assessment.id),
-                          attachments: widget.attachmentsFor(assessment.id),
-                          onProgressChanged: (value) =>
-                              widget.onProgressChanged(assessment.id, value),
-                          onPhasesChanged: (value) =>
-                              widget.onPhasesChanged(assessment.id, value),
-                          onNoteChanged: (value) =>
-                              widget.onNoteChanged(assessment.id, value),
-                          onAttachmentsChanged: (value) =>
-                              widget.onAttachmentsChanged(assessment.id, value),
-                        ),
+                      for (final assessment in upcoming) _card(assessment),
                     ],
                     if (past.isNotEmpty) ...[
                       const SizedBox(height: 16),
@@ -397,7 +382,8 @@ class _ExamDetailPageState extends State<_ExamDetailPage> {
   }
 
   Future<void> _addAttachment() async {
-    final attachment = await pickAndStoreAssessmentAttachment(currentAccountScope());
+    final attachment =
+        await pickAndStoreAssessmentAttachment(currentAccountScope());
     if (!mounted || attachment == null) return;
     setState(() => attachments = [...attachments, attachment]);
     widget.onAttachmentsChanged(attachments);
@@ -411,7 +397,8 @@ class _ExamDetailPageState extends State<_ExamDetailPage> {
   }
 
   Future<void> _openAttachment(AssessmentAttachment attachment) async {
-    final error = await openAssessmentAttachment(attachment, currentAccountScope());
+    final error =
+        await openAssessmentAttachment(attachment, currentAccountScope());
     if (!mounted || error == null) return;
     ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text(context.l10n.text('attachment.openFailed'))));
@@ -627,23 +614,25 @@ class _ExamWeekCalendarState extends State<_ExamWeekCalendar> {
   Widget _phaseTile(ExamAssessment assessment, StudyPhase phase) => Card(
         margin: const EdgeInsets.only(bottom: 6),
         color: Theme.of(context).colorScheme.secondaryContainer,
-        child: Padding(
-          padding: const EdgeInsets.all(8),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(
-                  context.l10n.text('exam.phase',
-                      args: {'effort': context.l10n.studyLabel(phase.effort)}),
-                  style: Theme.of(context).textTheme.labelSmall),
-              const SizedBox(height: 2),
-              Text(context.l10n.studyLabel(phase.title),
-                  maxLines: 3, overflow: TextOverflow.ellipsis),
-              Text(assessment.title,
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                  style: Theme.of(context).textTheme.bodySmall),
-            ],
+        clipBehavior: Clip.antiAlias,
+        child: InkWell(
+          onTap: () => _openAssessment(assessment),
+          child: Padding(
+            padding: const EdgeInsets.all(8),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(context.l10n.text('exam.plan'),
+                    style: Theme.of(context).textTheme.labelSmall),
+                const SizedBox(height: 2),
+                Text(context.l10n.studyLabel(phase.title),
+                    maxLines: 3, overflow: TextOverflow.ellipsis),
+                Text(assessment.title,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: Theme.of(context).textTheme.bodySmall),
+              ],
+            ),
           ),
         ),
       );
@@ -744,7 +733,6 @@ class _StudyPhaseEditorState extends State<_StudyPhaseEditor> {
     final existing = index == null ? null : _phases[index];
     var title = existing?.title ?? '';
     var date = existing?.date ?? DateTime.now();
-    var effort = existing?.effort ?? 'Mittel';
     var durationDays = existing?.durationDays ?? 1;
     final result = await showDialog<StudyPhase>(
       context: context,
@@ -760,18 +748,6 @@ class _StudyPhaseEditorState extends State<_StudyPhaseEditor> {
               decoration:
                   InputDecoration(labelText: context.l10n.text('exam.name')),
               onChanged: (value) => title = value,
-            ),
-            const SizedBox(height: 12),
-            DropdownButtonFormField<String>(
-              initialValue: effort,
-              decoration:
-                  InputDecoration(labelText: context.l10n.text('exam.effort')),
-              items: ['Leicht', 'Mittel', 'Intensiv']
-                  .map((value) => DropdownMenuItem(
-                      value: value,
-                      child: Text(context.l10n.studyLabel(value))))
-                  .toList(),
-              onChanged: (value) => setDialogState(() => effort = value!),
             ),
             const SizedBox(height: 12),
             DropdownButtonFormField<int>(
@@ -817,7 +793,7 @@ class _StudyPhaseEditorState extends State<_StudyPhaseEditor> {
                           'custom-${DateTime.now().microsecondsSinceEpoch}',
                       value,
                       date,
-                      effort: effort,
+                      effort: existing?.effort ?? 'Mittel',
                       durationDays: durationDays),
                 );
               },
@@ -853,7 +829,7 @@ String _phaseSubtitle(BuildContext context, StudyPhase phase) {
   final duration = context.l10n.text(
       phase.durationDays == 1 ? 'exam.day' : 'exam.days',
       args: {'count': '${phase.durationDays}'});
-  return '$date · $duration · ${context.l10n.studyLabel(phase.effort)}';
+  return '$date · $duration';
 }
 
 class _CountdownChip extends StatelessWidget {
