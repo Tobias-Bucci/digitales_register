@@ -44,6 +44,7 @@ class MainActivity: FlutterFragmentActivity() {
             .setMethodCallHandler { call, result ->
                 when (call.method) {
                     "isForeground" -> result.success(SchoolNotificationVisibility.isForeground)
+                    "timeZone" -> result.success(java.util.TimeZone.getDefault().id)
                     "canRequestNotificationPermission" -> result.success(
                         Build.VERSION.SDK_INT >= 33 &&
                         !ActivityCompat.shouldShowRequestPermissionRationale(this, Manifest.permission.POST_NOTIFICATIONS))

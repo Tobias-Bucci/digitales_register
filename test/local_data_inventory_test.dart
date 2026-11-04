@@ -459,6 +459,8 @@ void main() {
       'lib/privacy_consent.dart': {'marker', 'privacyDecisionKey'},
       'lib/product_analytics.dart': {"'analyticsInstallationNamespaceV4'"},
       'lib/settings_persistence_service.dart': {'globalSettingsPreferenceKey'},
+      // Ids, hashes and times only; emptied on logout.
+      'lib/reminder_notifications.dart': {'reminderStoragePreferenceKey'},
       'lib/theme_controller.dart': {
         'accentPreferenceKey',
         'platformOverridePreferenceKey',

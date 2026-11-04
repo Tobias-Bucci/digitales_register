@@ -72,6 +72,7 @@ dependencies:
   scrollable_positioned_list: ^0.3.1
   shared_preferences: ^2.5.3
   sqflite: 2.4.2
+  timezone: ^0.11.2
   tuple: ^2.0.0
   uni_links:
     path: packages/uni_links
@@ -112,7 +113,6 @@ dev_dependencies:
   matcher: ^0.12.10-nullsafety.3
   msix: ^3.16.13
   quiver: ^3.2.2
-  timezone: ^0.11.2
 
 flutter_icons:
   android: "launcher_icon"

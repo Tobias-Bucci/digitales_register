@@ -111,6 +111,7 @@ private func registerSchoolNotificationChannel(_ messenger: FlutterBinaryMesseng
     .setMethodCallHandler { call, result in
       switch call.method {
       case "isForeground": result(UIApplication.shared.applicationState != .background)
+      case "timeZone": result(TimeZone.current.identifier)
       case "canRequestNotificationPermission":
         UNUserNotificationCenter.current().getNotificationSettings { settings in
           DispatchQueue.main.async { result(settings.authorizationStatus == .notDetermined) }
