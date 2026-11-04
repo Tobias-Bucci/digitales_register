@@ -44,6 +44,8 @@ import 'package:dr/i18n/app_language.dart';
 import 'package:dr/i18n/app_localizations.dart';
 import 'package:dr/middleware/middleware.dart';
 import 'package:dr/reducer/reducer.dart';
+import 'package:dr/reminder_notifications.dart';
+import 'package:dr/reminder_sync.dart';
 import 'package:dr/runtime_trace.dart';
 import 'package:dr/school_notification_engine.dart';
 import 'package:dr/school_notification_service.dart';
@@ -238,6 +240,9 @@ Future<void> _initializeAfterFirstFrame({
       handlingSchoolNotificationTap = false;
     }
   };
+  reminderNotifications
+    ..onTap = openReminderTarget
+    ..prepare();
   // Notification storage/OS scheduling is optional and can be busy in another
   // Flutter engine. It must not hold the splash screen or automatic login.
   unawaited(schoolNotificationOperation(() async {
@@ -247,6 +252,7 @@ Future<void> _initializeAfterFirstFrame({
   final loginTimer = Stopwatch()..start();
   runtimeTrace('AppStartup', 'login-start',
       detail: 'startupMs=${startupStopwatch.elapsedMilliseconds}');
+  reminderSync.attach(store.nextState, store.state);
   await store.actions.start(uri);
   runtimeTrace('AppStartup', 'login-end',
       durationMs: loginTimer.elapsedMilliseconds);

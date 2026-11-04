@@ -369,6 +369,12 @@ abstract class SettingsState
   bool get amoledMode;
   bool get biometricAppLockEnabled;
 
+  /// Whether a notification reminds the user daily to sign up for the Mensa.
+  bool get mensaReminderEnabled;
+
+  /// The local time of that reminder, in minutes after midnight.
+  int get mensaReminderMinuteOfDay;
+
   /// Local learning-plan state, keyed by the stable dashboard assessment id.
   /// Values are compact strings of completed phase ids so the state remains
   /// serializable together with the user's other settings.
@@ -444,6 +450,8 @@ abstract class SettingsState
       ..dashboardColorTestsInRed = true
       ..amoledMode = false
       ..biometricAppLockEnabled = false
+      ..mensaReminderEnabled = false
+      ..mensaReminderMinuteOfDay = 7 * 60 + 30
       ..assessmentStudyProgress = MapBuilder<String, String>()
       ..assessmentStudyNotes = MapBuilder<String, String>()
       ..assessmentStudyAttachments = MapBuilder<String, String>()

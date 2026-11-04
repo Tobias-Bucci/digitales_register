@@ -125,6 +125,10 @@ class SettingsPageContainer extends StatelessWidget {
                 actions.settingsActions.removeCalendarSyncEvents.call,
             onRecreateMissingCalendarSyncEvents:
                 actions.settingsActions.recreateMissingCalendarSyncEvents.call,
+            onSetMensaReminderEnabled:
+                actions.settingsActions.mensaReminderEnabled.call,
+            onSetMensaReminderMinuteOfDay:
+                actions.settingsActions.mensaReminderMinuteOfDay.call,
             onSetAmoledMode: actions.settingsActions.amoledMode.call,
             onSetAccent: (accent) =>
                 unawaited(themeController.setAccent(accent)),
@@ -198,6 +202,8 @@ class SettingsViewModel {
   final bool dashboardColorTestsInRed;
   final bool substituteDetectionEnabled;
   final bool calendarSyncEnabled;
+  final bool mensaReminderEnabled;
+  final int mensaReminderMinuteOfDay;
   final int? calendarSyncCalendarId;
   final bool amoledMode;
   final bool demoMode;
@@ -233,6 +239,9 @@ class SettingsViewModel {
         substituteDetectionEnabled =
             state.settingsState.substituteDetectionEnabled,
         calendarSyncEnabled = state.settingsState.calendarSyncEnabled,
+        mensaReminderEnabled = state.settingsState.mensaReminderEnabled,
+        mensaReminderMinuteOfDay =
+            state.settingsState.mensaReminderMinuteOfDay,
         calendarSyncCalendarId = state.settingsState.calendarSyncCalendarId,
         amoledMode = state.settingsState.amoledMode,
         allSubjects = _sortedIgnoreCase(state.extractAllSubjects()),
@@ -284,6 +293,8 @@ class SettingsViewModel {
             other.dashboardColorTestsInRed == dashboardColorTestsInRed &&
             other.substituteDetectionEnabled == substituteDetectionEnabled &&
             other.calendarSyncEnabled == calendarSyncEnabled &&
+            other.mensaReminderEnabled == mensaReminderEnabled &&
+            other.mensaReminderMinuteOfDay == mensaReminderMinuteOfDay &&
             other.calendarSyncCalendarId == calendarSyncCalendarId &&
             other.amoledMode == amoledMode &&
             other.demoMode == demoMode &&
@@ -330,6 +341,8 @@ class SettingsViewModel {
         dashboardColorTestsInRed,
         substituteDetectionEnabled,
         calendarSyncEnabled,
+        mensaReminderEnabled,
+        mensaReminderMinuteOfDay,
         calendarSyncCalendarId,
         amoledMode,
         demoMode,

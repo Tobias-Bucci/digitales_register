@@ -1051,5 +1051,14 @@
   "settings.storeData.confirm.title": "Gespeicherte Daten löschen?",
   "settings.storeData.confirm.body": "Die gespeicherten Daten dieses Kontos (zuletzt geladene Seiten wie Dashboard, Noten, Hausaufgaben, Klassenbuch und Kursmaterial) werden von diesem Gerät gelöscht und künftig nicht mehr gespeichert. Eigene Lernnotizen und -dateien, Fristen, heruntergeladene Dateien und in den Gerätekalender exportierte Einträge bleiben erhalten.",
   "settings.storeData.confirm.confirm": "Ausschalten und löschen",
-  "settings.storeData.deleteFailed": "Die gespeicherten Daten konnten nicht vollständig gelöscht werden."
+  "settings.storeData.deleteFailed": "Die gespeicherten Daten konnten nicht vollständig gelöscht werden.",
+  "reminders.settings.title": "Erinnerungen",
+  "reminders.settings.subtitle": "Benachrichtigungen, die dieses Gerät selbst plant.",
+  "reminders.settings.permission": "Benachrichtigungen sind nicht erlaubt, deshalb erscheinen keine Erinnerungen. Du kannst sie in den Geräteeinstellungen unter Apps / Register / Benachrichtigungen erlauben.",
+  "reminders.settings.whileRunning": "Auf diesem System erscheinen Erinnerungen nur, solange die App geöffnet ist.",
+  "reminders.mensa.setting": "Mensa-Erinnerung",
+  "reminders.mensa.settingHint": "Erinnert dich jeden Tag daran, dich auf mensa.franziskanergymnasium.it anzumelden.",
+  "reminders.mensa.time": "Uhrzeit",
+  "reminders.mensa.title": "Mensa-Anmeldung",
+  "reminders.mensa.body": "Denk daran, dich für die Mensa anzumelden."
 }

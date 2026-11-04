@@ -153,6 +153,13 @@ class ReminderNotificationService {
   /// reload of the dashboard.
   Future<void> sync(List<PlannedReminder> reminders) =>
       _mutex.protect(() async {
+        // Nothing to do for everyone who does not use reminders: the plugin
+        // stays untouched on the platforms that have no other use for it.
+        if (reminders.isEmpty &&
+            _whileRunning.isEmpty &&
+            _readStored(await SharedPreferences.getInstance()).isEmpty) {
+          return;
+        }
         await _initialize();
         final now = _clock();
         final expanded = _expand(reminders, now);
