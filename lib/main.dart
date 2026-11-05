@@ -240,9 +240,18 @@ Future<void> _initializeAfterFirstFrame({
       handlingSchoolNotificationTap = false;
     }
   };
-  reminderNotifications
-    ..onTap = openReminderTarget
-    ..prepare();
+  // Reads the state at the time of the tap: a link changed after a reminder was
+  // scheduled counts, and the settings are there before the sign-in.
+  reminderNotifications.onTap = (payload) => openReminderTarget(
+        payload,
+        mensaUrl: store.state.settingsState.mensaReminderUrl,
+        openDashboard: () {
+          // Before the sign-in the app is on its way to the dashboard anyway,
+          // and the login page must stay.
+          if (store.state.loginState.loggedIn) showDashboardHome();
+        },
+      );
+  reminderNotifications.prepare();
   // Notification storage/OS scheduling is optional and can be busy in another
   // Flutter engine. It must not hold the splash screen or automatic login.
   unawaited(schoolNotificationOperation(() async {

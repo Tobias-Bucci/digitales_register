@@ -129,6 +129,8 @@ class SettingsPageContainer extends StatelessWidget {
                 actions.settingsActions.mensaReminderEnabled.call,
             onSetMensaReminderMinuteOfDay:
                 actions.settingsActions.mensaReminderMinuteOfDay.call,
+            onSetMensaReminderUrl:
+                actions.settingsActions.mensaReminderUrl.call,
             onSetAssessmentRemindersEnabled:
                 actions.settingsActions.assessmentRemindersEnabled.call,
             onSetAssessmentReminderDays: (days) => actions.settingsActions
@@ -211,6 +213,7 @@ class SettingsViewModel {
   final bool calendarSyncEnabled;
   final bool mensaReminderEnabled;
   final int mensaReminderMinuteOfDay;
+  final String mensaReminderUrl;
   final bool assessmentRemindersEnabled;
   final List<int> assessmentReminderDays;
   final int assessmentReminderMinuteOfDay;
@@ -253,6 +256,7 @@ class SettingsViewModel {
         mensaReminderEnabled = state.settingsState.mensaReminderEnabled,
         mensaReminderMinuteOfDay =
             state.settingsState.mensaReminderMinuteOfDay,
+        mensaReminderUrl = state.settingsState.mensaReminderUrl,
         assessmentRemindersEnabled =
             state.settingsState.assessmentRemindersEnabled,
         assessmentReminderDays =
@@ -313,6 +317,7 @@ class SettingsViewModel {
             other.calendarSyncEnabled == calendarSyncEnabled &&
             other.mensaReminderEnabled == mensaReminderEnabled &&
             other.mensaReminderMinuteOfDay == mensaReminderMinuteOfDay &&
+            other.mensaReminderUrl == mensaReminderUrl &&
             other.assessmentRemindersEnabled == assessmentRemindersEnabled &&
             other.assessmentReminderMinuteOfDay ==
                 assessmentReminderMinuteOfDay &&
@@ -369,6 +374,7 @@ class SettingsViewModel {
         calendarSyncEnabled,
         mensaReminderEnabled,
         mensaReminderMinuteOfDay,
+        mensaReminderUrl,
         assessmentRemindersEnabled,
         _settingsViewModelEquality.hash(assessmentReminderDays),
         assessmentReminderMinuteOfDay,

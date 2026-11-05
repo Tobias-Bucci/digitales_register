@@ -82,6 +82,7 @@ class SettingsPageWidget extends StatefulWidget {
   final Future<void> Function() onRecreateMissingCalendarSyncEvents;
   final OnSettingChanged<bool> onSetMensaReminderEnabled;
   final OnSettingChanged<int> onSetMensaReminderMinuteOfDay;
+  final OnSettingChanged<String> onSetMensaReminderUrl;
   final OnSettingChanged<bool> onSetAssessmentRemindersEnabled;
   final OnSettingChanged<List<int>> onSetAssessmentReminderDays;
   final OnSettingChanged<int> onSetAssessmentReminderMinuteOfDay;
@@ -136,6 +137,7 @@ class SettingsPageWidget extends StatefulWidget {
     required this.onRecreateMissingCalendarSyncEvents,
     required this.onSetMensaReminderEnabled,
     required this.onSetMensaReminderMinuteOfDay,
+    required this.onSetMensaReminderUrl,
     required this.onSetAssessmentRemindersEnabled,
     required this.onSetAssessmentReminderDays,
     required this.onSetAssessmentReminderMinuteOfDay,
@@ -1253,8 +1255,10 @@ class _SettingsPageWidgetState extends State<SettingsPageWidget> {
           ReminderSettings(
             mensaEnabled: widget.vm.mensaReminderEnabled,
             mensaMinuteOfDay: widget.vm.mensaReminderMinuteOfDay,
+            mensaUrl: widget.vm.mensaReminderUrl,
             onSetMensaEnabled: widget.onSetMensaReminderEnabled,
             onSetMensaMinuteOfDay: widget.onSetMensaReminderMinuteOfDay,
+            onSetMensaUrl: widget.onSetMensaReminderUrl,
             assessmentsEnabled: widget.vm.assessmentRemindersEnabled,
             assessmentDays: widget.vm.assessmentReminderDays,
             onSetAssessmentsEnabled: widget.onSetAssessmentRemindersEnabled,

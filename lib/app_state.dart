@@ -385,6 +385,9 @@ abstract class SettingsState
   /// The local time of that reminder, in minutes after midnight.
   int get mensaReminderMinuteOfDay;
 
+  /// What tapping that reminder opens; empty means the dashboard.
+  String get mensaReminderUrl;
+
   /// Whether notifications remind of every upcoming test and exam.
   bool get assessmentRemindersEnabled;
 
@@ -473,6 +476,7 @@ abstract class SettingsState
       ..biometricAppLockEnabled = false
       ..mensaReminderEnabled = false
       ..mensaReminderMinuteOfDay = 7 * 60 + 30
+      ..mensaReminderUrl = ''
       ..assessmentRemindersEnabled = false
       ..assessmentReminderDays = ListBuilder<int>(defaultAssessmentReminderDays)
       ..assessmentReminderMinuteOfDay = defaultAssessmentReminderMinuteOfDay
