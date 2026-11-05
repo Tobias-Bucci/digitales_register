@@ -35,6 +35,34 @@ import 'package:flutter_built_redux/flutter_built_redux.dart';
 
 part 'sidebar_container.g.dart';
 
+void showExamCalendarPage() {
+  scaffoldKey!.currentState!.selectContentWidget(
+    const ExamCalendarContainer(),
+    Pages.examCalendar,
+  );
+}
+
+void showClassRegisterPage() {
+  scaffoldKey!.currentState!.selectContentWidget(
+    ClassRegisterPage(key: UniqueKey()),
+    Pages.classRegister,
+  );
+}
+
+void showCourseMaterialsPage() {
+  scaffoldKey!.currentState!.selectContentWidget(
+    CourseMaterialsPage(key: UniqueKey()),
+    Pages.courseMaterials,
+  );
+}
+
+void showHomeworkSummaryPage() {
+  scaffoldKey!.currentState!.selectContentWidget(
+    const HomeworkSummaryPage(),
+    Pages.homeworkSummary,
+  );
+}
+
 class SidebarContainer extends StatelessWidget {
   final bool tabletMode;
   final VoidCallback goHome;
@@ -61,30 +89,10 @@ class SidebarContainer extends StatelessWidget {
           username: state.username,
           showAbsences: actions.routingActions.showAbsences.call,
           showCalendar: actions.routingActions.showCalendar.call,
-          showExamCalendar: () {
-            scaffoldKey!.currentState!.selectContentWidget(
-              const ExamCalendarContainer(),
-              Pages.examCalendar,
-            );
-          },
-          showClassRegister: () {
-            scaffoldKey!.currentState!.selectContentWidget(
-              ClassRegisterPage(key: UniqueKey()),
-              Pages.classRegister,
-            );
-          },
-          showCourseMaterials: () {
-            scaffoldKey!.currentState!.selectContentWidget(
-              CourseMaterialsPage(key: UniqueKey()),
-              Pages.courseMaterials,
-            );
-          },
-          showHomeworkSummary: () {
-            scaffoldKey!.currentState!.selectContentWidget(
-              const HomeworkSummaryPage(),
-              Pages.homeworkSummary,
-            );
-          },
+          showExamCalendar: showExamCalendarPage,
+          showClassRegister: showClassRegisterPage,
+          showCourseMaterials: showCourseMaterialsPage,
+          showHomeworkSummary: showHomeworkSummaryPage,
           showCertificate: actions.routingActions.showCertificate.call,
           showGrades: actions.routingActions.showGrades.call,
           showMessages: actions.routingActions.showMessages.call,

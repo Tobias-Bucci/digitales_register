@@ -136,6 +136,7 @@ class SettingsPageContainer extends StatelessWidget {
             onSetAssessmentReminderMinuteOfDay:
                 actions.settingsActions.assessmentReminderMinuteOfDay.call,
             onSetAmoledMode: actions.settingsActions.amoledMode.call,
+            onSetLegacyDesign: actions.settingsActions.legacyDesign.call,
             onSetAccent: (accent) =>
                 unawaited(themeController.setAccent(accent)),
             onSetSubjectTheme: actions.settingsActions.setSubjectTheme.call,
@@ -215,6 +216,7 @@ class SettingsViewModel {
   final int assessmentReminderMinuteOfDay;
   final int? calendarSyncCalendarId;
   final bool amoledMode;
+  final bool legacyDesign;
   final bool demoMode;
   final List<String> allSubjects;
   final List<String> ignoreForGradesAverage;
@@ -259,6 +261,7 @@ class SettingsViewModel {
             state.settingsState.assessmentReminderMinuteOfDay,
         calendarSyncCalendarId = state.settingsState.calendarSyncCalendarId,
         amoledMode = state.settingsState.amoledMode,
+        legacyDesign = state.settingsState.legacyDesign,
         allSubjects = _sortedIgnoreCase(state.extractAllSubjects()),
         allTeachers = _mergedTeachers(
           state.extractAllTeachers(),
@@ -319,6 +322,7 @@ class SettingsViewModel {
             ) &&
             other.calendarSyncCalendarId == calendarSyncCalendarId &&
             other.amoledMode == amoledMode &&
+            other.legacyDesign == legacyDesign &&
             other.demoMode == demoMode &&
             _settingsViewModelEquality.equals(other.allSubjects, allSubjects) &&
             _settingsViewModelEquality.equals(
@@ -370,6 +374,7 @@ class SettingsViewModel {
         assessmentReminderMinuteOfDay,
         calendarSyncCalendarId,
         amoledMode,
+        legacyDesign,
         demoMode,
         _settingsViewModelEquality.hash(allSubjects),
         _settingsViewModelEquality.hash(ignoreForGradesAverage),

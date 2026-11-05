@@ -53,6 +53,7 @@ import 'package:dr/class_register_cache.dart';
 import 'package:dr/container/absences_page_container.dart';
 import 'package:dr/container/calendar_container.dart';
 import 'package:dr/container/certificate_container.dart';
+import 'package:dr/container/extras_page_container.dart';
 import 'package:dr/container/grades_page_container.dart';
 import 'package:dr/container/messages_container.dart';
 import 'package:dr/container/settings_page.dart';

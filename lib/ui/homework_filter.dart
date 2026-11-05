@@ -21,6 +21,7 @@ import 'package:dr/container/homework_filter_container.dart';
 import 'package:dr/data.dart';
 import 'package:dr/i18n/app_localizations.dart';
 import 'package:flutter/material.dart';
+import 'package:responsive_scaffold/responsive_scaffold.dart';
 
 typedef HomeworkBlacklistCallback = void Function(
     ListBuilder<HomeworkType> blacklist);
@@ -98,6 +99,7 @@ class _HomeworkFilterState extends State<HomeworkFilter>
 
     await showModalBottomSheet<void>(
       context: context,
+      useRootNavigator: ResponsiveNavigationScope.isActive(context),
       isScrollControlled: true,
       builder: (context) {
         return StatefulBuilder(

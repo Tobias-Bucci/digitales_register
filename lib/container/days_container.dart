@@ -22,6 +22,7 @@ import 'package:dr/actions/app_actions.dart';
 import 'package:dr/actions/dashboard_actions.dart';
 import 'package:dr/app_selectors.dart';
 import 'package:dr/app_state.dart';
+import 'package:dr/config.dart';
 import 'package:dr/data.dart';
 import 'package:dr/local_reminder_assessments.dart';
 import 'package:dr/ui/days.dart';
@@ -123,6 +124,10 @@ abstract class DaysViewModel
   bool get showAddReminder;
   bool get colorBorders;
   bool get colorTestsInRed;
+  bool get legacyDesign;
+
+  /// The school in the header of the new design; null if it is unknown.
+  String? get schoolName;
   BuiltMap<String, SubjectTheme> get subjectThemes;
 
   bool get showNotifications;
@@ -137,8 +142,9 @@ abstract class DaysViewModel
   factory DaysViewModel([void Function(DaysViewModelBuilder)? updates]) =
       _$DaysViewModel;
   DaysViewModel._();
-  static void _initializeBuilder(DaysViewModelBuilder builder) =>
-      builder.showEmptyDays = true;
+  static void _initializeBuilder(DaysViewModelBuilder builder) => builder
+    ..showEmptyDays = true
+    ..legacyDesign = false;
 
   factory DaysViewModel.from(AppState state) {
     return DaysViewModel(
@@ -163,9 +169,17 @@ abstract class DaysViewModel
         ..showEmptyDays = state.dashboardState.showEmptyDays
         ..colorBorders = state.settingsState.dashboardColorBorders
         ..colorTestsInRed = state.settingsState.dashboardColorTestsInRed
+        ..legacyDesign = state.settingsState.legacyDesign
+        ..schoolName = schoolNameForUrl(state.url) ?? _hostOf(state.url)
         ..subjectThemes = state.settingsState.subjectThemes.toBuilder(),
     );
   }
+}
+
+/// A self-hosted school is not in the list, but its address identifies it.
+String? _hostOf(String? url) {
+  final host = url == null ? null : Uri.tryParse(url.trim())?.host;
+  return host == null || host.isEmpty ? null : host;
 }
 
 // Map all (previously by the server used) homework types to the titles they

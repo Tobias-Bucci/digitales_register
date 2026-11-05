@@ -85,6 +85,7 @@ class SettingsPageWidget extends StatefulWidget {
   final OnSettingChanged<List<int>> onSetAssessmentReminderDays;
   final OnSettingChanged<int> onSetAssessmentReminderMinuteOfDay;
   final OnSettingChanged<bool> onSetAmoledMode;
+  final OnSettingChanged<bool> onSetLegacyDesign;
   final OnSettingChanged<AppAccent> onSetAccent;
   final OnSettingChanged<MapEntry<String, SubjectTheme>> onSetSubjectTheme;
   final OnSettingChanged<Map<String, String>> onSetSubjectNicks;
@@ -138,6 +139,7 @@ class SettingsPageWidget extends StatefulWidget {
     required this.onSetAssessmentReminderDays,
     required this.onSetAssessmentReminderMinuteOfDay,
     required this.onSetAmoledMode,
+    required this.onSetLegacyDesign,
     required this.onSetAccent,
     required this.onSetFavoriteSubjects,
     required this.currentThemePreference,
@@ -824,6 +826,38 @@ class _SettingsPageWidgetState extends State<SettingsPageWidget> {
           ),
         ),
         ListTile(
+          key: const Key('settings-design-tile'),
+          title: Text(l10n.text('settings.design.title')),
+          subtitle: Text(l10n.text(widget.vm.legacyDesign
+              ? 'settings.design.legacyHint'
+              : 'settings.design.newHint')),
+        ),
+        Padding(
+          padding: const EdgeInsets.fromLTRB(16, 0, 16, 12),
+          child: SizedBox(
+            width: double.infinity,
+            child: SegmentedButton<bool>(
+              key: const Key('settings-design-switch'),
+              showSelectedIcon: false,
+              segments: [
+                ButtonSegment(
+                  value: false,
+                  icon: const Icon(Icons.auto_awesome_outlined),
+                  label: Text(l10n.text('settings.design.new')),
+                ),
+                ButtonSegment(
+                  value: true,
+                  icon: const Icon(Icons.history_rounded),
+                  label: Text(l10n.text('settings.design.legacy')),
+                ),
+              ],
+              selected: {widget.vm.legacyDesign},
+              onSelectionChanged: (selection) =>
+                  widget.onSetLegacyDesign(selection.first),
+            ),
+          ),
+        ),
+        ListTile(
           key: const Key('settings-language-tile'),
           title: Text(l10n.text('settings.language.label')),
           trailing: SizedBox(
@@ -1189,7 +1223,12 @@ class _SettingsPageWidgetState extends State<SettingsPageWidget> {
         title: Text(l10n.text('settings.title')),
       ),
       body: ListView(
-        padding: const EdgeInsets.fromLTRB(16, 16, 16, 24),
+        padding: EdgeInsets.fromLTRB(
+          16,
+          16,
+          16,
+          24 + ResponsiveNavigationScope.bottomInsetOf(context),
+        ),
         children: <Widget>[
           if (widget.vm.demoMode) ...[
             _buildDemoSection(l10n),
@@ -1371,7 +1410,12 @@ class _SettingsDetailPage extends StatelessWidget {
         title: Text(title),
       ),
       body: ListView(
-        padding: const EdgeInsets.fromLTRB(16, 16, 16, 24),
+        padding: EdgeInsets.fromLTRB(
+          16,
+          16,
+          16,
+          24 + ResponsiveNavigationScope.bottomInsetOf(context),
+        ),
         children: children,
       ),
     );

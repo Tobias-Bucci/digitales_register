@@ -368,6 +368,10 @@ abstract class SettingsState
   int? get calendarSyncCalendarId;
   bool get dashboardColorTestsInRed;
   bool get amoledMode;
+
+  /// Keeps the previous dashboard, with its app bar, bell and sidebar, instead
+  /// of the new design.
+  bool get legacyDesign;
   bool get biometricAppLockEnabled;
 
   /// Whether a notification reminds the user daily to sign up for the Mensa.
@@ -459,6 +463,7 @@ abstract class SettingsState
       ..calendarSyncCalendarId = null
       ..dashboardColorTestsInRed = true
       ..amoledMode = false
+      ..legacyDesign = false
       ..biometricAppLockEnabled = false
       ..mensaReminderEnabled = false
       ..mensaReminderMinuteOfDay = 7 * 60 + 30

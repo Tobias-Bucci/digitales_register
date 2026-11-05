@@ -301,7 +301,12 @@ class _ExportPageState extends State<ExportPage> {
               child: ConstrainedBox(
                   constraints: const BoxConstraints(maxWidth: 840),
                   child: ListView(
-                      padding: const EdgeInsets.fromLTRB(16, 20, 16, 32),
+                      padding: EdgeInsets.fromLTRB(
+                        16,
+                        20,
+                        16,
+                        32 + ResponsiveNavigationScope.bottomInsetOf(context),
+                      ),
                       children: [
                         if (widget.loading) const LinearProgressIndicator(),
                         if (widget.loading) Text(t('loading')),
