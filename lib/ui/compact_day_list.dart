@@ -331,11 +331,8 @@ class CompactEntryRow extends StatelessWidget {
       );
 
   void _openDetails(BuildContext context, Future<void> Function() delete) {
-    showModalBottomSheet<void>(
+    showGlassSheet<void>(
       context: context,
-      useRootNavigator: true,
-      isScrollControlled: true,
-      showDragHandle: true,
       builder: (_) => EntryDetailsSheet(
         id: item.id,
         fallback: item,

@@ -32,11 +32,8 @@ import 'package:responsive_scaffold/responsive_scaffold.dart';
 Future<void> showProfileMenu(BuildContext context) {
   final wide = MediaQuery.sizeOf(context).width >= tabletLayoutBreakpoint;
   if (!wide) {
-    return showModalBottomSheet<void>(
+    return showGlassSheet<void>(
       context: context,
-      useRootNavigator: true,
-      isScrollControlled: true,
-      showDragHandle: true,
       builder: (_) => const SingleChildScrollView(
         child: ProfileMenuContainer(),
       ),
@@ -50,14 +47,19 @@ Future<void> showProfileMenu(BuildContext context) {
         padding: const EdgeInsets.fromLTRB(96, 24, 24, 16),
         child: ConstrainedBox(
           constraints: const BoxConstraints(maxWidth: 360),
-          child: Material(
-            clipBehavior: Clip.antiAlias,
-            elevation: 6,
-            color: Theme.of(context).colorScheme.surfaceContainerHigh,
+          child: GlassSurface(
+            tint: Theme.of(context).colorScheme.surfaceContainerHigh,
+            opacity: DesignTokens.sheetOpacity,
             borderRadius: DesignTokens.cardBorderRadius,
-            child: const SingleChildScrollView(
-              padding: EdgeInsets.only(top: 8),
-              child: ProfileMenuContainer(),
+            rim: GlassRim.around,
+            child: const Material(
+              type: MaterialType.transparency,
+              clipBehavior: Clip.antiAlias,
+              borderRadius: DesignTokens.cardBorderRadius,
+              child: SingleChildScrollView(
+                padding: EdgeInsets.only(top: 8),
+                child: ProfileMenuContainer(),
+              ),
             ),
           ),
         ),

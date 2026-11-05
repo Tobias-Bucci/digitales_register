@@ -18,6 +18,7 @@
 import 'package:dr/dashboard_items.dart';
 import 'package:dr/i18n/app_localizations.dart';
 import 'package:dr/ui/dashboard_customize_dialog.dart';
+import 'package:dr/ui/glass_surface.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/semantics.dart';
 import 'package:flutter/services.dart';
@@ -194,10 +195,9 @@ class _DashboardCardEditorState extends State<DashboardCardEditor> {
   }
 
   Future<void> _showAddSheet() async {
-    final selected = await showModalBottomSheet<DashboardItem>(
+    final selected = await showGlassSheet<DashboardItem>(
       context: context,
-      useRootNavigator: true,
-      showDragHandle: true,
+      isScrollControlled: false,
       builder: (context) => SafeArea(
         top: false,
         child: ListView(
