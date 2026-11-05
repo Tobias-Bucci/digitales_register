@@ -19,6 +19,7 @@ import 'package:dr/actions/app_actions.dart';
 import 'package:dr/app_state.dart';
 import 'package:dr/dashboard_events.dart';
 import 'package:dr/ui/dashboard_event_banner.dart';
+import 'package:dr/ui/glass_surface.dart';
 import 'package:dr/ui/sorted_grades_widget.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_built_redux/flutter_built_redux.dart';
@@ -116,11 +117,8 @@ class DashboardEventsContainer extends StatelessWidget {
             canDismiss: !offline,
             onOpen: (event) => _open(actions, event, offline),
             onDismiss: (event) => markDashboardEventSeen(actions, event),
-            onShowAll: () => showModalBottomSheet<void>(
+            onShowAll: () => showGlassSheet<void>(
               context: context,
-              useRootNavigator: true,
-              isScrollControlled: true,
-              showDragHandle: true,
               builder: (sheetContext) =>
                   StoreConnection<AppState, AppActions, _EventSource>(
                 connect: _EventSource.new,
