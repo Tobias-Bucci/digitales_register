@@ -915,7 +915,7 @@ class _DaysWidgetState extends State<DaysWidget> {
       navKey: nestedNavKey,
     );
     final grouped = BackdropGroup(child: scaffold);
-    return modern ? GlassDialogTheme(child: grouped) : grouped;
+    return modern ? NewDesignTheme(child: grouped) : grouped;
   }
 }
 

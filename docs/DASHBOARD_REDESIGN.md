@@ -76,7 +76,7 @@ hellsten, nach unten gleichmäßig schwächer, links und rechts identisch. Schat
 haben keinen horizontalen Versatz. Der Verlauf klingt über eine feste Pixeltiefe
 aus, damit „+“ und ein hohes Sheet gleich betont sind. Das Rezept steht nur in
 `GlassRimPainter` und `GlassSheenPainter`. Zeilen bekommen nur den Rand, weil ihr
-Text auf kräftigen Farben steht. Dialoge erben den Rand über `GlassDialogTheme`
+Text auf kräftigen Farben steht. Dialoge erben den Rand über `NewDesignTheme`
 vom Ort, an dem sie geöffnet werden, und bleiben dadurch in Legacy unberührt. Die
 Tests spiegeln gerenderte Flächen pixelgenau.
 
@@ -85,8 +85,7 @@ Die Bindung links am Notizblock-Kästchen gehört zum App-Logo und ist kein Lich
 Die Linse der Navigationsleiste gleitet auf einer Feder zum gewählten Eintrag,
 streckt sich dabei mit ihrer Geschwindigkeit, und Symbole unter ihr wachsen leicht.
 Das ersetzt Brechung, die einen zweiten Backdrop bräuchte. Bei „Bewegung
-reduzieren“ springt sie. Die Leiste am Rand breiter Fenster zeigt dieselbe Füllung
-und denselben Rand, ohne zu gleiten.
+reduzieren“ springt sie.
 
 Die Deckkraft ist so gewählt, dass Text über dem ungünstigsten Hintergrund AA
 erreicht; die Tests rechnen das für jede Akzentfarbe nach. Auf hellen Sheets
@@ -99,9 +98,27 @@ Bewusst nicht verwendet:
   schon verschwommenen Hintergrund sichtbar nichts.
 - Sättigung im Backdrop-Filter: kaum sichtbar bei dieser Deckkraft, aber ein
   zusätzlicher Filterdurchgang.
+- Eine schwebende Leiste unten auf dem Desktop: 16:9-Fenster haben Breite übrig,
+  aber wenig Höhe.
 - Fragment-Shader für Brechung: Shader in `ImageFilter` gibt es nur mit Impeller,
   Linux und Windows wären außen vor.
-- Dialoge: Ihr Theme gilt auch für Legacy.
+
+## Breite Fenster
+
+Ab 720 px ist die Navigation dieselbe Leiste wie auf dem Handy, nur hochkant: am
+linken Rand, schwebend, mit derselben Linse. Beide teilen sich `_LensTrack`. Die
+Kopfzeile schwebt ebenfalls und richtet sich an der Spalte aus, Sheets werden zu
+zentrierten Panels aus demselben Glas (`showGlassSheet`).
+
+Ab 1080 px teilt `DashboardColumns` das Dashboard: Übersicht und Banner behalten
+ihre Handybreite und bleiben stehen, daneben scrollt die Tagesliste. Beide Spalten
+zusammen werden nicht breiter als 1220 px, mehr Platz wird zu Rand. Die Liste
+selbst reicht bis zum Fensterrand, damit dort auch ihre Scrollleiste liegt.
+
+Flutter zeigt in nativen Desktop-Apps auf Buttons den normalen Pfeil. Das neue
+Design setzt über `NewDesignTheme` die Hand, die Tastatur bekommt auf Glas einen
+deutlichen Ring (`GlassFocusRing`). Seiten, die Legacy mitbenutzt, begrenzen ihre
+Breite nur im neuen Design (`NewDesignReadable`).
 
 ## Beta-Rollout
 

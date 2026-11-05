@@ -10,6 +10,7 @@ import 'package:dr/config.dart';
 import 'package:dr/container/days_container.dart';
 import 'package:dr/container/notification_icon_container.dart';
 import 'package:dr/container/profile_menu_container.dart';
+import 'package:dr/container/settings_page.dart';
 import 'package:dr/dashboard_events.dart';
 import 'package:dr/data.dart';
 import 'package:dr/i18n/app_language.dart';
@@ -27,6 +28,7 @@ import 'package:dr/ui/days.dart';
 import 'package:dr/ui/glass_surface.dart';
 import 'package:dr/ui/notepad_mark.dart';
 import 'package:dr/ui/profile_menu.dart';
+import 'package:dr/ui/readable_content.dart';
 import 'package:dr/ui/school_countdown_overview.dart';
 import 'package:dr/ui/sidebar.dart';
 import 'package:dr/ui/sorted_grades_widget.dart';
@@ -35,6 +37,7 @@ import 'package:flutter/foundation.dart'
     show debugDefaultTargetPlatformOverride;
 import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart' hide Notification;
+import 'package:flutter/rendering.dart' show RendererBinding;
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 
@@ -2062,6 +2065,189 @@ void main() {
       expect(tester.getRect(panel).left, appNavigationRailExtent);
       expect(tester.getRect(panel).bottom, 768 - DesignTokens.gutter);
     });
+  });
+
+  group('desktop interaction', () {
+    AppState online() => _dashboardState(notifications: [
+          buildNotification(type: 'message', objectId: 1, title: 'Hinweis'),
+        ]).rebuild((b) => b.noInternet = false);
+
+    Future<void> pumpDesktop(WidgetTester tester) async {
+      debugDefaultTargetPlatformOverride = TargetPlatform.windows;
+      await _pumpDashboard(tester, online(), size: const Size(1366, 768));
+    }
+
+    Future<TestGesture> mouseOn(WidgetTester tester) async {
+      final mouse = await tester.createGesture(
+        kind: PointerDeviceKind.mouse,
+        pointer: 1,
+      );
+      await mouse.addPointer(location: Offset.zero);
+      addTearDown(mouse.removePointer);
+      await tester.pump();
+      return mouse;
+    }
+
+    testWidgets('clickable surfaces show the click cursor', (tester) async {
+      await pumpDesktop(tester);
+      final mouse = await mouseOn(tester);
+
+      for (final target in [
+        find.byKey(const ValueKey('compact-row-open-1')),
+        find.byKey(const ValueKey('compact-row-check-1')),
+        find.byKey(ValueKey('day-add-entry-$_today')),
+        find.byKey(const ValueKey('app-navigation-grades')),
+        find.byType(EventBanner),
+        find.text('Filter'),
+      ]) {
+        await mouse.moveTo(tester.getCenter(target));
+        await tester.pump();
+        expect(
+          RendererBinding.instance.mouseTracker.debugDeviceActiveCursor(1),
+          SystemMouseCursors.click,
+          reason: target.describeMatch(Plurality.one),
+        );
+      }
+      debugDefaultTargetPlatformOverride = null;
+    });
+
+    testWidgets('rows react to the mouse on every kind of fill',
+        (tester) async {
+      await pumpDesktop(tester);
+
+      final context = tester.element(find.byType(CompactDayWidget));
+      final scheme = Theme.of(context).colorScheme;
+      final open = tester.widget<InkWell>(
+        find.byKey(const ValueKey('compact-row-open-1')),
+      );
+      expect(open.hoverColor, scheme.onExam.withValues(alpha: 0.1));
+      debugDefaultTargetPlatformOverride = null;
+    });
+
+    testWidgets('tooltips name the destinations of the rail', (tester) async {
+      await pumpDesktop(tester);
+
+      final mouse = await mouseOn(tester);
+      await mouse.moveTo(
+        tester.getCenter(find.byKey(const ValueKey('app-navigation-calendar'))),
+      );
+      await tester.pump(const Duration(seconds: 1));
+
+      expect(find.text('Kalender'), findsOneWidget);
+      debugDefaultTargetPlatformOverride = null;
+      await tester.pumpWidget(const SizedBox());
+      await tester.pump(const Duration(seconds: 1));
+    });
+
+    Iterable<GlassFocusRingPainter> rings(WidgetTester tester) => tester
+        .widgetList<CustomPaint>(find.byType(CustomPaint))
+        .map((paint) => paint.foregroundPainter)
+        .whereType<GlassFocusRingPainter>();
+
+    testWidgets('the keyboard gets a clear ring around a row', (tester) async {
+      await pumpDesktop(tester);
+      FocusManager.instance.highlightStrategy =
+          FocusHighlightStrategy.alwaysTraditional;
+      addTearDown(() => FocusManager.instance.highlightStrategy =
+          FocusHighlightStrategy.automatic);
+      expect(rings(tester), isEmpty);
+
+      Focus.of(tester.element(find
+              .descendant(
+                of: find.byKey(const ValueKey('compact-row-open-1')),
+                matching: find.byType(ConstrainedBox),
+              )
+              .first))
+          .requestFocus();
+      await tester.pump();
+
+      expect(rings(tester), hasLength(1));
+      debugDefaultTargetPlatformOverride = null;
+    });
+
+    testWidgets('controls and the rail show their focus with a ring',
+        (tester) async {
+      await pumpDesktop(tester);
+      final scheme =
+          Theme.of(tester.element(find.byType(CompactDayWidget))).colorScheme;
+
+      final side = glassFocusSide(scheme);
+      expect(side.resolve({WidgetState.focused})?.color, scheme.primary);
+      expect(side.resolve({WidgetState.focused})?.width, 2);
+      expect(side.resolve({}), isNull);
+      final button = tester.widget<IconButton>(
+        find.byKey(const ValueKey('app-navigation-grades')),
+      );
+      expect(
+        button.style?.side?.resolve({WidgetState.focused})?.color,
+        scheme.primary,
+      );
+      debugDefaultTargetPlatformOverride = null;
+    });
+
+    testWidgets('Tab walks through the rail and the rows', (tester) async {
+      await pumpDesktop(tester);
+
+      final visited = <String>{};
+      for (var step = 0; step < 24; step++) {
+        await tester.sendKeyEvent(LogicalKeyboardKey.tab);
+        await tester.pump();
+        final focus = FocusManager.instance.primaryFocus?.context?.widget;
+        visited.add('$focus'.split('(').first);
+        final key = FocusManager.instance.primaryFocus?.context
+            ?.findAncestorWidgetOfExactType<InkWell>()
+            ?.key;
+        if (key != null) visited.add('$key');
+      }
+
+      expect(
+        visited.where((value) => value.contains('compact-row')),
+        isNotEmpty,
+      );
+      debugDefaultTargetPlatformOverride = null;
+    });
+
+    testWidgets('a right click on a card still opens its menu', (tester) async {
+      await pumpDesktop(tester);
+
+      await tester.tap(
+        find.byType(DashboardSummaryCard).first,
+        buttons: kSecondaryMouseButton,
+        kind: PointerDeviceKind.mouse,
+      );
+      await settleFor(tester);
+
+      expect(find.byType(PopupMenuItem<Object?>), findsNothing);
+      expect(find.byType(PopupMenuDivider), findsWidgets);
+      debugDefaultTargetPlatformOverride = null;
+    });
+
+    for (final (name, finder) in [
+      ('settings', () => find.byType(SettingsPageContainer)),
+    ]) {
+      testWidgets('$name keeps a readable width', (tester) async {
+        final store = await _pumpDashboard(
+          tester,
+          _dashboardState(),
+          size: const Size(1920, 1080),
+          withMiddleware: true,
+        );
+
+        await store.actions.routingActions.showSettings();
+        await settleFor(tester);
+
+        expect(finder(), findsOneWidget);
+        final content = find.descendant(
+          of: find.byType(NewDesignReadable),
+          matching: find.byType(ListView),
+        );
+        expect(
+          tester.getSize(content.first).width,
+          DesignTokens.contentMaxWidth,
+        );
+        await _finish(tester);
+      });
+    }
   });
 
   group('light of the glass', () {
