@@ -1095,6 +1095,7 @@ class DashboardHeader extends StatelessWidget {
               child: Padding(
                 padding: const EdgeInsets.fromLTRB(8, 6, 8, 6),
                 child: DashboardOverview(
+                  editable: modern,
                   timeline: schoolTimeline,
                   onOpenCalendarAt: openCalendarAt,
                   onEditGradeDeadline: editGradeDeadline,

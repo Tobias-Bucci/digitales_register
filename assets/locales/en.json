@@ -1114,5 +1114,13 @@
   "dashboard.banner.allTitle": "News",
   "dashboard.banner.average": "Average {average}",
   "dashboard.banner.averageChange": "Average {before} → {after}",
+  "dashboard.edit.start": "Edit cards",
+  "dashboard.edit.done": "Done",
+  "dashboard.edit.add": "Add card",
+  "dashboard.edit.hint": "Drag cards to move them.",
+  "dashboard.edit.moveEarlier": "Move earlier",
+  "dashboard.edit.moveLater": "Move later",
+  "dashboard.edit.widthValue": "Width: {width}",
+  "dashboard.edit.settingsHint": "Choose cards, sort them and change their width.",
   "calendar.view.exams": "Exams"
 }

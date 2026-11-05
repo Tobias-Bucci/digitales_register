@@ -11,14 +11,18 @@ class DashboardCardLayout extends MultiChildRenderObjectWidget {
       {super.key,
       required this.widths,
       required this.textScale,
+      this.preferredCardWidth = 170,
       required super.children});
 
   final List<DashboardItemWidth> widths;
   final double textScale;
 
+  /// The automatic layout adds a column as soon as cards can have this width.
+  final double preferredCardWidth;
+
   @override
   RenderObject createRenderObject(BuildContext context) =>
-      _DashboardCardLayout(widths, textScale);
+      _DashboardCardLayout(widths, textScale, preferredCardWidth);
 
   @override
   void updateRenderObject(
@@ -26,6 +30,7 @@ class DashboardCardLayout extends MultiChildRenderObjectWidget {
     renderObject
       ..widths = widths
       ..textScale = textScale
+      ..preferredCardWidth = preferredCardWidth
       ..markNeedsLayout();
   }
 }
@@ -36,9 +41,10 @@ class _DashboardCardLayout extends RenderBox
     with
         ContainerRenderObjectMixin<RenderBox, _DashboardCardParentData>,
         RenderBoxContainerDefaultsMixin<RenderBox, _DashboardCardParentData> {
-  _DashboardCardLayout(this.widths, this.textScale);
+  _DashboardCardLayout(this.widths, this.textScale, this.preferredCardWidth);
   List<DashboardItemWidth> widths;
   double textScale;
+  double preferredCardWidth;
   static const gap = 10.0;
 
   @override
@@ -58,9 +64,10 @@ class _DashboardCardLayout extends RenderBox
     final half = (available - gap) / 2;
     final canUseHalf = half >= 128 * textScale;
     final custom = widths.any((width) => width != DashboardItemWidth.automatic);
-    final preferredColumns = ((available + gap) / (170 * textScale + gap))
-        .floor()
-        .clamp(1, childCount.clamp(1, 3));
+    final preferredColumns =
+        ((available + gap) / (preferredCardWidth * textScale + gap))
+            .floor()
+            .clamp(1, childCount.clamp(1, 3));
     final columns = custom ? (canUseHalf ? 2 : 1) : preferredColumns;
     final automatic = (available - (columns - 1) * gap) / columns;
     final cardWidths = <double>[];

@@ -7,6 +7,7 @@ import 'package:dr/dashboard_items.dart';
 import 'package:dr/i18n/app_localizations.dart';
 import 'package:dr/school_timeline.dart';
 import 'package:dr/ui/dashboard_card_layout.dart';
+import 'package:dr/ui/dashboard_edit_mode.dart';
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 
@@ -20,6 +21,7 @@ class SchoolCountdownOverview extends StatelessWidget {
     this.additionalCards = const {},
     this.spans = const {},
     this.loading = false,
+    this.decorateCard,
   });
 
   final SchoolTimeline timeline;
@@ -29,6 +31,9 @@ class SchoolCountdownOverview extends StatelessWidget {
   final Map<String, int> spans;
   final Future<void> Function(DateTime date)? onOpenCalendarAt;
   final Future<void> Function(GradeDeadline deadline)? onEditGradeDeadline;
+
+  /// Wraps every card, for the edit mode of the new design.
+  final DashboardCardDecorator? decorateCard;
 
   @override
   Widget build(BuildContext context) {
@@ -61,11 +66,14 @@ class SchoolCountdownOverview extends StatelessWidget {
               DashboardItemWidth.fromSpan(spans[item.id])
           ],
           textScale: MediaQuery.textScalerOf(context).scale(14) / 14,
+          // Stacked cards would push the day list off a small phone.
+          preferredCardWidth: decorateCard == null ? 170 : 128,
           children: [
             for (var i = 0; i < cards.length; i++)
               SizedBox(
                   key: ValueKey('dashboard-item-${items[i].id}'),
-                  child: cards[i]),
+                  child: decorateCard?.call(context, items[i], cards[i]) ??
+                      cards[i]),
           ],
         );
       },

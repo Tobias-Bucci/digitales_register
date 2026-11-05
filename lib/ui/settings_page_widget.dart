@@ -22,6 +22,7 @@ import 'package:dr/app_clock.dart';
 import 'package:dr/app_state.dart';
 import 'package:dr/app_subject_translation_controller.dart';
 import 'package:dr/calendar_sync_service.dart';
+import 'package:dr/container/dashboard_overview.dart';
 import 'package:dr/container/export_container.dart';
 import 'package:dr/container/settings_page.dart';
 import 'package:dr/demo.dart';
@@ -952,6 +953,7 @@ class _SettingsPageWidgetState extends State<SettingsPageWidget> {
           onChanged: widget.onSetAskWhenDelete,
           value: widget.vm.askWhenDelete,
         ),
+        if (!widget.vm.legacyDesign) const DashboardCustomizeTile(),
         ListTile(
           key: const Key('settings-grades-tile'),
           title: Text(l10n.text('settings.section.grades')),

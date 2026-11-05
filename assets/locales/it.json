@@ -1114,5 +1114,13 @@
   "dashboard.banner.allTitle": "Novità",
   "dashboard.banner.average": "Media {average}",
   "dashboard.banner.averageChange": "Media {before} → {after}",
+  "dashboard.edit.start": "Modifica schede",
+  "dashboard.edit.done": "Fine",
+  "dashboard.edit.add": "Aggiungi scheda",
+  "dashboard.edit.hint": "Trascina le schede per spostarle.",
+  "dashboard.edit.moveEarlier": "Sposta avanti",
+  "dashboard.edit.moveLater": "Sposta indietro",
+  "dashboard.edit.widthValue": "Larghezza: {width}",
+  "dashboard.edit.settingsHint": "Scegli le schede, ordinale e cambia la larghezza.",
   "calendar.view.exams": "Verifiche"
 }
