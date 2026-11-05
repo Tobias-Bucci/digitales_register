@@ -27,6 +27,8 @@ import 'package:dr/ui/profile_menu.dart';
 import 'package:dr/ui/sidebar.dart';
 import 'package:dr/ui/sorted_grades_widget.dart';
 import 'package:dr/utc_date_time.dart';
+import 'package:flutter/foundation.dart'
+    show debugDefaultTargetPlatformOverride;
 import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart' hide Notification;
 import 'package:flutter/services.dart';
@@ -276,11 +278,133 @@ void main() {
       expect(find.byKey(const Key('entry-details-delete')), findsOneWidget);
     });
 
-    testWidgets('offers a new entry below each day', (tester) async {
-      await _pumpDashboard(tester, _dashboardState());
+    group('new entry button', () {
+      final addButton = find.byKey(ValueKey('day-add-entry-$_today'));
 
-      expect(find.text('Neuer Eintrag'), findsOneWidget);
-      expect(find.byIcon(Icons.add), findsNothing);
+      AppState online({List<Homework>? homework}) =>
+          _dashboardState(homework: homework).rebuild(
+            (b) => b.noInternet = false,
+          );
+
+      testWidgets('is an icon in the heading of each day', (tester) async {
+        await _pumpDashboard(tester, online());
+
+        expect(find.text('Neuer Eintrag'), findsNothing);
+        expect(
+          find.descendant(
+            of: addButton,
+            matching: find.byIcon(Icons.add_rounded),
+          ),
+          findsOneWidget,
+        );
+        expect(
+          tester.getCenter(addButton).dy,
+          moreOrLessEquals(
+            tester.getCenter(find.byKey(ValueKey('day-heading-$_today'))).dy,
+            epsilon: 1,
+          ),
+        );
+      });
+
+      testWidgets('stands above the notepads', (tester) async {
+        await _pumpDashboard(tester, online());
+
+        expect(
+          tester.getCenter(addButton).dx,
+          tester
+              .getCenter(find.byKey(const ValueKey('compact-row-check-1')))
+              .dx,
+        );
+      });
+
+      testWidgets('is there on a day without entries', (tester) async {
+        await _pumpDashboard(tester, online(homework: const []));
+
+        expect(find.byType(CompactDayWidget), findsOneWidget);
+        expect(addButton, findsOneWidget);
+      });
+
+      for (final (name, platform) in const [
+        ('touch', TargetPlatform.android),
+        ('desktop', TargetPlatform.windows),
+      ]) {
+        testWidgets('has a full touch target on $name, around a small disc',
+            (tester) async {
+          debugDefaultTargetPlatformOverride = platform;
+          await _pumpDashboard(tester, online());
+
+          final target = tester.getSize(addButton);
+          final disc = tester.getSize(find.descendant(
+            of: addButton,
+            matching: find.byType(Material),
+          ));
+          debugDefaultTargetPlatformOverride = null;
+          expect(target, const Size.square(48));
+          expect(disc, const Size.square(30));
+        });
+      }
+
+      testWidgets('has the localised label for tooltip and screen readers',
+          (tester) async {
+        final handle = tester.ensureSemantics();
+        await _pumpDashboard(tester, online());
+
+        expect(find.byTooltip('Neuer Eintrag'), findsOneWidget);
+        expect(
+          tester.getSemantics(addButton),
+          containsSemantics(
+            tooltip: 'Neuer Eintrag',
+            isButton: true,
+            hasTapAction: true,
+          ),
+        );
+        handle.dispose();
+      });
+
+      testWidgets('can be reached and activated with the keyboard',
+          (tester) async {
+        await _pumpDashboard(tester, online());
+
+        final focus = Focus.of(tester.element(find.descendant(
+          of: addButton,
+          matching: find.byIcon(Icons.add_rounded),
+        )));
+        focus.requestFocus();
+        await tester.pump();
+        expect(focus.hasFocus, isTrue);
+
+        await tester.sendKeyEvent(LogicalKeyboardKey.enter);
+        await settleFor(tester);
+        expect(find.byType(AlertDialog), findsOneWidget);
+      });
+
+      testWidgets('a tap asks for the text of the entry', (tester) async {
+        await _pumpDashboard(tester, online());
+
+        await tester.tap(addButton);
+        await settleFor(tester);
+
+        expect(find.byType(AlertDialog), findsOneWidget);
+      });
+
+      testWidgets('offline, it stays visible but does nothing', (tester) async {
+        await _pumpDashboard(tester, _dashboardState());
+
+        expect(addButton, findsOneWidget);
+        await tester.tap(addButton, warnIfMissed: false);
+        await settleFor(tester);
+        expect(find.byType(AlertDialog), findsNothing);
+      });
+
+      testWidgets('leaves more room for the date on a small phone',
+          (tester) async {
+        await _pumpDashboard(tester, online(), size: const Size(320, 640));
+
+        final progress =
+            tester.widget<Text>(find.byKey(ValueKey('day-progress-$_today')));
+        expect(progress.data, '1/2');
+        expect(progress.semanticsLabel, '1/2 erledigt');
+      });
     });
 
     testWidgets('fits at least twice as many entries as the legacy list',
@@ -1102,7 +1226,7 @@ void main() {
 
       final list = find.byType(Scrollable).first;
       await tester.scrollUntilVisible(
-        find.byKey(ValueKey('day-add-entry-$_today')),
+        find.byKey(const ValueKey('compact-row-29')),
         200,
         scrollable: list,
       );
@@ -1112,7 +1236,7 @@ void main() {
       final bar =
           tester.getTopLeft(find.byKey(const Key('app-navigation-bar'))).dy;
       expect(
-        tester.getBottomLeft(find.byKey(ValueKey('day-add-entry-$_today'))).dy,
+        tester.getBottomLeft(find.byKey(const ValueKey('compact-row-29'))).dy,
         lessThanOrEqualTo(bar),
       );
     });

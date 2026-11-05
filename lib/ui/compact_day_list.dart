@@ -51,8 +51,12 @@ const _rowGap = 4.0;
   );
 }
 
-/// One day of the compact list: heading, progress, slim rows and a button to
-/// add an entry.
+/// Below this width the heading has no room for the words of the progress next
+/// to the date and the add button.
+const _shortProgressBelowWidth = 380.0;
+
+/// One day of the compact list: heading with progress and a button to add an
+/// entry, then the slim rows.
 class CompactDayWidget extends StatelessWidget {
   const CompactDayWidget({
     super.key,
@@ -119,8 +123,18 @@ class CompactDayWidget extends StatelessWidget {
     final theme = Theme.of(context);
     final progress = dayProgress(day);
     final deletedChanged = day.deletedHomework.any((h) => h.isChanged);
+    final progressText = l10n.text('dashboard.progress', args: {
+      'done': '${progress.done}',
+      'total': '${progress.total}',
+    });
+    final shortProgress =
+        MediaQuery.sizeOf(context).width < _shortProgressBelowWidth;
     return Padding(
-      padding: const EdgeInsets.fromLTRB(16, 8, 16, 6),
+      // The add button has the width of the notepad column of the rows and
+      // stands right above it, its touch target fills the height of the heading.
+      padding: vm.showAddReminder
+          ? const EdgeInsets.fromLTRB(16, 0, DesignTokens.gutter, 0)
+          : const EdgeInsets.fromLTRB(16, 8, 16, 6),
       child: Row(
         children: [
           Expanded(
@@ -168,14 +182,26 @@ class CompactDayWidget extends StatelessWidget {
             ),
           if (progress.total > 0)
             Text(
-              l10n.text('dashboard.progress', args: {
-                'done': '${progress.done}',
-                'total': '${progress.total}',
-              }),
+              shortProgress
+                  ? '${progress.done}/${progress.total}'
+                  : progressText,
               key: ValueKey('day-progress-${day.date}'),
+              semanticsLabel: progressText,
               style: theme.textTheme.bodyMedium?.copyWith(
                 color: theme.colorScheme.onSurfaceVariant,
               ),
+            ),
+          if (vm.showAddReminder)
+            _AddEntryButton(
+              key: ValueKey('day-add-entry-${day.date}'),
+              onPressed: vm.noInternet
+                  ? null
+                  : () async {
+                      final message = await showEnterReminderDialog(context);
+                      if (message != null) {
+                        addReminderCallback(day, message);
+                      }
+                    },
             ),
         ],
       ),
@@ -218,38 +244,38 @@ class CompactDayWidget extends StatelessWidget {
               }
             },
           ),
-        if (vm.showAddReminder)
-          Padding(
-            padding: const EdgeInsets.fromLTRB(
-              DesignTokens.gutter,
-              2,
-              DesignTokens.gutter,
-              4,
-            ),
-            child: Align(
-              alignment: Alignment.centerLeft,
-              child: FilledButton.tonalIcon(
-                key: ValueKey('day-add-entry-${day.date}'),
-                onPressed: vm.noInternet
-                    ? null
-                    : () async {
-                        final message = await showEnterReminderDialog(context);
-                        if (message != null) {
-                          addReminderCallback(day, message);
-                        }
-                      },
-                icon: const Icon(Icons.add_rounded, size: 18),
-                label: Text(context.t('dashboard.addEntry')),
-                style: FilledButton.styleFrom(
-                  shape: const StadiumBorder(),
-                  visualDensity: VisualDensity.compact,
-                  tapTargetSize: MaterialTapTargetSize.padded,
-                  padding: const EdgeInsets.symmetric(horizontal: 12),
-                ),
-              ),
-            ),
-          ),
       ],
+    );
+  }
+}
+
+/// The "+" of a day: a small disc in a full-sized touch target.
+class _AddEntryButton extends StatelessWidget {
+  const _AddEntryButton({super.key, required this.onPressed});
+
+  static const double _discSize = 30;
+
+  final VoidCallback? onPressed;
+
+  @override
+  Widget build(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
+    return IconButton(
+      tooltip: context.t('dashboard.addEntry'),
+      onPressed: onPressed,
+      icon: const Icon(Icons.add_rounded, size: 20),
+      style: IconButton.styleFrom(
+        fixedSize: const Size.square(_discSize),
+        minimumSize: const Size.square(_discSize),
+        padding: EdgeInsets.zero,
+        // The compact density of desktops would shrink the target to 40.
+        visualDensity: VisualDensity.standard,
+        tapTargetSize: MaterialTapTargetSize.padded,
+        backgroundColor: scheme.secondaryContainer,
+        foregroundColor: scheme.onSecondaryContainer,
+        disabledBackgroundColor: scheme.onSurface.withValues(alpha: 0.08),
+        disabledForegroundColor: scheme.onSurface.withValues(alpha: 0.38),
+      ),
     );
   }
 }
