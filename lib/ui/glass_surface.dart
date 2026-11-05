@@ -20,6 +20,7 @@ import 'dart:ui';
 
 import 'package:flutter/material.dart';
 import 'package:flutter/scheduler.dart';
+import 'package:responsive_scaffold/responsive_scaffold.dart';
 
 /// Shared shape tokens of the new design: containers use the corner radius of
 /// the dashboard cards, single-line controls are pills.
@@ -548,8 +549,9 @@ class FloatingGlass extends StatelessWidget {
   }
 }
 
-/// A modal bottom sheet of glass. With [glass] off, which keeps the Legacy design
-/// as it is, this is a plain [showModalBottomSheet].
+/// A modal sheet of glass, which becomes a centred panel of the same glass in
+/// wide windows. With [glass] off, which keeps the Legacy design as it is, this
+/// is a plain [showModalBottomSheet].
 Future<T?> showGlassSheet<T>({
   required BuildContext context,
   required WidgetBuilder builder,
@@ -557,51 +559,79 @@ Future<T?> showGlassSheet<T>({
   bool useRootNavigator = true,
   bool isScrollControlled = true,
   bool showDragHandle = true,
-}) =>
-    glass
-        ? showModalBottomSheet<T>(
-            context: context,
-            useRootNavigator: useRootNavigator,
-            isScrollControlled: isScrollControlled,
-            showDragHandle: false,
-            backgroundColor: Colors.transparent,
-            elevation: 0,
-            builder: (context) => GlassSheet(
-              showDragHandle: showDragHandle,
-              child: builder(context),
-            ),
-          )
-        : showModalBottomSheet<T>(
-            context: context,
-            useRootNavigator: useRootNavigator,
-            isScrollControlled: isScrollControlled,
-            showDragHandle: showDragHandle,
-            builder: builder,
-          );
+}) {
+  if (!glass) {
+    return showModalBottomSheet<T>(
+      context: context,
+      useRootNavigator: useRootNavigator,
+      isScrollControlled: isScrollControlled,
+      showDragHandle: showDragHandle,
+      builder: builder,
+    );
+  }
+  if (MediaQuery.sizeOf(context).width >= tabletLayoutBreakpoint) {
+    return showDialog<T>(
+      context: context,
+      useRootNavigator: useRootNavigator,
+      builder: (context) => Dialog(
+        backgroundColor: Colors.transparent,
+        surfaceTintColor: Colors.transparent,
+        shadowColor: Colors.transparent,
+        elevation: 0,
+        shape:
+            const RoundedRectangleBorder(borderRadius: GlassSheet.panelRadius),
+        insetPadding: const EdgeInsets.all(24),
+        child: ConstrainedBox(
+          constraints: const BoxConstraints(maxWidth: GlassSheet.panelMaxWidth),
+          child: GlassSheet.panel(child: builder(context)),
+        ),
+      ),
+    );
+  }
+  return showModalBottomSheet<T>(
+    context: context,
+    useRootNavigator: useRootNavigator,
+    isScrollControlled: isScrollControlled,
+    showDragHandle: false,
+    backgroundColor: Colors.transparent,
+    elevation: 0,
+    builder: (context) => GlassSheet(
+      showDragHandle: showDragHandle,
+      child: builder(context),
+    ),
+  );
+}
 
-/// The body of [showGlassSheet]. A modal sheet covers what is below it and does
-/// not scroll over it, so its blur stays affordable.
+/// The body of [showGlassSheet]. It covers what is below it and does not scroll
+/// over it, so its blur stays affordable.
 class GlassSheet extends StatelessWidget {
   const GlassSheet({
     super.key,
     required this.showDragHandle,
     required this.child,
-  });
+  }) : _panel = false;
 
-  static const _radius = BorderRadius.vertical(top: Radius.circular(28));
+  /// As a centred panel, which has no use for a handle.
+  const GlassSheet.panel({super.key, required this.child})
+      : showDragHandle = false,
+        _panel = true;
 
-  final bool showDragHandle;
+  static const panelMaxWidth = 520.0;
+  static const panelRadius = BorderRadius.all(Radius.circular(28));
+  static const _sheetRadius = BorderRadius.vertical(top: Radius.circular(28));
+
+  final bool showDragHandle, _panel;
   final Widget child;
 
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final scheme = theme.colorScheme;
-    return GlassSurface(
+    final glass = GlassSurface(
       key: const Key('glass-sheet'),
       tint: scheme.surfaceContainer,
       opacity: DesignTokens.sheetOpacity,
-      borderRadius: _radius,
+      borderRadius: _panel ? panelRadius : _sheetRadius,
       rim: GlassRim.around,
       // Below a light sheet lies the dark scrim, on which the primary colour
       // would no longer reach the contrast of text.
@@ -617,11 +647,26 @@ class GlassSheet extends StatelessWidget {
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
               if (showDragHandle) const _SheetHandle(),
+              if (_panel) const SizedBox(height: 20),
               Flexible(child: child),
             ],
           ),
         ),
       ),
+    );
+    if (!_panel) return glass;
+    return DecoratedBox(
+      decoration: BoxDecoration(
+        borderRadius: panelRadius,
+        boxShadow: [
+          BoxShadow(
+            color: scheme.shadow.withValues(alpha: 0.24),
+            blurRadius: 32,
+            offset: const Offset(0, 12),
+          ),
+        ],
+      ),
+      child: glass,
     );
   }
 }
