@@ -374,32 +374,159 @@ class GlassRimBorder extends ShapeBorder {
   int get hashCode => Object.hash(shape, light);
 }
 
-/// Gives the dialogs opened below it the rim of the glass. A dialog takes over
-/// the theme of the place it is opened from, which keeps Legacy out of this.
-class GlassDialogTheme extends StatelessWidget {
-  const GlassDialogTheme({super.key, required this.child});
+/// What everything below it shares in the new design. Dialogs and sheets take
+/// over the theme of the place they are opened from, which keeps Legacy out.
+///
+/// Dialogs get the rim of the glass, and whatever can be clicked gets the hand
+/// cursor, which Flutter leaves out in native desktop apps.
+class NewDesignTheme extends StatelessWidget {
+  const NewDesignTheme({super.key, required this.child});
+
+  /// For the places that are not covered by a theme of a component.
+  static const MouseCursor clickCursor = WidgetStateMouseCursor.clickable;
+
+  static const _clickable = ButtonStyle(
+    mouseCursor: WidgetStatePropertyAll(clickCursor),
+  );
 
   final Widget child;
 
+  ButtonStyle _clickableStyle(ButtonStyle? style) =>
+      style?.merge(_clickable) ?? _clickable;
+
   @override
   Widget build(BuildContext context) {
-    if (MediaQuery.highContrastOf(context)) return child;
     final theme = Theme.of(context);
     return Theme(
       data: theme.copyWith(
-        dialogTheme: theme.dialogTheme.copyWith(
-          shape: GlassRimBorder(
-            shape: const RoundedRectangleBorder(
-              borderRadius: BorderRadius.all(Radius.circular(28)),
-            ),
-            light: GlassLight.of(theme.colorScheme),
-          ),
+        dialogTheme: MediaQuery.highContrastOf(context)
+            ? null
+            : theme.dialogTheme.copyWith(
+                shape: GlassRimBorder(
+                  shape: const RoundedRectangleBorder(
+                    borderRadius: BorderRadius.all(Radius.circular(28)),
+                  ),
+                  light: GlassLight.of(theme.colorScheme),
+                ),
+              ),
+        filledButtonTheme: FilledButtonThemeData(
+          style: _clickableStyle(theme.filledButtonTheme.style),
+        ),
+        outlinedButtonTheme: OutlinedButtonThemeData(
+          style: _clickableStyle(theme.outlinedButtonTheme.style),
+        ),
+        textButtonTheme: TextButtonThemeData(
+          style: _clickableStyle(theme.textButtonTheme.style),
+        ),
+        elevatedButtonTheme: ElevatedButtonThemeData(
+          style: _clickableStyle(theme.elevatedButtonTheme.style),
+        ),
+        iconButtonTheme: IconButtonThemeData(
+          style: _clickableStyle(theme.iconButtonTheme.style),
+        ),
+        listTileTheme: theme.listTileTheme.copyWith(
+          mouseCursor: const WidgetStatePropertyAll(clickCursor),
+        ),
+        checkboxTheme: theme.checkboxTheme.copyWith(
+          mouseCursor: const WidgetStatePropertyAll(clickCursor),
+        ),
+        radioTheme: theme.radioTheme.copyWith(
+          mouseCursor: const WidgetStatePropertyAll(clickCursor),
+        ),
+        switchTheme: theme.switchTheme.copyWith(
+          mouseCursor: const WidgetStatePropertyAll(clickCursor),
         ),
       ),
       child: child,
     );
   }
 }
+
+/// A clear ring around [child] while the keyboard is inside of it. On glass, the
+/// usual focus tint of Material is too faint to find. It lies just outside of
+/// [shape], on the page, where it has the same contrast on every kind of fill.
+class GlassFocusRing extends StatefulWidget {
+  const GlassFocusRing({super.key, required this.shape, required this.child});
+
+  final ShapeBorder shape;
+  final Widget child;
+
+  @override
+  State<GlassFocusRing> createState() => _GlassFocusRingState();
+}
+
+class _GlassFocusRingState extends State<GlassFocusRing> {
+  bool _focused = false;
+
+  @override
+  void initState() {
+    super.initState();
+    FocusManager.instance.addHighlightModeListener(_onHighlightMode);
+  }
+
+  @override
+  void dispose() {
+    FocusManager.instance.removeHighlightModeListener(_onHighlightMode);
+    super.dispose();
+  }
+
+  void _onHighlightMode(FocusHighlightMode mode) {
+    if (_focused) setState(() {});
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final keyboard =
+        FocusManager.instance.highlightMode == FocusHighlightMode.traditional;
+    return Focus(
+      canRequestFocus: false,
+      skipTraversal: true,
+      onFocusChange: (focused) => setState(() => _focused = focused),
+      child: CustomPaint(
+        foregroundPainter: _focused && keyboard
+            ? GlassFocusRingPainter(
+                shape: widget.shape,
+                color: Theme.of(context).colorScheme.primary,
+              )
+            : null,
+        child: widget.child,
+      ),
+    );
+  }
+}
+
+class GlassFocusRingPainter extends CustomPainter {
+  const GlassFocusRingPainter({required this.shape, required this.color});
+
+  final ShapeBorder shape;
+  final Color color;
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    canvas.drawPath(
+      shape.getOuterPath((Offset.zero & size).inflate(1.5)),
+      Paint()
+        ..style = PaintingStyle.stroke
+        ..strokeWidth = 2
+        ..color = color,
+    );
+  }
+
+  @override
+  bool hitTest(Offset position) => false;
+
+  @override
+  bool shouldRepaint(GlassFocusRingPainter oldDelegate) =>
+      oldDelegate.shape != shape || oldDelegate.color != color;
+}
+
+/// The ring of [GlassFocusRing] for buttons, which report their own focus.
+WidgetStateProperty<BorderSide?> glassFocusSide(ColorScheme scheme) =>
+    WidgetStateProperty.resolveWith(
+      (states) => states.contains(WidgetState.focused)
+          ? BorderSide(color: scheme.primary, width: 2)
+          : null,
+    );
 
 /// The look of a small control on a list: tonal glass without blur. As a theme
 /// for filled buttons or merged into the style of an icon button.
@@ -419,6 +546,8 @@ ButtonStyle glassControlStyle(
             ? scheme.onSurface.withValues(alpha: 0.38)
             : scheme.onSecondaryContainer,
       ),
+      side: glassFocusSide(scheme),
+      mouseCursor: const WidgetStatePropertyAll(NewDesignTheme.clickCursor),
       backgroundBuilder: (context, states, child) => GlassEdge(
         shape: shape,
         child: child ?? const SizedBox.shrink(),

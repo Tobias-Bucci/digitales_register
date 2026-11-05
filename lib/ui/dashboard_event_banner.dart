@@ -141,6 +141,8 @@ String _eventFacts(AppLocalizations l10n, DashboardEvent event) {
   ].join(' · ');
 }
 
+const _edgeWidth = 1.5;
+
 /// One event: compact, in the density of the dashboard cards.
 class EventBanner extends StatelessWidget {
   const EventBanner({
@@ -201,136 +203,153 @@ class EventBanner extends StatelessWidget {
           CustomSemanticsAction(label: more): onShowMore!,
       },
       excludeSemantics: true,
-      child: Material(
-        type: MaterialType.transparency,
-        child: Ink(
-          decoration: BoxDecoration(
-            color: colors.background.withValues(alpha: 0.92),
-            borderRadius: DesignTokens.cardBorderRadius,
-          ),
-          child: InkWell(
-            key: ValueKey('event-banner-${event.id}'),
-            borderRadius: DesignTokens.cardBorderRadius,
-            onTap: onOpen,
-            child: GlassEdge(
-              shape: const RoundedRectangleBorder(
-                borderRadius: DesignTokens.cardBorderRadius,
-              ),
+      child: GlassFocusRing(
+        shape: const RoundedRectangleBorder(
+          borderRadius: DesignTokens.cardBorderRadius,
+        ),
+        child: Material(
+          type: MaterialType.transparency,
+          child: Ink(
+            decoration: BoxDecoration(
+              color: colors.background.withValues(alpha: 0.92),
+              borderRadius: DesignTokens.cardBorderRadius,
+            ),
+            child: InkWell(
+              key: ValueKey('event-banner-${event.id}'),
+              borderRadius: DesignTokens.cardBorderRadius,
+              hoverColor: foreground.withValues(alpha: 0.08),
+              mouseCursor: NewDesignTheme.clickCursor,
+              onTap: onOpen,
               child: AnimatedEventEdge(
                 color: colors.edge,
+// The rim of the glass lies inside the coloured edge, not on it.
                 child: Padding(
-                  padding: const EdgeInsets.fromLTRB(12, 7, 4, 9),
-                  child: DefaultTextStyle.merge(
-                    style: TextStyle(color: foreground),
-                    child: IconTheme.merge(
-                      data: IconThemeData(color: foreground),
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          Row(
+                  padding: const EdgeInsets.all(_edgeWidth),
+                  child: GlassEdge(
+                    shape: const RoundedRectangleBorder(
+                      borderRadius: BorderRadius.all(
+                        Radius.circular(DesignTokens.cardRadius - _edgeWidth),
+                      ),
+                    ),
+                    child: Padding(
+                      padding: const EdgeInsets.fromLTRB(10.5, 5.5, 2.5, 7.5),
+                      child: DefaultTextStyle.merge(
+                        style: TextStyle(color: foreground),
+                        child: IconTheme.merge(
+                          data: IconThemeData(color: foreground),
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            mainAxisSize: MainAxisSize.min,
                             children: [
-                              Expanded(
-                                child: Text(
-                                  title,
-                                  maxLines: 1,
-                                  overflow: TextOverflow.ellipsis,
-                                  style: theme.textTheme.labelLarge?.copyWith(
-                                    color: foreground,
-                                    fontWeight: FontWeight.w700,
-                                  ),
-                                ),
-                              ),
-                              if (more != null)
-                                TextButton(
-                                  key: const Key('event-banner-more'),
-                                  onPressed: onShowMore,
-                                  style: TextButton.styleFrom(
-                                    foregroundColor: foreground,
-                                    visualDensity: VisualDensity.compact,
-                                    tapTargetSize:
-                                        MaterialTapTargetSize.shrinkWrap,
-                                    minimumSize: const Size(0, 28),
-                                    padding: const EdgeInsets.symmetric(
-                                        horizontal: 8),
-                                    textStyle: theme.textTheme.labelMedium,
-                                  ),
-                                  child: Text(more),
-                                ),
-                              if (onDismiss != null)
-                                SizedBox.square(
-                                  dimension: 28,
-                                  child: IconButton(
-                                    key: ValueKey(
-                                        'event-banner-close-${event.id}'),
-                                    tooltip:
-                                        l10n.text('dashboard.banner.dismiss'),
-                                    onPressed: onDismiss,
-                                    padding: EdgeInsets.zero,
-                                    iconSize: 18,
-                                    color: foreground,
-                                    icon: const Icon(Icons.close_rounded),
-                                  ),
-                                ),
-                            ],
-                          ),
-                          Padding(
-                            padding: const EdgeInsets.only(right: 8),
-                            child: Row(
-                              children: [
-                                if (grade != null)
-                                  Padding(
-                                    padding: const EdgeInsets.only(right: 12),
+                              Row(
+                                children: [
+                                  Expanded(
                                     child: Text(
-                                      grade,
-                                      key: const Key('event-banner-grade'),
-                                      style: theme.textTheme.headlineMedium
-                                          ?.copyWith(
+                                      title,
+                                      maxLines: 1,
+                                      overflow: TextOverflow.ellipsis,
+                                      style:
+                                          theme.textTheme.labelLarge?.copyWith(
                                         color: foreground,
                                         fontWeight: FontWeight.w700,
-                                        height: 1.1,
                                       ),
                                     ),
-                                  )
-                                else
-                                  Padding(
-                                    padding: const EdgeInsets.only(right: 10),
-                                    child:
-                                        Icon(_eventIcon(event.kind), size: 26),
                                   ),
-                                Expanded(
-                                  child: Column(
-                                    crossAxisAlignment:
-                                        CrossAxisAlignment.start,
-                                    mainAxisSize: MainAxisSize.min,
-                                    children: [
-                                      Text(
-                                        l10n.translateDashboardServerText(
-                                            event.description),
-                                        maxLines: 1,
-                                        overflow: TextOverflow.ellipsis,
-                                        style: theme.textTheme.bodyMedium
-                                            ?.copyWith(
-                                          color: foreground,
-                                          fontWeight: FontWeight.w600,
+                                  if (more != null)
+                                    TextButton(
+                                      key: const Key('event-banner-more'),
+                                      onPressed: onShowMore,
+                                      style: TextButton.styleFrom(
+                                        foregroundColor: foreground,
+                                        visualDensity: VisualDensity.compact,
+                                        tapTargetSize:
+                                            MaterialTapTargetSize.shrinkWrap,
+                                        minimumSize: const Size(0, 28),
+                                        padding: const EdgeInsets.symmetric(
+                                            horizontal: 8),
+                                        textStyle: theme.textTheme.labelMedium,
+                                      ),
+                                      child: Text(more),
+                                    ),
+                                  if (onDismiss != null)
+                                    SizedBox.square(
+                                      dimension: 28,
+                                      child: IconButton(
+                                        key: ValueKey(
+                                            'event-banner-close-${event.id}'),
+                                        tooltip: l10n
+                                            .text('dashboard.banner.dismiss'),
+                                        onPressed: onDismiss,
+                                        padding: EdgeInsets.zero,
+                                        iconSize: 18,
+                                        color: foreground,
+                                        icon: const Icon(Icons.close_rounded),
+                                      ),
+                                    ),
+                                ],
+                              ),
+                              Padding(
+                                padding: const EdgeInsets.only(right: 8),
+                                child: Row(
+                                  children: [
+                                    if (grade != null)
+                                      Padding(
+                                        padding:
+                                            const EdgeInsets.only(right: 12),
+                                        child: Text(
+                                          grade,
+                                          key: const Key('event-banner-grade'),
+                                          style: theme.textTheme.headlineMedium
+                                              ?.copyWith(
+                                            color: foreground,
+                                            fontWeight: FontWeight.w700,
+                                            height: 1.1,
+                                          ),
                                         ),
+                                      )
+                                    else
+                                      Padding(
+                                        padding:
+                                            const EdgeInsets.only(right: 10),
+                                        child: Icon(_eventIcon(event.kind),
+                                            size: 26),
                                       ),
-                                      Text(
-                                        [if (detail != null) detail, facts]
-                                            .join(' · '),
-                                        key: const Key('event-banner-facts'),
-                                        maxLines: 2,
-                                        overflow: TextOverflow.ellipsis,
-                                        style: theme.textTheme.bodySmall
-                                            ?.copyWith(color: foreground),
+                                    Expanded(
+                                      child: Column(
+                                        crossAxisAlignment:
+                                            CrossAxisAlignment.start,
+                                        mainAxisSize: MainAxisSize.min,
+                                        children: [
+                                          Text(
+                                            l10n.translateDashboardServerText(
+                                                event.description),
+                                            maxLines: 1,
+                                            overflow: TextOverflow.ellipsis,
+                                            style: theme.textTheme.bodyMedium
+                                                ?.copyWith(
+                                              color: foreground,
+                                              fontWeight: FontWeight.w600,
+                                            ),
+                                          ),
+                                          Text(
+                                            [if (detail != null) detail, facts]
+                                                .join(' · '),
+                                            key:
+                                                const Key('event-banner-facts'),
+                                            maxLines: 2,
+                                            overflow: TextOverflow.ellipsis,
+                                            style: theme.textTheme.bodySmall
+                                                ?.copyWith(color: foreground),
+                                          ),
+                                        ],
                                       ),
-                                    ],
-                                  ),
+                                    ),
+                                  ],
                                 ),
-                              ],
-                            ),
+                              ),
+                            ],
                           ),
-                        ],
+                        ),
                       ),
                     ),
                   ),
@@ -425,14 +444,14 @@ class EventEdgePainter extends CustomPainter {
 
   @override
   void paint(Canvas canvas, Size size) {
-    final rect = (Offset.zero & size).deflate(0.75);
+    final rect = (Offset.zero & size).deflate(_edgeWidth / 2);
     final edge = RRect.fromRectAndRadius(
       rect,
       const Radius.circular(DesignTokens.cardRadius),
     );
     final stroke = Paint()
       ..style = PaintingStyle.stroke
-      ..strokeWidth = 1.5
+      ..strokeWidth = _edgeWidth
       ..color = color;
     canvas.drawRRect(edge, stroke);
     if (animation.isAnimating) {

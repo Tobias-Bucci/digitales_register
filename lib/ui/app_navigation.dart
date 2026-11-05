@@ -466,6 +466,9 @@ class _BarItem extends StatelessWidget {
             scheme.onPrimaryContainer,
             nearness,
           ),
+        ).copyWith(
+          side: glassFocusSide(scheme),
+          mouseCursor: const WidgetStatePropertyAll(NewDesignTheme.clickCursor),
         ),
       ),
     );

@@ -215,8 +215,9 @@ class DashboardSummaryCard extends StatelessWidget {
     final theme = Theme.of(context);
     final scheme = theme.colorScheme;
     final progressValue = progress?.clamp(0.0, 1.0);
+    final glass = ResponsiveNavigationScope.isActive(context);
     // Long texts are cut off in the card; the tooltip keeps the full text.
-    return Tooltip(
+    final card = Tooltip(
       message: [title, primaryText, secondaryText]
           .where((text) => text.isNotEmpty)
           .join('\n'),
@@ -225,8 +226,10 @@ class DashboardSummaryCard extends StatelessWidget {
         child: InkWell(
           onTap: onTap == null ? null : () => onTap!(),
           borderRadius: BorderRadius.circular(14),
+          hoverColor: glass ? scheme.primary.withValues(alpha: 0.12) : null,
+          mouseCursor: glass ? NewDesignTheme.clickCursor : null,
           child: GlassEdgeIf(
-            enabled: ResponsiveNavigationScope.isActive(context),
+            enabled: glass,
             shape: _cardShape,
             child: Container(
               padding: const EdgeInsets.all(11),
@@ -336,6 +339,7 @@ class DashboardSummaryCard extends StatelessWidget {
         ),
       ),
     );
+    return glass ? GlassFocusRing(shape: _cardShape, child: card) : card;
   }
 }
 
