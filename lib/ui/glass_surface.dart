@@ -445,10 +445,20 @@ class NewDesignTheme extends StatelessWidget {
 /// A clear ring around [child] while the keyboard is inside of it. On glass, the
 /// usual focus tint of Material is too faint to find. It lies just outside of
 /// [shape], on the page, where it has the same contrast on every kind of fill.
+///
+/// With [activeTint], the whole of [shape] is tinted while the mouse or the
+/// keyboard is on it. Ink cannot do that for a row with two targets, it would
+/// only tint a rectangle of one of them.
 class GlassFocusRing extends StatefulWidget {
-  const GlassFocusRing({super.key, required this.shape, required this.child});
+  const GlassFocusRing({
+    super.key,
+    required this.shape,
+    required this.child,
+    this.activeTint,
+  });
 
   final ShapeBorder shape;
+  final Color? activeTint;
   final Widget child;
 
   @override
@@ -456,7 +466,7 @@ class GlassFocusRing extends StatefulWidget {
 }
 
 class _GlassFocusRingState extends State<GlassFocusRing> {
-  bool _focused = false;
+  bool _focused = false, _hovered = false;
 
   @override
   void initState() {
@@ -476,40 +486,54 @@ class _GlassFocusRingState extends State<GlassFocusRing> {
 
   @override
   Widget build(BuildContext context) {
-    final keyboard =
+    final ring = _focused &&
         FocusManager.instance.highlightMode == FocusHighlightMode.traditional;
-    return Focus(
-      canRequestFocus: false,
-      skipTraversal: true,
-      onFocusChange: (focused) => setState(() => _focused = focused),
-      child: CustomPaint(
-        foregroundPainter: _focused && keyboard
-            ? GlassFocusRingPainter(
-                shape: widget.shape,
-                color: Theme.of(context).colorScheme.primary,
-              )
-            : null,
-        child: widget.child,
+    final tint = ring || _hovered ? widget.activeTint : null;
+    return MouseRegion(
+      onEnter: (_) => setState(() => _hovered = true),
+      onExit: (_) => setState(() => _hovered = false),
+      child: Focus(
+        canRequestFocus: false,
+        skipTraversal: true,
+        onFocusChange: (focused) => setState(() => _focused = focused),
+        child: CustomPaint(
+          foregroundPainter: ring || tint != null
+              ? GlassFocusRingPainter(
+                  shape: widget.shape,
+                  ring: ring ? Theme.of(context).colorScheme.primary : null,
+                  tint: tint,
+                )
+              : null,
+          child: widget.child,
+        ),
       ),
     );
   }
 }
 
 class GlassFocusRingPainter extends CustomPainter {
-  const GlassFocusRingPainter({required this.shape, required this.color});
+  const GlassFocusRingPainter({required this.shape, this.ring, this.tint});
 
   final ShapeBorder shape;
-  final Color color;
+  final Color? ring, tint;
 
   @override
   void paint(Canvas canvas, Size size) {
-    canvas.drawPath(
-      shape.getOuterPath((Offset.zero & size).inflate(1.5)),
-      Paint()
-        ..style = PaintingStyle.stroke
-        ..strokeWidth = 2
-        ..color = color,
-    );
+    final rect = Offset.zero & size;
+    final tint = this.tint;
+    if (tint != null) {
+      canvas.drawPath(shape.getOuterPath(rect), Paint()..color = tint);
+    }
+    final ring = this.ring;
+    if (ring != null) {
+      canvas.drawPath(
+        shape.getOuterPath(rect.inflate(1.5)),
+        Paint()
+          ..style = PaintingStyle.stroke
+          ..strokeWidth = 2
+          ..color = ring,
+      );
+    }
   }
 
   @override
@@ -517,7 +541,9 @@ class GlassFocusRingPainter extends CustomPainter {
 
   @override
   bool shouldRepaint(GlassFocusRingPainter oldDelegate) =>
-      oldDelegate.shape != shape || oldDelegate.color != color;
+      oldDelegate.shape != shape ||
+      oldDelegate.ring != ring ||
+      oldDelegate.tint != tint;
 }
 
 /// The ring of [GlassFocusRing] for buttons, which report their own focus.
