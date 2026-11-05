@@ -1075,5 +1075,6 @@
   "reminders.assessment.tomorrow": "Doman: {type}",
   "reminders.assessment.inDays": "Danter {days} dis: {type}",
   "reminders.assessment.fallback": "Proa",
-  "reminders.assessment.noSubject": "I detai ie tl Register."
+  "reminders.assessment.noSubject": "I detai ie tl Register.",
+  "sidebar.dashboard": "Dashboard"
 }

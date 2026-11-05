@@ -1075,5 +1075,6 @@
   "reminders.assessment.tomorrow": "Tomorrow: {type}",
   "reminders.assessment.inDays": "In {days} days: {type}",
   "reminders.assessment.fallback": "Exam",
-  "reminders.assessment.noSubject": "You can find the details in Register."
+  "reminders.assessment.noSubject": "You can find the details in Register.",
+  "sidebar.dashboard": "Dashboard"
 }

@@ -162,7 +162,7 @@ class Sidebar extends StatelessWidget {
           CollapsibleItem(
             isSelected: currentSelected == Pages.homework,
             icon: Icons.dashboard_outlined,
-            text: l10n.text('sidebar.homework'),
+            text: l10n.text('sidebar.dashboard'),
             onPressed: goHome,
           ),
         CollapsibleItem(
