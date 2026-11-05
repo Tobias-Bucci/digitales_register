@@ -53,6 +53,7 @@ class DashboardAppHeader extends StatelessWidget
       child: GlassSurface(
         key: const Key('dashboard-app-header'),
         tint: scheme.surface,
+        rim: GlassRim.bottom,
         border: Border(
           bottom:
               BorderSide(color: scheme.outlineVariant.withValues(alpha: 0.5)),

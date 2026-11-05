@@ -1069,93 +1069,109 @@ class DashboardHeader extends StatelessWidget {
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            AnimatedContainer(
-              duration: const Duration(milliseconds: 240),
-              curve: Curves.easeOutCubic,
-              key: const ValueKey('dashboard-header-box'),
-              decoration: BoxDecoration(
-                color: modern
-                    ? scheme.surfaceContainerLowest.withValues(alpha: 0.72)
-                    : scheme.surface,
-                borderRadius: BorderRadius.circular(16),
-                border: Border.all(
-                  color: scheme.outline.withValues(
-                    alpha: theme.brightness == Brightness.dark ? 0.45 : 0.2,
-                  ),
-                ),
-                boxShadow: [
-                  if (theme.brightness == Brightness.light && !modern)
-                    BoxShadow(
-                      color: Colors.black.withValues(alpha: 0.04),
-                      blurRadius: 16,
-                      offset: const Offset(0, 6),
+            GlassEdgeIf(
+              enabled: modern,
+              sheen: false,
+              child: AnimatedContainer(
+                duration: const Duration(milliseconds: 240),
+                curve: Curves.easeOutCubic,
+                key: const ValueKey('dashboard-header-box'),
+                decoration: BoxDecoration(
+                  color: modern
+                      ? scheme.surfaceContainerLowest.withValues(alpha: 0.72)
+                      : scheme.surface,
+                  borderRadius: BorderRadius.circular(16),
+                  border: Border.all(
+                    color: scheme.outline.withValues(
+                      alpha: theme.brightness == Brightness.dark ? 0.45 : 0.2,
                     ),
-                ],
-              ),
-              child: Padding(
-                padding: const EdgeInsets.fromLTRB(8, 6, 8, 6),
-                child: DashboardOverview(
-                  editable: modern,
-                  timeline: schoolTimeline,
-                  onOpenCalendarAt: openCalendarAt,
-                  onEditGradeDeadline: editGradeDeadline,
-                  footer: Column(
-                    mainAxisSize: MainAxisSize.min,
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      LayoutBuilder(builder: (context, constraints) {
-                        final filter = HomeworkFilterContainer(
-                          showEmptyDays: showEmptyDays,
-                          onShowEmptyDaysChanged: onShowEmptyDaysChanged,
-                        );
-                        final past = AnimatedSwitcher(
-                          duration: const Duration(milliseconds: 220),
-                          transitionBuilder: (child, animation) {
-                            return FadeTransition(
-                              opacity: animation,
-                              child: ScaleTransition(
-                                  scale: animation, child: child),
+                  ),
+                  boxShadow: [
+                    if (theme.brightness == Brightness.light && !modern)
+                      BoxShadow(
+                        color: Colors.black.withValues(alpha: 0.04),
+                        blurRadius: 16,
+                        offset: const Offset(0, 6),
+                      ),
+                  ],
+                ),
+                child: GlassEdgeIf(
+                  enabled: modern,
+                  rim: GlassRim.none,
+                  child: Padding(
+                    padding: const EdgeInsets.fromLTRB(8, 6, 8, 6),
+                    child: DashboardOverview(
+                      editable: modern,
+                      timeline: schoolTimeline,
+                      onOpenCalendarAt: openCalendarAt,
+                      onEditGradeDeadline: editGradeDeadline,
+                      footer: Column(
+                        mainAxisSize: MainAxisSize.min,
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          LayoutBuilder(builder: (context, constraints) {
+                            final filter = HomeworkFilterContainer(
+                              showEmptyDays: showEmptyDays,
+                              onShowEmptyDaysChanged: onShowEmptyDaysChanged,
                             );
-                          },
-                          child: FilledButton.tonalIcon(
-                            key: ValueKey(future),
-                            onPressed: onSwitchFuture,
-                            icon: Icon(
-                              future
-                                  ? Icons.history_toggle_off
-                                  : Icons.upcoming_rounded,
-                            ),
-                            label: Text(future
-                                ? l10n.text('dashboard.past')
-                                : l10n.text('dashboard.future')),
-                            style: FilledButton.styleFrom(
-                              shape: const StadiumBorder(),
-                              visualDensity: VisualDensity.compact,
-                              padding: const EdgeInsets.symmetric(
-                                horizontal: 14,
-                                vertical: 12,
+                            final past = AnimatedSwitcher(
+                              duration: const Duration(milliseconds: 220),
+                              transitionBuilder: (child, animation) {
+                                return FadeTransition(
+                                  opacity: animation,
+                                  child: ScaleTransition(
+                                      scale: animation, child: child),
+                                );
+                              },
+                              child: FilledButton.tonalIcon(
+                                key: ValueKey(future),
+                                onPressed: onSwitchFuture,
+                                icon: Icon(
+                                  future
+                                      ? Icons.history_toggle_off
+                                      : Icons.upcoming_rounded,
+                                ),
+                                label: Text(future
+                                    ? l10n.text('dashboard.past')
+                                    : l10n.text('dashboard.future')),
+                                style: FilledButton.styleFrom(
+                                  shape: const StadiumBorder(),
+                                  visualDensity: VisualDensity.compact,
+                                  padding: const EdgeInsets.symmetric(
+                                    horizontal: 14,
+                                    vertical: 12,
+                                  ),
+                                ),
                               ),
-                            ),
-                          ),
-                        );
-                        return SizedBox(
-                          key: const ValueKey('dashboard-header-controls'),
-                          width: constraints.maxWidth,
-                          child: Wrap(
-                              alignment: WrapAlignment.spaceBetween,
-                              spacing: 8,
-                              runSpacing: 8,
-                              children: [
-                                filter,
-                                past,
-                              ]),
-                        );
-                      }),
-                      if (hasCards && favoriteSubjects.isNotEmpty) ...[
-                        const SizedBox(height: 8),
-                        favoriteFilter,
-                      ],
-                    ],
+                            );
+                            final controls = SizedBox(
+                              key: const ValueKey('dashboard-header-controls'),
+                              width: constraints.maxWidth,
+                              child: Wrap(
+                                  alignment: WrapAlignment.spaceBetween,
+                                  spacing: 8,
+                                  runSpacing: 8,
+                                  children: [
+                                    filter,
+                                    past,
+                                  ]),
+                            );
+                            return modern
+                                ? FilledButtonTheme(
+                                    data: FilledButtonThemeData(
+                                      style: glassControlStyle(scheme),
+                                    ),
+                                    child: controls,
+                                  )
+                                : controls;
+                          }),
+                          if (hasCards && favoriteSubjects.isNotEmpty) ...[
+                            const SizedBox(height: 8),
+                            favoriteFilter,
+                          ],
+                        ],
+                      ),
+                    ),
                   ),
                 ),
               ),

@@ -271,11 +271,7 @@ class _AddEntryButton extends StatelessWidget {
         // The compact density of desktops would shrink the target to 40.
         visualDensity: VisualDensity.standard,
         tapTargetSize: MaterialTapTargetSize.padded,
-        backgroundColor: scheme.secondaryContainer,
-        foregroundColor: scheme.onSecondaryContainer,
-        disabledBackgroundColor: scheme.onSurface.withValues(alpha: 0.08),
-        disabledForegroundColor: scheme.onSurface.withValues(alpha: 0.38),
-      ),
+      ).merge(glassControlStyle(scheme, shape: const CircleBorder())),
     );
   }
 }
