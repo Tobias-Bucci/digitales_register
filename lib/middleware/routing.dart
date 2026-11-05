@@ -31,6 +31,7 @@ enum Pages {
   messages,
   settings,
   debug,
+  extras,
 }
 
 // This allows tests to just include the routingMiddleware
@@ -53,6 +54,7 @@ final routingMiddleware =
           _showEditGradesAverageSettings)
       ..add(RoutingActionsNames.showCalendar, _showCalendar)
       ..add(RoutingActionsNames.showAbsences, _showAbsences)
+      ..add(RoutingActionsNames.showExtras, _showExtras)
       ..add(RoutingActionsNames.showGradesChart, _showGradesChart)
       ..add(RoutingActionsNames.showGrades, _showGrades)
       ..add(RoutingActionsNames.showGradeCalculator, _showGradeCalculator)
@@ -201,6 +203,15 @@ Future<void> _showAbsences(
   scaffoldKey!.currentState!
       .selectContentWidget(const AbsencesPageContainer(), Pages.absences);
   await api.actions.absencesActions.load();
+  await next(action);
+}
+
+Future<void> _showExtras(
+    MiddlewareApi<AppState, AppStateBuilder, AppActions> api,
+    ActionHandler next,
+    Action<void> action) async {
+  scaffoldKey!.currentState!
+      .selectContentWidget(const ExtrasPageContainer(), Pages.extras);
   await next(action);
 }
 

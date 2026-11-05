@@ -22,6 +22,7 @@ import 'package:dr/analytics_service.dart';
 import 'package:dr/calendar_load_log.dart';
 import 'package:dr/container/calendar_container.dart';
 import 'package:dr/container/calendar_detail_container.dart';
+import 'package:dr/container/calendar_view_switcher.dart';
 import 'package:dr/container/calendar_week_container.dart';
 import 'package:dr/container/exam_calendar_container.dart';
 import 'package:dr/data.dart';
@@ -288,23 +289,28 @@ class _CalendarState extends State<Calendar> with TickerProviderStateMixin {
                         ),
                     ],
                   ),
+                  bottomNavigationBar:
+                      ResponsiveNavigationScope.spacerOf(context),
                   body: Column(
                     children: <Widget>[
-                      Align(
-                        alignment: Alignment.centerRight,
-                        child: TextButton.icon(
-                          key: const Key('calendar-open-exam-calendar'),
-                          onPressed: () => Navigator.of(context).push<void>(
-                            MaterialPageRoute(
-                              builder: (_) => const ExamCalendarContainer(
-                                calendarView: true,
+                      if (ResponsiveNavigationScope.isActive(context))
+                        const CalendarViewSwitcher(exams: false)
+                      else
+                        Align(
+                          alignment: Alignment.centerRight,
+                          child: TextButton.icon(
+                            key: const Key('calendar-open-exam-calendar'),
+                            onPressed: () => Navigator.of(context).push<void>(
+                              MaterialPageRoute(
+                                builder: (_) => const ExamCalendarContainer(
+                                  calendarView: true,
+                                ),
                               ),
                             ),
+                            icon: const Icon(Icons.school_outlined),
+                            label: Text(context.t('exam.title')),
                           ),
-                          icon: const Icon(Icons.school_outlined),
-                          label: Text(context.t('exam.title')),
                         ),
-                      ),
                       Material(
                         clipBehavior: Clip.antiAlias,
                         elevation: 4,

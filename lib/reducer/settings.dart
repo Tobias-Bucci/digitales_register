@@ -83,6 +83,7 @@ final settingsReducerBuilder = NestedReducerBuilder<AppState, AppStateBuilder,
       _mensaReminderMinuteOfDay)
   ..add(SettingsActionsNames.calendarSyncCalendarId, _calendarSyncCalendarId)
   ..add(SettingsActionsNames.amoledMode, _amoledMode)
+  ..add(SettingsActionsNames.legacyDesign, _legacyDesign)
   ..add(SettingsActionsNames.biometricAppLockEnabled, _biometricAppLockEnabled)
   ..add(SettingsActionsNames.setAssessmentStudyProgress,
       _setAssessmentStudyProgress)
@@ -302,6 +303,11 @@ void _dashboardColorTestsInRed(
 void _amoledMode(
     SettingsState state, Action<bool> action, SettingsStateBuilder builder) {
   builder.amoledMode = action.payload;
+}
+
+void _legacyDesign(
+    SettingsState state, Action<bool> action, SettingsStateBuilder builder) {
+  builder.legacyDesign = action.payload;
 }
 
 void _biometricAppLockEnabled(

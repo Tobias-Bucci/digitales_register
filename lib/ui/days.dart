@@ -24,6 +24,7 @@ import 'package:built_collection/built_collection.dart';
 import 'package:dr/actions/app_actions.dart';
 import 'package:dr/app_clock.dart';
 import 'package:dr/app_state.dart';
+import 'package:dr/container/app_navigation_container.dart';
 import 'package:dr/container/dashboard_overview.dart';
 import 'package:dr/container/days_container.dart';
 import 'package:dr/container/homework_filter_container.dart';
@@ -40,11 +41,14 @@ import 'package:dr/theme/app_palette.dart';
 import 'package:dr/ui/animated_linear_progress_indicator.dart';
 import 'package:dr/ui/committed_deleteable.dart';
 import 'package:dr/ui/controlled_text_builder.dart';
+import 'package:dr/ui/dashboard_app_header.dart';
 import 'package:dr/ui/dialog.dart';
 import 'package:dr/ui/favorite_subject_filter.dart';
+import 'package:dr/ui/glass_surface.dart';
 import 'package:dr/ui/grade_colors.dart';
 import 'package:dr/ui/last_fetched_overlay.dart';
 import 'package:dr/ui/no_internet.dart';
+import 'package:dr/ui/readable_content.dart';
 import 'package:dr/utc_date_time.dart';
 import 'package:dr/util.dart';
 import 'package:flutter/material.dart';
@@ -477,9 +481,10 @@ class _DaysWidgetState extends State<DaysWidget> {
     required List<String> availableFavoriteSubjects,
     required String? activeFavoriteSubject,
   }) {
+    final modern = !widget.vm.legacyDesign;
     if (n == 0) {
       final timeline = _schoolTimeline();
-      return DashboardHeader(
+      final header = DashboardHeader(
         future: widget.vm.future,
         onSwitchFuture: widget.onSwitchFuture,
         favoriteSubjects: availableFavoriteSubjects,
@@ -505,17 +510,22 @@ class _DaysWidgetState extends State<DaysWidget> {
         schoolTimeline: timeline,
         openCalendarAt: widget.openCalendarAt,
         editGradeDeadline: _editGradeDeadline,
+        modern: modern,
       );
+      return modern ? _modernTop(header) : header;
     }
     if (isLast) {
-      return const SizedBox(
-        height: 160,
+      // The list view already ends above the navigation bar.
+      return SizedBox(
+        height: modern ? 72 : 160,
       );
     }
     if (n.isEven) {
-      return const Divider(
-        height: 16,
-      );
+      return modern
+          ? const SizedBox(height: 4)
+          : const Divider(
+              height: 16,
+            );
     }
     final itemIndex = (n - 1) ~/ 2;
     return DayWidget(
@@ -536,6 +546,18 @@ class _DaysWidgetState extends State<DaysWidget> {
       showLastFetched: showLastFetched,
     );
   }
+
+  PreferredSizeWidget _modernAppBar() => DashboardAppHeader(
+        schoolName: widget.vm.schoolName,
+        noInternet: widget.vm.noInternet,
+        onRetry: widget.refreshNoInternet,
+      );
+
+  /// What the new design shows above the day list.
+  Widget _modernTop(Widget header) => ReadableContent(
+        maxWidth: DesignTokens.contentMaxWidth,
+        child: header,
+      );
 
   void _markVisibleAsSeen(List<Day> visibleDays) {
     for (final day in visibleDays) {
@@ -559,6 +581,7 @@ class _DaysWidgetState extends State<DaysWidget> {
     final visibleDays = _filteredDays(activeFavoriteSubject);
     final noInternet = widget.vm.noInternet;
     final noEntries = visibleDays.isEmpty;
+    final modern = !widget.vm.legacyDesign;
     final schoolTimeline = _schoolTimeline();
     Widget body;
     if (noEntries) {
@@ -586,42 +609,55 @@ class _DaysWidgetState extends State<DaysWidget> {
           ),
         );
       }
-      body = CustomScrollView(
-        slivers: [
-          SliverToBoxAdapter(
-              child: DashboardHeader(
-            future: widget.vm.future,
-            onSwitchFuture: widget.onSwitchFuture,
-            favoriteSubjects: availableFavoriteSubjects,
-            selectedFavoriteSubject: activeFavoriteSubject,
-            onFavoriteSubjectChanged: (favoriteSubject) {
-              setState(() {
-                _favoriteSubject = favoriteSubject;
-                widget.onFavoriteSubjectChanged?.call(favoriteSubject);
-                widget.onFavoriteSubjectChanged?.call(favoriteSubject);
-                updateValues(_filteredDays(favoriteSubject));
-                update();
-              });
-            },
-            showEmptyDays: _showEmptyDays,
-            onShowEmptyDaysChanged: (value) {
-              setState(() {
-                _showEmptyDays = value;
-                widget.onShowEmptyDaysChanged?.call(value);
-                updateValues(_filteredDays(activeFavoriteSubject));
-                update();
-              });
-            },
-            subjectThemes: widget.vm.subjectThemes,
-            schoolTimeline: schoolTimeline,
-            openCalendarAt: widget.openCalendarAt,
-            editGradeDeadline: _editGradeDeadline,
-          )),
-          SliverFillRemaining(
-            hasScrollBody: false,
-            child: Center(child: fullScreenBody),
-          ),
-        ],
+      final emptyHeader = DashboardHeader(
+        modern: modern,
+        future: widget.vm.future,
+        onSwitchFuture: widget.onSwitchFuture,
+        favoriteSubjects: availableFavoriteSubjects,
+        selectedFavoriteSubject: activeFavoriteSubject,
+        onFavoriteSubjectChanged: (favoriteSubject) {
+          setState(() {
+            _favoriteSubject = favoriteSubject;
+            widget.onFavoriteSubjectChanged?.call(favoriteSubject);
+            widget.onFavoriteSubjectChanged?.call(favoriteSubject);
+            updateValues(_filteredDays(favoriteSubject));
+            update();
+          });
+        },
+        showEmptyDays: _showEmptyDays,
+        onShowEmptyDaysChanged: (value) {
+          setState(() {
+            _showEmptyDays = value;
+            widget.onShowEmptyDaysChanged?.call(value);
+            updateValues(_filteredDays(activeFavoriteSubject));
+            update();
+          });
+        },
+        subjectThemes: widget.vm.subjectThemes,
+        schoolTimeline: schoolTimeline,
+        openCalendarAt: widget.openCalendarAt,
+        editGradeDeadline: _editGradeDeadline,
+      );
+      // Unlike a list view, a sliver list leaves the padding of the header and
+      // the navigation bar to its slivers.
+      body = Builder(
+        builder: (context) {
+          final padding = MediaQuery.paddingOf(context);
+          return CustomScrollView(
+            slivers: [
+              if (modern)
+                SliverPadding(padding: EdgeInsets.only(top: padding.top)),
+              SliverToBoxAdapter(
+                  child: modern ? _modernTop(emptyHeader) : emptyHeader),
+              SliverFillRemaining(
+                hasScrollBody: false,
+                child: Center(child: fullScreenBody),
+              ),
+              if (modern)
+                SliverPadding(padding: EdgeInsets.only(bottom: padding.bottom)),
+            ],
+          );
+        },
       );
     } else {
       UtcDateTime? lastFetched;
@@ -655,22 +691,35 @@ class _DaysWidgetState extends State<DaysWidget> {
           },
         ),
       );
-      if (!noInternet && !widget.vm.loading) {
-        body = RefreshIndicator(
-          onRefresh: widget.refresh,
-          child: body,
-        );
-      }
-      body = Stack(
-        children: [
-          body,
-          AnimatedLinearProgressIndicator(show: widget.vm.loading),
-        ],
+      final list = body;
+      body = Builder(
+        builder: (context) {
+          // Below the header of the new design, this is its bottom edge.
+          final top = modern ? MediaQuery.paddingOf(context).top : 0.0;
+          return Stack(
+            children: [
+              if (!noInternet && !widget.vm.loading)
+                RefreshIndicator(
+                  edgeOffset: top,
+                  onRefresh: widget.refresh,
+                  child: list,
+                )
+              else
+                list,
+              Padding(
+                padding: EdgeInsets.only(top: top),
+                child: AnimatedLinearProgressIndicator(show: widget.vm.loading),
+              ),
+            ],
+          );
+        },
       );
     }
-    return ResponsiveScaffold<Pages>(
+    final scaffold = ResponsiveScaffold<Pages>(
       key: scaffoldKey,
-      homeBody: body,
+      navigation: modern ? appNavigation() : null,
+      extendHomeBodyBehindAppBar: modern,
+      homeBody: modern ? DashboardBackdrop(child: body) : body,
       onRouteChanged: (route) {
         if (route == Pages.homework) {
           widget.refresh();
@@ -730,44 +779,47 @@ class _DaysWidgetState extends State<DaysWidget> {
             ),
         ],
       ),
-      homeAppBar: ResponsiveAppBar(
-        leading: Builder(
-          builder: (context) => IconButton(
-            tooltip: MaterialLocalizations.of(context).openAppDrawerTooltip,
-            icon: const Icon(Icons.menu),
-            onPressed: () => Scaffold.of(context).openDrawer(),
-          ),
-        ),
-        title: Row(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            const Icon(Icons.dashboard_customize_outlined),
-            const SizedBox(width: 8),
-            Flexible(
-              child: Text(l10n.text('dashboard.title'),
-                  maxLines: 1, overflow: TextOverflow.ellipsis),
-            ),
-          ],
-        ),
-        actions: <Widget>[
-          const DashboardCustomizeButton(),
-          if (widget.vm.noInternet)
-            Tooltip(
-              message: l10n.text('dashboard.noConnectionReload'),
-              child: IconButton(
-                onPressed: widget.refreshNoInternet,
-                icon: const Icon(Icons.wifi_off_rounded),
-                style: IconButton.styleFrom(
-                  backgroundColor:
-                      Theme.of(context).colorScheme.secondaryContainer,
-                  foregroundColor:
-                      Theme.of(context).colorScheme.onSecondaryContainer,
+      homeAppBar: modern
+          ? _modernAppBar()
+          : ResponsiveAppBar(
+              leading: Builder(
+                builder: (context) => IconButton(
+                  tooltip:
+                      MaterialLocalizations.of(context).openAppDrawerTooltip,
+                  icon: const Icon(Icons.menu),
+                  onPressed: () => Scaffold.of(context).openDrawer(),
                 ),
               ),
+              title: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  const Icon(Icons.dashboard_customize_outlined),
+                  const SizedBox(width: 8),
+                  Flexible(
+                    child: Text(l10n.text('dashboard.title'),
+                        maxLines: 1, overflow: TextOverflow.ellipsis),
+                  ),
+                ],
+              ),
+              actions: <Widget>[
+                const DashboardCustomizeButton(),
+                if (widget.vm.noInternet)
+                  Tooltip(
+                    message: l10n.text('dashboard.noConnectionReload'),
+                    child: IconButton(
+                      onPressed: widget.refreshNoInternet,
+                      icon: const Icon(Icons.wifi_off_rounded),
+                      style: IconButton.styleFrom(
+                        backgroundColor:
+                            Theme.of(context).colorScheme.secondaryContainer,
+                        foregroundColor:
+                            Theme.of(context).colorScheme.onSecondaryContainer,
+                      ),
+                    ),
+                  ),
+                if (widget.vm.showNotifications) NotificationIconContainer(),
+              ],
             ),
-          if (widget.vm.showNotifications) NotificationIconContainer(),
-        ],
-      ),
       drawerBuilder: (widgetSelected, goHome, currentSelected, tabletMode) {
         // _widgetSelected is not passed down because routing is done by
         // accessing the ResponsiveScaffoldState via the GlobalKey and calling
@@ -781,6 +833,7 @@ class _DaysWidgetState extends State<DaysWidget> {
       homeId: Pages.homework,
       navKey: nestedNavKey,
     );
+    return BackdropGroup(child: scaffold);
   }
 }
 
@@ -944,6 +997,9 @@ class DashboardHeader extends StatelessWidget {
   final SchoolTimeline schoolTimeline;
   final OpenCalendarAtCallback openCalendarAt;
   final Future<void> Function(GradeDeadline deadline) editGradeDeadline;
+
+  /// Shows the translucent box of the new design with editable cards.
+  final bool modern;
   const DashboardHeader({
     super.key,
     required this.future,
@@ -957,6 +1013,7 @@ class DashboardHeader extends StatelessWidget {
     required this.schoolTimeline,
     required this.openCalendarAt,
     required this.editGradeDeadline,
+    this.modern = false,
   });
 
   @override
@@ -990,7 +1047,9 @@ class DashboardHeader extends StatelessWidget {
               curve: Curves.easeOutCubic,
               key: const ValueKey('dashboard-header-box'),
               decoration: BoxDecoration(
-                color: scheme.surface,
+                color: modern
+                    ? scheme.surfaceContainerLowest.withValues(alpha: 0.72)
+                    : scheme.surface,
                 borderRadius: BorderRadius.circular(16),
                 border: Border.all(
                   color: scheme.outline.withValues(
@@ -998,7 +1057,7 @@ class DashboardHeader extends StatelessWidget {
                   ),
                 ),
                 boxShadow: [
-                  if (theme.brightness == Brightness.light)
+                  if (theme.brightness == Brightness.light && !modern)
                     BoxShadow(
                       color: Colors.black.withValues(alpha: 0.04),
                       blurRadius: 16,
@@ -1300,39 +1359,6 @@ class ItemWidget extends StatelessWidget {
     required this.colorTestsInRed,
   });
 
-  Future<Tuple2<bool, bool>> _showConfirmDelete(BuildContext context) async {
-    final l10n = context.l10n;
-    var ask = true;
-    final delete = await showDialog<bool>(
-      context: context,
-      builder: (context) {
-        return InfoDialog(
-          content: StatefulBuilder(
-            builder: (context, setState) => SwitchListTile.adaptive(
-              title: Text(l10n.text('dashboard.neverAsk')),
-              onChanged: (bool value) {
-                setState(() => ask = !value);
-              },
-              value: !ask,
-            ),
-          ),
-          title: Text(l10n.text('dashboard.reminder.deleteQuestion')),
-          actions: <Widget>[
-            TextButton(
-              onPressed: () => Navigator.pop(context),
-              child: Text(l10n.text('common.cancel')),
-            ),
-            ElevatedButton(
-              onPressed: () => Navigator.pop(context, true),
-              child: Text(l10n.text('button.delete')),
-            )
-          ],
-        );
-      },
-    );
-    return Tuple2(delete ?? false, ask);
-  }
-
   void _showHistory(BuildContext context) {
     final l10n = context.l10n;
     // if we are in the deleted view, show the history for the previous item
@@ -1404,21 +1430,13 @@ class ItemWidget extends StatelessWidget {
         item.type == HomeworkType.homework &&
         item.deleteable &&
         editReminder != null;
-    Future<void> handleDelete(Future<void> Function() delete) async {
-      if (askWhenDelete) {
-        final confirmationResult = await _showConfirmDelete(context);
-        final shouldDelete = confirmationResult.item1;
-        final ask = confirmationResult.item2;
-        if (shouldDelete == true) {
-          if (!ask) {
-            setDoNotAskWhenDelete!();
-          }
-          await delete();
-        }
-      } else {
-        await delete();
-      }
-    }
+    Future<void> handleDelete(Future<void> Function() delete) =>
+        deleteReminderWithConfirmation(
+          context,
+          askWhenDelete: askWhenDelete,
+          setDoNotAskWhenDelete: setDoNotAskWhenDelete,
+          delete: delete,
+        );
 
     Widget child = CommittedDeleteable(
       key: ValueKey(item.id),
@@ -1663,6 +1681,61 @@ class ItemWidget extends StatelessWidget {
           ),
       ],
     );
+  }
+}
+
+Future<Tuple2<bool, bool>> _showConfirmDelete(BuildContext context) async {
+  final l10n = context.l10n;
+  var ask = true;
+  final delete = await showDialog<bool>(
+    context: context,
+    builder: (context) {
+      return InfoDialog(
+        content: StatefulBuilder(
+          builder: (context, setState) => SwitchListTile.adaptive(
+            title: Text(l10n.text('dashboard.neverAsk')),
+            onChanged: (bool value) {
+              setState(() => ask = !value);
+            },
+            value: !ask,
+          ),
+        ),
+        title: Text(l10n.text('dashboard.reminder.deleteQuestion')),
+        actions: <Widget>[
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: Text(l10n.text('common.cancel')),
+          ),
+          ElevatedButton(
+            onPressed: () => Navigator.pop(context, true),
+            child: Text(l10n.text('button.delete')),
+          )
+        ],
+      );
+    },
+  );
+  return Tuple2(delete ?? false, ask);
+}
+
+/// Runs [delete], after asking first if the user wants to be asked.
+Future<void> deleteReminderWithConfirmation(
+  BuildContext context, {
+  required bool askWhenDelete,
+  required VoidCallback? setDoNotAskWhenDelete,
+  required Future<void> Function() delete,
+}) async {
+  if (askWhenDelete) {
+    final confirmationResult = await _showConfirmDelete(context);
+    final shouldDelete = confirmationResult.item1;
+    final ask = confirmationResult.item2;
+    if (shouldDelete == true) {
+      if (!ask) {
+        setDoNotAskWhenDelete!();
+      }
+      await delete();
+    }
+  } else {
+    await delete();
   }
 }
 

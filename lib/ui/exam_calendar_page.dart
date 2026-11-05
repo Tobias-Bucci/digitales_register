@@ -2,12 +2,14 @@ import 'dart:math' as math;
 
 import 'package:dr/assessment_attachments.dart';
 import 'package:dr/calendar_date.dart';
+import 'package:dr/container/calendar_view_switcher.dart';
 import 'package:dr/exam_study_plan.dart';
 import 'package:dr/i18n/app_localizations.dart';
 import 'package:dr/middleware/middleware.dart';
 import 'package:dr/ui/exam_timeline.dart';
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
+import 'package:responsive_scaffold/responsive_scaffold.dart';
 
 class ExamCalendarPage extends StatefulWidget {
   const ExamCalendarPage({
@@ -91,27 +93,32 @@ class _ExamCalendarPageState extends State<ExamCalendarPage> {
         .toList()
         .reversed
         .toList();
-    return Scaffold(
-      appBar: AppBar(
-        title: Text(context.l10n.text('exam.title')),
-        actions: [
-          IconButton(
-            key: const Key('exam-timeline-view'),
-            tooltip: context.l10n
-                .text(_timeline ? 'exam.listView' : 'exam.timelineView'),
-            icon: Icon(_timeline ? Icons.view_list_outlined : Icons.timeline),
-            onPressed: () => setState(() => _timeline = !_timeline),
-          ),
-          IconButton(
-            key: const Key('exam-calendar-week-view'),
-            tooltip: context.l10n.text('exam.calendarView'),
-            icon: const Icon(Icons.calendar_month_outlined),
-            onPressed: () => Navigator.of(context).push(MaterialPageRoute<void>(
-              builder: widget.weekViewBuilder ?? (_) => weekCalendar,
-            )),
-          ),
-        ],
+    final title = Text(context.l10n.text('exam.title'));
+    final actions = [
+      IconButton(
+        key: const Key('exam-timeline-view'),
+        tooltip: context.l10n
+            .text(_timeline ? 'exam.listView' : 'exam.timelineView'),
+        icon: Icon(_timeline ? Icons.view_list_outlined : Icons.timeline),
+        onPressed: () => setState(() => _timeline = !_timeline),
       ),
+      IconButton(
+        key: const Key('exam-calendar-week-view'),
+        tooltip: context.l10n.text('exam.calendarView'),
+        icon: const Icon(Icons.calendar_month_outlined),
+        onPressed: () => Navigator.of(context).push(MaterialPageRoute<void>(
+          builder: widget.weekViewBuilder ?? (_) => weekCalendar,
+        )),
+      ),
+    ];
+    return Scaffold(
+      appBar: ResponsiveNavigationScope.isActive(context)
+          ? ResponsiveAppBar(
+              title: title,
+              actions: actions,
+              bottom: const CalendarViewSwitcher(exams: true),
+            )
+          : AppBar(title: title, actions: actions),
       body: _timeline
           ? ExamTimeline(
               assessments: upcoming,
@@ -121,7 +128,12 @@ class _ExamCalendarPageState extends State<ExamCalendarPage> {
           : upcoming.isEmpty && past.isEmpty
               ? const _EmptyExamCalendar()
               : ListView(
-                  padding: const EdgeInsets.fromLTRB(12, 16, 12, 32),
+                  padding: EdgeInsets.fromLTRB(
+                    12,
+                    16,
+                    12,
+                    32 + ResponsiveNavigationScope.bottomInsetOf(context),
+                  ),
                   children: [
                     if (upcoming.isNotEmpty) ...[
                       Text(context.l10n.text('exam.upcoming'),
@@ -292,9 +304,12 @@ class _ExamDetailPageState extends State<_ExamDetailPage> {
   @override
   Widget build(BuildContext context) {
     final days = widget.assessment.daysUntil(widget.now);
+    final padding = const EdgeInsets.all(16).copyWith(
+      bottom: 16 + ResponsiveNavigationScope.bottomInsetOf(context),
+    );
     return Scaffold(
       appBar: AppBar(title: Text(context.l10n.text('exam.details'))),
-      body: ListView(padding: const EdgeInsets.all(16), children: [
+      body: ListView(padding: padding, children: [
         Text(widget.assessment.title,
             style: Theme.of(context).textTheme.headlineSmall),
         const SizedBox(height: 6),
@@ -468,6 +483,7 @@ class _ExamWeekCalendarState extends State<_ExamWeekCalendar> {
     final sunday = _monday.add(const Duration(days: 6));
     return Scaffold(
       appBar: AppBar(title: Text(context.l10n.text('exam.title'))),
+      bottomNavigationBar: ResponsiveNavigationScope.spacerOf(context),
       body: Column(children: [
         Padding(
           padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),

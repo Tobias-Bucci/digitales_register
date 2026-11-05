@@ -239,29 +239,37 @@ class Sidebar extends StatelessWidget {
   }
 
   Future<void> _confirmRemoveCurrentAccount(BuildContext context) async {
-    final l10n = context.l10n;
-    final confirmed = await showDialog<bool>(
-      context: context,
-      builder: (dialogContext) => AlertDialog(
-        title: Text(l10n.text('login.removeAccount.title')),
-        content: Text(
-          l10n.text('login.removeAccount.body',
-              args: {'account': username ?? '?'}),
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.of(dialogContext).pop(false),
-            child: Text(l10n.text('common.cancel')),
-          ),
-          FilledButton(
-            onPressed: () => Navigator.of(dialogContext).pop(true),
-            child: Text(l10n.text('login.removeAccount')),
-          ),
-        ],
-      ),
-    );
-    if (confirmed == true) {
+    if (await confirmRemoveAccount(context, username)) {
       removeCurrentAccount();
     }
   }
+}
+
+/// Asks whether the account of [username] should be removed from this device.
+Future<bool> confirmRemoveAccount(
+  BuildContext context,
+  String? username,
+) async {
+  final l10n = context.l10n;
+  final confirmed = await showDialog<bool>(
+    context: context,
+    builder: (dialogContext) => AlertDialog(
+      title: Text(l10n.text('login.removeAccount.title')),
+      content: Text(
+        l10n.text('login.removeAccount.body',
+            args: {'account': username ?? '?'}),
+      ),
+      actions: [
+        TextButton(
+          onPressed: () => Navigator.of(dialogContext).pop(false),
+          child: Text(l10n.text('common.cancel')),
+        ),
+        FilledButton(
+          onPressed: () => Navigator.of(dialogContext).pop(true),
+          child: Text(l10n.text('login.removeAccount')),
+        ),
+      ],
+    ),
+  );
+  return confirmed == true;
 }

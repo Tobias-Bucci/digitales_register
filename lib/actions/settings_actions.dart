@@ -67,6 +67,7 @@ abstract class SettingsActions extends ReduxActions {
   abstract final VoidActionDispatcher recreateMissingCalendarSyncEvents;
   abstract final ActionDispatcher<bool> dashboardColorTestsInRed;
   abstract final ActionDispatcher<bool> amoledMode;
+  abstract final ActionDispatcher<bool> legacyDesign;
   abstract final ActionDispatcher<bool> biometricAppLockEnabled;
   abstract final ActionDispatcher<bool> mensaReminderEnabled;
   abstract final ActionDispatcher<int> mensaReminderMinuteOfDay;
