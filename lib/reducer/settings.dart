@@ -112,7 +112,9 @@ void _showCancelledGrades(
 
 void _colorGrades(
     SettingsState state, Action<bool> action, SettingsStateBuilder builder) {
-  builder.colorGrades = action.payload;
+  builder
+    ..colorGrades = action.payload
+    ..gradeColorsTurnedOff = !action.payload;
 }
 
 void _gradesTypeSorted(
