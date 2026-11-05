@@ -40,6 +40,7 @@ import 'package:dr/ui/credits_page.dart';
 import 'package:dr/ui/dialog.dart';
 import 'package:dr/ui/network_protocol_page.dart';
 import 'package:dr/ui/privacy_data_details_page.dart';
+import 'package:dr/ui/readable_content.dart';
 import 'package:dr/ui/reminder_settings.dart';
 import 'package:dr/ui/school_notification_settings.dart';
 import 'package:dr/ui/subject_swatch_picker.dart';
@@ -1226,7 +1227,8 @@ class _SettingsPageWidgetState extends State<SettingsPageWidget> {
       appBar: ResponsiveAppBar(
         title: Text(l10n.text('settings.title')),
       ),
-      body: ListView(
+      body: NewDesignReadable(
+          child: ListView(
         padding: EdgeInsets.fromLTRB(
           16,
           16,
@@ -1310,7 +1312,7 @@ class _SettingsPageWidgetState extends State<SettingsPageWidget> {
               ),
             ),
         ],
-      ),
+      )),
     );
   }
 
@@ -1415,7 +1417,8 @@ class _SettingsDetailPage extends StatelessWidget {
       appBar: AppBar(
         title: Text(title),
       ),
-      body: ListView(
+      body: NewDesignReadable(
+          child: ListView(
         padding: EdgeInsets.fromLTRB(
           16,
           16,
@@ -1423,7 +1426,7 @@ class _SettingsDetailPage extends StatelessWidget {
           24 + ResponsiveNavigationScope.bottomInsetOf(context),
         ),
         children: children,
-      ),
+      )),
     );
   }
 }

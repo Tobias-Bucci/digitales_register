@@ -24,6 +24,7 @@ import 'package:dr/middleware/middleware.dart';
 import 'package:dr/page_payload_cache.dart';
 import 'package:dr/ui/animated_linear_progress_indicator.dart';
 import 'package:dr/ui/no_internet.dart';
+import 'package:dr/ui/readable_content.dart';
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import 'package:responsive_scaffold/responsive_scaffold.dart';
@@ -261,12 +262,13 @@ class _CourseMaterialsPageState extends State<CourseMaterialsPage> {
           ],
         ),
       ),
-      body: Stack(
+      body: NewDesignReadable(
+          child: Stack(
         children: [
           _buildBody(),
           AnimatedLinearProgressIndicator(show: _loading),
         ],
-      ),
+      )),
     );
   }
 
