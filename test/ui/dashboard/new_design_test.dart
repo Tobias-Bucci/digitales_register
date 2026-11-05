@@ -125,6 +125,14 @@ DashboardEvent _plainEvent(DashboardEventKind kind) => DashboardEvent(
       notification: buildNotification(id: 7, type: kind.name),
     );
 
+/// The 16:9 windows of a desktop.
+const _wideWindows = [
+  Size(1920, 1080),
+  Size(1600, 900),
+  Size(1366, 768),
+  Size(1280, 720),
+];
+
 /// What paints the light of the glass.
 Iterable<CustomPaint> _glassPaints(WidgetTester tester) =>
     tester.widgetList<CustomPaint>(find.byType(CustomPaint)).where((paint) =>
@@ -1311,9 +1319,45 @@ void main() {
           size: const Size(1200, 800));
 
       expect(find.byType(FloatingNavigationBar), findsNothing);
-      final rail = tester.widget<NavigationRail>(find.byType(NavigationRail));
-      expect(rail.destinations, hasLength(AppDestination.values.length));
-      expect(rail.selectedIndex, AppDestination.dashboard.index);
+      expect(find.byType(AppNavigationRail), findsOneWidget);
+      for (final destination in AppDestination.values) {
+        expect(
+          find.byKey(ValueKey('app-navigation-${destination.name}')),
+          findsOneWidget,
+        );
+      }
+    });
+
+    for (final size in _wideWindows) {
+      testWidgets('the rail fits and floats at ${size.width}x${size.height}',
+          (tester) async {
+        await _pumpDashboard(tester, _dashboardState(), size: size);
+
+        final rail =
+            tester.getRect(find.byKey(const Key('app-navigation-rail')));
+        expect(rail.center.dy, moreOrLessEquals(size.height / 2));
+        expect(rail.left, DesignTokens.gutter);
+        expect(rail.width, appNavigationBarHeight);
+        expect(rail.bottom, lessThan(size.height));
+        expect(tester.takeException(), isNull);
+      });
+    }
+
+    testWidgets('a very low window can scroll the rail', (tester) async {
+      await _pumpDashboard(tester, _dashboardState(),
+          size: const Size(900, 280));
+
+      expect(tester.takeException(), isNull);
+      final profile = find.byKey(const ValueKey('app-navigation-profile'));
+      await tester.dragUntilVisible(
+        profile,
+        find.descendant(
+          of: find.byType(AppNavigationRail),
+          matching: find.byType(Scrollable),
+        ),
+        const Offset(0, -60),
+      );
+      expect(tester.getRect(profile).bottom, lessThanOrEqualTo(280));
     });
 
     testWidgets('the bar does not cover the end of the list', (tester) async {
@@ -1548,7 +1592,7 @@ void main() {
     testWidgets('opens as a panel in a wide window', (tester) async {
       await _pumpDashboard(tester, profileState(), size: const Size(1200, 800));
 
-      await tester.tap(find.text('Profil'));
+      await tester.tap(find.byKey(const ValueKey('app-navigation-profile')));
       await settleFor(tester);
 
       expect(find.byType(ProfileMenuContainer), findsOneWidget);
@@ -2167,26 +2211,105 @@ void main() {
       handle.dispose();
     });
 
-    testWidgets('the rail has the same glass, but not in high contrast mode',
+    testWidgets('the rail has the same glass and lens as the bar',
         (tester) async {
       await _pumpDashboard(tester, _dashboardState(),
           size: const Size(1200, 800));
+
       final rail = find.byKey(const Key('app-navigation-rail'));
-      final scheme = Theme.of(tester.element(rail)).colorScheme;
+      expect(
+        find.descendant(of: rail, matching: find.byType(BackdropFilter)),
+        findsOneWidget,
+      );
+      expect(tester.getRect(lens).height, greaterThan(44));
+      expect(
+        tester.getCenter(lens).dy,
+        moreOrLessEquals(
+          tester.getCenter(item(AppDestination.dashboard)).dy,
+          epsilon: 0.5,
+        ),
+      );
+      expect(tester.getRect(lens).width, 44);
+    });
 
-      var widget = tester.widget<NavigationRail>(rail);
-      expect(widget.indicatorShape, isA<GlassRimBorder>());
-      expect(widget.indicatorColor, navigationLensFill(scheme));
+    Future<ValueNotifier<AppDestination>> pumpRail(WidgetTester tester) async {
+      tester.view.physicalSize = const Size(1200, 800);
+      tester.view.devicePixelRatio = 1;
+      addTearDown(tester.view.reset);
+      final selected = ValueNotifier(AppDestination.dashboard);
+      addTearDown(selected.dispose);
+      await pumpApp(
+        tester,
+        store: createStore(newDesign: true),
+        home: Scaffold(
+          body: Align(
+            alignment: Alignment.centerLeft,
+            child: ValueListenableBuilder(
+              valueListenable: selected,
+              builder: (context, destination, _) => AppNavigationRail(
+                selected: destination,
+                onSelected: (_) {},
+                unreadMessages: 0,
+                userIcon: null,
+              ),
+            ),
+          ),
+        ),
+      );
+      return selected;
+    }
 
+    testWidgets('slides upright in the rail', (tester) async {
+      final selected = await pumpRail(tester);
+      final rest = tester.getRect(lens);
+      final target = tester.getCenter(item(AppDestination.extras)).dy;
+
+      selected.value = AppDestination.extras;
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 60));
+
+      final moving = tester.getRect(lens);
+      expect(moving.center.dy, greaterThan(rest.center.dy));
+      expect(moving.center.dy, lessThan(target));
+      expect(moving.height, greaterThan(rest.height));
+      expect(moving.width, lessThan(rest.width));
+      expect(moving.center.dx, moreOrLessEquals(rest.center.dx));
+
+      await tester.pumpAndSettle();
+      expect(
+        tester.getCenter(lens).dy,
+        moreOrLessEquals(target, epsilon: 0.05),
+      );
+    });
+
+    testWidgets('jumps in the rail with reduced motion', (tester) async {
       tester.platformDispatcher.accessibilityFeaturesTestValue =
-          const FakeAccessibilityFeatures(highContrast: true);
+          const FakeAccessibilityFeatures(disableAnimations: true);
       addTearDown(
           tester.platformDispatcher.clearAccessibilityFeaturesTestValue);
+      final selected = await pumpRail(tester);
+
+      selected.value = AppDestination.messages;
       await tester.pump();
 
-      widget = tester.widget<NavigationRail>(rail);
-      expect(widget.indicatorShape, isNot(isA<GlassRimBorder>()));
-      expect(widget.indicatorColor, scheme.primaryContainer);
+      expect(
+        tester.getCenter(lens).dy,
+        moreOrLessEquals(tester.getCenter(item(AppDestination.messages)).dy),
+      );
+    });
+
+    testWidgets('the wash of the dashboard continues below the rail only',
+        (tester) async {
+      final selected = await pumpRail(tester);
+      final wash = find.descendant(
+        of: find.byType(AppNavigationRail),
+        matching: find.byType(DashboardBackdrop),
+      );
+      expect(tester.widget<DashboardBackdrop>(wash).visible, isTrue);
+
+      selected.value = AppDestination.grades;
+      await tester.pumpAndSettle();
+      expect(tester.widget<DashboardBackdrop>(wash).visible, isFalse);
     });
   });
 

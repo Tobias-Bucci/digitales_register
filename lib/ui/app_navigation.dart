@@ -17,6 +17,7 @@
 
 import 'package:dr/i18n/app_localizations.dart';
 import 'package:dr/middleware/middleware.dart';
+import 'package:dr/ui/dashboard_app_header.dart';
 import 'package:dr/ui/glass_surface.dart';
 import 'package:dr/ui/profile_avatar.dart';
 import 'package:flutter/material.dart';
@@ -103,6 +104,14 @@ const _barBottomGap = 8.0;
 /// The touch target of an item of the bar.
 const _barItemExtent = 48.0;
 
+/// The free space around the items of the rail, whose length is not given by
+/// the window as the width of the bar is.
+const _railItemGap = 8.0;
+
+/// The width that the rail takes from the page, including its margins.
+const appNavigationRailExtent =
+    appNavigationBarHeight + 2 * DesignTokens.gutter;
+
 const _lensHeight = 44.0;
 const _lensMaxWidth = 60.0;
 
@@ -147,6 +156,83 @@ String _destinationLabel(
       : label;
 }
 
+/// The glass that the bar and the rail have in common.
+class _FloatingGlass extends StatelessWidget {
+  const _FloatingGlass({required this.surfaceKey, required this.child});
+
+  static final _radius = BorderRadius.circular(appNavigationBarHeight / 2);
+
+  final Key surfaceKey;
+  final Widget child;
+
+  @override
+  Widget build(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
+    return DecoratedBox(
+      decoration: BoxDecoration(
+        borderRadius: _radius,
+        boxShadow: [
+          BoxShadow(
+            color: scheme.shadow.withValues(alpha: 0.14),
+            blurRadius: 18,
+            offset: const Offset(0, 6),
+          ),
+        ],
+      ),
+      child: GlassSurface(
+        key: surfaceKey,
+        tint: navigationBarTint(scheme),
+        opacity: DesignTokens.navigationBarOpacity,
+        borderRadius: _radius,
+        rim: GlassRim.around,
+        border: Border.all(
+          color: scheme.outlineVariant.withValues(alpha: 0.6),
+        ),
+        child: FocusTraversalGroup(child: child),
+      ),
+    );
+  }
+}
+
+/// The destinations on a track of [axis], the same in the bar and the rail.
+class _DestinationTrack extends StatelessWidget {
+  const _DestinationTrack({
+    required this.axis,
+    required this.selected,
+    required this.onSelected,
+    required this.unreadMessages,
+    required this.userIcon,
+  });
+
+  final Axis axis;
+  final AppDestination selected;
+  final DestinationCallback onSelected;
+  final int unreadMessages;
+  final String? userIcon;
+
+  @override
+  Widget build(BuildContext context) {
+    final l10n = context.l10n;
+    return _LensTrack(
+      axis: axis,
+      selectedIndex: selected.index,
+      itemCount: AppDestination.values.length,
+      itemBuilder: (context, index, nearness) {
+        final destination = AppDestination.values[index];
+        return _BarItem(
+          destination: destination,
+          selected: destination == selected,
+          nearness: nearness,
+          label: _destinationLabel(l10n, destination, unreadMessages),
+          unreadMessages: unreadMessages,
+          userIcon: userIcon,
+          onPressed: () => onSelected(destination),
+        );
+      },
+    );
+  }
+}
+
 /// The floating, translucent bar of the new design on phones.
 class FloatingNavigationBar extends StatelessWidget {
   const FloatingNavigationBar({
@@ -164,13 +250,11 @@ class FloatingNavigationBar extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final l10n = context.l10n;
-    final scheme = Theme.of(context).colorScheme;
     final media = MediaQuery.of(context);
     return Semantics(
       container: true,
       explicitChildNodes: true,
-      label: l10n.text('sidebar.navigationLabel'),
+      label: context.l10n.text('sidebar.navigationLabel'),
       child: Padding(
         padding: EdgeInsets.fromLTRB(
           DesignTokens.gutter,
@@ -180,47 +264,16 @@ class FloatingNavigationBar extends StatelessWidget {
         ),
         child: ConstrainedBox(
           constraints: const BoxConstraints(maxWidth: 480),
-          child: DecoratedBox(
-            decoration: BoxDecoration(
-              borderRadius: BorderRadius.circular(appNavigationBarHeight / 2),
-              boxShadow: [
-                BoxShadow(
-                  color: scheme.shadow.withValues(alpha: 0.14),
-                  blurRadius: 18,
-                  offset: const Offset(0, 6),
-                ),
-              ],
-            ),
-            child: GlassSurface(
-              key: const Key('app-navigation-bar'),
-              tint: navigationBarTint(scheme),
-              opacity: DesignTokens.navigationBarOpacity,
-              borderRadius: BorderRadius.circular(appNavigationBarHeight / 2),
-              rim: GlassRim.around,
-              border: Border.all(
-                color: scheme.outlineVariant.withValues(alpha: 0.6),
-              ),
-              child: SizedBox(
-                height: appNavigationBarHeight,
-                child: FocusTraversalGroup(
-                  child: _LensTrack(
-                    selectedIndex: selected.index,
-                    itemCount: AppDestination.values.length,
-                    itemBuilder: (context, index, nearness) {
-                      final destination = AppDestination.values[index];
-                      return _BarItem(
-                        destination: destination,
-                        selected: destination == selected,
-                        nearness: nearness,
-                        label: _destinationLabel(
-                            l10n, destination, unreadMessages),
-                        unreadMessages: unreadMessages,
-                        userIcon: userIcon,
-                        onPressed: () => onSelected(destination),
-                      );
-                    },
-                  ),
-                ),
+          child: _FloatingGlass(
+            surfaceKey: const Key('app-navigation-bar'),
+            child: SizedBox(
+              height: appNavigationBarHeight,
+              child: _DestinationTrack(
+                axis: Axis.horizontal,
+                selected: selected,
+                onSelected: onSelected,
+                unreadMessages: unreadMessages,
+                userIcon: userIcon,
               ),
             ),
           ),
@@ -235,11 +288,13 @@ class FloatingNavigationBar extends StatelessWidget {
 /// as under real glass. With reduced motion it simply is at the new place.
 class _LensTrack extends StatefulWidget {
   const _LensTrack({
+    required this.axis,
     required this.selectedIndex,
     required this.itemCount,
     required this.itemBuilder,
   });
 
+  final Axis axis;
   final int selectedIndex, itemCount;
 
   /// [nearness] is 1 below the centre of the lens and 0 clear of it.
@@ -290,41 +345,43 @@ class _LensTrackState extends State<_LensTrack>
 
   @override
   Widget build(BuildContext context) {
+    final horizontal = widget.axis == Axis.horizontal;
     return LayoutBuilder(
       builder: (context, constraints) {
-        final width = constraints.maxWidth;
+        final length =
+            horizontal ? constraints.maxWidth : constraints.maxHeight;
         final count = widget.itemCount;
         // The same places as the free space of spaceEvenly gives the items.
-        final gap = (width - count * _barItemExtent) / (count + 1);
+        final gap = (length - count * _barItemExtent) / (count + 1);
         final pitch = _barItemExtent + gap;
-        final lensWidth = (pitch - 6).clamp(_lensHeight, _lensMaxWidth);
+        final lensLength = (pitch - 6).clamp(_lensHeight, _lensMaxWidth);
         return AnimatedBuilder(
           animation: _position,
           builder: (context, _) {
             final position = _position.value;
             final speed = _position.isAnimating ? _position.velocity.abs() : 0;
             final stretch = (speed / _fullStretchSpeed).clamp(0.0, 1.0);
-            final lensSize = Size(
-              lensWidth * (1 + 0.32 * stretch),
-              _lensHeight * (1 - 0.1 * stretch),
-            );
+            final along = lensLength * (1 + 0.32 * stretch);
+            final across = _lensHeight * (1 - 0.1 * stretch);
             final center = gap + _barItemExtent / 2 + position * pitch;
-            final left = (center - lensSize.width / 2).clamp(
+            final start = (center - along / 2).clamp(
               _lensEdgeGap,
-              width - lensSize.width - _lensEdgeGap,
+              length - along - _lensEdgeGap,
             );
+            final side = (appNavigationBarHeight - across) / 2;
             return Stack(
               alignment: Alignment.center,
               children: [
                 Positioned(
                   key: const Key('app-navigation-lens'),
-                  left: left,
-                  top: (appNavigationBarHeight - lensSize.height) / 2,
-                  width: lensSize.width,
-                  height: lensSize.height,
+                  left: horizontal ? start : side,
+                  top: horizontal ? side : start,
+                  width: horizontal ? along : across,
+                  height: horizontal ? across : along,
                   child: const _GlassLens(),
                 ),
-                Row(
+                Flex(
+                  direction: widget.axis,
                   mainAxisAlignment: MainAxisAlignment.spaceEvenly,
                   children: [
                     for (var index = 0; index < count; index++)
@@ -437,7 +494,10 @@ class _BarItem extends StatelessWidget {
   }
 }
 
-/// The same destinations as [FloatingNavigationBar] for wide windows.
+/// [FloatingNavigationBar] turned upright for wide windows, where height is
+/// scarcer than width. It keeps a margin of its own and floats in the middle of
+/// it. The wash of the dashboard continues below it, so that the page has no
+/// edge there.
 class AppNavigationRail extends StatelessWidget {
   const AppNavigationRail({
     super.key,
@@ -454,59 +514,42 @@ class AppNavigationRail extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final l10n = context.l10n;
-    final scheme = Theme.of(context).colorScheme;
-    final highContrast = MediaQuery.highContrastOf(context);
-    return DecoratedBox(
-      decoration: BoxDecoration(
-        border: Border(
-          right: BorderSide(color: scheme.outlineVariant),
+    final count = AppDestination.values.length;
+    final rail = Semantics(
+      container: true,
+      explicitChildNodes: true,
+      label: context.l10n.text('sidebar.navigationLabel'),
+      child: Center(
+        // Only a very low window has to scroll it.
+        child: ScrollConfiguration(
+          behavior: ScrollConfiguration.of(context).copyWith(scrollbars: false),
+          child: SingleChildScrollView(
+            clipBehavior: Clip.none,
+            padding: const EdgeInsets.all(DesignTokens.gutter),
+            child: _FloatingGlass(
+              surfaceKey: const Key('app-navigation-rail'),
+              child: SizedBox(
+                width: appNavigationBarHeight,
+                height: count * _barItemExtent + (count + 1) * _railItemGap,
+                child: _DestinationTrack(
+                  axis: Axis.vertical,
+                  selected: selected,
+                  onSelected: onSelected,
+                  unreadMessages: unreadMessages,
+                  userIcon: userIcon,
+                ),
+              ),
+            ),
+          ),
         ),
       ),
-      child: NavigationRail(
-        key: const Key('app-navigation-rail'),
-        scrollable: true,
-        labelType: NavigationRailLabelType.all,
-        backgroundColor: scheme.surfaceContainerLow,
-        indicatorColor:
-            highContrast ? scheme.primaryContainer : navigationLensFill(scheme),
-        indicatorShape: highContrast
-            ? const StadiumBorder()
-            : GlassRimBorder(
-                shape: const StadiumBorder(),
-                light: GlassLight.of(scheme),
-              ),
-        selectedIconTheme: IconThemeData(color: scheme.onPrimaryContainer),
-        selectedIndex: selected.index,
-        onDestinationSelected: (index) =>
-            onSelected(AppDestination.values[index]),
-        destinations: [
-          for (final destination in AppDestination.values)
-            NavigationRailDestination(
-              icon: Tooltip(
-                message: _destinationLabel(l10n, destination, unreadMessages),
-                child: destination == AppDestination.profile
-                    ? ProfileAvatar(imageUrl: userIcon, size: 30)
-                    : _withBadge(
-                        context,
-                        Icon(destination.icon),
-                        destination == AppDestination.messages
-                            ? unreadMessages
-                            : 0,
-                      ),
-              ),
-              selectedIcon: destination == AppDestination.profile
-                  ? ProfileAvatar(imageUrl: userIcon, size: 30)
-                  : _withBadge(
-                      context,
-                      Icon(destination.selectedIcon),
-                      destination == AppDestination.messages
-                          ? unreadMessages
-                          : 0,
-                    ),
-              label: Text(l10n.text(destination.labelKey)),
-            ),
-        ],
+    );
+    return SizedBox(
+      width: appNavigationRailExtent,
+      height: double.infinity,
+      child: DashboardBackdrop(
+        visible: selected == AppDestination.dashboard,
+        child: rail,
       ),
     );
   }
