@@ -860,7 +860,8 @@ class _DaysWidgetState extends State<DaysWidget> {
       homeId: Pages.homework,
       navKey: nestedNavKey,
     );
-    return BackdropGroup(child: scaffold);
+    final grouped = BackdropGroup(child: scaffold);
+    return modern ? GlassDialogTheme(child: grouped) : grouped;
   }
 }
 

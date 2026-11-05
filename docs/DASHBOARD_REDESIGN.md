@@ -8,7 +8,7 @@ Grundlage sind Skizze und Sprachnachricht des Beta-Testers vom 20.10.2026.
 | --- | --- |
 | Standard-Design | „Neu“. „Legacy“ bleibt unter Einstellungen → Darstellung wählbar. Gespeicherte Einstellungen ohne das Feld öffnen ebenfalls „Neu“. |
 | Kopfzeile | App-Logo, Schulname, „Digitales Register“. Der Name kommt aus `schools` über die Adresse des Kontos, bei fremden Adressen wird der Host gezeigt. |
-| Striche im Banner | Kompaktes Banner in der Dichte der Karten. Am Rand läuft beim Erscheinen zweimal ein Lichtpunkt; bei „Bewegung reduzieren“ steht er still. |
+| Striche im Banner | Kompaktes Banner in der Dichte der Karten. Am Rand fällt beim Erscheinen zweimal ein Lichtband von oben nach unten; bei „Bewegung reduzieren“ steht es still. |
 | Farbe der Beobachtungen | Violett (`observationContainer`). |
 | Oranger Bereich | `gradeCategory()` bleibt unverändert: 5,50–5,75 orange, 6 grün (siehe #81). Der Tester hatte auch die 6 als orange genannt. |
 | Absenzen, Materialien | Auf der Seite „Extras“, zusammen mit Klassenbuch, Hausaufgaben und Zeugnis. |
@@ -68,8 +68,19 @@ für die Sitzung einfarbig. Das gilt auch im Hochkontrastmodus.
 Der Rest des Glases ist Licht, nicht Blur, und kostet deshalb fast nichts:
 `GlassEdge` malt einen feinen Rand und einen weichen Schein, beides statische
 Verläufe aus den Rollen des Themes (`GlassLight`). Das darf auch in der Liste
-stehen: Übersichtsbox, Filter, Vergangenheit und „+“. Fällt der Blur weg, bleibt
-das Licht; im Hochkontrastmodus entfällt es ganz.
+stehen. Fällt der Blur weg, bleibt das Licht; im Hochkontrastmodus entfällt es
+ganz.
+
+Das Licht kommt für alle Oberflächen gleich von direkt oben: am oberen Rand am
+hellsten, nach unten gleichmäßig schwächer, links und rechts identisch. Schatten
+haben keinen horizontalen Versatz. Der Verlauf klingt über eine feste Pixeltiefe
+aus, damit „+“ und ein hohes Sheet gleich betont sind. Das Rezept steht nur in
+`GlassRimPainter` und `GlassSheenPainter`. Zeilen bekommen nur den Rand, weil ihr
+Text auf kräftigen Farben steht. Dialoge erben den Rand über `GlassDialogTheme`
+vom Ort, an dem sie geöffnet werden, und bleiben dadurch in Legacy unberührt. Die
+Tests spiegeln gerenderte Flächen pixelgenau.
+
+Die Bindung links am Notizblock-Kästchen gehört zum App-Logo und ist kein Licht.
 
 Die Linse der Navigationsleiste gleitet auf einer Feder zum gewählten Eintrag,
 streckt sich dabei mit ihrer Geschwindigkeit, und Symbole unter ihr wachsen leicht.
@@ -84,8 +95,6 @@ setzt deshalb dort `onPrimaryContainer` als `primary`.
 
 Bewusst nicht verwendet:
 
-- Schein auf den Bannern: Im hellen Design wirkte er glänzend und schwächte die
-  Farben, die dort eine Bedeutung haben.
 - Blur oder Lupe in der Linse: Ein zweiter Backdrop in der Leiste bringt über dem
   schon verschwommenen Hintergrund sichtbar nichts.
 - Sättigung im Backdrop-Filter: kaum sichtbar bei dieser Deckkraft, aber ein

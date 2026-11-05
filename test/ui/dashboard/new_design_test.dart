@@ -1,4 +1,6 @@
 import 'dart:convert';
+import 'dart:math' as math;
+import 'dart:ui' as ui;
 
 import 'package:built_collection/built_collection.dart';
 import 'package:built_redux/built_redux.dart';
@@ -24,6 +26,7 @@ import 'package:dr/ui/days.dart';
 import 'package:dr/ui/glass_surface.dart';
 import 'package:dr/ui/notepad_mark.dart';
 import 'package:dr/ui/profile_menu.dart';
+import 'package:dr/ui/school_countdown_overview.dart';
 import 'package:dr/ui/sidebar.dart';
 import 'package:dr/ui/sorted_grades_widget.dart';
 import 'package:dr/utc_date_time.dart';
@@ -624,6 +627,29 @@ void main() {
                   greaterThanOrEqualTo(4.5));
             }
           }
+        }
+      }
+    });
+
+    test('text on a banner stays readable below the sheen', () {
+      for (final scheme in _allSchemes()) {
+        final light = GlassLight.of(scheme);
+        for (final kind in DashboardEventKind.values) {
+          final colors = eventBannerColors(
+            scheme,
+            kind == DashboardEventKind.grade
+                ? _gradeEvent('7/8', 750)
+                : _plainEvent(kind),
+            colorGrades: true,
+          );
+          final banner = over(colors.background, 0.92, scheme.surface);
+          expect(
+            AppPalette.contrastRatio(
+              colors.foreground,
+              over(light.highlight, light.sheenStrength, banner),
+            ),
+            greaterThanOrEqualTo(4.5),
+          );
         }
       }
     });
@@ -1702,6 +1728,279 @@ void main() {
     });
   });
 
+  group('light of the glass', () {
+    // Curves are not rasterised perfectly alike on both sides. Light from the
+    // side differs by far more, as the control below shows.
+    const antialiasing = 12;
+
+    final schemes = [
+      AppPalette.scheme(brightness: Brightness.light, amoled: false),
+      AppPalette.scheme(brightness: Brightness.dark, amoled: false),
+      AppPalette.scheme(brightness: Brightness.dark, amoled: true),
+    ];
+
+    /// The pixels of [paint] on a canvas of [size], in RGBA.
+    Future<ByteData> render(
+      WidgetTester tester,
+      Size size,
+      void Function(Canvas canvas) paint,
+    ) async =>
+        (await tester.runAsync(() async {
+          final recorder = ui.PictureRecorder();
+          paint(Canvas(recorder));
+          final image = await recorder
+              .endRecording()
+              .toImage(size.width.toInt(), size.height.toInt());
+          final data =
+              await image.toByteData(format: ui.ImageByteFormat.rawRgba);
+          image.dispose();
+          return data!;
+        }))!;
+
+    /// How far the pixels of a render differ from the ones across its middle.
+    int mirrorDifference(ByteData pixels, Size size) {
+      final width = size.width.toInt();
+      var worst = 0;
+      for (var y = 0; y < size.height; y++) {
+        for (var x = 0; x < width ~/ 2; x++) {
+          for (var channel = 0; channel < 4; channel++) {
+            final left = pixels.getUint8((y * width + x) * 4 + channel);
+            final right =
+                pixels.getUint8((y * width + width - 1 - x) * 4 + channel);
+            worst = math.max(worst, (left - right).abs());
+          }
+        }
+      }
+      return worst;
+    }
+
+    test('all gradients run straight down', () {
+      for (final scheme in schemes) {
+        final light = GlassLight.of(scheme);
+        const shape = StadiumBorder();
+        final rim = GlassRimPainter(
+          shape: shape,
+          rim: GlassRim.around,
+          light: light,
+        );
+        final gradients = [
+          GlassSheenPainter(shape: shape, light: light).gradient,
+          for (final height in const [30.0, 56.0, 220.0, 600.0])
+            rim.aroundGradient(height),
+          EventEdgePainter(
+            color: scheme.primary,
+            animation: const AlwaysStoppedAnimation(0.5),
+          ).bandGradient(0.5),
+        ];
+        for (final gradient in gradients) {
+          expect((gradient.begin as Alignment).x, 0);
+          expect((gradient.end as Alignment).x, 0);
+          expect((gradient.begin as Alignment).y, -1);
+        }
+      }
+    });
+
+    test('the line below the header is the same on both sides', () {
+      for (final scheme in schemes) {
+        final gradient = GlassRimPainter(
+          shape: const RoundedRectangleBorder(),
+          rim: GlassRim.bottom,
+          light: GlassLight.of(scheme),
+        ).bottomGradient;
+        expect(gradient.stops, isNull);
+        expect(gradient.colors.first, gradient.colors.last);
+      }
+    });
+
+    test('the top is the brightest and the sides fade to the same value', () {
+      for (final scheme in schemes) {
+        final light = GlassLight.of(scheme);
+        final colors = GlassRimPainter(
+          shape: const StadiumBorder(),
+          rim: GlassRim.around,
+          light: light,
+        ).aroundGradient(200).colors;
+        expect(colors[0].a, greaterThan(colors[1].a));
+      }
+    });
+
+    testWidgets('a mirrored surface looks exactly the same', (tester) async {
+      const size = Size(120, 60);
+      for (final scheme in schemes) {
+        final light = GlassLight.of(scheme);
+        for (final shape in const <ShapeBorder>[
+          StadiumBorder(),
+          CircleBorder(),
+          RoundedRectangleBorder(
+            borderRadius: DesignTokens.cardBorderRadius,
+          ),
+        ]) {
+          final pixels = await render(tester, size, (canvas) {
+            GlassSheenPainter(shape: shape, light: light).paint(canvas, size);
+            GlassRimPainter(shape: shape, rim: GlassRim.around, light: light)
+                .paint(canvas, size);
+          });
+          expect(mirrorDifference(pixels, size), lessThan(antialiasing));
+        }
+      }
+    });
+
+    testWidgets('the mirror test sees light that comes from the side',
+        (tester) async {
+      const size = Size(120, 60);
+      final pixels = await render(tester, size, (canvas) {
+        canvas.drawRect(
+          Offset.zero & size,
+          Paint()
+            ..shader = const LinearGradient(
+              begin: Alignment.topLeft,
+              end: Alignment.bottomRight,
+              colors: [Color(0xFFFFFFFF), Color(0x00FFFFFF)],
+            ).createShader(Offset.zero & size),
+        );
+      });
+      expect(mirrorDifference(pixels, size), greaterThan(40));
+    });
+
+    testWidgets('the band on the edge of a banner falls down both sides',
+        (tester) async {
+      const size = Size(120, 60);
+      final painter = EventEdgePainter(
+        color: const Color(0xFF3972A6),
+        animation: const AlwaysStoppedAnimation(0.5),
+      );
+      for (final progress in const [0.0, 0.3, 0.5, 1.0]) {
+        final gradient = painter.bandGradient(progress);
+        final pixels = await render(tester, size, (canvas) {
+          canvas.drawRRect(
+            RRect.fromRectAndRadius(
+              (Offset.zero & size).deflate(1),
+              const Radius.circular(DesignTokens.cardRadius),
+            ),
+            Paint()
+              ..style = PaintingStyle.stroke
+              ..strokeWidth = 2.5
+              ..shader = gradient.createShader(Offset.zero & size),
+          );
+        });
+        expect(mirrorDifference(pixels, size), lessThan(antialiasing));
+      }
+    });
+
+    /// Every shadow that a decoration of the tree below [finder] casts.
+    Iterable<BoxShadow> shadows(WidgetTester tester) => tester
+        .widgetList<DecoratedBox>(find.byType(DecoratedBox))
+        .map((box) => box.decoration)
+        .expand<BoxShadow>((decoration) => switch (decoration) {
+              BoxDecoration(:final boxShadow?) => boxShadow,
+              ShapeDecoration(:final shadows?) => shadows,
+              _ => const [],
+            });
+
+    testWidgets('no shadow falls to the side', (tester) async {
+      await _pumpDashboard(
+          tester,
+          _dashboardState(notifications: [
+            buildNotification(type: 'message', objectId: 1, title: 'Hinweis'),
+          ]));
+
+      final all = shadows(tester);
+      expect(all, isNotEmpty);
+      for (final shadow in all) {
+        expect(shadow.offset.dx, 0);
+      }
+
+      await tester.tap(find.byKey(const ValueKey('compact-row-open-1')));
+      await settleFor(tester);
+      for (final shadow in shadows(tester)) {
+        expect(shadow.offset.dx, 0);
+      }
+    });
+
+    testWidgets('every kind of surface uses the shared light', (tester) async {
+      await _pumpDashboard(
+        tester,
+        _dashboardState(notifications: [
+          buildNotification(type: 'message', objectId: 1, title: 'Hinweis'),
+        ]).rebuild((b) => b.noInternet = false),
+      );
+
+      for (final surface in [
+        find.byKey(const Key('dashboard-app-header')),
+        find.byKey(const Key('app-navigation-bar')),
+        find.byKey(const Key('app-navigation-lens')),
+        find.byKey(const ValueKey('compact-row-1')),
+        find.byKey(ValueKey('day-add-entry-$_today')),
+        find.byType(EventBanner),
+        find.byType(DashboardSummaryCard).first,
+      ]) {
+        expect(
+          find.descendant(of: surface, matching: find.byType(GlassEdge)),
+          findsWidgets,
+        );
+      }
+      expect(
+        find.ancestor(
+          of: find.byKey(const ValueKey('dashboard-header-box')),
+          matching: find.byType(GlassEdge),
+        ),
+        findsWidgets,
+      );
+    });
+
+    testWidgets('dialogs have the rim, but not in Legacy', (tester) async {
+      await _pumpDashboard(tester, _dashboardState());
+      expect(
+        Theme.of(tester.element(find.byType(CompactDayWidget)))
+            .dialogTheme
+            .shape,
+        isA<GlassRimBorder>(),
+      );
+
+      await _pumpDashboard(tester, _dashboardState(), newDesign: false);
+      expect(
+        Theme.of(tester.element(find.byType(DayWidget))).dialogTheme.shape,
+        isNot(isA<GlassRimBorder>()),
+      );
+    });
+
+    testWidgets('a dialog keeps the rim of the place it opens from',
+        (tester) async {
+      await _pumpDashboard(
+        tester,
+        _dashboardState().rebuild((b) => b.noInternet = false),
+      );
+
+      await tester.tap(find.byKey(ValueKey('day-add-entry-$_today')));
+      await settleFor(tester);
+
+      final dialog = find.descendant(
+        of: find.byType(Dialog),
+        matching: find.byType(Material),
+      );
+      expect(
+        tester.widget<Material>(dialog.first).shape,
+        isA<GlassRimBorder>(),
+      );
+    });
+
+    testWidgets('high contrast keeps plain dialogs', (tester) async {
+      tester.platformDispatcher.accessibilityFeaturesTestValue =
+          const FakeAccessibilityFeatures(highContrast: true);
+      addTearDown(
+          tester.platformDispatcher.clearAccessibilityFeaturesTestValue);
+
+      await _pumpDashboard(tester, _dashboardState());
+
+      expect(
+        Theme.of(tester.element(find.byType(CompactDayWidget)))
+            .dialogTheme
+            .shape,
+        isNot(isA<GlassRimBorder>()),
+      );
+    });
+  });
+
   group('navigation lens', () {
     final lens = find.byKey(const Key('app-navigation-lens'));
 
@@ -1876,7 +2175,7 @@ void main() {
       final scheme = Theme.of(tester.element(rail)).colorScheme;
 
       var widget = tester.widget<NavigationRail>(rail);
-      expect(widget.indicatorShape, isA<GlassStadiumBorder>());
+      expect(widget.indicatorShape, isA<GlassRimBorder>());
       expect(widget.indicatorColor, navigationLensFill(scheme));
 
       tester.platformDispatcher.accessibilityFeaturesTestValue =
@@ -1886,7 +2185,7 @@ void main() {
       await tester.pump();
 
       widget = tester.widget<NavigationRail>(rail);
-      expect(widget.indicatorShape, isNot(isA<GlassStadiumBorder>()));
+      expect(widget.indicatorShape, isNot(isA<GlassRimBorder>()));
       expect(widget.indicatorColor, scheme.primaryContainer);
     });
   });

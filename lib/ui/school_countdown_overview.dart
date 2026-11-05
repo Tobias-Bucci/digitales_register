@@ -8,8 +8,10 @@ import 'package:dr/i18n/app_localizations.dart';
 import 'package:dr/school_timeline.dart';
 import 'package:dr/ui/dashboard_card_layout.dart';
 import 'package:dr/ui/dashboard_edit_mode.dart';
+import 'package:dr/ui/glass_surface.dart';
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
+import 'package:responsive_scaffold/responsive_scaffold.dart';
 
 class SchoolCountdownOverview extends StatelessWidget {
   const SchoolCountdownOverview({
@@ -175,6 +177,10 @@ class _GradeDeadlineCountdownCard extends StatelessWidget {
   }
 }
 
+const _cardShape = RoundedRectangleBorder(
+  borderRadius: BorderRadius.all(Radius.circular(14)),
+);
+
 class DashboardSummaryCard extends StatelessWidget {
   const DashboardSummaryCard({
     super.key,
@@ -219,106 +225,112 @@ class DashboardSummaryCard extends StatelessWidget {
         child: InkWell(
           onTap: onTap == null ? null : () => onTap!(),
           borderRadius: BorderRadius.circular(14),
-          child: Container(
-            padding: const EdgeInsets.all(11),
-            decoration: BoxDecoration(
-              color: scheme.primaryContainer.withValues(alpha: 0.36),
-              borderRadius: BorderRadius.circular(14),
-              border: Border.all(color: scheme.primary.withValues(alpha: 0.16)),
-            ),
-            child: LayoutBuilder(
-              builder: (context, constraints) {
-                return Column(
-                  mainAxisSize: MainAxisSize.min,
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Row(
-                      children: [
-                        Icon(
-                          icon,
-                          size: 20,
-                          color: scheme.primary,
-                        ),
-                        const SizedBox(width: 6),
-                        Expanded(
-                          child: Text(
-                            title,
+          child: GlassEdgeIf(
+            enabled: ResponsiveNavigationScope.isActive(context),
+            shape: _cardShape,
+            child: Container(
+              padding: const EdgeInsets.all(11),
+              decoration: BoxDecoration(
+                color: scheme.primaryContainer.withValues(alpha: 0.36),
+                borderRadius: BorderRadius.circular(14),
+                border:
+                    Border.all(color: scheme.primary.withValues(alpha: 0.16)),
+              ),
+              child: LayoutBuilder(
+                builder: (context, constraints) {
+                  return Column(
+                    mainAxisSize: MainAxisSize.min,
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Row(
+                        children: [
+                          Icon(
+                            icon,
+                            size: 20,
+                            color: scheme.primary,
+                          ),
+                          const SizedBox(width: 6),
+                          Expanded(
+                            child: Text(
+                              title,
+                              maxLines: 2,
+                              overflow: TextOverflow.ellipsis,
+                              style: theme.textTheme.titleSmall?.copyWith(
+                                fontWeight: FontWeight.w700,
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 4),
+                      primaryContent ??
+                          Text(
+                            primaryText,
                             maxLines: 2,
                             overflow: TextOverflow.ellipsis,
-                            style: theme.textTheme.titleSmall?.copyWith(
+                            style: theme.textTheme.titleLarge?.copyWith(
                               fontWeight: FontWeight.w700,
                             ),
                           ),
-                        ),
-                      ],
-                    ),
-                    const SizedBox(height: 4),
-                    primaryContent ??
+                      const SizedBox(height: 2),
+                      if (compactSecondary)
+                        // One ellipsized line per entry keeps the card height
+                        // independent of long subject names.
+                        for (final line in secondaryText.split('\n'))
+                          Text(
+                            line,
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            style: theme.textTheme.bodySmall?.copyWith(
+                              color: scheme.onSurfaceVariant,
+                            ),
+                          )
+                      else
                         Text(
-                          primaryText,
-                          maxLines: 2,
-                          overflow: TextOverflow.ellipsis,
-                          style: theme.textTheme.titleLarge?.copyWith(
-                            fontWeight: FontWeight.w700,
-                          ),
-                        ),
-                    const SizedBox(height: 2),
-                    if (compactSecondary)
-                      // One ellipsized line per entry keeps the card height
-                      // independent of long subject names.
-                      for (final line in secondaryText.split('\n'))
-                        Text(
-                          line,
-                          maxLines: 1,
+                          secondaryText,
+                          maxLines: 4,
                           overflow: TextOverflow.ellipsis,
                           style: theme.textTheme.bodySmall?.copyWith(
                             color: scheme.onSurfaceVariant,
                           ),
-                        )
-                    else
-                      Text(
-                        secondaryText,
-                        maxLines: 4,
-                        overflow: TextOverflow.ellipsis,
-                        style: theme.textTheme.bodySmall?.copyWith(
-                          color: scheme.onSurfaceVariant,
                         ),
-                      ),
-                    if (progressValue != null) ...[
-                      const SizedBox(height: 8),
-                      if (constraints.hasBoundedHeight) const Spacer(),
-                      Semantics(
-                        label: context.l10n.text('schoolCountdown.progress'),
-                        value: '${(progressValue * 100).round()} %',
-                        child: ClipRRect(
-                          borderRadius: BorderRadius.circular(20),
-                          child: LinearProgressIndicator(
-                            minHeight: 4,
-                            value: progressValue,
-                            color: progressColor,
-                            backgroundColor: scheme.surfaceContainerHighest,
+                      if (progressValue != null) ...[
+                        const SizedBox(height: 8),
+                        if (constraints.hasBoundedHeight) const Spacer(),
+                        Semantics(
+                          label: context.l10n.text('schoolCountdown.progress'),
+                          value: '${(progressValue * 100).round()} %',
+                          child: ClipRRect(
+                            borderRadius: BorderRadius.circular(20),
+                            child: LinearProgressIndicator(
+                              minHeight: 4,
+                              value: progressValue,
+                              color: progressColor,
+                              backgroundColor: scheme.surfaceContainerHighest,
+                            ),
                           ),
                         ),
-                      ),
-                      const SizedBox(height: 3),
-                      Align(
-                        alignment: Alignment.centerRight,
-                        child: Text(
-                          progressLabel ??
-                              context.l10n.text(
-                                'schoolCountdown.progressValue',
-                                args: {
-                                  'percent': '${(progressValue * 100).round()}',
-                                },
-                              ),
-                          softWrap: true,
-                          style: theme.textTheme.labelSmall,
+                        const SizedBox(height: 3),
+                        Align(
+                          alignment: Alignment.centerRight,
+                          child: Text(
+                            progressLabel ??
+                                context.l10n.text(
+                                  'schoolCountdown.progressValue',
+                                  args: {
+                                    'percent':
+                                        '${(progressValue * 100).round()}',
+                                  },
+                                ),
+                            softWrap: true,
+                            style: theme.textTheme.labelSmall,
+                          ),
                         ),
-                      ),
+                      ],
                     ],
-                  ],
-                );
-              },
+                  );
+                },
+              ),
             ),
           ),
         ),
@@ -371,26 +383,30 @@ class DashboardLoadingCard extends StatelessWidget {
     return Semantics(
       label: '$title: ${context.t('dashboard.customize.loading')}',
       child: ExcludeSemantics(
-          child: Container(
-        padding: const EdgeInsets.all(11),
-        decoration: BoxDecoration(
-          color: scheme.primaryContainer.withValues(alpha: 0.36),
-          borderRadius: BorderRadius.circular(14),
-          border: Border.all(color: scheme.primary.withValues(alpha: 0.16)),
-        ),
-        child: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              bar(0.7, 20),
-              const SizedBox(height: 6),
-              bar(0.55, 24),
-              const SizedBox(height: 6),
-              bar(0.85, 14),
-              const SizedBox(height: 8),
-              bar(1, 4),
-            ]),
-      )),
+          child: GlassEdgeIf(
+              enabled: ResponsiveNavigationScope.isActive(context),
+              shape: _cardShape,
+              child: Container(
+                padding: const EdgeInsets.all(11),
+                decoration: BoxDecoration(
+                  color: scheme.primaryContainer.withValues(alpha: 0.36),
+                  borderRadius: BorderRadius.circular(14),
+                  border:
+                      Border.all(color: scheme.primary.withValues(alpha: 0.16)),
+                ),
+                child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      bar(0.7, 20),
+                      const SizedBox(height: 6),
+                      bar(0.55, 24),
+                      const SizedBox(height: 6),
+                      bar(0.85, 14),
+                      const SizedBox(height: 8),
+                      bar(1, 4),
+                    ]),
+              ))),
     );
   }
 }
