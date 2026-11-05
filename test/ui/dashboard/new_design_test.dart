@@ -555,26 +555,95 @@ void main() {
       }
     });
 
+    Color over(Color top, double alpha, Color below) =>
+        Color.alphaBlend(top.withValues(alpha: alpha), below);
+
     test('text on the glass surfaces stays readable over anything', () {
       for (final scheme in _allSchemes()) {
+        final light = GlassLight.of(scheme);
+        Color lit(Color surface) =>
+            over(light.highlight, light.sheenStrength, surface);
         // The worst case is content of the opposite brightness below.
         final behind = scheme.brightness == Brightness.dark
             ? const Color(0xFFFFFFFF)
             : const Color(0xFF000000);
-        final header = Color.alphaBlend(
-            scheme.surface.withValues(alpha: DesignTokens.headerOpacity),
-            behind);
-        expect(AppPalette.contrastRatio(scheme.onSurface, header),
-            greaterThanOrEqualTo(4.5));
-        final bar = Color.alphaBlend(
-          Color.alphaBlend(
-            scheme.primary.withValues(alpha: 0.08),
-            scheme.surfaceContainerHigh,
-          ).withValues(alpha: DesignTokens.navigationBarOpacity),
+        final header = over(scheme.surface, DesignTokens.headerOpacity, behind);
+        for (final surface in [header, lit(header)]) {
+          expect(AppPalette.contrastRatio(scheme.onSurface, surface),
+              greaterThanOrEqualTo(4.5));
+          expect(AppPalette.contrastRatio(scheme.onSurfaceVariant, surface),
+              greaterThanOrEqualTo(4.5));
+        }
+        final bar = over(
+          navigationBarTint(scheme),
+          DesignTokens.navigationBarOpacity,
           behind,
         );
         expect(AppPalette.contrastRatio(scheme.onSurfaceVariant, bar),
             greaterThanOrEqualTo(4.5));
+        // The bar holds only icons, and the sheen hardly reaches them.
+        expect(AppPalette.contrastRatio(scheme.onSurfaceVariant, lit(bar)),
+            greaterThanOrEqualTo(3));
+        final lens = Color.alphaBlend(navigationLensFill(scheme), bar);
+        for (final surface in [lens, lit(lens)]) {
+          expect(AppPalette.contrastRatio(scheme.onPrimaryContainer, surface),
+              greaterThanOrEqualTo(4.5));
+        }
+      }
+    });
+
+    test('text on a glass sheet stays readable over anything', () {
+      for (final scheme in _allSchemes()) {
+        final light = GlassLight.of(scheme);
+        for (final page in [
+          const Color(0xFF000000),
+          const Color(0xFFFFFFFF),
+          scheme.surface,
+          scheme.exam,
+        ]) {
+          // Between the sheet and the page lies the scrim of the route.
+          final scrim = over(const Color(0xFF000000), 0.54, page);
+          final sheet =
+              over(scheme.surfaceContainer, DesignTokens.sheetOpacity, scrim);
+          for (final surface in [
+            sheet,
+            over(light.highlight, light.sheenStrength, sheet),
+          ]) {
+            for (final text in [
+              scheme.onSurface,
+              scheme.onSurfaceVariant,
+              scheme.onPrimaryContainer,
+            ]) {
+              expect(AppPalette.contrastRatio(text, surface),
+                  greaterThanOrEqualTo(4.5));
+            }
+          }
+        }
+      }
+    });
+
+    test('text on glass controls stays readable', () {
+      for (final scheme in _allSchemes()) {
+        final light = GlassLight.of(scheme);
+        for (final page in [
+          scheme.surface,
+          over(scheme.surfaceContainerLowest, 0.72, scheme.surface),
+          over(scheme.primaryContainer, 0.42, scheme.surface),
+        ]) {
+          final control = over(
+            scheme.secondaryContainer,
+            DesignTokens.controlOpacity,
+            page,
+          );
+          for (final surface in [
+            control,
+            over(light.highlight, light.sheenStrength, control),
+          ]) {
+            expect(
+                AppPalette.contrastRatio(scheme.onSecondaryContainer, surface),
+                greaterThanOrEqualTo(4.5));
+          }
+        }
       }
     });
 

@@ -32,7 +32,7 @@ abstract final class DesignTokens {
   /// How opaque the glass is. High enough that text keeps WCAG AA contrast even
   /// with content of the opposite brightness below and no blur at all.
   static const double headerOpacity = 0.8;
-  static const double navigationBarOpacity = 0.9;
+  static const double navigationBarOpacity = 0.84;
   static const double sheetOpacity = 0.88;
 
   /// The fill of controls that stay in the list, so without blur. They only
