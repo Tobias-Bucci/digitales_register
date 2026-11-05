@@ -53,20 +53,8 @@ Future<void> showProfileMenu(BuildContext context) {
         ),
         child: ConstrainedBox(
           constraints: const BoxConstraints(maxWidth: 360),
-          child: GlassSurface(
-            tint: Theme.of(context).colorScheme.surfaceContainerHigh,
-            opacity: DesignTokens.sheetOpacity,
-            borderRadius: DesignTokens.cardBorderRadius,
-            rim: GlassRim.around,
-            child: const Material(
-              type: MaterialType.transparency,
-              clipBehavior: Clip.antiAlias,
-              borderRadius: DesignTokens.cardBorderRadius,
-              child: SingleChildScrollView(
-                padding: EdgeInsets.only(top: 8),
-                child: ProfileMenuContainer(),
-              ),
-            ),
+          child: const GlassSheet.panel(
+            child: SingleChildScrollView(child: ProfileMenuContainer()),
           ),
         ),
       ),

@@ -1952,6 +1952,118 @@ void main() {
     });
   });
 
+  group('desktop panels', () {
+    tearDown(GlassPerformance.instance.reset);
+
+    final panel = find.byKey(const Key('glass-sheet'));
+
+    for (final size in _wideWindows) {
+      final name = '${size.width.toInt()}x${size.height.toInt()}';
+
+      testWidgets('$name centres the details of an entry', (tester) async {
+        await _pumpDashboard(tester, _dashboardState(), size: size);
+
+        await tester.tap(find.byKey(const ValueKey('compact-row-open-1')));
+        await settleFor(tester);
+
+        expect(find.byType(BottomSheet), findsNothing);
+        expect(find.byType(EntryDetailsSheet), findsOneWidget);
+        final rect = tester.getRect(panel);
+        expect(rect.width, lessThanOrEqualTo(GlassSheet.panelMaxWidth));
+        expect(rect.center.dx, moreOrLessEquals(size.width / 2));
+        expect(rect.center.dy, moreOrLessEquals(size.height / 2));
+        expect(
+          find.descendant(of: panel, matching: find.byType(BackdropFilter)),
+          findsOneWidget,
+        );
+      });
+    }
+
+    testWidgets('the filter opens as a panel', (tester) async {
+      await _pumpDashboard(tester, _dashboardState(),
+          size: const Size(1366, 768));
+
+      await tester.tap(find.text('Filter'));
+      await settleFor(tester);
+
+      expect(find.byType(BottomSheet), findsNothing);
+      expect(tester.getSize(panel).width, GlassSheet.panelMaxWidth);
+    });
+
+    testWidgets('the event list opens as a panel', (tester) async {
+      await _pumpDashboard(
+        tester,
+        _dashboardState(notifications: [
+          buildNotification(id: 1, type: 'message', objectId: 1),
+          buildNotification(id: 2, type: 'message', objectId: 2),
+        ]).rebuild((b) => b.noInternet = false),
+        size: const Size(1366, 768),
+      );
+
+      await tester.tap(find.byKey(const Key('event-banner-more')));
+      await settleFor(tester);
+
+      expect(find.byType(EventListSheet), findsOneWidget);
+      expect(find.byType(BottomSheet), findsNothing);
+    });
+
+    testWidgets('a panel closes with Escape', (tester) async {
+      await _pumpDashboard(tester, _dashboardState(),
+          size: const Size(1366, 768));
+
+      await tester.tap(find.byKey(const ValueKey('compact-row-open-1')));
+      await settleFor(tester);
+      await tester.sendKeyEvent(LogicalKeyboardKey.escape);
+      await settleFor(tester);
+
+      expect(find.byType(EntryDetailsSheet), findsNothing);
+    });
+
+    testWidgets('a panel is solid without blur', (tester) async {
+      GlassPerformance.instance.blurAllowed.value = false;
+      await _pumpDashboard(tester, _dashboardState(),
+          size: const Size(1366, 768));
+
+      await tester.tap(find.byKey(const ValueKey('compact-row-open-1')));
+      await settleFor(tester);
+
+      expect(find.byType(BackdropFilter), findsNothing);
+    });
+
+    testWidgets('a tablet gets panels as well', (tester) async {
+      await _pumpDashboard(tester, _dashboardState(),
+          size: const Size(820, 1000));
+
+      await tester.tap(find.byKey(const ValueKey('compact-row-open-1')));
+      await settleFor(tester);
+
+      expect(find.byType(GlassSheet), findsOneWidget);
+      expect(find.byType(BottomSheet), findsNothing);
+    });
+
+    testWidgets('a phone keeps its sheet', (tester) async {
+      await _pumpDashboard(tester, _dashboardState());
+
+      await tester.tap(find.byKey(const ValueKey('compact-row-open-1')));
+      await settleFor(tester);
+
+      expect(find.byType(BottomSheet), findsOneWidget);
+    });
+
+    testWidgets('the profile menu sits beside the rail, with the same corners',
+        (tester) async {
+      await _pumpDashboard(tester, _dashboardState(),
+          size: const Size(1366, 768));
+
+      await tester.tap(find.byKey(const ValueKey('app-navigation-profile')));
+      await settleFor(tester);
+
+      expect(find.byType(ProfileMenuContainer), findsOneWidget);
+      expect(tester.getRect(panel).left, appNavigationRailExtent);
+      expect(tester.getRect(panel).bottom, 768 - DesignTokens.gutter);
+    });
+  });
+
   group('light of the glass', () {
     // Curves are not rasterised perfectly alike on both sides. Light from the
     // side differs by far more, as the control below shows.
