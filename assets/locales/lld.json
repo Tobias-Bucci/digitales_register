@@ -1114,5 +1114,13 @@
   "dashboard.banner.allTitle": "Novités",
   "dashboard.banner.average": "Media {average}",
   "dashboard.banner.averageChange": "Media {before} → {after}",
+  "dashboard.edit.start": "Mudè les cartes",
+  "dashboard.edit.done": "Fat",
+  "dashboard.edit.add": "Ajuntè na carta",
+  "dashboard.edit.hint": "Tira les cartes por les spostè.",
+  "dashboard.edit.moveEarlier": "Spostè inant",
+  "dashboard.edit.moveLater": "Spostè zoruch",
+  "dashboard.edit.widthValue": "Larghëza: {width}",
+  "dashboard.edit.settingsHint": "Tó fora les cartes, les ordinè y mudè la larghëza.",
   "calendar.view.exams": "Proes"
 }

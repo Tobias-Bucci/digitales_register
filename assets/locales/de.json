@@ -1114,5 +1114,13 @@
   "dashboard.banner.allTitle": "Neuigkeiten",
   "dashboard.banner.average": "Schnitt {average}",
   "dashboard.banner.averageChange": "Schnitt {before} → {after}",
+  "dashboard.edit.start": "Karten bearbeiten",
+  "dashboard.edit.done": "Fertig",
+  "dashboard.edit.add": "Karte hinzufügen",
+  "dashboard.edit.hint": "Karten ziehen, um sie zu verschieben.",
+  "dashboard.edit.moveEarlier": "Nach vorne",
+  "dashboard.edit.moveLater": "Nach hinten",
+  "dashboard.edit.widthValue": "Breite: {width}",
+  "dashboard.edit.settingsHint": "Karten auswählen, sortieren und ihre Breite ändern.",
   "calendar.view.exams": "Prüfungen"
 }
