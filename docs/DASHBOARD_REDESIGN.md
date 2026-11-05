@@ -58,11 +58,41 @@ Noch mit echten Daten zu prüfen:
 
 ## Glas und Leistung
 
-Nur Kopfzeile und Navigationsleiste verwenden echten Blur, in einer gemeinsamen
-`BackdropGroup`. Karten und Banner liegen in der Liste und sind nur transparent
-getönt, weil Blur dort beim Scrollen am teuersten wäre. `GlassPerformance` misst
-die Raster-Zeit: Verpassen über 25 % von 120 Frames das Budget, bleibt die
-Oberfläche für die Sitzung einfarbig. Das gilt auch im Hochkontrastmodus.
+Echten Blur haben nur Kopfzeile, Navigationsleiste (in einer gemeinsamen
+`BackdropGroup`) und die modalen Sheets. Ein Sheet deckt die Seite ab und scrollt
+nicht über ihr, sein Blur bleibt also bezahlbar. In der Liste gibt es keinen Blur,
+weil er dort beim Scrollen am teuersten wäre. `GlassPerformance` misst die
+Raster-Zeit: Verpassen über 25 % von 120 Frames das Budget, bleibt die Oberfläche
+für die Sitzung einfarbig. Das gilt auch im Hochkontrastmodus.
+
+Der Rest des Glases ist Licht, nicht Blur, und kostet deshalb fast nichts:
+`GlassEdge` malt einen feinen Rand und einen weichen Schein, beides statische
+Verläufe aus den Rollen des Themes (`GlassLight`). Das darf auch in der Liste
+stehen: Übersichtsbox, Filter, Vergangenheit und „+“. Fällt der Blur weg, bleibt
+das Licht; im Hochkontrastmodus entfällt es ganz.
+
+Die Linse der Navigationsleiste gleitet auf einer Feder zum gewählten Eintrag,
+streckt sich dabei mit ihrer Geschwindigkeit, und Symbole unter ihr wachsen leicht.
+Das ersetzt Brechung, die einen zweiten Backdrop bräuchte. Bei „Bewegung
+reduzieren“ springt sie. Die Leiste am Rand breiter Fenster zeigt dieselbe Füllung
+und denselben Rand, ohne zu gleiten.
+
+Die Deckkraft ist so gewählt, dass Text über dem ungünstigsten Hintergrund AA
+erreicht; die Tests rechnen das für jede Akzentfarbe nach. Auf hellen Sheets
+reicht `primary` dafür nicht, weil darunter der dunkle Scrim liegt. `GlassSheet`
+setzt deshalb dort `onPrimaryContainer` als `primary`.
+
+Bewusst nicht verwendet:
+
+- Schein auf den Bannern: Im hellen Design wirkte er glänzend und schwächte die
+  Farben, die dort eine Bedeutung haben.
+- Blur oder Lupe in der Linse: Ein zweiter Backdrop in der Leiste bringt über dem
+  schon verschwommenen Hintergrund sichtbar nichts.
+- Sättigung im Backdrop-Filter: kaum sichtbar bei dieser Deckkraft, aber ein
+  zusätzlicher Filterdurchgang.
+- Fragment-Shader für Brechung: Shader in `ImageFilter` gibt es nur mit Impeller,
+  Linux und Windows wären außen vor.
+- Dialoge: Ihr Theme gilt auch für Legacy.
 
 ## Beta-Rollout
 

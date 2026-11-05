@@ -122,6 +122,12 @@ DashboardEvent _plainEvent(DashboardEventKind kind) => DashboardEvent(
       notification: buildNotification(id: 7, type: kind.name),
     );
 
+/// What paints the light of the glass.
+Iterable<CustomPaint> _glassPaints(WidgetTester tester) =>
+    tester.widgetList<CustomPaint>(find.byType(CustomPaint)).where((paint) =>
+        paint.painter is GlassSheenPainter ||
+        paint.foregroundPainter is GlassRimPainter);
+
 List<ColorScheme> _allSchemes() => [
       for (final accent in AppAccent.values)
         for (final (brightness, amoled) in const [
@@ -1641,6 +1647,324 @@ void main() {
       await _pumpDashboard(tester, _dashboardState());
 
       expect(find.byType(BackdropFilter), findsNothing);
+      expect(_glassPaints(tester), isEmpty);
+    });
+
+    testWidgets('a solid surface keeps its rim, which costs next to nothing',
+        (tester) async {
+      GlassPerformance.instance.blurAllowed.value = false;
+
+      await _pumpDashboard(tester, _dashboardState());
+
+      expect(find.byType(BackdropFilter), findsNothing);
+      expect(_glassPaints(tester), isNotEmpty);
+    });
+
+    testWidgets('nothing in the list blurs', (tester) async {
+      await _pumpDashboard(tester, _dashboardState());
+
+      expect(
+        find.descendant(
+          of: find.byType(ListView),
+          matching: find.byType(BackdropFilter),
+        ),
+        findsNothing,
+      );
+    });
+
+    testWidgets('light on the glass does not take taps', (tester) async {
+      await _pumpDashboard(
+        tester,
+        _dashboardState().rebuild((b) => b.noInternet = false),
+      );
+
+      await tester.tap(find.text('Filter'));
+      await settleFor(tester);
+
+      expect(find.byType(GlassSheet), findsOneWidget);
+    });
+
+    testWidgets('Legacy has no part in it', (tester) async {
+      await _pumpDashboard(tester, _dashboardState(), newDesign: false);
+
+      expect(find.byType(GlassEdge), findsNothing);
+      expect(_glassPaints(tester), isEmpty);
+      final button = tester.widget<FilledButton>(
+        find.ancestor(
+          of: find.text('Filter'),
+          matching: find.byWidgetPredicate((widget) => widget is FilledButton),
+        ),
+      );
+      expect(
+        FilledButtonTheme.of(tester.element(find.byWidget(button))).style,
+        isNull,
+      );
+    });
+  });
+
+  group('navigation lens', () {
+    final lens = find.byKey(const Key('app-navigation-lens'));
+
+    Future<ValueNotifier<AppDestination>> pumpBar(
+      WidgetTester tester, {
+      double width = 400,
+    }) async {
+      tester.view.physicalSize = Size(width, 800);
+      tester.view.devicePixelRatio = 1;
+      addTearDown(tester.view.reset);
+      final selected = ValueNotifier(AppDestination.dashboard);
+      addTearDown(selected.dispose);
+      await pumpApp(
+        tester,
+        store: createStore(newDesign: true),
+        home: Scaffold(
+          body: Align(
+            alignment: Alignment.bottomCenter,
+            child: ValueListenableBuilder(
+              valueListenable: selected,
+              builder: (context, destination, _) => FloatingNavigationBar(
+                selected: destination,
+                onSelected: (_) {},
+                unreadMessages: 0,
+                userIcon: null,
+              ),
+            ),
+          ),
+        ),
+      );
+      return selected;
+    }
+
+    Finder item(AppDestination destination) =>
+        find.byKey(ValueKey('app-navigation-${destination.name}'));
+
+    for (final (name, platform) in const [
+      ('touch', TargetPlatform.android),
+      ('desktop', TargetPlatform.windows),
+    ]) {
+      for (final width in const [320.0, 400.0, 800.0]) {
+        testWidgets('rests on the selected item at $width px on $name',
+            (tester) async {
+          debugDefaultTargetPlatformOverride = platform;
+          final selected = await pumpBar(tester, width: width);
+          final barRect =
+              tester.getRect(find.byKey(const Key('app-navigation-bar')));
+
+          for (final destination in AppDestination.values) {
+            selected.value = destination;
+            await tester.pumpAndSettle();
+            final rect = tester.getRect(lens);
+            expect(
+              rect.center.dx,
+              moreOrLessEquals(tester.getCenter(item(destination)).dx,
+                  epsilon: 0.5),
+            );
+            expect(rect.left, greaterThanOrEqualTo(barRect.left));
+            expect(rect.right, lessThanOrEqualTo(barRect.right));
+            expect(rect.height, 44);
+          }
+          debugDefaultTargetPlatformOverride = null;
+        });
+      }
+    }
+
+    testWidgets('slides over and stretches on the way', (tester) async {
+      final selected = await pumpBar(tester);
+      final rest = tester.getRect(lens);
+      final target = tester.getCenter(item(AppDestination.extras)).dx;
+
+      selected.value = AppDestination.extras;
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 60));
+
+      final moving = tester.getRect(lens);
+      expect(moving.center.dx, greaterThan(rest.center.dx));
+      expect(moving.center.dx, lessThan(target));
+      expect(moving.width, greaterThan(rest.width));
+      expect(moving.height, lessThan(rest.height));
+
+      await tester.pumpAndSettle();
+      expect(tester.getRect(lens).width, moreOrLessEquals(rest.width));
+      expect(
+        tester.getRect(lens).center.dx,
+        moreOrLessEquals(target, epsilon: 0.05),
+      );
+    });
+
+    testWidgets('follows a new selection in mid-flight', (tester) async {
+      final selected = await pumpBar(tester);
+
+      selected.value = AppDestination.extras;
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 60));
+      selected.value = AppDestination.grades;
+      await tester.pumpAndSettle();
+
+      expect(
+        tester.getRect(lens).center.dx,
+        moreOrLessEquals(
+          tester.getCenter(item(AppDestination.grades)).dx,
+          epsilon: 0.05,
+        ),
+      );
+    });
+
+    testWidgets('jumps with reduced motion', (tester) async {
+      tester.platformDispatcher.accessibilityFeaturesTestValue =
+          const FakeAccessibilityFeatures(disableAnimations: true);
+      addTearDown(
+          tester.platformDispatcher.clearAccessibilityFeaturesTestValue);
+      final selected = await pumpBar(tester);
+      final rest = tester.getRect(lens);
+
+      selected.value = AppDestination.extras;
+      await tester.pump();
+
+      expect(tester.getRect(lens).width, moreOrLessEquals(rest.width));
+      expect(
+        tester.getRect(lens).center.dx,
+        moreOrLessEquals(tester.getCenter(item(AppDestination.extras)).dx),
+      );
+    });
+
+    testWidgets('is solid with an outline in high contrast mode',
+        (tester) async {
+      tester.platformDispatcher.accessibilityFeaturesTestValue =
+          const FakeAccessibilityFeatures(highContrast: true);
+      addTearDown(
+          tester.platformDispatcher.clearAccessibilityFeaturesTestValue);
+      await pumpBar(tester);
+
+      final scheme = Theme.of(tester.element(lens)).colorScheme;
+      final box = tester.widget<DecoratedBox>(
+        find.descendant(of: lens, matching: find.byType(DecoratedBox)),
+      );
+      final decoration = box.decoration as ShapeDecoration;
+      expect(decoration.color, scheme.primaryContainer);
+      expect(
+        (decoration.shape as StadiumBorder).side.color,
+        scheme.onPrimaryContainer,
+      );
+      expect(_glassPaints(tester), isEmpty);
+    });
+
+    testWidgets('leaves the semantics of the items as they were',
+        (tester) async {
+      final handle = tester.ensureSemantics();
+      final selected = await pumpBar(tester);
+
+      selected.value = AppDestination.calendar;
+      await tester.pumpAndSettle();
+
+      expect(
+        tester.getSemantics(item(AppDestination.calendar)),
+        containsSemantics(isSelected: true, hasTapAction: true),
+      );
+      expect(
+        tester.getSemantics(item(AppDestination.dashboard)),
+        containsSemantics(isSelected: false, hasTapAction: true),
+      );
+      expect(find.byTooltip('Kalender'), findsOneWidget);
+      handle.dispose();
+    });
+
+    testWidgets('the rail has the same glass, but not in high contrast mode',
+        (tester) async {
+      await _pumpDashboard(tester, _dashboardState(),
+          size: const Size(1200, 800));
+      final rail = find.byKey(const Key('app-navigation-rail'));
+      final scheme = Theme.of(tester.element(rail)).colorScheme;
+
+      var widget = tester.widget<NavigationRail>(rail);
+      expect(widget.indicatorShape, isA<GlassStadiumBorder>());
+      expect(widget.indicatorColor, navigationLensFill(scheme));
+
+      tester.platformDispatcher.accessibilityFeaturesTestValue =
+          const FakeAccessibilityFeatures(highContrast: true);
+      addTearDown(
+          tester.platformDispatcher.clearAccessibilityFeaturesTestValue);
+      await tester.pump();
+
+      widget = tester.widget<NavigationRail>(rail);
+      expect(widget.indicatorShape, isNot(isA<GlassStadiumBorder>()));
+      expect(widget.indicatorColor, scheme.primaryContainer);
+    });
+  });
+
+  group('glass sheets', () {
+    tearDown(GlassPerformance.instance.reset);
+
+    Finder inSheet(Type type) => find.descendant(
+          of: find.byType(GlassSheet),
+          matching: find.byType(type),
+        );
+
+    testWidgets('the details of an entry blur what is behind them',
+        (tester) async {
+      await _pumpDashboard(tester, _dashboardState());
+
+      await tester.tap(find.byKey(const ValueKey('compact-row-open-1')));
+      await settleFor(tester);
+
+      expect(find.byType(GlassSheet), findsOneWidget);
+      expect(inSheet(BackdropFilter), findsOneWidget);
+    });
+
+    testWidgets('the accent of a sheet is readable on its glass',
+        (tester) async {
+      await _pumpDashboard(tester, _dashboardState());
+      final scheme =
+          Theme.of(tester.element(find.byType(CompactDayWidget))).colorScheme;
+
+      await tester.tap(find.byKey(const ValueKey('compact-row-open-1')));
+      await settleFor(tester);
+
+      final label = tester.widget<Text>(find.text('Deutsch'));
+      expect(label.style?.color, scheme.onPrimaryContainer);
+    });
+
+    testWidgets('are solid once blur is off or in high contrast mode',
+        (tester) async {
+      GlassPerformance.instance.blurAllowed.value = false;
+      await _pumpDashboard(tester, _dashboardState());
+
+      await tester.tap(find.byKey(const ValueKey('compact-row-open-1')));
+      await settleFor(tester);
+
+      expect(find.byType(GlassSheet), findsOneWidget);
+      expect(find.byType(BackdropFilter), findsNothing);
+      final surface = tester.widget<DecoratedBox>(find
+          .descendant(
+            of: find.byKey(const Key('glass-sheet')),
+            matching: find.byType(DecoratedBox),
+          )
+          .first);
+      expect((surface.decoration as BoxDecoration).color!.a, 1);
+    });
+
+    testWidgets('can be dragged away and closed by a screen reader',
+        (tester) async {
+      final handle = tester.ensureSemantics();
+      await _pumpDashboard(tester, _dashboardState());
+
+      await tester.tap(find.byKey(const ValueKey('compact-row-open-1')));
+      await settleFor(tester);
+      expect(find.bySemanticsLabel('Schließen'), findsOneWidget);
+
+      await tester.drag(find.byType(GlassSheet), const Offset(0, 500));
+      await settleFor(tester);
+      expect(find.byType(GlassSheet), findsNothing);
+      handle.dispose();
+    });
+
+    testWidgets('Legacy keeps its plain filter sheet', (tester) async {
+      await _pumpDashboard(tester, _dashboardState(), newDesign: false);
+
+      await tester.tap(find.text('Filter'));
+      await settleFor(tester);
+
+      expect(find.byType(BottomSheet), findsOneWidget);
+      expect(find.byType(GlassSheet), findsNothing);
     });
   });
 
