@@ -96,7 +96,7 @@ bool isExtrasChild(Pages page) => switch (page) {
     };
 
 /// The height of the floating bar itself. Kept slim on purpose, see #85.
-const appNavigationBarHeight = 56.0;
+const appNavigationBarHeight = FloatingGlass.thickness;
 
 /// The space between the bar and the bottom safe area.
 const _barBottomGap = 8.0;
@@ -157,41 +157,19 @@ String _destinationLabel(
 }
 
 /// The glass that the bar and the rail have in common.
-class _FloatingGlass extends StatelessWidget {
-  const _FloatingGlass({required this.surfaceKey, required this.child});
-
-  static final _radius = BorderRadius.circular(appNavigationBarHeight / 2);
+class _NavigationGlass extends StatelessWidget {
+  const _NavigationGlass({required this.surfaceKey, required this.child});
 
   final Key surfaceKey;
   final Widget child;
 
   @override
-  Widget build(BuildContext context) {
-    final scheme = Theme.of(context).colorScheme;
-    return DecoratedBox(
-      decoration: BoxDecoration(
-        borderRadius: _radius,
-        boxShadow: [
-          BoxShadow(
-            color: scheme.shadow.withValues(alpha: 0.14),
-            blurRadius: 18,
-            offset: const Offset(0, 6),
-          ),
-        ],
-      ),
-      child: GlassSurface(
-        key: surfaceKey,
-        tint: navigationBarTint(scheme),
+  Widget build(BuildContext context) => FloatingGlass(
+        surfaceKey: surfaceKey,
+        tint: navigationBarTint(Theme.of(context).colorScheme),
         opacity: DesignTokens.navigationBarOpacity,
-        borderRadius: _radius,
-        rim: GlassRim.around,
-        border: Border.all(
-          color: scheme.outlineVariant.withValues(alpha: 0.6),
-        ),
         child: FocusTraversalGroup(child: child),
-      ),
-    );
-  }
+      );
 }
 
 /// The destinations on a track of [axis], the same in the bar and the rail.
@@ -264,7 +242,7 @@ class FloatingNavigationBar extends StatelessWidget {
         ),
         child: ConstrainedBox(
           constraints: const BoxConstraints(maxWidth: 480),
-          child: _FloatingGlass(
+          child: _NavigationGlass(
             surfaceKey: const Key('app-navigation-bar'),
             child: SizedBox(
               height: appNavigationBarHeight,
@@ -526,7 +504,7 @@ class AppNavigationRail extends StatelessWidget {
           child: SingleChildScrollView(
             clipBehavior: Clip.none,
             padding: const EdgeInsets.all(DesignTokens.gutter),
-            child: _FloatingGlass(
+            child: _NavigationGlass(
               surfaceKey: const Key('app-navigation-rail'),
               child: SizedBox(
                 width: appNavigationBarHeight,

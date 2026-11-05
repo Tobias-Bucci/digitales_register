@@ -44,6 +44,7 @@ import 'package:dr/ui/committed_deleteable.dart';
 import 'package:dr/ui/compact_day_list.dart';
 import 'package:dr/ui/controlled_text_builder.dart';
 import 'package:dr/ui/dashboard_app_header.dart';
+import 'package:dr/ui/dashboard_columns.dart';
 import 'package:dr/ui/dialog.dart';
 import 'package:dr/ui/favorite_subject_filter.dart';
 import 'package:dr/ui/glass_surface.dart';
@@ -485,33 +486,10 @@ class _DaysWidgetState extends State<DaysWidget> {
   }) {
     final modern = !widget.vm.legacyDesign;
     if (n == 0) {
-      final timeline = _schoolTimeline();
-      final header = DashboardHeader(
-        future: widget.vm.future,
-        onSwitchFuture: widget.onSwitchFuture,
-        favoriteSubjects: availableFavoriteSubjects,
-        selectedFavoriteSubject: activeFavoriteSubject,
-        onFavoriteSubjectChanged: (favoriteSubject) {
-          setState(() {
-            _favoriteSubject = favoriteSubject;
-            widget.onFavoriteSubjectChanged?.call(favoriteSubject);
-            updateValues(_filteredDays(favoriteSubject));
-            update();
-          });
-        },
-        showEmptyDays: _showEmptyDays,
-        onShowEmptyDaysChanged: (value) {
-          setState(() {
-            _showEmptyDays = value;
-            widget.onShowEmptyDaysChanged?.call(value);
-            updateValues(_filteredDays(activeFavoriteSubject));
-            update();
-          });
-        },
-        subjectThemes: widget.vm.subjectThemes,
-        schoolTimeline: timeline,
-        openCalendarAt: widget.openCalendarAt,
-        editGradeDeadline: _editGradeDeadline,
+      if (_dashboardColumns(modern) != null) return const SizedBox(height: 4);
+      final header = _dashboardHeader(
+        availableFavoriteSubjects,
+        activeFavoriteSubject,
         modern: modern,
       );
       return modern ? _modernTop(header) : header;
@@ -571,11 +549,59 @@ class _DaysWidgetState extends State<DaysWidget> {
     );
   }
 
-  PreferredSizeWidget _modernAppBar() => DashboardAppHeader(
-        schoolName: widget.vm.schoolName,
-        noInternet: widget.vm.noInternet,
-        onRetry: widget.refreshNoInternet,
-      );
+  /// The two columns of a wide window, or null.
+  DashboardColumns? _dashboardColumns(bool modern) => modern
+      ? DashboardColumns.forWindow(MediaQuery.sizeOf(context).width)
+      : null;
+
+  Widget _dashboardHeader(
+    List<String> availableFavoriteSubjects,
+    String? activeFavoriteSubject, {
+    required bool modern,
+  }) {
+    return DashboardHeader(
+      future: widget.vm.future,
+      onSwitchFuture: widget.onSwitchFuture,
+      favoriteSubjects: availableFavoriteSubjects,
+      selectedFavoriteSubject: activeFavoriteSubject,
+      onFavoriteSubjectChanged: (favoriteSubject) {
+        setState(() {
+          _favoriteSubject = favoriteSubject;
+          widget.onFavoriteSubjectChanged?.call(favoriteSubject);
+          updateValues(_filteredDays(favoriteSubject));
+          update();
+        });
+      },
+      showEmptyDays: _showEmptyDays,
+      onShowEmptyDaysChanged: (value) {
+        setState(() {
+          _showEmptyDays = value;
+          widget.onShowEmptyDaysChanged?.call(value);
+          updateValues(_filteredDays(activeFavoriteSubject));
+          update();
+        });
+      },
+      subjectThemes: widget.vm.subjectThemes,
+      schoolTimeline: _schoolTimeline(),
+      openCalendarAt: widget.openCalendarAt,
+      editGradeDeadline: _editGradeDeadline,
+      modern: modern,
+    );
+  }
+
+  PreferredSizeWidget _modernAppBar() {
+    final width = MediaQuery.sizeOf(context).width;
+    return DashboardAppHeader(
+      schoolName: widget.vm.schoolName,
+      noInternet: widget.vm.noInternet,
+      onRetry: widget.refreshNoInternet,
+      floatingMaxWidth: width < tabletLayoutBreakpoint
+          ? null
+          : DashboardColumns.forWindow(width) == null
+              ? DesignTokens.contentMaxWidth
+              : DashboardColumns.maxWidth,
+    );
+  }
 
   /// What the new design shows above the day list.
   Widget _modernTop(Widget header) => ReadableContent(
@@ -609,6 +635,7 @@ class _DaysWidgetState extends State<DaysWidget> {
     final noInternet = widget.vm.noInternet;
     final noEntries = visibleDays.isEmpty;
     final modern = !widget.vm.legacyDesign;
+    final columns = _dashboardColumns(modern);
     final schoolTimeline = _schoolTimeline();
     Widget body;
     if (noEntries) {
@@ -670,6 +697,16 @@ class _DaysWidgetState extends State<DaysWidget> {
       body = Builder(
         builder: (context) {
           final padding = MediaQuery.paddingOf(context);
+          if (columns != null) {
+            return DashboardColumnsView(
+              columns: columns,
+              side: _modernTop(emptyHeader),
+              main: Padding(
+                padding: EdgeInsets.only(right: columns.margin),
+                child: Center(child: fullScreenBody),
+              ),
+            );
+          }
           return CustomScrollView(
             slivers: [
               if (modern)
@@ -699,24 +736,27 @@ class _DaysWidgetState extends State<DaysWidget> {
       body = LastFetchedOverlay(
         noInternet: widget.vm.noInternet,
         lastFetched: lastFetched,
-        child: ListView.builder(
-          physics: const AlwaysScrollableScrollPhysics(),
-          controller: controller,
-          // Times two for the divider, minus one because there's no divider after the last item.
-          // The first item is the DashboardHeader, the last one a SizedBox (a spacer).
-          itemCount: (visibleDays.length * 2 - 1) + 2,
-          itemBuilder: (context, n) {
-            return getItem(
-              visibleDays,
-              n,
-              isLast: n == (visibleDays.length * 2 - 1) + 1,
-              showLastFetched:
-                  widget.vm.noInternet && daysShouldShowLastFetched,
-              availableFavoriteSubjects: availableFavoriteSubjects,
-              activeFavoriteSubject: activeFavoriteSubject,
-            );
-          },
-        ),
+        child: Builder(builder: (context) {
+          return ListView.builder(
+            padding: columns?.listPadding(MediaQuery.paddingOf(context)),
+            physics: const AlwaysScrollableScrollPhysics(),
+            controller: controller,
+            // Times two for the divider, minus one because there's no divider after the last item.
+            // The first item is the DashboardHeader, the last one a SizedBox (a spacer).
+            itemCount: (visibleDays.length * 2 - 1) + 2,
+            itemBuilder: (context, n) {
+              return getItem(
+                visibleDays,
+                n,
+                isLast: n == (visibleDays.length * 2 - 1) + 1,
+                showLastFetched:
+                    widget.vm.noInternet && daysShouldShowLastFetched,
+                availableFavoriteSubjects: availableFavoriteSubjects,
+                activeFavoriteSubject: activeFavoriteSubject,
+              );
+            },
+          );
+        }),
       );
       final list = body;
       body = Builder(
@@ -741,6 +781,20 @@ class _DaysWidgetState extends State<DaysWidget> {
           );
         },
       );
+      if (columns != null) {
+        final days = body;
+        body = Builder(
+          builder: (context) => DashboardColumnsView(
+            columns: columns,
+            side: _modernTop(_dashboardHeader(
+              availableFavoriteSubjects,
+              activeFavoriteSubject,
+              modern: modern,
+            )),
+            main: days,
+          ),
+        );
+      }
     }
     final scaffold = ResponsiveScaffold<Pages>(
       key: scaffoldKey,
