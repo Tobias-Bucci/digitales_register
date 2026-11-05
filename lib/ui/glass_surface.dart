@@ -639,6 +639,7 @@ class FloatingGlass extends StatelessWidget {
     required this.tint,
     required this.opacity,
     required this.child,
+    this.shadowBlur = 18,
   });
 
   static const double thickness = 56;
@@ -646,7 +647,7 @@ class FloatingGlass extends StatelessWidget {
 
   final Key surfaceKey;
   final Color tint;
-  final double opacity;
+  final double opacity, shadowBlur;
   final Widget child;
 
   @override
@@ -658,7 +659,7 @@ class FloatingGlass extends StatelessWidget {
         boxShadow: [
           BoxShadow(
             color: scheme.shadow.withValues(alpha: 0.14),
-            blurRadius: 18,
+            blurRadius: shadowBlur,
             offset: const Offset(0, 6),
           ),
         ],

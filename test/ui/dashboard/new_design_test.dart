@@ -1347,6 +1347,18 @@ void main() {
       });
     }
 
+    testWidgets('the shadow of the rail ends inside its margin',
+        (tester) async {
+      await _pumpDashboard(tester, _dashboardState(),
+          size: const Size(1280, 720));
+
+      final glass = tester.widget<FloatingGlass>(find.descendant(
+        of: find.byType(AppNavigationRail),
+        matching: find.byType(FloatingGlass),
+      ));
+      expect(glass.shadowBlur, lessThan(DesignTokens.gutter));
+    });
+
     testWidgets('a very low window can scroll the rail', (tester) async {
       await _pumpDashboard(tester, _dashboardState(),
           size: const Size(900, 280));
