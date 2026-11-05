@@ -102,9 +102,53 @@ class SortedGradesWidget extends StatefulWidget {
 class _SortedGradesWidgetState extends State<SortedGradesWidget> {
   String? _favoriteSubject;
   String? _expandedSubjectKey;
+  final Map<String, GlobalKey> _subjectKeys = {};
 
   String _subjectExpansionKey(Subject subject) =>
       subject.id?.toString() ?? subject.name.toLowerCase();
+
+  @override
+  void initState() {
+    super.initState();
+    gradesPageFocusSubject.addListener(_openFocusSubject);
+    _openFocusSubject();
+  }
+
+  @override
+  void dispose() {
+    gradesPageFocusSubject.removeListener(_openFocusSubject);
+    super.dispose();
+  }
+
+  /// Opens the subject a banner asked for, once the page knows that subject.
+  void _openFocusSubject() {
+    final name = gradesPageFocusSubject.value?.toLowerCase();
+    if (name == null) return;
+    final subject = widget.vm.subjects
+        .where((subject) => subject.name.toLowerCase() == name)
+        .firstOrNull;
+    if (subject == null) return;
+    gradesPageFocusSubject.value = null;
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return;
+      final key = _subjectExpansionKey(subject);
+      setState(() {
+        _favoriteSubject = null;
+        _expandedSubjectKey = key;
+      });
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        final context = _subjectKeys[key]?.currentContext;
+        if (context != null && context.mounted) {
+          Scrollable.ensureVisible(
+            context,
+            duration: MediaQuery.disableAnimationsOf(context)
+                ? Duration.zero
+                : const Duration(milliseconds: 300),
+          );
+        }
+      });
+    });
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -161,7 +205,10 @@ class _SortedGradesWidgetState extends State<SortedGradesWidget> {
         ),
         for (final s in visibleSubjects)
           SubjectWidget(
-            key: ValueKey(_subjectExpansionKey(s)),
+            key: _subjectKeys.putIfAbsent(
+              _subjectExpansionKey(s),
+              GlobalKey.new,
+            ),
             subject: s,
             competenceStarsScale: widget.vm.competenceStarsScale,
             sortByType: widget.vm.sortByType,
@@ -213,6 +260,7 @@ class _SortedGradesWidgetState extends State<SortedGradesWidget> {
     if (oldWidget.vm.semester != widget.vm.semester) {
       _expandedSubjectKey = null;
     }
+    _openFocusSubject();
     if (_favoriteSubject != null &&
         findSubjectIgnoreCase(
               filterAvailableFavoriteSubjects(
@@ -239,6 +287,9 @@ class _SortedGradesWidgetState extends State<SortedGradesWidget> {
     super.didUpdateWidget(oldWidget);
   }
 }
+
+/// The subject the grades page should open next, set by a dashboard banner.
+final ValueNotifier<String?> gradesPageFocusSubject = ValueNotifier(null);
 
 class SubjectWidget extends StatefulWidget {
   final int? competenceStarsScale;
@@ -289,7 +340,10 @@ class _SubjectWidgetState extends State<SubjectWidget> {
       return;
     }
     if (widget.expanded) {
-      _controller.expand();
+      // Expanding reports back to the parent, which is building right now.
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (mounted && widget.expanded) _controller.expand();
+      });
     } else {
       _controller.collapse();
     }

@@ -25,6 +25,7 @@ import 'package:dr/actions/app_actions.dart';
 import 'package:dr/app_clock.dart';
 import 'package:dr/app_state.dart';
 import 'package:dr/container/app_navigation_container.dart';
+import 'package:dr/container/dashboard_events_container.dart';
 import 'package:dr/container/dashboard_overview.dart';
 import 'package:dr/container/days_container.dart';
 import 'package:dr/container/homework_filter_container.dart';
@@ -40,6 +41,7 @@ import 'package:dr/school_timeline.dart';
 import 'package:dr/theme/app_palette.dart';
 import 'package:dr/ui/animated_linear_progress_indicator.dart';
 import 'package:dr/ui/committed_deleteable.dart';
+import 'package:dr/ui/compact_day_list.dart';
 import 'package:dr/ui/controlled_text_builder.dart';
 import 'package:dr/ui/dashboard_app_header.dart';
 import 'package:dr/ui/dialog.dart';
@@ -528,6 +530,28 @@ class _DaysWidgetState extends State<DaysWidget> {
             );
     }
     final itemIndex = (n - 1) ~/ 2;
+    if (modern) {
+      return ReadableContent(
+        maxWidth: DesignTokens.contentMaxWidth,
+        child: CompactDayWidget(
+          day: visibleDays[itemIndex],
+          vm: widget.vm,
+          controller: controller,
+          index: _dayStartIndices[itemIndex]!,
+          addReminderCallback: widget.addReminderCallback,
+          editReminderCallback: widget.editReminderCallback,
+          removeReminderCallback: widget.removeReminderCallback,
+          toggleDoneCallback: widget.toggleDoneCallback,
+          setDoNotAskWhenDeleteCallback: widget.setDoNotAskWhenDeleteCallback,
+          onOpenAttachment: widget.onOpenAttachment,
+          colorBorders: widget.vm.colorBorders,
+          colorTestsInRed: widget.vm.colorTestsInRed,
+          subjectThemes: widget.vm.subjectThemes,
+          allSubjects: widget.vm.allSubjects,
+          showLastFetched: showLastFetched,
+        ),
+      );
+    }
     return DayWidget(
       day: visibleDays[itemIndex],
       vm: widget.vm,
@@ -556,7 +580,10 @@ class _DaysWidgetState extends State<DaysWidget> {
   /// What the new design shows above the day list.
   Widget _modernTop(Widget header) => ReadableContent(
         maxWidth: DesignTokens.contentMaxWidth,
-        child: header,
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [header, const DashboardEventsContainer()],
+        ),
       );
 
   void _markVisibleAsSeen(List<Day> visibleDays) {

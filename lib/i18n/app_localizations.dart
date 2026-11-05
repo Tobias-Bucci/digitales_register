@@ -584,6 +584,35 @@ class AppLocalizations {
     );
   }
 
+  /// The heading of a day in the compact list, such as
+  /// "Heute, Dienstag 20. Oktober".
+  String dashboardDayHeading(UtcDateTime date) {
+    final today = UtcDateTime(now.year, now.month, now.day);
+    final relativeKey = switch (date.difference(today).inDays) {
+      0 => 'day.today',
+      1 => 'day.tomorrow',
+      -1 => 'day.yesterday',
+      _ => null,
+    };
+    final weekdayKey = switch (date.weekday) {
+      DateTime.monday => 'weekday.monday',
+      DateTime.tuesday => 'weekday.tuesday',
+      DateTime.wednesday => 'weekday.wednesday',
+      DateTime.thursday => 'weekday.thursday',
+      DateTime.friday => 'weekday.friday',
+      DateTime.saturday => 'weekday.saturday',
+      _ => 'weekday.sunday',
+    };
+    final args = {
+      'weekday': text(weekdayKey),
+      'date': DateFormat.MMMMd(locale.toLanguageTag()).format(date),
+    };
+    return relativeKey == null
+        ? text('dashboard.dayHeading', args: args)
+        : text('dashboard.dayHeading.relative',
+            args: {...args, 'relative': text(relativeKey)});
+  }
+
   String translateDashboardServerText(String input) {
     final replacements = <String, String>{
       'Heute': text('day.today'),
