@@ -22,6 +22,9 @@ import 'package:flutter/material.dart';
 
 /// The slim header of the new design: app logo, school and app name. The
 /// height never changes, a long school name is cut off instead.
+///
+/// With [floatingMaxWidth], as in wide windows, it is not a band from edge to
+/// edge but floats like the navigation and lines up with the content below it.
 class DashboardAppHeader extends StatelessWidget
     implements PreferredSizeWidget {
   const DashboardAppHeader({
@@ -29,9 +32,12 @@ class DashboardAppHeader extends StatelessWidget
     required this.schoolName,
     required this.noInternet,
     required this.onRetry,
+    this.floatingMaxWidth,
   });
 
   static const double height = 56;
+
+  final double? floatingMaxWidth;
 
   /// Null for an unknown school, which leaves only the app name.
   final String? schoolName;
@@ -39,7 +45,9 @@ class DashboardAppHeader extends StatelessWidget
   final VoidCallback onRetry;
 
   @override
-  Size get preferredSize => const Size.fromHeight(height);
+  Size get preferredSize => Size.fromHeight(
+        floatingMaxWidth == null ? height : height + DesignTokens.gutter,
+      );
 
   @override
   Widget build(BuildContext context) {
@@ -47,84 +55,109 @@ class DashboardAppHeader extends StatelessWidget
     final theme = Theme.of(context);
     final scheme = theme.colorScheme;
     final appName = l10n.text('login.appTitle');
+    final content = SizedBox(
+      height: height,
+      child: Padding(
+        padding: EdgeInsets.symmetric(
+          horizontal: floatingMaxWidth == null ? DesignTokens.gutter : 14,
+        ),
+        child: Row(
+          children: [
+            ExcludeSemantics(
+              child: NotepadMark(
+                checked: true,
+                size: 36,
+                fill: scheme.surfaceContainerLowest,
+              ),
+            ),
+            const SizedBox(width: 10),
+            Expanded(
+              child: Semantics(
+                header: true,
+                child: Column(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    if (schoolName != null)
+                      Text(
+                        schoolName!,
+                        key: const Key('dashboard-header-school'),
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: theme.textTheme.titleSmall?.copyWith(
+                          fontWeight: FontWeight.w700,
+                          height: 1.2,
+                        ),
+                      ),
+                    Text(
+                      appName,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: schoolName == null
+                          ? theme.textTheme.titleMedium
+                              ?.copyWith(fontWeight: FontWeight.w700)
+                          : theme.textTheme.bodySmall?.copyWith(
+                              color: scheme.onSurfaceVariant,
+                              height: 1.2,
+                            ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+            if (noInternet)
+              IconButton(
+                tooltip: l10n.text('dashboard.noConnectionReload'),
+                onPressed: onRetry,
+                icon: const Icon(Icons.wifi_off_rounded),
+                style: IconButton.styleFrom(
+                  backgroundColor: scheme.secondaryContainer,
+                  foregroundColor: scheme.onSecondaryContainer,
+                ),
+              ),
+          ],
+        ),
+      ),
+    );
+    final maxWidth = floatingMaxWidth;
     // Two lines have to fit the fixed height, whatever the text size.
     return MediaQuery.withClampedTextScaling(
       maxScaleFactor: 1.5,
-      child: GlassSurface(
-        key: const Key('dashboard-app-header'),
-        tint: scheme.surface,
-        rim: GlassRim.bottom,
-        border: Border(
-          bottom:
-              BorderSide(color: scheme.outlineVariant.withValues(alpha: 0.5)),
-        ),
-        child: SafeArea(
-          bottom: false,
-          child: SizedBox(
-            height: height,
-            child: Padding(
-              padding:
-                  const EdgeInsets.symmetric(horizontal: DesignTokens.gutter),
-              child: Row(
-                children: [
-                  ExcludeSemantics(
-                    child: NotepadMark(
-                      checked: true,
-                      size: 36,
-                      fill: scheme.surfaceContainerLowest,
+      child: maxWidth == null
+          ? GlassSurface(
+              key: const Key('dashboard-app-header'),
+              tint: scheme.surface,
+              rim: GlassRim.bottom,
+              border: Border(
+                bottom: BorderSide(
+                  color: scheme.outlineVariant.withValues(alpha: 0.5),
+                ),
+              ),
+              child: SafeArea(bottom: false, child: content),
+            )
+          : SafeArea(
+              bottom: false,
+              child: Align(
+                alignment: Alignment.topCenter,
+                child: ConstrainedBox(
+                  constraints: BoxConstraints(maxWidth: maxWidth),
+                  child: Padding(
+                    padding: const EdgeInsets.fromLTRB(
+                      DesignTokens.gutter,
+                      DesignTokens.gutter,
+                      DesignTokens.gutter,
+                      0,
+                    ),
+                    child: FloatingGlass(
+                      surfaceKey: const Key('dashboard-app-header'),
+                      tint: scheme.surface,
+                      opacity: DesignTokens.headerOpacity,
+                      child: content,
                     ),
                   ),
-                  const SizedBox(width: 10),
-                  Expanded(
-                    child: Semantics(
-                      header: true,
-                      child: Column(
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          if (schoolName != null)
-                            Text(
-                              schoolName!,
-                              key: const Key('dashboard-header-school'),
-                              maxLines: 1,
-                              overflow: TextOverflow.ellipsis,
-                              style: theme.textTheme.titleSmall?.copyWith(
-                                fontWeight: FontWeight.w700,
-                                height: 1.2,
-                              ),
-                            ),
-                          Text(
-                            appName,
-                            maxLines: 1,
-                            overflow: TextOverflow.ellipsis,
-                            style: schoolName == null
-                                ? theme.textTheme.titleMedium
-                                    ?.copyWith(fontWeight: FontWeight.w700)
-                                : theme.textTheme.bodySmall?.copyWith(
-                                    color: scheme.onSurfaceVariant,
-                                    height: 1.2,
-                                  ),
-                          ),
-                        ],
-                      ),
-                    ),
-                  ),
-                  if (noInternet)
-                    IconButton(
-                      tooltip: l10n.text('dashboard.noConnectionReload'),
-                      onPressed: onRetry,
-                      icon: const Icon(Icons.wifi_off_rounded),
-                      style: IconButton.styleFrom(
-                        backgroundColor: scheme.secondaryContainer,
-                        foregroundColor: scheme.onSecondaryContainer,
-                      ),
-                    ),
-                ],
+                ),
               ),
             ),
-          ),
-        ),
-      ),
     );
   }
 }

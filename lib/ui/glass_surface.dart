@@ -501,6 +501,53 @@ class _GlassSurfaceState extends State<GlassSurface> {
   }
 }
 
+/// A bar of glass that floats above the page, like the navigation.
+class FloatingGlass extends StatelessWidget {
+  const FloatingGlass({
+    super.key,
+    required this.surfaceKey,
+    required this.tint,
+    required this.opacity,
+    required this.child,
+  });
+
+  static const double thickness = 56;
+  static const _radius = BorderRadius.all(Radius.circular(thickness / 2));
+
+  final Key surfaceKey;
+  final Color tint;
+  final double opacity;
+  final Widget child;
+
+  @override
+  Widget build(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
+    return DecoratedBox(
+      decoration: BoxDecoration(
+        borderRadius: _radius,
+        boxShadow: [
+          BoxShadow(
+            color: scheme.shadow.withValues(alpha: 0.14),
+            blurRadius: 18,
+            offset: const Offset(0, 6),
+          ),
+        ],
+      ),
+      child: GlassSurface(
+        key: surfaceKey,
+        tint: tint,
+        opacity: opacity,
+        borderRadius: _radius,
+        rim: GlassRim.around,
+        border: Border.all(
+          color: scheme.outlineVariant.withValues(alpha: 0.6),
+        ),
+        child: child,
+      ),
+    );
+  }
+}
+
 /// A modal bottom sheet of glass. With [glass] off, which keeps the Legacy design
 /// as it is, this is a plain [showModalBottomSheet].
 Future<T?> showGlassSheet<T>({

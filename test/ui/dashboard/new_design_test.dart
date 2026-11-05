@@ -21,6 +21,7 @@ import 'package:dr/theme/app_palette.dart';
 import 'package:dr/ui/app_navigation.dart';
 import 'package:dr/ui/compact_day_list.dart';
 import 'package:dr/ui/dashboard_app_header.dart';
+import 'package:dr/ui/dashboard_columns.dart';
 import 'package:dr/ui/dashboard_event_banner.dart';
 import 'package:dr/ui/days.dart';
 import 'package:dr/ui/glass_surface.dart';
@@ -1768,6 +1769,185 @@ void main() {
       expect(
         FilledButtonTheme.of(tester.element(find.byWidget(button))).style,
         isNull,
+      );
+    });
+  });
+
+  group('wide windows', () {
+    final side = find.byKey(const Key('dashboard-side-column'));
+    final header = find.byKey(const Key('dashboard-app-header'));
+    final box = find.byKey(const ValueKey('dashboard-header-box'));
+    final row = find.byKey(const ValueKey('compact-row-1'));
+
+    AppState withBanner() => _dashboardState(notifications: [
+          buildNotification(type: 'message', objectId: 1, title: 'Hinweis'),
+        ]);
+
+    for (final size in _wideWindows) {
+      final name = '${size.width.toInt()}x${size.height.toInt()}';
+
+      testWidgets('$name shows the summary beside the day list',
+          (tester) async {
+        await _pumpDashboard(tester, withBanner(), size: size);
+
+        expect(tester.takeException(), isNull);
+        expect(find.byType(DashboardHeader), findsOneWidget);
+        expect(
+          find.descendant(of: side, matching: find.byType(DashboardHeader)),
+          findsOneWidget,
+        );
+        expect(
+          find.descendant(of: side, matching: find.byType(EventBanner)),
+          findsOneWidget,
+        );
+        expect(tester.getRect(side).right, lessThan(tester.getRect(row).left));
+        expect(tester.getRect(box).top, tester.getRect(header).bottom + 8);
+      });
+
+      testWidgets('$name keeps the phone width of the summary and short rows',
+          (tester) async {
+        await _pumpDashboard(tester, withBanner(), size: size);
+
+        expect(tester.getSize(side).width, DashboardColumns.sideWidth);
+        expect(
+          tester.getSize(row).width,
+          lessThanOrEqualTo(DesignTokens.contentMaxWidth),
+        );
+        expect(tester.getSize(row).height, compactRowHeight);
+      });
+
+      testWidgets('$name lines the header up with the columns', (tester) async {
+        await _pumpDashboard(tester, withBanner(), size: size);
+
+        final bar = tester.getRect(header);
+        expect(bar.left, moreOrLessEquals(tester.getRect(box).left));
+        expect(bar.right, moreOrLessEquals(tester.getRect(row).right));
+        expect(bar.top, DesignTokens.gutter);
+      });
+
+      testWidgets('$name centres the columns next to the rail', (tester) async {
+        await _pumpDashboard(tester, withBanner(), size: size);
+
+        final bar = tester.getRect(header);
+        expect(
+          bar.left - appNavigationRailExtent,
+          moreOrLessEquals(size.width - bar.right),
+        );
+      });
+
+      testWidgets('$name keeps its list scrollable to the edge of the window',
+          (tester) async {
+        await _pumpDashboard(tester, withBanner(), size: size);
+
+        final list = find.ancestor(
+          of: row,
+          matching: find.byType(Scrollable),
+        );
+        expect(tester.getRect(list.first).right, size.width);
+      });
+    }
+
+    testWidgets('the day list scrolls while the summary stays', (tester) async {
+      await _pumpDashboard(
+        tester,
+        _dashboardState(homework: [
+          for (var id = 1; id < 40; id++)
+            buildHomework(id: id, title: 'Eintrag $id', checkable: true),
+        ]),
+        size: const Size(1280, 720),
+      );
+
+      final before = tester.getTopLeft(box);
+      await tester.drag(row, const Offset(0, -300));
+      await settleFor(tester);
+
+      expect(tester.getTopLeft(box), before);
+      expect(tester.getTopLeft(row).dy, lessThan(100));
+    });
+
+    testWidgets('a low window can still reach the whole summary',
+        (tester) async {
+      await _pumpDashboard(tester, withBanner(), size: const Size(1280, 300));
+
+      expect(tester.takeException(), isNull);
+      await tester.dragUntilVisible(
+        find.byType(EventBanner),
+        find.descendant(of: side, matching: find.byType(Scrollable)),
+        const Offset(0, -80),
+      );
+      expect(tester.takeException(), isNull);
+    });
+
+    testWidgets('large text fits both columns', (tester) async {
+      tester.platformDispatcher.textScaleFactorTestValue = 1.5;
+      addTearDown(tester.platformDispatcher.clearTextScaleFactorTestValue);
+
+      await _pumpDashboard(tester, withBanner(), size: const Size(1280, 720));
+
+      expect(tester.takeException(), isNull);
+    });
+
+    testWidgets('without entries the message stands beside the summary',
+        (tester) async {
+      await _pumpDashboard(
+        tester,
+        AppState((b) => b
+          ..dashboardState.allDays = ListBuilder<Day>()
+          ..loginState.loggedIn = true
+          ..url = 'https://franziskanergymnasium.digitalesregister.it'),
+        size: const Size(1366, 768),
+      );
+
+      expect(tester.takeException(), isNull);
+      expect(
+        find.descendant(of: side, matching: find.byType(DashboardHeader)),
+        findsOneWidget,
+      );
+    });
+
+    testWidgets('a window below the limit keeps one column', (tester) async {
+      await _pumpDashboard(tester, withBanner(), size: const Size(1000, 700));
+
+      expect(side, findsNothing);
+      expect(tester.getRect(header).top, DesignTokens.gutter);
+      expect(tester.getRect(header).left,
+          moreOrLessEquals(tester.getRect(box).left));
+      expect(tester.takeException(), isNull);
+    });
+
+    for (final size in const [Size(320, 640), Size(400, 800), Size(700, 800)]) {
+      testWidgets('a ${size.width.toInt()} px window stays the phone layout',
+          (tester) async {
+        await _pumpDashboard(tester, withBanner(), size: size);
+
+        expect(side, findsNothing);
+        expect(tester.getRect(header).left, 0);
+        expect(tester.getRect(header).right, size.width);
+        expect(find.byType(FloatingNavigationBar), findsOneWidget);
+        expect(tester.takeException(), isNull);
+      });
+    }
+
+    testWidgets('Legacy stays as it was at any width', (tester) async {
+      await _pumpDashboard(
+        tester,
+        _dashboardState(),
+        size: const Size(1920, 1080),
+        newDesign: false,
+      );
+
+      expect(side, findsNothing);
+      expect(find.byType(DashboardAppHeader), findsNothing);
+      expect(find.byType(AppNavigationRail), findsNothing);
+      expect(find.byType(Sidebar), findsOneWidget);
+    });
+
+    test('the limit follows from the columns and the rail', () {
+      expect(DashboardColumns.forWindow(1079), isNull);
+      expect(DashboardColumns.forWindow(1080)?.margin, 0);
+      expect(
+        DashboardColumns.forWindow(1920)?.margin,
+        (1920 - appNavigationRailExtent - DashboardColumns.maxWidth) / 2,
       );
     });
   });
