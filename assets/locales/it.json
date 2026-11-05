@@ -1075,5 +1075,6 @@
   "reminders.assessment.tomorrow": "Domani: {type}",
   "reminders.assessment.inDays": "Tra {days} giorni: {type}",
   "reminders.assessment.fallback": "Verifica",
-  "reminders.assessment.noSubject": "Trovi i dettagli in Register."
+  "reminders.assessment.noSubject": "Trovi i dettagli in Register.",
+  "sidebar.dashboard": "Dashboard"
 }
