@@ -248,7 +248,7 @@ Future<void> handleAndroidWidgetLaunchDestination(
     switch (destination) {
       case AndroidWidgetLaunchDestination.homework:
         await actions.loginActions
-            .addAfterLoginCallback(_showHomeworkFromWidget);
+            .addAfterLoginCallback(showDashboardHome);
         return;
       case AndroidWidgetLaunchDestination.grades:
         await actions.loginActions
@@ -263,7 +263,7 @@ Future<void> handleAndroidWidgetLaunchDestination(
 
   switch (destination) {
     case AndroidWidgetLaunchDestination.homework:
-      _showHomeworkFromWidget();
+      showDashboardHome();
       return;
     case AndroidWidgetLaunchDestination.grades:
       await actions.routingActions.showGrades();
@@ -274,7 +274,8 @@ Future<void> handleAndroidWidgetLaunchDestination(
   }
 }
 
-void _showHomeworkFromWidget() {
+/// Closes whatever is open on top of the dashboard.
+void showDashboardHome() {
   navigatorKey?.currentState?.popUntil((route) => route.isFirst);
   nestedNavKey.currentState?.popUntil((route) => route.isFirst);
   scaffoldKey?.currentState?.goHome();

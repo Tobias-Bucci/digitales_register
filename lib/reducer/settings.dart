@@ -81,6 +81,7 @@ final settingsReducerBuilder = NestedReducerBuilder<AppState, AppStateBuilder,
       _assessmentReminderMinuteOfDay)
   ..add(SettingsActionsNames.mensaReminderMinuteOfDay,
       _mensaReminderMinuteOfDay)
+  ..add(SettingsActionsNames.mensaReminderUrl, _mensaReminderUrl)
   ..add(SettingsActionsNames.calendarSyncCalendarId, _calendarSyncCalendarId)
   ..add(SettingsActionsNames.amoledMode, _amoledMode)
   ..add(SettingsActionsNames.legacyDesign, _legacyDesign)
@@ -285,6 +286,11 @@ void _mensaReminderEnabled(
 void _mensaReminderMinuteOfDay(
     SettingsState state, Action<int> action, SettingsStateBuilder builder) {
   builder.mensaReminderMinuteOfDay = action.payload;
+}
+
+void _mensaReminderUrl(
+    SettingsState state, Action<String> action, SettingsStateBuilder builder) {
+  builder.mensaReminderUrl = action.payload;
 }
 
 void _calendarSyncEnabled(

@@ -22,18 +22,39 @@ import 'package:dr/app_state.dart';
 import 'package:dr/exam_study_plan.dart';
 import 'package:dr/i18n/app_language.dart';
 import 'package:dr/i18n/app_localizations.dart';
+import 'package:dr/reminder_link.dart';
 import 'package:dr/reminder_notifications.dart';
 import 'package:dr/reminder_schedule.dart';
 import 'package:dr/runtime_trace.dart';
+import 'package:flutter/foundation.dart';
 import 'package:url_launcher/url_launcher.dart';
 
 const mensaReminderPayload = 'dr-reminder:mensa';
-final mensaReminderUri = Uri.https('mensa.franziskanergymnasium.it');
 
-Future<void> openReminderTarget(String? payload) async {
-  if (payload == mensaReminderPayload) {
-    await launchUrl(mensaReminderUri, mode: LaunchMode.externalApplication);
+Future<bool> _openExternally(Uri uri) =>
+    launchUrl(uri, mode: LaunchMode.externalApplication);
+
+/// Reacts to a tapped reminder, whether the app was running or the tap started
+/// it. The mensa reminder opens [mensaUrl], the user's own link. Without a link,
+/// or if it cannot be opened, the dashboard is shown instead. A value that is
+/// not a valid link is never opened.
+Future<void> openReminderTarget(
+  String? payload, {
+  required String mensaUrl,
+  required VoidCallback openDashboard,
+  Future<bool> Function(Uri uri) launch = _openExternally,
+}) async {
+  if (payload != mensaReminderPayload) return;
+  final link = normalizeReminderLink(mensaUrl);
+  if (link == null || link.isEmpty) return openDashboard();
+  var opened = false;
+  try {
+    opened = await launch(Uri.parse(link));
+  } catch (error) {
+    runtimeTrace('Reminders', 'open-link-failed',
+        detail: 'type=${error.runtimeType}');
   }
+  if (!opened) openDashboard();
 }
 
 /// Reminders of all upcoming tests and exams. Ids depend on the assessment and

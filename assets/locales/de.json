@@ -1057,7 +1057,7 @@
   "reminders.settings.permission": "Benachrichtigungen sind nicht erlaubt, deshalb erscheinen keine Erinnerungen. Du kannst sie in den Geräteeinstellungen unter Apps / Register / Benachrichtigungen erlauben.",
   "reminders.settings.whileRunning": "Auf diesem System erscheinen Erinnerungen nur, solange die App geöffnet ist.",
   "reminders.mensa.setting": "Mensa-Erinnerung",
-  "reminders.mensa.settingHint": "Erinnert dich jeden Tag daran, dich auf mensa.franziskanergymnasium.it anzumelden.",
+  "reminders.mensa.settingHint": "Erinnert dich jeden Tag daran, dich für die Mensa anzumelden.",
   "reminders.settings.time": "Uhrzeit",
   "reminders.mensa.title": "Mensa-Anmeldung",
   "reminders.mensa.body": "Denk daran, dich für die Mensa anzumelden.",
@@ -1122,5 +1122,9 @@
   "dashboard.edit.moveLater": "Nach hinten",
   "dashboard.edit.widthValue": "Breite: {width}",
   "dashboard.edit.settingsHint": "Karten auswählen, sortieren und ihre Breite ändern.",
-  "calendar.view.exams": "Prüfungen"
+  "calendar.view.exams": "Prüfungen",
+  "reminders.mensa.url": "Link beim Antippen",
+  "reminders.mensa.urlHint": "https://…",
+  "reminders.mensa.urlHelper": "Öffnet sich beim Antippen der Erinnerung. Leer lassen, um das Dashboard zu öffnen.",
+  "reminders.mensa.urlInvalid": "Bitte gib einen gültigen Link ein, der mit http:// oder https:// beginnt."
 }

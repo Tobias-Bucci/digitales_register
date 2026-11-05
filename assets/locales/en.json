@@ -1057,7 +1057,7 @@
   "reminders.settings.permission": "Notifications are not allowed, so no reminders will appear. You can allow them in your device settings under Apps / Register / Notifications.",
   "reminders.settings.whileRunning": "On this system, reminders only appear while the app is open.",
   "reminders.mensa.setting": "Canteen reminder",
-  "reminders.mensa.settingHint": "Reminds you every day to sign up on mensa.franziskanergymnasium.it.",
+  "reminders.mensa.settingHint": "Reminds you every day to sign up for the canteen.",
   "reminders.settings.time": "Time",
   "reminders.mensa.title": "Canteen sign-up",
   "reminders.mensa.body": "Remember to sign up for the canteen.",
@@ -1122,5 +1122,9 @@
   "dashboard.edit.moveLater": "Move later",
   "dashboard.edit.widthValue": "Width: {width}",
   "dashboard.edit.settingsHint": "Choose cards, sort them and change their width.",
-  "calendar.view.exams": "Exams"
+  "calendar.view.exams": "Exams",
+  "reminders.mensa.url": "Link to open",
+  "reminders.mensa.urlHint": "https://…",
+  "reminders.mensa.urlHelper": "Opens when you tap the reminder. Leave empty to open the dashboard.",
+  "reminders.mensa.urlInvalid": "Enter a valid link starting with http:// or https://."
 }

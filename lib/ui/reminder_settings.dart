@@ -18,6 +18,7 @@
 import 'dart:async';
 
 import 'package:dr/i18n/app_localizations.dart';
+import 'package:dr/reminder_link.dart';
 import 'package:dr/reminder_notifications.dart';
 import 'package:dr/reminder_schedule.dart';
 import 'package:flutter/material.dart';
@@ -28,8 +29,10 @@ class ReminderSettings extends StatefulWidget {
     super.key,
     required this.mensaEnabled,
     required this.mensaMinuteOfDay,
+    required this.mensaUrl,
     required this.onSetMensaEnabled,
     required this.onSetMensaMinuteOfDay,
+    required this.onSetMensaUrl,
     required this.assessmentsEnabled,
     required this.assessmentDays,
     required this.onSetAssessmentsEnabled,
@@ -41,8 +44,10 @@ class ReminderSettings extends StatefulWidget {
 
   final bool mensaEnabled;
   final int mensaMinuteOfDay;
+  final String mensaUrl;
   final ValueChanged<bool> onSetMensaEnabled;
   final ValueChanged<int> onSetMensaMinuteOfDay;
+  final ValueChanged<String> onSetMensaUrl;
   final bool assessmentsEnabled;
   final List<int> assessmentDays;
   final ValueChanged<bool> onSetAssessmentsEnabled;
@@ -85,7 +90,8 @@ class _ReminderSettingsState extends State<ReminderSettings>
 
   Future<void> _checkPermission() async {
     if (!_anyEnabled) return _showPermission(granted: true);
-    await _showPermission(granted: await _permissionState(_service.hasPermission));
+    await _showPermission(
+        granted: await _permissionState(_service.hasPermission));
   }
 
   /// Turning a reminder on is the moment to ask, as the user knows why.
@@ -119,8 +125,9 @@ class _ReminderSettingsState extends State<ReminderSettings>
         final format = MaterialLocalizations.of(context).timeOfDayFormat();
         return MediaQuery(
           data: MediaQuery.of(context).copyWith(
-            alwaysUse24HourFormat: MediaQuery.alwaysUse24HourFormatOf(context) ||
-                hourFormat(of: format) != HourFormat.h,
+            alwaysUse24HourFormat:
+                MediaQuery.alwaysUse24HourFormatOf(context) ||
+                    hourFormat(of: format) != HourFormat.h,
           ),
           child: child!,
         );
@@ -261,12 +268,18 @@ class _ReminderSettingsState extends State<ReminderSettings>
               }
             },
           ),
-          if (widget.mensaEnabled)
+          if (widget.mensaEnabled) ...[
             _timeTile(
               key: const Key('mensa-reminder-time'),
               minuteOfDay: widget.mensaMinuteOfDay,
               onPicked: widget.onSetMensaMinuteOfDay,
             ),
+            _ReminderLinkField(
+              key: const Key('mensa-reminder-url'),
+              value: widget.mensaUrl,
+              onSaved: widget.onSetMensaUrl,
+            ),
+          ],
           SwitchListTile.adaptive(
             key: const Key('assessment-reminder-toggle'),
             secondary: const Icon(Icons.event_note_outlined),
@@ -374,6 +387,93 @@ class _ReminderDayDialogState extends State<_ReminderDayDialog> {
           child: Text(l10n.text('reminders.assessment.addDayConfirm')),
         ),
       ],
+    );
+  }
+}
+
+/// Edits the link of a reminder. A value is saved when the field is left, not
+/// while typing, because a half-typed address can look valid. An invalid value
+/// is never saved, so the last valid one stays in effect.
+class _ReminderLinkField extends StatefulWidget {
+  const _ReminderLinkField({
+    super.key,
+    required this.value,
+    required this.onSaved,
+  });
+
+  final String value;
+  final ValueChanged<String> onSaved;
+
+  @override
+  State<_ReminderLinkField> createState() => _ReminderLinkFieldState();
+}
+
+class _ReminderLinkFieldState extends State<_ReminderLinkField> {
+  late final _controller = TextEditingController(text: widget.value);
+  final _focus = FocusNode();
+  bool _invalid = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _focus.addListener(_onFocusChanged);
+  }
+
+  @override
+  void didUpdateWidget(_ReminderLinkField oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.value != widget.value && !_focus.hasFocus) {
+      _controller.text = widget.value;
+    }
+  }
+
+  @override
+  void dispose() {
+    // Leaving the page does not take the focus away first.
+    _save(showError: false);
+    _focus.dispose();
+    _controller.dispose();
+    super.dispose();
+  }
+
+  void _onFocusChanged() {
+    if (!_focus.hasFocus) _save(showError: true);
+  }
+
+  void _save({required bool showError}) {
+    final link = normalizeReminderLink(_controller.text);
+    if (showError && mounted) setState(() => _invalid = link == null);
+    if (link == null) return;
+    if (showError) _controller.text = link;
+    if (link != widget.value) widget.onSaved(link);
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final l10n = context.l10n;
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(16, 4, 16, 8),
+      child: TextField(
+        key: const Key('mensa-reminder-url-field'),
+        controller: _controller,
+        focusNode: _focus,
+        keyboardType: TextInputType.url,
+        textInputAction: TextInputAction.done,
+        autocorrect: false,
+        enableSuggestions: false,
+        decoration: InputDecoration(
+          labelText: l10n.text('reminders.mensa.url'),
+          hintText: l10n.text('reminders.mensa.urlHint'),
+          helperText: l10n.text('reminders.mensa.urlHelper'),
+          helperMaxLines: 2,
+          errorText: _invalid ? l10n.text('reminders.mensa.urlInvalid') : null,
+          errorMaxLines: 2,
+        ),
+        onChanged: (_) {
+          if (_invalid) setState(() => _invalid = false);
+        },
+        onSubmitted: (_) => _save(showError: true),
+      ),
     );
   }
 }

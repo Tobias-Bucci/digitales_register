@@ -1057,7 +1057,7 @@
   "reminders.settings.permission": "Le notifiche non sono consentite, quindi i promemoria non verranno mostrati. Puoi consentirle nelle impostazioni del dispositivo: App / Register / Notifiche.",
   "reminders.settings.whileRunning": "Su questo sistema i promemoria vengono mostrati solo mentre l’app è aperta.",
   "reminders.mensa.setting": "Promemoria mensa",
-  "reminders.mensa.settingHint": "Ti ricorda ogni giorno di iscriverti su mensa.franziskanergymnasium.it.",
+  "reminders.mensa.settingHint": "Ti ricorda ogni giorno di iscriverti alla mensa.",
   "reminders.settings.time": "Ora",
   "reminders.mensa.title": "Iscrizione alla mensa",
   "reminders.mensa.body": "Ricordati di iscriverti alla mensa.",
@@ -1122,5 +1122,9 @@
   "dashboard.edit.moveLater": "Sposta indietro",
   "dashboard.edit.widthValue": "Larghezza: {width}",
   "dashboard.edit.settingsHint": "Scegli le schede, ordinale e cambia la larghezza.",
-  "calendar.view.exams": "Verifiche"
+  "calendar.view.exams": "Verifiche",
+  "reminders.mensa.url": "Link da aprire",
+  "reminders.mensa.urlHint": "https://…",
+  "reminders.mensa.urlHelper": "Si apre toccando il promemoria. Lascia vuoto per aprire la dashboard.",
+  "reminders.mensa.urlInvalid": "Inserisci un link valido che inizia con http:// o https://."
 }
