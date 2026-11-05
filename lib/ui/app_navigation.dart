@@ -158,9 +158,14 @@ String _destinationLabel(
 
 /// The glass that the bar and the rail have in common.
 class _NavigationGlass extends StatelessWidget {
-  const _NavigationGlass({required this.surfaceKey, required this.child});
+  const _NavigationGlass({
+    required this.surfaceKey,
+    required this.child,
+    this.shadowBlur = 18,
+  });
 
   final Key surfaceKey;
+  final double shadowBlur;
   final Widget child;
 
   @override
@@ -168,6 +173,7 @@ class _NavigationGlass extends StatelessWidget {
         surfaceKey: surfaceKey,
         tint: navigationBarTint(Theme.of(context).colorScheme),
         opacity: DesignTokens.navigationBarOpacity,
+        shadowBlur: shadowBlur,
         child: FocusTraversalGroup(child: child),
       );
 }
@@ -509,6 +515,8 @@ class AppNavigationRail extends StatelessWidget {
             padding: const EdgeInsets.all(DesignTokens.gutter),
             child: _NavigationGlass(
               surfaceKey: const Key('app-navigation-rail'),
+              // The page next to the margin would cut off a wider shadow.
+              shadowBlur: DesignTokens.gutter - 2,
               child: SizedBox(
                 width: appNavigationBarHeight,
                 height: count * _barItemExtent + (count + 1) * _railItemGap,
