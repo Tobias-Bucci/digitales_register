@@ -2123,16 +2123,49 @@ void main() {
       debugDefaultTargetPlatformOverride = null;
     });
 
-    testWidgets('rows react to the mouse on every kind of fill',
-        (tester) async {
-      await pumpDesktop(tester);
+    Iterable<GlassFocusRingPainter> highlights(WidgetTester tester) => tester
+        .widgetList<CustomPaint>(find.byType(CustomPaint))
+        .map((paint) => paint.foregroundPainter)
+        .whereType<GlassFocusRingPainter>();
 
-      final context = tester.element(find.byType(CompactDayWidget));
-      final scheme = Theme.of(context).colorScheme;
+    testWidgets('a row reacts to the mouse as a whole', (tester) async {
+      await pumpDesktop(tester);
+      expect(highlights(tester), isEmpty);
+      final mouse = await mouseOn(tester);
+
+      await mouse.moveTo(
+        tester.getCenter(find.byKey(const ValueKey('compact-row-open-1'))),
+      );
+      await tester.pump();
+
+      final scheme =
+          Theme.of(tester.element(find.byType(CompactDayWidget))).colorScheme;
+      final highlight = highlights(tester).single;
+      expect(highlight.tint, scheme.onExam.withValues(alpha: 0.06));
+      expect(highlight.ring, isNull);
+      expect(highlight.shape, isA<StadiumBorder>());
+
+      // Ink would only cover a rectangle of one of the two targets.
       final open = tester.widget<InkWell>(
         find.byKey(const ValueKey('compact-row-open-1')),
       );
-      expect(open.hoverColor, scheme.onExam.withValues(alpha: 0.1));
+      expect(open.hoverColor, Colors.transparent);
+      expect(open.focusColor, Colors.transparent);
+
+      await mouse.moveTo(Offset.zero);
+      await tester.pump();
+      expect(highlights(tester), isEmpty);
+      debugDefaultTargetPlatformOverride = null;
+    });
+
+    testWidgets('the notepad has a round highlight of its own', (tester) async {
+      await pumpDesktop(tester);
+
+      final check = tester.widget<InkWell>(
+        find.byKey(const ValueKey('compact-row-check-1')),
+      );
+      expect(check.customBorder, isA<CircleBorder>());
+      expect(check.focusColor, check.hoverColor);
       debugDefaultTargetPlatformOverride = null;
     });
 
@@ -2151,18 +2184,13 @@ void main() {
       await tester.pump(const Duration(seconds: 1));
     });
 
-    Iterable<GlassFocusRingPainter> rings(WidgetTester tester) => tester
-        .widgetList<CustomPaint>(find.byType(CustomPaint))
-        .map((paint) => paint.foregroundPainter)
-        .whereType<GlassFocusRingPainter>();
-
     testWidgets('the keyboard gets a clear ring around a row', (tester) async {
       await pumpDesktop(tester);
       FocusManager.instance.highlightStrategy =
           FocusHighlightStrategy.alwaysTraditional;
       addTearDown(() => FocusManager.instance.highlightStrategy =
           FocusHighlightStrategy.automatic);
-      expect(rings(tester), isEmpty);
+      expect(highlights(tester), isEmpty);
 
       Focus.of(tester.element(find
               .descendant(
@@ -2173,7 +2201,7 @@ void main() {
           .requestFocus();
       await tester.pump();
 
-      expect(rings(tester), hasLength(1));
+      expect(highlights(tester).single.ring, isNotNull);
       debugDefaultTargetPlatformOverride = null;
     });
 

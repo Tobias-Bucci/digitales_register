@@ -413,6 +413,7 @@ class CompactEntryRow extends StatelessWidget {
           ),
           child: GlassFocusRing(
             shape: const StadiumBorder(),
+            activeTint: foreground.withValues(alpha: 0.06),
             child: Material(
               key: ValueKey('compact-row-${item.id}'),
               color: background,
@@ -448,7 +449,8 @@ class CompactEntryRow extends StatelessWidget {
                           excludeSemantics: true,
                           child: InkWell(
                             key: ValueKey('compact-row-open-${item.id}'),
-                            hoverColor: hover,
+                            hoverColor: Colors.transparent,
+                            focusColor: Colors.transparent,
                             mouseCursor: NewDesignTheme.clickCursor,
                             onTap: () => _openDetails(context, delete),
                             child: ConstrainedBox(
@@ -549,7 +551,9 @@ class CompactEntryRow extends StatelessWidget {
                             excludeSemantics: true,
                             child: InkWell(
                               key: ValueKey('compact-row-check-${item.id}'),
+                              customBorder: const CircleBorder(),
                               hoverColor: hover,
+                              focusColor: hover,
                               mouseCursor: NewDesignTheme.clickCursor,
                               onTap: noInternet ? null : toggleDone,
                               child: SizedBox(
