@@ -132,8 +132,11 @@ class DashboardAppHeader extends StatelessWidget
 /// A quiet accent wash behind the dashboard, so that its translucent surfaces
 /// have something to show. Pure black stays pure black on AMOLED.
 class DashboardBackdrop extends StatelessWidget {
-  const DashboardBackdrop({super.key, required this.child});
+  const DashboardBackdrop(
+      {super.key, required this.child, this.visible = true});
 
+  /// Without it [child] stays where it is in the tree and keeps its state.
+  final bool visible;
   final Widget child;
 
   @override
@@ -142,15 +145,17 @@ class DashboardBackdrop extends StatelessWidget {
     if (scheme.surface == const Color(0xFF000000)) return child;
     return DecoratedBox(
       decoration: BoxDecoration(
-        gradient: LinearGradient(
-          begin: Alignment.topCenter,
-          end: Alignment.bottomCenter,
-          stops: const [0, 0.55],
-          colors: [
-            scheme.primaryContainer.withValues(alpha: 0.42),
-            scheme.primaryContainer.withValues(alpha: 0),
-          ],
-        ),
+        gradient: !visible
+            ? null
+            : LinearGradient(
+                begin: Alignment.topCenter,
+                end: Alignment.bottomCenter,
+                stops: const [0, 0.55],
+                colors: [
+                  scheme.primaryContainer.withValues(alpha: 0.42),
+                  scheme.primaryContainer.withValues(alpha: 0),
+                ],
+              ),
       ),
       child: child,
     );

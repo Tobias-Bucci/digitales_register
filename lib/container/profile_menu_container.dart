@@ -21,6 +21,7 @@ import 'package:dr/actions/login_actions.dart';
 import 'package:dr/app_state.dart';
 import 'package:dr/config.dart';
 import 'package:dr/profile_picture.dart';
+import 'package:dr/ui/app_navigation.dart';
 import 'package:dr/ui/glass_surface.dart';
 import 'package:dr/ui/profile_menu.dart';
 import 'package:flutter/material.dart';
@@ -44,7 +45,12 @@ Future<void> showProfileMenu(BuildContext context) {
     builder: (_) => Align(
       alignment: Alignment.bottomLeft,
       child: Padding(
-        padding: const EdgeInsets.fromLTRB(96, 24, 24, 16),
+        padding: const EdgeInsets.fromLTRB(
+          appNavigationRailExtent,
+          24,
+          24,
+          DesignTokens.gutter,
+        ),
         child: ConstrainedBox(
           constraints: const BoxConstraints(maxWidth: 360),
           child: GlassSurface(
