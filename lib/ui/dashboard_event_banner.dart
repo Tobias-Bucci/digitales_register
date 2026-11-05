@@ -15,8 +15,6 @@
 // You should have received a copy of the GNU General Public License
 // along with digitales_register.  If not, see <http://www.gnu.org/licenses/>.
 
-import 'dart:math' as math;
-
 import 'package:dr/dashboard_events.dart';
 import 'package:dr/i18n/app_localizations.dart';
 import 'package:dr/theme/app_palette.dart';
@@ -214,119 +212,126 @@ class EventBanner extends StatelessWidget {
             key: ValueKey('event-banner-${event.id}'),
             borderRadius: DesignTokens.cardBorderRadius,
             onTap: onOpen,
-            child: AnimatedEventEdge(
-              color: colors.edge,
-              child: Padding(
-                padding: const EdgeInsets.fromLTRB(12, 7, 4, 9),
-                child: DefaultTextStyle.merge(
-                  style: TextStyle(color: foreground),
-                  child: IconTheme.merge(
-                    data: IconThemeData(color: foreground),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        Row(
-                          children: [
-                            Expanded(
-                              child: Text(
-                                title,
-                                maxLines: 1,
-                                overflow: TextOverflow.ellipsis,
-                                style: theme.textTheme.labelLarge?.copyWith(
-                                  color: foreground,
-                                  fontWeight: FontWeight.w700,
-                                ),
-                              ),
-                            ),
-                            if (more != null)
-                              TextButton(
-                                key: const Key('event-banner-more'),
-                                onPressed: onShowMore,
-                                style: TextButton.styleFrom(
-                                  foregroundColor: foreground,
-                                  visualDensity: VisualDensity.compact,
-                                  tapTargetSize:
-                                      MaterialTapTargetSize.shrinkWrap,
-                                  minimumSize: const Size(0, 28),
-                                  padding:
-                                      const EdgeInsets.symmetric(horizontal: 8),
-                                  textStyle: theme.textTheme.labelMedium,
-                                ),
-                                child: Text(more),
-                              ),
-                            if (onDismiss != null)
-                              SizedBox.square(
-                                dimension: 28,
-                                child: IconButton(
-                                  key: ValueKey(
-                                      'event-banner-close-${event.id}'),
-                                  tooltip:
-                                      l10n.text('dashboard.banner.dismiss'),
-                                  onPressed: onDismiss,
-                                  padding: EdgeInsets.zero,
-                                  iconSize: 18,
-                                  color: foreground,
-                                  icon: const Icon(Icons.close_rounded),
-                                ),
-                              ),
-                          ],
-                        ),
-                        Padding(
-                          padding: const EdgeInsets.only(right: 8),
-                          child: Row(
+            child: GlassEdge(
+              shape: const RoundedRectangleBorder(
+                borderRadius: DesignTokens.cardBorderRadius,
+              ),
+              child: AnimatedEventEdge(
+                color: colors.edge,
+                child: Padding(
+                  padding: const EdgeInsets.fromLTRB(12, 7, 4, 9),
+                  child: DefaultTextStyle.merge(
+                    style: TextStyle(color: foreground),
+                    child: IconTheme.merge(
+                      data: IconThemeData(color: foreground),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Row(
                             children: [
-                              if (grade != null)
-                                Padding(
-                                  padding: const EdgeInsets.only(right: 12),
-                                  child: Text(
-                                    grade,
-                                    key: const Key('event-banner-grade'),
-                                    style: theme.textTheme.headlineMedium
-                                        ?.copyWith(
-                                      color: foreground,
-                                      fontWeight: FontWeight.w700,
-                                      height: 1.1,
-                                    ),
-                                  ),
-                                )
-                              else
-                                Padding(
-                                  padding: const EdgeInsets.only(right: 10),
-                                  child: Icon(_eventIcon(event.kind), size: 26),
-                                ),
                               Expanded(
-                                child: Column(
-                                  crossAxisAlignment: CrossAxisAlignment.start,
-                                  mainAxisSize: MainAxisSize.min,
-                                  children: [
-                                    Text(
-                                      l10n.translateDashboardServerText(
-                                          event.description),
-                                      maxLines: 1,
-                                      overflow: TextOverflow.ellipsis,
-                                      style:
-                                          theme.textTheme.bodyMedium?.copyWith(
-                                        color: foreground,
-                                        fontWeight: FontWeight.w600,
-                                      ),
-                                    ),
-                                    Text(
-                                      [if (detail != null) detail, facts]
-                                          .join(' · '),
-                                      key: const Key('event-banner-facts'),
-                                      maxLines: 2,
-                                      overflow: TextOverflow.ellipsis,
-                                      style: theme.textTheme.bodySmall
-                                          ?.copyWith(color: foreground),
-                                    ),
-                                  ],
+                                child: Text(
+                                  title,
+                                  maxLines: 1,
+                                  overflow: TextOverflow.ellipsis,
+                                  style: theme.textTheme.labelLarge?.copyWith(
+                                    color: foreground,
+                                    fontWeight: FontWeight.w700,
+                                  ),
                                 ),
                               ),
+                              if (more != null)
+                                TextButton(
+                                  key: const Key('event-banner-more'),
+                                  onPressed: onShowMore,
+                                  style: TextButton.styleFrom(
+                                    foregroundColor: foreground,
+                                    visualDensity: VisualDensity.compact,
+                                    tapTargetSize:
+                                        MaterialTapTargetSize.shrinkWrap,
+                                    minimumSize: const Size(0, 28),
+                                    padding: const EdgeInsets.symmetric(
+                                        horizontal: 8),
+                                    textStyle: theme.textTheme.labelMedium,
+                                  ),
+                                  child: Text(more),
+                                ),
+                              if (onDismiss != null)
+                                SizedBox.square(
+                                  dimension: 28,
+                                  child: IconButton(
+                                    key: ValueKey(
+                                        'event-banner-close-${event.id}'),
+                                    tooltip:
+                                        l10n.text('dashboard.banner.dismiss'),
+                                    onPressed: onDismiss,
+                                    padding: EdgeInsets.zero,
+                                    iconSize: 18,
+                                    color: foreground,
+                                    icon: const Icon(Icons.close_rounded),
+                                  ),
+                                ),
                             ],
                           ),
-                        ),
-                      ],
+                          Padding(
+                            padding: const EdgeInsets.only(right: 8),
+                            child: Row(
+                              children: [
+                                if (grade != null)
+                                  Padding(
+                                    padding: const EdgeInsets.only(right: 12),
+                                    child: Text(
+                                      grade,
+                                      key: const Key('event-banner-grade'),
+                                      style: theme.textTheme.headlineMedium
+                                          ?.copyWith(
+                                        color: foreground,
+                                        fontWeight: FontWeight.w700,
+                                        height: 1.1,
+                                      ),
+                                    ),
+                                  )
+                                else
+                                  Padding(
+                                    padding: const EdgeInsets.only(right: 10),
+                                    child:
+                                        Icon(_eventIcon(event.kind), size: 26),
+                                  ),
+                                Expanded(
+                                  child: Column(
+                                    crossAxisAlignment:
+                                        CrossAxisAlignment.start,
+                                    mainAxisSize: MainAxisSize.min,
+                                    children: [
+                                      Text(
+                                        l10n.translateDashboardServerText(
+                                            event.description),
+                                        maxLines: 1,
+                                        overflow: TextOverflow.ellipsis,
+                                        style: theme.textTheme.bodyMedium
+                                            ?.copyWith(
+                                          color: foreground,
+                                          fontWeight: FontWeight.w600,
+                                        ),
+                                      ),
+                                      Text(
+                                        [if (detail != null) detail, facts]
+                                            .join(' · '),
+                                        key: const Key('event-banner-facts'),
+                                        maxLines: 2,
+                                        overflow: TextOverflow.ellipsis,
+                                        style: theme.textTheme.bodySmall
+                                            ?.copyWith(color: foreground),
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                        ],
+                      ),
                     ),
                   ),
                 ),
@@ -339,8 +344,8 @@ class EventBanner extends StatelessWidget {
   }
 }
 
-/// The edge of a banner. A soft highlight runs around it twice when the banner
-/// appears, then the edge rests; with reduced motion it never moves.
+/// The edge of a banner. A soft band of light falls down both sides twice when
+/// the banner appears, then the edge rests; with reduced motion it never moves.
 class AnimatedEventEdge extends StatefulWidget {
   const AnimatedEventEdge({
     super.key,
@@ -383,7 +388,7 @@ class _AnimatedEventEdgeState extends State<AnimatedEventEdge>
   Widget build(BuildContext context) {
     return RepaintBoundary(
       child: CustomPaint(
-        foregroundPainter: _EventEdgePainter(
+        foregroundPainter: EventEdgePainter(
           color: widget.color,
           animation: _controller,
         ),
@@ -393,12 +398,30 @@ class _AnimatedEventEdgeState extends State<AnimatedEventEdge>
   }
 }
 
-class _EventEdgePainter extends CustomPainter {
-  _EventEdgePainter({required this.color, required this.animation})
+class EventEdgePainter extends CustomPainter {
+  EventEdgePainter({required this.color, required this.animation})
       : super(repaint: animation);
+
+  static const _bandHalf = 0.3;
 
   final Color color;
   final Animation<double> animation;
+
+  /// The band at [progress] on its way from above the banner to below it, the
+  /// same on both sides like all light of the new design.
+  LinearGradient bandGradient(double progress) {
+    final centre = -_bandHalf + progress * (1 + 2 * _bandHalf);
+    return LinearGradient(
+      begin: Alignment.topCenter,
+      end: Alignment.bottomCenter,
+      stops: [centre - _bandHalf, centre, centre + _bandHalf],
+      colors: [
+        color.withValues(alpha: 0),
+        color,
+        color.withValues(alpha: 0),
+      ],
+    );
+  }
 
   @override
   void paint(Canvas canvas, Size size) {
@@ -415,22 +438,13 @@ class _EventEdgePainter extends CustomPainter {
     if (animation.isAnimating) {
       stroke
         ..strokeWidth = 2.5
-        ..shader = SweepGradient(
-          colors: [
-            color.withValues(alpha: 0),
-            color.withValues(alpha: 0),
-            color,
-            color.withValues(alpha: 0),
-          ],
-          stops: const [0, 0.7, 0.92, 1],
-          transform: GradientRotation(animation.value * 2 * math.pi),
-        ).createShader(rect);
+        ..shader = bandGradient(animation.value).createShader(rect);
       canvas.drawRRect(edge, stroke);
     }
   }
 
   @override
-  bool shouldRepaint(_EventEdgePainter oldDelegate) =>
+  bool shouldRepaint(EventEdgePainter oldDelegate) =>
       oldDelegate.color != color;
 }
 

@@ -105,8 +105,9 @@ class GlassPerformance {
 }
 
 /// How light falls on the glass of the new design, in roles of the theme: from
-/// the top left, so that the upper edge catches it and the lower edge is either
-/// a faint reflection (dark) or a soft shade (light).
+/// straight above, so that every surface is lit the same on its left and right.
+/// The upper edge catches the light, and it fades towards the lower edge, which
+/// keeps a faint reflection (dark) or a soft shade (light).
 @immutable
 class GlassLight {
   const GlassLight._({
@@ -122,9 +123,9 @@ class GlassLight {
     return GlassLight._(
       highlight: dark ? scheme.onSurface : scheme.surfaceContainerLowest,
       shade: dark ? scheme.onSurface : scheme.outline,
-      rimStrength: dark ? 0.46 : 0.95,
-      shadeStrength: dark ? 0.14 : 0.3,
-      sheenStrength: dark ? 0.07 : 0.42,
+      rimStrength: dark ? 0.42 : 0.95,
+      shadeStrength: dark ? 0.1 : 0.26,
+      sheenStrength: dark ? 0.06 : 0.26,
     );
   }
 
@@ -197,18 +198,20 @@ class GlassEdgeIf extends StatelessWidget {
     required this.child,
     this.rim = GlassRim.around,
     this.sheen = true,
+    this.shape = const RoundedRectangleBorder(
+      borderRadius: DesignTokens.cardBorderRadius,
+    ),
   });
 
   final bool enabled, sheen;
   final GlassRim rim;
+  final ShapeBorder shape;
   final Widget child;
 
   @override
   Widget build(BuildContext context) => enabled
       ? GlassEdge(
-          shape: const RoundedRectangleBorder(
-            borderRadius: DesignTokens.cardBorderRadius,
-          ),
+          shape: shape,
           rim: rim,
           sheen: sheen,
           child: child,
@@ -216,8 +219,7 @@ class GlassEdgeIf extends StatelessWidget {
       : child;
 }
 
-/// Light on the upper part of the glass and, much fainter, the light that the
-/// glass gathers at its far edge.
+/// Light on the upper part of the glass.
 class GlassSheenPainter extends CustomPainter {
   const GlassSheenPainter({required this.shape, required this.light});
 
@@ -226,41 +228,28 @@ class GlassSheenPainter extends CustomPainter {
   final ShapeBorder shape;
   final GlassLight light;
 
+  /// Straight down, so that the left and right of a surface stay the same.
+  LinearGradient get gradient => LinearGradient(
+        begin: Alignment.topCenter,
+        end: Alignment.bottomCenter,
+        colors: [
+          light.highlight.withValues(alpha: light.sheenStrength),
+          light.highlight.withValues(alpha: 0),
+        ],
+      );
+
   @override
   void paint(Canvas canvas, Size size) {
-    final rect = Offset.zero & size;
-    final depth = math.min(size.height * 0.6, _maxDepth);
-    final color = light.highlight;
-    final top = Rect.fromLTWH(0, 0, size.width, depth);
-    final bottom =
-        Rect.fromLTWH(0, size.height - depth / 2, size.width, depth / 2);
+    final top = Rect.fromLTWH(
+      0,
+      0,
+      size.width,
+      math.min(size.height * 0.6, _maxDepth),
+    );
     canvas
       ..save()
-      ..clipPath(shape.getOuterPath(rect))
-      ..drawRect(
-        top,
-        Paint()
-          ..shader = LinearGradient(
-            begin: Alignment.topCenter,
-            end: Alignment.bottomCenter,
-            colors: [
-              color.withValues(alpha: light.sheenStrength),
-              color.withValues(alpha: 0),
-            ],
-          ).createShader(top),
-      )
-      ..drawRect(
-        bottom,
-        Paint()
-          ..shader = LinearGradient(
-            begin: Alignment.bottomCenter,
-            end: Alignment.topCenter,
-            colors: [
-              color.withValues(alpha: light.sheenStrength * 0.4),
-              color.withValues(alpha: 0),
-            ],
-          ).createShader(bottom),
-      )
+      ..clipPath(shape.getOuterPath(Offset.zero & size))
+      ..drawRect(top, Paint()..shader = gradient.createShader(top))
       ..restore();
   }
 
@@ -273,8 +262,8 @@ class GlassSheenPainter extends CustomPainter {
       oldDelegate.shape != shape || oldDelegate.light != light;
 }
 
-/// The specular edge: brightest towards the light, nearly gone along the sides
-/// and with a second, weaker glint opposite of it.
+/// The specular edge: brightest along the top and fading evenly down both
+/// sides, the same on the left and on the right.
 class GlassRimPainter extends CustomPainter {
   const GlassRimPainter({
     required this.shape,
@@ -282,14 +271,38 @@ class GlassRimPainter extends CustomPainter {
     required this.light,
   });
 
+  /// How far down the highlight fades, whatever the height of the surface. A
+  /// small button and a tall sheet are thereby lit with the same emphasis.
+  static const double _fadeDepth = 56;
+
   final ShapeBorder shape;
   final GlassRim rim;
   final GlassLight light;
 
+  /// The light of [GlassRim.around] on a surface of [height].
+  LinearGradient aroundGradient(double height) => LinearGradient(
+        begin: Alignment.topCenter,
+        end: Alignment.bottomCenter,
+        stops: [0, math.min(1, _fadeDepth / height), 1],
+        colors: [
+          light.highlight.withValues(alpha: light.rimStrength),
+          light.highlight.withValues(alpha: light.rimStrength * 0.2),
+          light.shade.withValues(alpha: light.shadeStrength),
+        ],
+      );
+
+  /// The light of [GlassRim.bottom], which is widest in the middle.
+  LinearGradient get bottomGradient => LinearGradient(
+        colors: [
+          light.highlight.withValues(alpha: 0),
+          light.highlight.withValues(alpha: light.rimStrength),
+          light.highlight.withValues(alpha: 0),
+        ],
+      );
+
   @override
   void paint(Canvas canvas, Size size) {
     final rect = Offset.zero & size;
-    final highlight = light.highlight;
     final stroke = Paint()
       ..style = PaintingStyle.stroke
       ..strokeWidth = 1;
@@ -298,32 +311,13 @@ class GlassRimPainter extends CustomPainter {
       canvas.drawLine(
         Offset(0, y),
         Offset(size.width, y),
-        stroke
-          ..shader = LinearGradient(
-            stops: const [0, 0.28, 1],
-            colors: [
-              highlight.withValues(alpha: 0),
-              highlight.withValues(alpha: light.rimStrength),
-              highlight.withValues(alpha: 0),
-            ],
-          ).createShader(rect),
+        stroke..shader = bottomGradient.createShader(rect),
       );
       return;
     }
     canvas.drawPath(
       shape.getOuterPath(rect.deflate(0.5)),
-      stroke
-        ..shader = LinearGradient(
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
-          stops: const [0, 0.42, 0.7, 1],
-          colors: [
-            highlight.withValues(alpha: light.rimStrength),
-            highlight.withValues(alpha: light.rimStrength * 0.18),
-            light.shade.withValues(alpha: light.shadeStrength * 0.3),
-            light.shade.withValues(alpha: light.shadeStrength),
-          ],
-        ).createShader(rect),
+      stroke..shader = aroundGradient(size.height).createShader(rect),
     );
   }
 
@@ -337,32 +331,73 @@ class GlassRimPainter extends CustomPainter {
       oldDelegate.light != light;
 }
 
-/// A pill with the rim of the glass, for places that only take a shape, such as
-/// the indicator of a navigation rail.
-class GlassStadiumBorder extends StadiumBorder {
-  const GlassStadiumBorder({required this.light});
+/// [shape] with the rim of the glass, for places that only take a shape, such
+/// as dialogs and the indicator of a navigation rail.
+class GlassRimBorder extends ShapeBorder {
+  const GlassRimBorder({required this.shape, required this.light});
 
+  final ShapeBorder shape;
   final GlassLight light;
 
   @override
+  EdgeInsetsGeometry get dimensions => shape.dimensions;
+
+  @override
+  Path getInnerPath(Rect rect, {TextDirection? textDirection}) =>
+      shape.getInnerPath(rect, textDirection: textDirection);
+
+  @override
+  Path getOuterPath(Rect rect, {TextDirection? textDirection}) =>
+      shape.getOuterPath(rect, textDirection: textDirection);
+
+  @override
   void paint(Canvas canvas, Rect rect, {TextDirection? textDirection}) {
+    shape.paint(canvas, rect, textDirection: textDirection);
     canvas
       ..save()
       ..translate(rect.left, rect.top);
-    GlassRimPainter(
-      shape: const StadiumBorder(),
-      rim: GlassRim.around,
-      light: light,
-    ).paint(canvas, rect.size);
+    GlassRimPainter(shape: shape, rim: GlassRim.around, light: light)
+        .paint(canvas, rect.size);
     canvas.restore();
   }
 
   @override
-  bool operator ==(Object other) =>
-      other is GlassStadiumBorder && other.light == light;
+  ShapeBorder scale(double t) =>
+      GlassRimBorder(shape: shape.scale(t), light: light);
 
   @override
-  int get hashCode => light.hashCode;
+  bool operator ==(Object other) =>
+      other is GlassRimBorder && other.shape == shape && other.light == light;
+
+  @override
+  int get hashCode => Object.hash(shape, light);
+}
+
+/// Gives the dialogs opened below it the rim of the glass. A dialog takes over
+/// the theme of the place it is opened from, which keeps Legacy out of this.
+class GlassDialogTheme extends StatelessWidget {
+  const GlassDialogTheme({super.key, required this.child});
+
+  final Widget child;
+
+  @override
+  Widget build(BuildContext context) {
+    if (MediaQuery.highContrastOf(context)) return child;
+    final theme = Theme.of(context);
+    return Theme(
+      data: theme.copyWith(
+        dialogTheme: theme.dialogTheme.copyWith(
+          shape: GlassRimBorder(
+            shape: const RoundedRectangleBorder(
+              borderRadius: BorderRadius.all(Radius.circular(28)),
+            ),
+            light: GlassLight.of(theme.colorScheme),
+          ),
+        ),
+      ),
+      child: child,
+    );
+  }
 }
 
 /// The look of a small control on a list: tonal glass without blur. As a theme

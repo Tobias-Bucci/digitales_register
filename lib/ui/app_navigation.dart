@@ -472,7 +472,10 @@ class AppNavigationRail extends StatelessWidget {
             highContrast ? scheme.primaryContainer : navigationLensFill(scheme),
         indicatorShape: highContrast
             ? const StadiumBorder()
-            : GlassStadiumBorder(light: GlassLight.of(scheme)),
+            : GlassRimBorder(
+                shape: const StadiumBorder(),
+                light: GlassLight.of(scheme),
+              ),
         selectedIconTheme: IconThemeData(color: scheme.onPrimaryContainer),
         selectedIndex: selected.index,
         onDestinationSelected: (index) =>
