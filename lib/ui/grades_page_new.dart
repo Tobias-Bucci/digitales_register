@@ -19,7 +19,6 @@ import 'package:dr/app_clock.dart';
 import 'package:dr/app_state.dart';
 import 'package:dr/container/grades_history_container.dart';
 import 'package:dr/container/grades_page_new_container.dart';
-import 'package:dr/container/sorted_grades_container.dart';
 import 'package:dr/data.dart';
 import 'package:dr/grade_forecast.dart';
 import 'package:dr/grade_history.dart';
@@ -30,6 +29,7 @@ import 'package:dr/ui/glass_segmented_control.dart';
 import 'package:dr/ui/glass_surface.dart';
 import 'package:dr/ui/grades_overview.dart';
 import 'package:dr/ui/grades_panels.dart';
+import 'package:dr/ui/grades_subject_list.dart';
 import 'package:dr/ui/readable_content.dart';
 import 'package:flutter/material.dart';
 import 'package:responsive_scaffold/responsive_scaffold.dart';
@@ -201,9 +201,24 @@ class GradesPageNew extends StatelessWidget {
                         padding: const EdgeInsets.symmetric(
                           horizontal: DesignTokens.gutter,
                         ),
-                        child: _Summary(vm: vm, callbacks: callbacks),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.stretch,
+                          children: [
+                            _Summary(vm: vm, callbacks: callbacks),
+                            GradesSubjectList(
+                              vm: vm.list,
+                              colorGrades: vm.colorGrades,
+                              viewSubjectDetail: callbacks.viewSubjectDetail,
+                              onOpenDisplayOptions: () =>
+                                  showGradesDisplayPanel(
+                                context,
+                                onShowAverageSettings:
+                                    callbacks.showGradesSettings,
+                              ),
+                            ),
+                          ],
+                        ),
                       ),
-                      SortedGradesContainer(),
                     ],
                   ),
                 ),

@@ -15,6 +15,9 @@
 // You should have received a copy of the GNU General Public License
 // along with digitales_register.  If not, see <http://www.gnu.org/licenses/>.
 
+import 'package:dr/actions/app_actions.dart';
+import 'package:dr/app_state.dart';
+import 'package:dr/data.dart';
 import 'package:dr/grade_forecast.dart';
 import 'package:dr/grade_history.dart';
 import 'package:dr/i18n/app_localizations.dart';
@@ -22,7 +25,9 @@ import 'package:dr/theme/app_palette.dart';
 import 'package:dr/ui/glass_surface.dart';
 import 'package:dr/ui/grade_colors.dart';
 import 'package:dr/ui/grades_format.dart';
+import 'package:dr/util.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter_built_redux/flutter_built_redux.dart';
 
 /// The frame of everything the grades page opens: a sheet on phones, a centred
 /// panel in wide windows, with a title and what scrolls below it.
@@ -319,4 +324,322 @@ class _HistoryDetails extends StatelessWidget {
       ],
     );
   }
+}
+
+/// A competence with its stars. Whatever the register sends that is no rating
+/// is written out, as Legacy does.
+class CompetenceLine extends StatelessWidget {
+  const CompetenceLine({
+    super.key,
+    required this.competence,
+    required this.scale,
+    this.cancelled = false,
+  });
+
+  /// A larger scale is written out, so that a school cannot make this any size.
+  static const _maxStars = 20;
+  static const double _starSize = 14;
+
+  final Competence competence;
+  final int? scale;
+  final bool cancelled;
+
+  @override
+  Widget build(BuildContext context) {
+    final l10n = context.l10n;
+    final theme = Theme.of(context);
+    final scheme = theme.colorScheme;
+    final name = l10n.translateSchoolTerm(competence.typeName);
+    final value = competence.grade;
+    final scale = this.scale;
+    final style = theme.textTheme.labelSmall?.copyWith(
+      color: scheme.onSurfaceVariant,
+      decoration: cancelled ? TextDecoration.lineThrough : null,
+    );
+    final String spoken;
+    final Widget rating;
+    if (value == null || value < 0) {
+      spoken = '—';
+      rating = Text(spoken, style: style);
+    } else if (scale == null || scale <= 0) {
+      spoken = '$value ★ / ?';
+      rating = Text(spoken, style: style);
+    } else if (value > scale) {
+      spoken = '$value / $scale ?';
+      rating = Text(spoken, style: style);
+    } else {
+      spoken = l10n.text(
+        'grades.stars',
+        args: {'value': '$value', 'scale': '$scale'},
+      );
+      rating = scale > _maxStars
+          ? Text('$value / $scale ★', style: style)
+          : Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                for (var star = 0; star < scale; star++)
+                  Icon(
+                    star < value
+                        ? Icons.star_rounded
+                        : Icons.star_outline_rounded,
+                    size: _starSize,
+                    color: scheme.onSurfaceVariant,
+                  ),
+              ],
+            );
+    }
+    return Semantics(
+      label: '$name, $spoken',
+      excludeSemantics: true,
+      child: Wrap(
+        alignment: WrapAlignment.spaceBetween,
+        crossAxisAlignment: WrapCrossAlignment.center,
+        spacing: 8,
+        children: [Text(name, style: style), rating],
+      ),
+    );
+  }
+}
+
+void showGradeDetailsPanel(
+  BuildContext context, {
+  required GradeDetail grade,
+  required bool colorGrades,
+  required int? competenceStarsScale,
+}) {
+  showGlassSheet<void>(
+    context: context,
+    builder: (context) => GradesPanel(
+      key: const Key('grades-grade-panel'),
+      title: grade.name.isEmpty
+          ? context.l10n.translateSchoolTerm(grade.type)
+          : grade.name,
+      child: _GradeDetails(
+        grade: grade,
+        colorGrades: colorGrades,
+        competenceStarsScale: competenceStarsScale,
+      ),
+    ),
+  );
+}
+
+/// A label and its value, one below the other in the panels of a grade.
+class _Fact extends StatelessWidget {
+  const _Fact(this.label, this.value);
+
+  final String label, value;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 8),
+      child: MergeSemantics(
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              label,
+              style: theme.textTheme.labelMedium?.copyWith(
+                color: theme.colorScheme.onSurfaceVariant,
+              ),
+            ),
+            SelectableText(value, style: theme.textTheme.bodyMedium),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _GradeDetails extends StatelessWidget {
+  const _GradeDetails({
+    required this.grade,
+    required this.colorGrades,
+    required this.competenceStarsScale,
+  });
+
+  final GradeDetail grade;
+  final bool colorGrades;
+  final int? competenceStarsScale;
+
+  @override
+  Widget build(BuildContext context) {
+    final l10n = context.l10n;
+    final theme = Theme.of(context);
+    final scheme = theme.colorScheme;
+    final format = GradesFormat.of(context);
+    final value = format.grade(grade.gradeFormatted);
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Semantics(
+          label: l10n.text(
+            'grades.spoken.grade',
+            args: {'value': format.spoken(value, grade.grade)},
+          ),
+          excludeSemantics: true,
+          child: GradeBadge(
+            text: value,
+            hundredths: grade.grade,
+            colorized: colorGrades,
+            cancelled: grade.cancelled,
+            style: theme.textTheme.titleLarge?.copyWith(
+              fontWeight: FontWeight.w700,
+            ),
+          ),
+        ),
+        const SizedBox(height: 12),
+        _Fact(
+          l10n.text('grades.details.type'),
+          l10n.translateSchoolTerm(grade.type),
+        ),
+        _Fact(l10n.text('grades.details.date'), format.longDate(grade.date)),
+        _Fact(
+          l10n.text('grades.details.weight'),
+          format.weight(grade.weightPercentage),
+        ),
+        if (!grade.description.isNullOrEmpty)
+          _Fact(l10n.text('grades.details.comment'), grade.description!),
+        if (grade.cancelled)
+          _Fact(
+            l10n.text('grades.spoken.cancelled'),
+            grade.cancelledDescription.isNullOrEmpty
+                ? '—'
+                : grade.cancelledDescription!,
+          ),
+        if (grade.competences.isNotEmpty) ...[
+          Text(
+            l10n.text('grades.details.competences'),
+            style: theme.textTheme.labelMedium?.copyWith(
+              color: scheme.onSurfaceVariant,
+            ),
+          ),
+          const SizedBox(height: 4),
+          for (final competence in grade.competences)
+            Padding(
+              padding: const EdgeInsets.only(bottom: 4),
+              child: CompetenceLine(
+                competence: competence,
+                scale: competenceStarsScale,
+                cancelled: grade.cancelled,
+              ),
+            ),
+          const SizedBox(height: 4),
+        ],
+        Text(
+          l10n.translateCreatedText(grade.created),
+          style: theme.textTheme.bodySmall?.copyWith(
+            color: scheme.onSurfaceVariant,
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+void showObservationDetailsPanel(
+  BuildContext context, {
+  required Observation observation,
+}) {
+  showGlassSheet<void>(
+    context: context,
+    builder: (context) {
+      final l10n = context.l10n;
+      final theme = Theme.of(context);
+      final format = GradesFormat.of(context);
+      return GradesPanel(
+        key: const Key('grades-observation-panel'),
+        title: l10n.translateSchoolTerm(observation.typeName),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            _Fact(
+              l10n.text('grades.details.date'),
+              format.longDate(observation.date),
+            ),
+            if (!observation.note.isNullOrEmpty)
+              _Fact(l10n.text('grades.details.comment'), observation.note),
+            Text(
+              l10n.translateCreatedText(observation.created),
+              style: theme.textTheme.bodySmall?.copyWith(
+                color: theme.colorScheme.onSurfaceVariant,
+              ),
+            ),
+          ],
+        ),
+      );
+    },
+  );
+}
+
+/// How the grades are shown. The switches follow the state while this is open.
+void showGradesDisplayPanel(
+  BuildContext context, {
+  required VoidCallback onShowAverageSettings,
+}) {
+  showGlassSheet<void>(
+    context: context,
+    builder: (context) => GradesPanel(
+      key: const Key('grades-display-panel'),
+      title: context.t('grades.view'),
+      child: StoreConnection<AppState, AppActions, (bool, bool, bool)>(
+        connect: (state) => (
+          state.settingsState.typeSorted,
+          state.settingsState.showCancelled,
+          !state.settingsState.gradeColorsTurnedOff,
+        ),
+        builder: (context, vm, actions) {
+          final l10n = context.l10n;
+          Widget toggle(
+            String key,
+            String label,
+            bool value,
+            ValueChanged<bool> onChanged,
+          ) =>
+              SwitchListTile.adaptive(
+                key: Key(key),
+                contentPadding: EdgeInsets.zero,
+                title: Text(label),
+                value: value,
+                onChanged: onChanged,
+              );
+          return Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              toggle(
+                'grades-sort-by-type',
+                l10n.text('grades.sortByType'),
+                vm.$1,
+                actions.settingsActions.gradesTypeSorted.call,
+              ),
+              toggle(
+                'grades-show-cancelled',
+                l10n.text('grades.showDeleted'),
+                vm.$2,
+                actions.settingsActions.showCancelledGrades.call,
+              ),
+              toggle(
+                'grades-color-grades',
+                l10n.text('grades.colorGrades'),
+                vm.$3,
+                actions.settingsActions.colorGrades.call,
+              ),
+              ListTile(
+                key: const Key('grades-average-settings'),
+                contentPadding: EdgeInsets.zero,
+                title: Text(l10n.text('grades.averageSettings')),
+                subtitle: Text(l10n.text('grades.averageSettings.subtitle')),
+                trailing: const Icon(Icons.chevron_right_rounded),
+                onTap: () {
+                  Navigator.of(context).pop();
+                  onShowAverageSettings();
+                },
+              ),
+            ],
+          );
+        },
+      ),
+    ),
+  );
 }

@@ -27,6 +27,7 @@ import 'package:dr/ui/dashboard_columns.dart';
 import 'package:dr/ui/dashboard_event_banner.dart';
 import 'package:dr/ui/days.dart';
 import 'package:dr/ui/glass_surface.dart';
+import 'package:dr/ui/grades_subject_list.dart';
 import 'package:dr/ui/notepad_mark.dart';
 import 'package:dr/ui/profile_menu.dart';
 import 'package:dr/ui/readable_content.dart';
@@ -1845,7 +1846,9 @@ void main() {
       expect(current(), Pages.grades);
       expect(gradesPageFocusSubject.value, isNull);
       expect(
-        tester.widget<SubjectWidget>(find.byType(SubjectWidget).first).expanded,
+        tester
+            .widget<GradeSubjectEntry>(find.byType(GradeSubjectEntry).first)
+            .expanded,
         isTrue,
       );
       await _finish(tester);
