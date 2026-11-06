@@ -75,16 +75,26 @@ Verläufe aus den Rollen des Themes (`GlassLight`). Das darf auch in der Liste
 stehen. Fällt der Blur weg, bleibt das Licht; im Hochkontrastmodus entfällt es
 ganz.
 
-Das Licht kommt für alle Oberflächen gleich von direkt oben: am oberen Rand am
-hellsten, nach unten gleichmäßig schwächer, links und rechts identisch. Schatten
-haben keinen horizontalen Versatz. Der Verlauf klingt über eine feste Pixeltiefe
-aus, damit „+“ und ein hohes Sheet gleich betont sind. Das Rezept steht nur in
-`GlassRimPainter` und `GlassSheenPainter`. Zeilen bekommen nur den Rand, weil ihr
+Das Licht kommt für alle Oberflächen gleich von direkt oben und von nah: Es
+erreicht den ganzen Umriss fast gleich, oben nur ganz leicht stärker als unten
+(höchstens 1,2 : 1), links und rechts identisch. Der Verlauf läuft über die ganze
+Höhe, damit „+“ und ein hohes Sheet gleich betont sind. Schatten haben keinen
+horizontalen und nur wenig vertikalen Versatz. Auf hellen Seiten würde ein
+Lichtrand allein verschwinden, er liegt dort deshalb innen an einer weichen,
+gleichmäßigen Kontur. Das Rezept steht nur in `GlassLight`, `GlassRimPainter` und
+`GlassSheenPainter`. Zeilen bekommen nur den Rand, weil ihr
 Text auf kräftigen Farben steht. Dialoge erben den Rand über `NewDesignTheme`
 vom Ort, an dem sie geöffnet werden, und bleiben dadurch in Legacy unberührt. Die
 Tests spiegeln gerenderte Flächen pixelgenau.
 
 Die Bindung links am Notizblock-Kästchen gehört zum App-Logo und ist kein Licht.
+
+Zeilen sind so breit wie die Leiste und laufen unter ihr durch. Eine rote Zeile
+stand deshalb an den runden Enden der Leiste über und schien durch ihr Glas, was
+wie ein rötlicher Rand aussah; Rand, Akzent und Linse sind neutral. Die Seite läuft
+deshalb im Abstand über der Leiste kurz aus (`app-navigation-fade`), reicht aber
+nicht in diesen Abstand hinein weiter nach oben, damit die letzte Zeile unberührt
+bleibt.
 
 Die Linse der Navigationsleiste gleitet auf einer kritisch gedämpften Feder zum
 gewählten Eintrag, ohne über ihn hinauszuschwingen, und streckt sich dabei nur

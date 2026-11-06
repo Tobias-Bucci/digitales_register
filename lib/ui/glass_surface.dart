@@ -107,16 +107,18 @@ class GlassPerformance {
 }
 
 /// How light falls on the glass of the new design, in roles of the theme: from
-/// straight above, so that every surface is lit the same on its left and right.
-/// The upper edge catches the light, and it fades towards the lower edge, which
-/// keeps a faint reflection (dark) or a soft shade (light).
+/// a lamp straight above and close to the surface. It reaches the whole outline
+/// nearly evenly, the same on the left and on the right, and the upper edge is
+/// only very slightly stronger than the lower one.
+///
+/// On a light page a highlight alone would vanish, so there it lies just inside
+/// of a soft [outline], which is as even as the light.
 @immutable
 class GlassLight {
   const GlassLight._({
     required this.highlight,
-    required this.shade,
+    required this.outline,
     required this.rimStrength,
-    required this.shadeStrength,
     required this.sheenStrength,
     required this.glowStrength,
     required this.reflectionStrength,
@@ -126,17 +128,20 @@ class GlassLight {
     final dark = scheme.brightness == Brightness.dark;
     return GlassLight._(
       highlight: dark ? scheme.onSurface : scheme.surfaceContainerLowest,
-      shade: dark ? scheme.onSurface : scheme.outline,
-      rimStrength: dark ? 0.42 : 0.95,
-      shadeStrength: dark ? 0.1 : 0.26,
-      sheenStrength: dark ? 0.06 : 0.26,
-      glowStrength: dark ? 0.16 : 0.6,
+      outline: dark ? null : scheme.outline.withValues(alpha: 0.26),
+      rimStrength: dark ? 0.3 : 0.6,
+      sheenStrength: dark ? 0.03 : 0.14,
+      glowStrength: dark ? 0.1 : 0.4,
       reflectionStrength: dark ? 0.07 : 0.3,
     );
   }
 
-  final Color highlight, shade;
-  final double rimStrength, shadeStrength, sheenStrength;
+  /// What the rim keeps of its strength along the lower edge.
+  static const double rimFalloff = 0.88;
+
+  final Color highlight;
+  final Color? outline;
+  final double rimStrength, sheenStrength;
 
   /// The light inside a lens, which gathers it, and what its lower edge throws
   /// back.
@@ -146,9 +151,8 @@ class GlassLight {
   bool operator ==(Object other) =>
       other is GlassLight &&
       other.highlight == highlight &&
-      other.shade == shade &&
+      other.outline == outline &&
       other.rimStrength == rimStrength &&
-      other.shadeStrength == shadeStrength &&
       other.sheenStrength == sheenStrength &&
       other.glowStrength == glowStrength &&
       other.reflectionStrength == reflectionStrength;
@@ -156,9 +160,8 @@ class GlassLight {
   @override
   int get hashCode => Object.hash(
         highlight,
-        shade,
+        outline,
         rimStrength,
-        shadeStrength,
         sheenStrength,
         glowStrength,
         reflectionStrength,
@@ -281,8 +284,8 @@ class GlassSheenPainter extends CustomPainter {
       oldDelegate.shape != shape || oldDelegate.light != light;
 }
 
-/// The specular edge: brightest along the top and fading evenly down both
-/// sides, the same on the left and on the right.
+/// The specular edge: lit nearly evenly all around, a touch stronger at the top
+/// and the same on the left and on the right.
 class GlassRimPainter extends CustomPainter {
   const GlassRimPainter({
     required this.shape,
@@ -290,23 +293,21 @@ class GlassRimPainter extends CustomPainter {
     required this.light,
   });
 
-  /// How far down the highlight fades, whatever the height of the surface. A
-  /// small button and a tall sheet are thereby lit with the same emphasis.
-  static const double _fadeDepth = 56;
-
   final ShapeBorder shape;
   final GlassRim rim;
   final GlassLight light;
 
-  /// The light of [GlassRim.around] on a surface of [height].
-  LinearGradient aroundGradient(double height) => LinearGradient(
+  /// The light of [GlassRim.around]. It runs over the whole height, so that a
+  /// small button and a tall sheet are lit with the same emphasis, and the sides
+  /// of a sheet have no point where the light stops.
+  LinearGradient get aroundGradient => LinearGradient(
         begin: Alignment.topCenter,
         end: Alignment.bottomCenter,
-        stops: [0, math.min(1, _fadeDepth / height), 1],
         colors: [
           light.highlight.withValues(alpha: light.rimStrength),
-          light.highlight.withValues(alpha: light.rimStrength * 0.2),
-          light.shade.withValues(alpha: light.shadeStrength),
+          light.highlight.withValues(
+            alpha: light.rimStrength * GlassLight.rimFalloff,
+          ),
         ],
       );
 
@@ -334,9 +335,19 @@ class GlassRimPainter extends CustomPainter {
       );
       return;
     }
+    final outline = light.outline;
+    if (outline != null) {
+      canvas.drawPath(
+        shape.getOuterPath(rect.deflate(0.5)),
+        Paint()
+          ..style = PaintingStyle.stroke
+          ..strokeWidth = 1
+          ..color = outline,
+      );
+    }
     canvas.drawPath(
-      shape.getOuterPath(rect.deflate(0.5)),
-      stroke..shader = aroundGradient(size.height).createShader(rect),
+      shape.getOuterPath(rect.deflate(outline == null ? 0.5 : 1.5)),
+      stroke..shader = aroundGradient.createShader(rect),
     );
   }
 
@@ -381,7 +392,7 @@ class GlassLensPainter extends CustomPainter {
           ..addRRect(lens),
       )
       ..drawRRect(
-        lens.shift(const Offset(0, 3)),
+        lens.shift(const Offset(0, 1.5)),
         Paint()
           ..color = shadow.withValues(alpha: 0.2)
           ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 5),
@@ -792,13 +803,12 @@ class FloatingGlass extends StatelessWidget {
           BoxShadow(
             color: scheme.shadow.withValues(alpha: 0.14),
             blurRadius: shadowBlur,
-            offset: const Offset(0, 6),
+            offset: const Offset(0, 2),
           ),
           // Holds the glass on the page where the wide shadow is too soft to.
           BoxShadow(
             color: scheme.shadow.withValues(alpha: 0.1),
             blurRadius: 3,
-            offset: const Offset(0, 1),
           ),
         ],
       ),
@@ -994,7 +1004,7 @@ class _GlassSheetState extends State<GlassSheet>
             BoxShadow(
               color: scheme.shadow.withValues(alpha: 0.24),
               blurRadius: 32,
-              offset: const Offset(0, 12),
+              offset: const Offset(0, 4),
             ),
           ],
         ),

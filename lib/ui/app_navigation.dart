@@ -138,6 +138,13 @@ Color navigationHoverTint(ColorScheme scheme, {required bool onLens}) =>
     (onLens ? scheme.onPrimaryContainer : scheme.onSurface)
         .withValues(alpha: 0.1);
 
+/// How far above the bar the page starts to fade. It stays in the gap that
+/// content keeps to the bar, and is done just below the upper edge of the bar.
+const _barFadeDepth = 8.0;
+
+/// How far the page below the bar has faded.
+const _barFadeOpacity = 0.92;
+
 /// How far the bar reaches above the bottom safe area, including the gap to the
 /// content above it.
 const appNavigationBarExtent = appNavigationBarHeight + _barBottomGap + 8;
@@ -244,33 +251,75 @@ class FloatingNavigationBar extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final media = MediaQuery.of(context);
-    return Semantics(
-      container: true,
-      explicitChildNodes: true,
-      label: context.l10n.text('sidebar.navigationLabel'),
-      child: Padding(
-        padding: EdgeInsets.fromLTRB(
-          DesignTokens.gutter,
-          0,
-          DesignTokens.gutter,
-          media.padding.bottom + _barBottomGap,
-        ),
-        child: ConstrainedBox(
-          constraints: const BoxConstraints(maxWidth: 480),
-          child: _NavigationGlass(
-            surfaceKey: const Key('app-navigation-bar'),
-            child: SizedBox(
-              height: appNavigationBarHeight,
-              child: _DestinationTrack(
-                axis: Axis.horizontal,
-                selected: selected,
-                onSelected: onSelected,
-                unreadMessages: unreadMessages,
-                userIcon: userIcon,
+    final surface = Theme.of(context).colorScheme.surface;
+    return SizedBox(
+      width: double.infinity,
+      child: Stack(
+        clipBehavior: Clip.none,
+        alignment: Alignment.bottomCenter,
+        children: [
+          // Rows are as wide as the bar and run below it. Without this they
+          // would stick out past its round ends and colour its glass.
+          Positioned(
+            key: const Key('app-navigation-fade'),
+            left: 0,
+            right: 0,
+            bottom: 0,
+            top: -_barFadeDepth,
+            child: IgnorePointer(
+              child: DecoratedBox(
+                decoration: BoxDecoration(
+                  gradient: LinearGradient(
+                    begin: Alignment.topCenter,
+                    end: Alignment.bottomCenter,
+                    stops: [
+                      0,
+                      1.5 *
+                          _barFadeDepth /
+                          (_barFadeDepth +
+                              appNavigationBarHeight +
+                              _barBottomGap +
+                              media.padding.bottom),
+                    ],
+                    colors: [
+                      surface.withValues(alpha: 0),
+                      surface.withValues(alpha: _barFadeOpacity),
+                    ],
+                  ),
+                ),
               ),
             ),
           ),
-        ),
+          Semantics(
+            container: true,
+            explicitChildNodes: true,
+            label: context.l10n.text('sidebar.navigationLabel'),
+            child: Padding(
+              padding: EdgeInsets.fromLTRB(
+                DesignTokens.gutter,
+                0,
+                DesignTokens.gutter,
+                media.padding.bottom + _barBottomGap,
+              ),
+              child: ConstrainedBox(
+                constraints: const BoxConstraints(maxWidth: 480),
+                child: _NavigationGlass(
+                  surfaceKey: const Key('app-navigation-bar'),
+                  child: SizedBox(
+                    height: appNavigationBarHeight,
+                    child: _DestinationTrack(
+                      axis: Axis.horizontal,
+                      selected: selected,
+                      onSelected: onSelected,
+                      unreadMessages: unreadMessages,
+                      userIcon: userIcon,
+                    ),
+                  ),
+                ),
+              ),
+            ),
+          ),
+        ],
       ),
     );
   }

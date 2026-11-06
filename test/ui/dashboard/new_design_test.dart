@@ -38,8 +38,10 @@ import 'package:flutter/foundation.dart'
     show debugDefaultTargetPlatformOverride;
 import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart' hide Notification;
-import 'package:flutter/rendering.dart' show RendererBinding;
+import 'package:flutter/rendering.dart'
+    show RenderRepaintBoundary, RendererBinding, debugDisableShadows;
 import 'package:flutter/services.dart';
+import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 import '../../support/fixtures.dart';
@@ -2656,8 +2658,7 @@ void main() {
         );
         final gradients = [
           GlassSheenPainter(shape: shape, light: light).gradient,
-          for (final height in const [30.0, 56.0, 220.0, 600.0])
-            rim.aroundGradient(height),
+          rim.aroundGradient,
           EventEdgePainter(
             color: scheme.primary,
             animation: const AlwaysStoppedAnimation(0.5),
@@ -2683,16 +2684,188 @@ void main() {
       }
     });
 
-    test('the top is the brightest and the sides fade to the same value', () {
+    test('the top of the rim is only very slightly the stronger one', () {
       for (final scheme in schemes) {
-        final light = GlassLight.of(scheme);
         final colors = GlassRimPainter(
           shape: const StadiumBorder(),
           rim: GlassRim.around,
-          light: light,
-        ).aroundGradient(200).colors;
+          light: GlassLight.of(scheme),
+        ).aroundGradient.colors;
         expect(colors[0].a, greaterThan(colors[1].a));
+        expect(colors[0].a / colors[1].a, lessThanOrEqualTo(1.2));
       }
+    });
+
+    /// What the rim adds to the fill, at the middle of each side of a surface.
+    /// Outside of the stroke, the render is the bare [fill].
+    Future<({double top, double bottom, double left, double right})> rimLight(
+      WidgetTester tester,
+      ColorScheme scheme,
+      ShapeBorder shape,
+      Size size,
+    ) async {
+      final light = GlassLight.of(scheme);
+      final fill = scheme.surfaceContainer;
+      final pixels = await render(tester, size, (canvas) {
+        canvas.drawRect(Offset.zero & size, Paint()..color = fill);
+        GlassRimPainter(shape: shape, rim: GlassRim.around, light: light)
+            .paint(canvas, size);
+      });
+      final width = size.width.toInt();
+      final height = size.height.toInt();
+      // In light themes the highlight lies next to the outline, so of the
+      // pixels of the rim, the one that differs from the fill the most counts.
+      double lift(int x, int y, int stepX, int stepY) {
+        var most = 0.0;
+        for (var step = 0; step < 3; step++) {
+          final offset = ((y + step * stepY) * width + x + step * stepX) * 4;
+          final difference = [
+            (pixels.getUint8(offset) - fill.r * 255).abs(),
+            (pixels.getUint8(offset + 1) - fill.g * 255).abs(),
+            (pixels.getUint8(offset + 2) - fill.b * 255).abs(),
+          ].reduce(math.max);
+          most = math.max(most, difference);
+        }
+        return most;
+      }
+
+      return (
+        top: lift(width ~/ 2, 0, 0, 1),
+        bottom: lift(width ~/ 2, height - 1, 0, -1),
+        left: lift(0, height ~/ 2, 1, 0),
+        right: lift(width - 1, height ~/ 2, -1, 0),
+      );
+    }
+
+    testWidgets('the rim is lit nearly evenly all around', (tester) async {
+      for (final scheme in schemes) {
+        for (final (shape, size) in const <(ShapeBorder, Size)>[
+          (StadiumBorder(), Size(120, 44)),
+          (StadiumBorder(), Size(388, 56)),
+          (CircleBorder(), Size(40, 40)),
+          (
+            RoundedRectangleBorder(
+              borderRadius: DesignTokens.cardBorderRadius,
+            ),
+            Size(388, 209),
+          ),
+          (
+            RoundedRectangleBorder(
+              borderRadius: BorderRadius.all(Radius.circular(28)),
+            ),
+            Size(412, 640),
+          ),
+        ]) {
+          final rim = await rimLight(tester, scheme, shape, size);
+          expect(rim.bottom, greaterThan(0));
+          expect(rim.top / rim.bottom, lessThanOrEqualTo(1.2));
+          expect(rim.top / rim.bottom, greaterThanOrEqualTo(0.95));
+          expect((rim.left - rim.right).abs(), lessThan(antialiasing));
+          final middle = (rim.top + rim.bottom) / 2;
+          expect(rim.left / middle, inInclusiveRange(0.85, 1.15));
+        }
+      }
+    });
+
+    testWidgets('a row below the bar does not colour its glass',
+        (tester) async {
+      tester.view.physicalSize = const Size(412, 300);
+      tester.view.devicePixelRatio = 1;
+      addTearDown(tester.view.reset);
+      final boundary = GlobalKey();
+      final scheme = AppPalette.scheme(
+        brightness: Brightness.dark,
+        amoled: false,
+      );
+
+      Future<ByteData> barOver(Color behind) async {
+        // Otherwise the shadow of the bar is painted as a solid slab.
+        debugDisableShadows = false;
+        await tester.pumpWidget(RepaintBoundary(
+          key: boundary,
+          child: MaterialApp(
+            theme: ThemeData(colorScheme: scheme),
+            localizationsDelegates: const [
+              AppLocalizations.delegate,
+              ...GlobalMaterialLocalizations.delegates,
+            ],
+            supportedLocales: AppLocalizations.supportedLocales,
+            locale: const Locale('de'),
+            home: Material(
+              color: scheme.surface,
+              child: Stack(children: [
+                // Just as wide as the bar, like a row of the list.
+                Positioned(
+                  left: DesignTokens.gutter,
+                  right: DesignTokens.gutter,
+                  bottom: 30,
+                  height: 60,
+                  child: ColoredBox(color: behind),
+                ),
+                Align(
+                  alignment: Alignment.bottomCenter,
+                  child: FloatingNavigationBar(
+                    selected: AppDestination.grades,
+                    onSelected: (_) {},
+                    unreadMessages: 0,
+                    userIcon: null,
+                  ),
+                ),
+              ]),
+            ),
+          ),
+        ));
+        await tester.runAsync(
+            () => Future<void>.delayed(const Duration(milliseconds: 50)));
+        await tester.pump();
+        final render = boundary.currentContext!.findRenderObject()!
+            as RenderRepaintBoundary;
+        final pixels = (await tester.runAsync(() async {
+          final image = await render.toImage();
+          final data =
+              await image.toByteData(format: ui.ImageByteFormat.rawRgba);
+          image.dispose();
+          return data!;
+        }))!;
+        debugDisableShadows = true;
+        return pixels;
+      }
+
+      final plain = await barOver(scheme.surface);
+      final tinted = await barOver(const Color(0xFFFF5449));
+      final bar = tester.getRect(find.byKey(const Key('app-navigation-bar')));
+      int warmth(ByteData pixels, double x, double y) {
+        final offset = (y.toInt() * 412 + x.toInt()) * 4;
+        return pixels.getUint8(offset) - pixels.getUint8(offset + 2);
+      }
+
+      // Without the fade, the corners change by 165 and the glass by 18.
+      for (final (x, y, limit) in [
+        (bar.left + 8.5, bar.top + 7.5, 20),
+        (bar.right - 9.5, bar.top + 7.5, 20),
+        (bar.left + 14.0, bar.top + 12.0, 10),
+        (bar.right - 14.0, bar.top + 12.0, 10),
+      ]) {
+        expect(
+          (warmth(tinted, x, y) - warmth(plain, x, y)).abs(),
+          lessThanOrEqualTo(limit),
+        );
+      }
+      await tester.pumpWidget(const SizedBox());
+    });
+
+    testWidgets('the fade below the bar leaves the page tappable',
+        (tester) async {
+      await _pumpDashboard(tester, _dashboardState());
+      final fade = find.byKey(const Key('app-navigation-fade'));
+      expect(
+        find.descendant(of: fade, matching: find.byType(IgnorePointer)),
+        findsOneWidget,
+      );
+      final bar = tester.getRect(find.byKey(const Key('app-navigation-bar')));
+      // It stays in the gap that content keeps to the bar.
+      expect(tester.getTopLeft(fade).dy, greaterThanOrEqualTo(bar.top - 8));
+      expect(tester.getSize(fade).width, 400);
     });
 
     testWidgets('a mirrored surface looks exactly the same', (tester) async {
