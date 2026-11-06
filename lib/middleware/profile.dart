@@ -223,7 +223,10 @@ Future<void> _pickAndUploadProfilePicture(
   if (resultMap["error"] == null) {
     showSnackBar(tr('profile.pictureUpdated'));
     _markRuntimeCacheStale(_profileCacheKey);
+    forgetProfilePictures();
     await _refreshProfile(api, session);
+    // The new picture can have the same address as the old one.
+    retryProfilePictures();
   } else {
     showSnackBar(tr('profile.saveFailed'));
   }

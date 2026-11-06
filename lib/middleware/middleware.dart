@@ -67,6 +67,7 @@ import 'package:dr/main.dart';
 import 'package:dr/page_payload_cache.dart';
 import 'package:dr/platform_adapter.dart';
 import 'package:dr/privacy_log.dart';
+import 'package:dr/profile_picture.dart';
 import 'package:dr/reminder_sync.dart';
 import 'package:dr/school_api_endpoints.dart';
 import 'package:dr/school_notification_service.dart';
@@ -216,6 +217,7 @@ void _clearRuntimeCaches() {
   _runtimeCacheTimes.clear();
   _staleCacheKeys.clear();
   _authenticatedBytesInFlight.clear();
+  forgetProfilePictures();
   _workingCourseMaterialCandidate = null;
   // A new session (or regenerated demo data) starts on an unknown server-side
   // semester, so the next grades request has to switch explicitly.
@@ -1087,8 +1089,8 @@ List<Middleware<AppState, AppStateBuilder, AppActions>> middleware({
             ..add(SettingsActionsNames.saveNoData, _saveNoData)
             ..add(AppActionsNames.deleteData, _deleteData)
             ..add(AppActionsNames.assignLegacyStudyData, _assignLegacyStudyData)
-            ..add(AppActionsNames.discardLegacyStudyData,
-                _discardLegacyStudyData)
+            ..add(
+                AppActionsNames.discardLegacyStudyData, _discardLegacyStudyData)
             ..add(AppActionsNames.load, _load)
             ..add(AppActionsNames.start, _start)
             ..add(DashboardActionsNames.refresh, _refresh)
@@ -1274,6 +1276,7 @@ Future<void> _noInternet(
       showSnackBar(tr('offline.title'));
     } else {
       _cancelNoInternetRetry();
+      retryProfilePictures();
       showSnackBar(tr('offline.reconnected'));
       await api.actions.dashboardActions.refresh();
     }
@@ -1491,6 +1494,8 @@ Future<void> _loggedIn(
     callback();
   }
   if (!action.payload.offlineOnly) {
+    // A saved profile can show an avatar before there is a session to load it.
+    retryProfilePictures();
     await Future.wait([
       api.actions.dashboardActions.load(api.state.dashboardState.future),
       api.actions.notificationsActions.load(),
@@ -1569,9 +1574,10 @@ Future<void> _mountStudyData(
   session.ensureCurrent();
   if (unreadable) showSnackBar(tr('error.savedDataUnreadable'));
   await api.actions.mountAppState(
-    api.state.rebuild((b) => b..settingsState.replace(
-          data.applyTo(api.state.settingsState),
-        )),
+    api.state.rebuild((b) => b
+      ..settingsState.replace(
+        data.applyTo(api.state.settingsState),
+      )),
   );
   _studyDataScope = scope;
   WidgetsBinding.instance.addPostFrameCallback(
@@ -1587,9 +1593,7 @@ Future<void> _offerLegacyStudyData(
   _Session session,
 ) async {
   try {
-    if (!session.isCurrent ||
-        wrapper.demoMode ||
-        session.scope.user == null) {
+    if (!session.isCurrent || wrapper.demoMode || session.scope.user == null) {
       return;
     }
     final prefs = await SharedPreferences.getInstance();
@@ -1636,8 +1640,8 @@ Future<void> showLegacyStudyDataDialog(
       context: context,
       builder: (context) => InfoDialog(
         title: Text(tr('studyData.legacy.title')),
-        content: Text(
-            tr('studyData.legacy.body', args: _legacyStudySummaryArgs(summary))),
+        content: Text(tr('studyData.legacy.body',
+            args: _legacyStudySummaryArgs(summary))),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context, _LegacyStudyChoice.discard),
@@ -1725,8 +1729,8 @@ Future<void> _assignLegacyStudyData(
       final merged = StudyData.fromSettings(api.state.settingsState)
           .withMissingFrom(result.moved);
       await api.actions.mountAppState(
-        api.state.rebuild((b) => b
-          ..settingsState.replace(merged.applyTo(api.state.settingsState))),
+        api.state.rebuild((b) =>
+            b..settingsState.replace(merged.applyTo(api.state.settingsState))),
       );
       return result;
     });
@@ -2354,6 +2358,13 @@ Future<void> _writeFileAtomically(File file, List<int> bytes) async {
   }
 }
 
+/// The server had no usable answer, or there was no session to ask it with.
+class AuthenticatedBytesUnavailable implements Exception {
+  const AuthenticatedBytesUnavailable();
+}
+
+/// Throws [AuthenticatedBytesUnavailable] unless the answer really is the file:
+/// an expired session answers with status 200 and the login page.
 Future<Uint8List> fetchAuthenticatedBytes(String url) async {
   final session = _Session.capture();
   // One request per session: another account must not share this answer.
@@ -2363,15 +2374,32 @@ Future<Uint8List> fetchAuthenticatedBytes(String url) async {
     return existing;
   }
   final request = () async {
-    await session.wrapper.ensureLoggedIn();
-    session.ensureCurrent();
-    final response = await session.wrapper.dio.get<List<int>>(
-      url,
-      options: dio.Options(responseType: dio.ResponseType.bytes),
-    );
-    // Bytes fetched for an account the app has left are not for the next one.
-    session.ensureCurrent();
-    return Uint8List.fromList(response.data ?? const <int>[]);
+    // Mirrors Wrapper.send: a login page is worth one more login.
+    for (var attempt = 0; attempt < 2; attempt++) {
+      final loggedIn = await session.wrapper.ensureLoggedIn(
+        isRetryAfterUnexpectedLogout: attempt > 0,
+      );
+      session.ensureCurrent();
+      if (!loggedIn) break;
+      final response = await session.wrapper.dio.get<List<int>>(
+        url,
+        options: dio.Options(responseType: dio.ResponseType.bytes),
+      );
+      // Bytes fetched for an account the app has left are not for the next one.
+      session.ensureCurrent();
+      final bytes = Uint8List.fromList(response.data ?? const <int>[]);
+      final contentType =
+          response.headers.value(HttpHeaders.contentTypeHeader) ?? '';
+      switch (validateDownloadedDocument(bytes, contentType, '')) {
+        case DownloadValidation.valid:
+          return bytes;
+        case DownloadValidation.loginPage:
+          continue;
+        case DownloadValidation.invalid:
+          throw const AuthenticatedBytesUnavailable();
+      }
+    }
+    throw const AuthenticatedBytesUnavailable();
   }();
   _authenticatedBytesInFlight[key] = request;
   try {

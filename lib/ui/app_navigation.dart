@@ -481,7 +481,11 @@ class _BarItemState extends State<_BarItem> {
     final destination = widget.destination;
     final onLens = widget.nearness > 0.5;
     final icon = destination == AppDestination.profile
-        ? ProfileAvatar(imageUrl: widget.userIcon, size: 32)
+        ? ProfileAvatar(
+            imageUrl: widget.userIcon,
+            size: 32,
+            showProgress: false,
+          )
         : _withBadge(
             context,
             Icon(

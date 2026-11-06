@@ -110,7 +110,11 @@ class ProfileMenu extends StatelessWidget {
                 padding: const EdgeInsets.fromLTRB(16, 8, 16, 12),
                 child: Row(
                   children: [
-                    ProfileAvatar(imageUrl: userIcon, size: 48),
+                    ProfileAvatar(
+                      imageUrl: userIcon,
+                      size: 48,
+                      showProgress: false,
+                    ),
                     const SizedBox(width: DesignTokens.gutter),
                     Expanded(
                       child: Column(
