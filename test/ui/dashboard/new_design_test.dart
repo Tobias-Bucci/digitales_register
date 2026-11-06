@@ -2767,6 +2767,116 @@ void main() {
       }
     });
 
+    testWidgets('the rim of a sheet runs down its sides without a stop',
+        (tester) async {
+      const size = Size(412, 640);
+      const shape = RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(28)),
+      );
+      for (final scheme in schemes) {
+        final fill = scheme.surfaceContainer;
+        final pixels = await render(tester, size, (canvas) {
+          canvas.drawRect(Offset.zero & size, Paint()..color = fill);
+          GlassRimPainter(
+            shape: shape,
+            rim: GlassRim.around,
+            light: GlassLight.of(scheme),
+          ).paint(canvas, size);
+        });
+        double side(int x, int y) => (pixels.getUint8(
+                  (y * size.width.toInt() + x) * 4 + 1,
+                ) -
+                fill.g * 255)
+            .abs();
+        // From just below the corners, where the old light ran out, to the end.
+        final depths = [32, 40, 60, 100, 200, 400, 630];
+        final left = [for (final y in depths) side(0, y)];
+        final right = [for (final y in depths) side(411, y)];
+        expect(left.reduce(math.min), greaterThan(0));
+        expect(
+          left.reduce(math.max) / left.reduce(math.min),
+          lessThanOrEqualTo(1.2),
+        );
+        for (var index = 0; index < depths.length; index++) {
+          expect((left[index] - right[index]).abs(), lessThan(antialiasing));
+        }
+      }
+    });
+
+    testWidgets('the rim of a sheet lies on the edge of the screen',
+        (tester) async {
+      for (final width in const [320.0, 412.0]) {
+        await _pumpDashboard(
+          tester,
+          _dashboardState(),
+          size: Size(width, 800),
+        );
+        await tester.tap(find.byKey(const ValueKey('app-navigation-profile')));
+        await settleFor(tester, duration: const Duration(milliseconds: 600));
+        final sheet = find.byKey(const Key('glass-sheet'));
+        expect(tester.getRect(sheet).left, 0);
+        expect(tester.getRect(sheet).right, width);
+        expect(
+          find.descendant(of: sheet, matching: find.byType(GlassEdge)),
+          findsOneWidget,
+        );
+        // Only the glass inside has a rim, not the route around it as well.
+        final material = tester.widget<Material>(find
+            .descendant(
+              of: find.byType(BottomSheet),
+              matching: find.byType(Material),
+            )
+            .first);
+        expect(material.shape, isNot(isA<GlassRimBorder>()));
+        Navigator.of(tester.element(find.byType(GlassSheet))).pop();
+        await settleFor(tester, duration: const Duration(milliseconds: 600));
+      }
+      await _finish(tester);
+    });
+
+    testWidgets('all that floats above the page has the rim', (tester) async {
+      await _pumpDashboard(tester, _dashboardState());
+      final context = tester.element(find.byType(CompactDayWidget).first);
+      final theme = Theme.of(context);
+      expect(theme.dialogTheme.shape, isA<GlassRimBorder>());
+      expect(theme.bottomSheetTheme.shape, isA<GlassRimBorder>());
+      expect(theme.popupMenuTheme.shape, isA<GlassRimBorder>());
+      expect(theme.datePickerTheme.shape, isA<GlassRimBorder>());
+      expect(theme.timePickerTheme.shape, isA<GlassRimBorder>());
+      expect(
+        glassRimShape(context, const CircleBorder()),
+        isA<GlassRimBorder>(),
+      );
+    });
+
+    testWidgets('Legacy keeps its plain shapes', (tester) async {
+      await _pumpDashboard(
+        tester,
+        _dashboardState(),
+        size: const Size(1200, 800),
+        newDesign: false,
+      );
+      final context = tester.element(find.byType(Sidebar).first);
+      expect(Theme.of(context).bottomSheetTheme.shape, isNull);
+      expect(Theme.of(context).popupMenuTheme.shape, isNull);
+      expect(
+        glassRimShape(context, const CircleBorder()),
+        const CircleBorder(),
+      );
+    });
+
+    testWidgets('high contrast keeps its plain shapes', (tester) async {
+      tester.platformDispatcher.accessibilityFeaturesTestValue =
+          const FakeAccessibilityFeatures(highContrast: true);
+      addTearDown(
+        tester.platformDispatcher.clearAccessibilityFeaturesTestValue,
+      );
+      await _pumpDashboard(tester, _dashboardState());
+      final context = tester.element(find.byType(CompactDayWidget).first);
+      expect(Theme.of(context).bottomSheetTheme.shape, isNull);
+      expect(Theme.of(context).datePickerTheme.shape, isNull);
+    });
+
     testWidgets('a row below the bar does not colour its glass',
         (tester) async {
       tester.view.physicalSize = const Size(412, 300);

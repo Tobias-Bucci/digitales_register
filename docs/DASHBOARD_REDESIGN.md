@@ -83,8 +83,11 @@ horizontalen und nur wenig vertikalen Versatz. Auf hellen Seiten würde ein
 Lichtrand allein verschwinden, er liegt dort deshalb innen an einer weichen,
 gleichmäßigen Kontur. Das Rezept steht nur in `GlassLight`, `GlassRimPainter` und
 `GlassSheenPainter`. Zeilen bekommen nur den Rand, weil ihr
-Text auf kräftigen Farben steht. Dialoge erben den Rand über `NewDesignTheme`
-vom Ort, an dem sie geöffnet werden, und bleiben dadurch in Legacy unberührt. Die
+Text auf kräftigen Farben steht. Dialoge, einfache Sheets, Menüs und die
+Datums- und Zeitauswahl erben den Rand über `NewDesignTheme` vom Ort, an dem sie
+geöffnet werden, und bleiben dadurch in Legacy unberührt. Ein Sheet liegt am
+Bildschirmrand an; sein Rand läuft trotzdem an beiden Seiten und unten weiter, damit
+der Umriss nicht an den Ecken aufhört. Die
 Tests spiegeln gerenderte Flächen pixelgenau.
 
 Die Bindung links am Notizblock-Kästchen gehört zum App-Logo und ist kein Licht.
