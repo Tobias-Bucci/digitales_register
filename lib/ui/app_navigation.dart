@@ -665,7 +665,8 @@ class AppNavigationRail extends StatelessWidget {
       width: appNavigationRailExtent,
       height: double.infinity,
       child: DashboardBackdrop(
-        visible: selected == AppDestination.dashboard,
+        visible: selected == AppDestination.dashboard ||
+            selected == AppDestination.grades,
         child: rail,
       ),
     );

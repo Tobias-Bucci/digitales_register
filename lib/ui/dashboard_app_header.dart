@@ -142,7 +142,7 @@ class DashboardAppHeader extends StatelessWidget
               ValueListenableBuilder(
                 valueListenable: showScrollUp!,
                 builder: (context, show, _) => show
-                    ? _HeaderDiscButton(
+                    ? HeaderDiscButton(
                         key: const Key('dashboard-scroll-up'),
                         tooltip: l10n.text('dashboard.scrollToTop'),
                         icon: Icons.arrow_upward_rounded,
@@ -169,13 +169,39 @@ class DashboardAppHeader extends StatelessWidget
               ),
             ],
           );
+    return GlassHeaderShell(
+      surfaceKey: const Key('dashboard-app-header'),
+      floatingMaxWidth: floatingMaxWidth,
+      child: band,
+    );
+  }
+}
+
+/// The glass of a page header: a band from edge to edge, or with
+/// [floatingMaxWidth], as in wide windows, a bar that floats like the navigation
+/// and lines up with the content below it.
+class GlassHeaderShell extends StatelessWidget {
+  const GlassHeaderShell({
+    super.key,
+    required this.surfaceKey,
+    required this.floatingMaxWidth,
+    required this.child,
+  });
+
+  final Key surfaceKey;
+  final double? floatingMaxWidth;
+  final Widget child;
+
+  @override
+  Widget build(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
     final maxWidth = floatingMaxWidth;
     // Two lines have to fit the fixed height, whatever the text size.
     return MediaQuery.withClampedTextScaling(
       maxScaleFactor: 1.5,
       child: maxWidth == null
           ? GlassSurface(
-              key: const Key('dashboard-app-header'),
+              key: surfaceKey,
               tint: scheme.surface,
               rim: GlassRim.bottom,
               border: Border(
@@ -183,7 +209,7 @@ class DashboardAppHeader extends StatelessWidget
                   color: scheme.outlineVariant.withValues(alpha: 0.5),
                 ),
               ),
-              child: SafeArea(bottom: false, child: band),
+              child: SafeArea(bottom: false, child: child),
             )
           : SafeArea(
               bottom: false,
@@ -199,10 +225,10 @@ class DashboardAppHeader extends StatelessWidget
                       0,
                     ),
                     child: FloatingGlass(
-                      surfaceKey: const Key('dashboard-app-header'),
+                      surfaceKey: surfaceKey,
                       tint: scheme.surface,
                       opacity: DesignTokens.headerOpacity,
-                      child: band,
+                      child: child,
                     ),
                   ),
                 ),
@@ -251,7 +277,7 @@ class _NewEntriesStrip extends StatelessWidget {
                 ),
               ),
             ),
-            _HeaderDiscButton(
+            HeaderDiscButton(
               key: const Key('dashboard-dismiss-new-entries'),
               tooltip: l10n.text('dashboard.banner.dismiss'),
               icon: Icons.close_rounded,
@@ -265,8 +291,8 @@ class _NewEntriesStrip extends StatelessWidget {
 }
 
 /// A disc as big as the logo, in a full-sized touch target.
-class _HeaderDiscButton extends StatelessWidget {
-  const _HeaderDiscButton({
+class HeaderDiscButton extends StatelessWidget {
+  const HeaderDiscButton({
     super.key,
     required this.tooltip,
     required this.icon,

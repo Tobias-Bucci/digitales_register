@@ -1149,7 +1149,8 @@ class DashboardHeader extends StatelessWidget {
                 key: const ValueKey('dashboard-header-box'),
                 decoration: BoxDecoration(
                   color: modern
-                      ? scheme.surfaceContainerLowest.withValues(alpha: 0.72)
+                      ? scheme.surfaceContainerLowest
+                          .withValues(alpha: DesignTokens.cardOpacity)
                       : scheme.surface,
                   borderRadius: BorderRadius.circular(16),
                   border: Border.all(

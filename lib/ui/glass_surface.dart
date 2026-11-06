@@ -41,6 +41,9 @@ abstract final class DesignTokens {
   /// ever lie on the page or on the summary box, never over content.
   static const double controlOpacity = 0.62;
 
+  /// The fill of a card on the page. It scrolls, so it has no blur.
+  static const double cardOpacity = 0.72;
+
   /// Dashboard content stops growing here, so that a row stays readable in a
   /// wide desktop window.
   static const double contentMaxWidth = 840;
@@ -799,6 +802,54 @@ class _GlassSurfaceState extends State<GlassSurface> {
         );
       },
       child: widget.child,
+    );
+  }
+}
+
+/// A card of glass on the page, like the box at the top of the dashboard. It
+/// scrolls with the page, so it stays light only, without blur.
+class GlassCard extends StatelessWidget {
+  const GlassCard({
+    super.key,
+    required this.child,
+    this.padding = const EdgeInsets.all(DesignTokens.gutter),
+  });
+
+  static const _shape = RoundedRectangleBorder(
+    borderRadius: DesignTokens.cardBorderRadius,
+  );
+
+  final EdgeInsetsGeometry padding;
+  final Widget child;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final scheme = theme.colorScheme;
+    final highContrast = MediaQuery.highContrastOf(context);
+    return GlassEdge(
+      shape: _shape,
+      sheen: false,
+      child: DecoratedBox(
+        decoration: BoxDecoration(
+          color: scheme.surfaceContainerLowest.withValues(
+            alpha: highContrast ? 1 : DesignTokens.cardOpacity,
+          ),
+          borderRadius: DesignTokens.cardBorderRadius,
+          border: Border.all(
+            color: highContrast
+                ? scheme.outline
+                : scheme.outline.withValues(
+                    alpha: theme.brightness == Brightness.dark ? 0.45 : 0.2,
+                  ),
+          ),
+        ),
+        child: GlassEdge(
+          shape: _shape,
+          rim: GlassRim.none,
+          child: Padding(padding: padding, child: child),
+        ),
+      ),
     );
   }
 }

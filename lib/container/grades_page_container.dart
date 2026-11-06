@@ -21,11 +21,13 @@ import 'package:built_value/built_value.dart';
 import 'package:dr/actions/app_actions.dart';
 import 'package:dr/app_selectors.dart';
 import 'package:dr/app_state.dart';
+import 'package:dr/container/grades_page_new_container.dart';
 import 'package:dr/i18n/app_localizations.dart';
 import 'package:dr/ui/grades_page.dart';
 import 'package:dr/utc_date_time.dart';
 import 'package:flutter/material.dart' hide Builder;
 import 'package:flutter_built_redux/flutter_built_redux.dart';
+import 'package:responsive_scaffold/responsive_scaffold.dart';
 
 part 'grades_page_container.g.dart';
 
@@ -34,6 +36,11 @@ class GradesPageContainer extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    // Below the navigation of the new design. The setting decides about that,
+    // so this follows a switch of the design at once.
+    if (ResponsiveNavigationScope.isActive(context)) {
+      return const NewGradesPageContainer();
+    }
     return StoreConnection<AppState, AppActions, GradesPageViewModel>(
       builder: (context, vm, actions) {
         return GradesPage(

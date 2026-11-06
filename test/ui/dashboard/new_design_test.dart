@@ -3593,7 +3593,8 @@ void main() {
       );
     });
 
-    testWidgets('the wash of the dashboard continues below the rail only',
+    testWidgets(
+        'the wash of the page continues below the rail only where it has one',
         (tester) async {
       final selected = await pumpRail(tester);
       final wash = find.descendant(
@@ -3603,6 +3604,10 @@ void main() {
       expect(tester.widget<DashboardBackdrop>(wash).visible, isTrue);
 
       selected.value = AppDestination.grades;
+      await tester.pumpAndSettle();
+      expect(tester.widget<DashboardBackdrop>(wash).visible, isTrue);
+
+      selected.value = AppDestination.messages;
       await tester.pumpAndSettle();
       expect(tester.widget<DashboardBackdrop>(wash).visible, isFalse);
     });
