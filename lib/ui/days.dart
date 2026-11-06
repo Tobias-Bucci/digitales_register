@@ -597,14 +597,24 @@ class _DaysWidgetState extends State<DaysWidget> {
     );
   }
 
-  PreferredSizeWidget _modernAppBar({required bool hasList}) {
+  Future<void> _showNextNewEntry() => controller.scrollToIndex(
+        _targets.first,
+        preferPosition: AutoScrollPosition.middle,
+      );
+
+  PreferredSizeWidget _modernAppBar(List<Day> visibleDays) {
     final width = MediaQuery.sizeOf(context).width;
     return DashboardAppHeader(
       schoolName: widget.vm.schoolName,
       noInternet: widget.vm.noInternet,
       onRetry: widget.refreshNoInternet,
       showScrollUp: _showScrollUp,
-      onScrollUp: hasList ? _scrollToTop : null,
+      onScrollUp: visibleDays.isEmpty ? null : _scrollToTop,
+      onShowNewEntries:
+          _targets.isNotEmpty && _afterFirstFrame ? _showNextNewEntry : null,
+      onDismissNewEntries: _targets.isNotEmpty || _focused.isNotEmpty
+          ? () => _markVisibleAsSeen(visibleDays)
+          : null,
       floatingMaxWidth: width < tabletLayoutBreakpoint
           ? null
           : DashboardColumns.forWindow(width) == null
@@ -816,58 +826,58 @@ class _DaysWidgetState extends State<DaysWidget> {
           widget.refresh();
         }
       },
-      homeFloatingActionButton: Column(
-        crossAxisAlignment: CrossAxisAlignment.end,
-        mainAxisAlignment: MainAxisAlignment.end,
-        children: <Widget>[
-          // The new design has this button in its header.
-          if (!modern)
-            ValueListenableBuilder(
-              valueListenable: _showScrollUp,
-              builder: (context, bool value, child) {
-                if (value) {
-                  return child!;
-                } else {
-                  return const SizedBox();
-                }
-              },
-              child: FloatingActionButton(
-                backgroundColor: Theme.of(context).colorScheme.surface,
-                foregroundColor: Theme.of(context).colorScheme.onSurface,
-                heroTag: null,
-                onPressed: _scrollToTop,
-                mini: true,
-                child: const Icon(Icons.arrow_upward_rounded),
-              ),
+      // The new design has these controls in its header, clear of the list.
+      homeFloatingActionButton: modern
+          ? null
+          : Column(
+              crossAxisAlignment: CrossAxisAlignment.end,
+              mainAxisAlignment: MainAxisAlignment.end,
+              children: <Widget>[
+                ValueListenableBuilder(
+                  valueListenable: _showScrollUp,
+                  builder: (context, bool value, child) {
+                    if (value) {
+                      return child!;
+                    } else {
+                      return const SizedBox();
+                    }
+                  },
+                  child: FloatingActionButton(
+                    backgroundColor: Theme.of(context).colorScheme.surface,
+                    foregroundColor: Theme.of(context).colorScheme.onSurface,
+                    heroTag: null,
+                    onPressed: _scrollToTop,
+                    mini: true,
+                    child: const Icon(Icons.arrow_upward_rounded),
+                  ),
+                ),
+                if (_targets.isNotEmpty || _focused.isNotEmpty)
+                  FloatingActionButton(
+                    backgroundColor:
+                        Theme.of(context).colorScheme.errorContainer,
+                    foregroundColor:
+                        Theme.of(context).colorScheme.onErrorContainer,
+                    heroTag: null,
+                    onPressed: () {
+                      _markVisibleAsSeen(visibleDays);
+                    },
+                    mini: true,
+                    child: const Icon(Icons.close),
+                  ),
+                if (_targets.isNotEmpty && _afterFirstFrame)
+                  FloatingActionButton.extended(
+                    backgroundColor:
+                        Theme.of(context).colorScheme.primaryContainer,
+                    foregroundColor:
+                        Theme.of(context).colorScheme.onPrimaryContainer,
+                    icon: const Icon(Icons.keyboard_double_arrow_down_rounded),
+                    label: Text(l10n.text('dashboard.newEntries')),
+                    onPressed: _showNextNewEntry,
+                  ),
+              ],
             ),
-          if (_targets.isNotEmpty || _focused.isNotEmpty)
-            FloatingActionButton(
-              backgroundColor: Theme.of(context).colorScheme.errorContainer,
-              foregroundColor: Theme.of(context).colorScheme.onErrorContainer,
-              heroTag: null,
-              onPressed: () {
-                _markVisibleAsSeen(visibleDays);
-              },
-              mini: true,
-              child: const Icon(Icons.close),
-            ),
-          if (_targets.isNotEmpty && _afterFirstFrame)
-            FloatingActionButton.extended(
-              backgroundColor: Theme.of(context).colorScheme.primaryContainer,
-              foregroundColor: Theme.of(context).colorScheme.onPrimaryContainer,
-              icon: const Icon(Icons.keyboard_double_arrow_down_rounded),
-              label: Text(l10n.text('dashboard.newEntries')),
-              onPressed: () async {
-                await controller.scrollToIndex(
-                  _targets.first,
-                  preferPosition: AutoScrollPosition.middle,
-                );
-              },
-            ),
-        ],
-      ),
       homeAppBar: modern
-          ? _modernAppBar(hasList: !noEntries)
+          ? _modernAppBar(visibleDays)
           : ResponsiveAppBar(
               leading: Builder(
                 builder: (context) => IconButton(

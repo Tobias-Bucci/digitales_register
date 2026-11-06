@@ -1242,6 +1242,125 @@ void main() {
     });
   });
 
+  group('new entries strip', () {
+    final strip = find.byKey(const Key('dashboard-new-entries'));
+    final show = find.byKey(const Key('dashboard-show-new-entries'));
+    final dismiss = find.byKey(const Key('dashboard-dismiss-new-entries'));
+    final header = find.byKey(const Key('dashboard-app-header'));
+    const newEntryId = 101;
+
+    // Only a day far down has a new entry, so that it starts out of view.
+    AppState newEntries() => _dashboardState(updates: (b) {
+          b.noInternet = false;
+          b.dashboardState.future = true;
+          b.dashboardState.allDays = ListBuilder<Day>([
+            for (var day = 0; day < 20; day++)
+              buildDay(
+                date: _today.add(Duration(days: day)),
+                homework: [
+                  buildHomework(
+                    id: day * 10 + 1,
+                    title: 'Hausaufgabe',
+                    label: 'Deutsch',
+                    checkable: true,
+                    isNew: day == 10,
+                  ),
+                ],
+              ),
+          ]);
+        });
+
+    for (final window in const [
+      Size(320, 640),
+      Size(412, 915),
+      Size(800, 1100),
+      Size(1100, 800),
+      Size(1920, 1080),
+    ]) {
+      testWidgets('leaves the day controls free in a $window window',
+          (tester) async {
+        await _pumpDashboard(tester, newEntries(), size: window);
+
+        expect(find.byType(FloatingActionButton), findsNothing);
+        final bounds = tester.getRect(header);
+        for (final control in [strip, show, dismiss]) {
+          final rect = tester.getRect(control);
+          expect(bounds.expandToInclude(rect), bounds);
+        }
+        // The list starts below the strip instead of passing through it at
+        // rest, also where the first day stands right under the header.
+        final firstDay = find.byKey(ValueKey('day-add-entry-$_today'));
+        expect(
+            tester.getRect(firstDay).top, greaterThanOrEqualTo(bounds.bottom));
+      });
+    }
+
+    testWidgets('goes to the new entry', (tester) async {
+      await _pumpDashboard(tester, newEntries(), size: const Size(412, 915));
+      final row = find.byKey(const ValueKey('compact-row-$newEntryId'));
+      expect(row, findsNothing);
+
+      await tester.tap(show);
+      await settleFor(tester, duration: const Duration(seconds: 3));
+
+      expect(row, findsOneWidget);
+      expect(tester.getRect(row).top,
+          greaterThanOrEqualTo(tester.getRect(header).bottom));
+      expect(tester.widget<FilledButton>(show).onPressed, isNull);
+      expect(dismiss, findsOneWidget);
+    });
+
+    testWidgets('marks the entries as seen and goes away', (tester) async {
+      final store = await _pumpDashboard(tester, newEntries(),
+          size: const Size(412, 915));
+      expect(
+        tester.getSize(header).height,
+        DashboardAppHeader.height + DashboardAppHeader.newEntriesHeight,
+      );
+
+      await tester.tap(dismiss);
+      await settleFor(tester);
+
+      expect(store.state.dashboardState.allDays![10].homework.single.isNew,
+          isFalse);
+      expect(strip, findsNothing);
+      expect(tester.getSize(header).height, DashboardAppHeader.height);
+    });
+
+    testWidgets('has labels and full touch targets', (tester) async {
+      final semantics = tester.ensureSemantics();
+      await _pumpDashboard(tester, newEntries(), size: const Size(320, 640));
+
+      expect(find.text('Neue Einträge'), findsOneWidget);
+      expect(find.byTooltip('Ausblenden'), findsOneWidget);
+      expect(tester.getSize(dismiss), const Size.square(48));
+      expect(tester.getSize(show).height, 48);
+      semantics.dispose();
+    });
+
+    testWidgets('fits with large text', (tester) async {
+      tester.platformDispatcher.textScaleFactorTestValue = 2;
+      addTearDown(tester.platformDispatcher.clearTextScaleFactorTestValue);
+      await _pumpDashboard(tester, newEntries(), size: const Size(320, 640));
+
+      expect(tester.takeException(), isNull);
+      expect(strip, findsOneWidget);
+    });
+
+    testWidgets('Legacy keeps its floating buttons', (tester) async {
+      await _pumpDashboard(
+        tester,
+        newEntries(),
+        size: const Size(800, 915),
+        newDesign: false,
+      );
+
+      expect(strip, findsNothing);
+      expect(find.text('Neue Einträge'), findsOneWidget);
+      expect(find.byType(FloatingActionButton), findsNWidgets(2));
+    });
+  });
+
   group('editing cards', () {
     AppState editState() => _dashboardState(
           updates: (b) {

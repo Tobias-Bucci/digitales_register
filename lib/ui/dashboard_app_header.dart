@@ -21,8 +21,10 @@ import 'package:dr/ui/notepad_mark.dart';
 import 'package:flutter/foundation.dart' show ValueListenable;
 import 'package:flutter/material.dart';
 
-/// The slim header of the new design: app logo, school and app name. The
-/// height never changes, a long school name is cut off instead.
+/// The slim header of the new design: app logo, school and app name. A long
+/// school name is cut off instead of changing the height. Only the strip for new
+/// entries adds to it, and the content below moves down with it, so that the
+/// strip never lies over the list.
 ///
 /// With [floatingMaxWidth], as in wide windows, it is not a band from edge to
 /// edge but floats like the navigation and lines up with the content below it.
@@ -36,9 +38,12 @@ class DashboardAppHeader extends StatelessWidget
     this.floatingMaxWidth,
     this.showScrollUp,
     this.onScrollUp,
+    this.onShowNewEntries,
+    this.onDismissNewEntries,
   });
 
   static const double height = 56;
+  static const double newEntriesHeight = 48;
 
   final double? floatingMaxWidth;
 
@@ -54,9 +59,17 @@ class DashboardAppHeader extends StatelessWidget
   /// Null while there is no list to scroll, which leaves out the button.
   final VoidCallback? onScrollUp;
 
+  /// Jumps to the next new entry. Null once it is in view.
+  final VoidCallback? onShowNewEntries;
+
+  /// Null without new entries, which leaves out their strip.
+  final VoidCallback? onDismissNewEntries;
+
   @override
   Size get preferredSize => Size.fromHeight(
-        floatingMaxWidth == null ? height : height + DesignTokens.gutter,
+        height +
+            (floatingMaxWidth == null ? 0 : DesignTokens.gutter) +
+            (onDismissNewEntries == null ? 0 : newEntriesHeight),
       );
 
   @override
@@ -129,13 +142,33 @@ class DashboardAppHeader extends StatelessWidget
               ValueListenableBuilder(
                 valueListenable: showScrollUp!,
                 builder: (context, show, _) => show
-                    ? _ScrollUpButton(onPressed: onScrollUp!)
+                    ? _HeaderDiscButton(
+                        key: const Key('dashboard-scroll-up'),
+                        tooltip: l10n.text('dashboard.scrollToTop'),
+                        icon: Icons.arrow_upward_rounded,
+                        onPressed: onScrollUp!,
+                      )
                     : const SizedBox.shrink(),
               ),
           ],
         ),
       ),
     );
+    final dismiss = onDismissNewEntries;
+    final band = dismiss == null
+        ? content
+        : Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              content,
+              _NewEntriesStrip(
+                horizontalPadding:
+                    floatingMaxWidth == null ? DesignTokens.gutter : 14,
+                onShow: onShowNewEntries,
+                onDismiss: dismiss,
+              ),
+            ],
+          );
     final maxWidth = floatingMaxWidth;
     // Two lines have to fit the fixed height, whatever the text size.
     return MediaQuery.withClampedTextScaling(
@@ -150,7 +183,7 @@ class DashboardAppHeader extends StatelessWidget
                   color: scheme.outlineVariant.withValues(alpha: 0.5),
                 ),
               ),
-              child: SafeArea(bottom: false, child: content),
+              child: SafeArea(bottom: false, child: band),
             )
           : SafeArea(
               bottom: false,
@@ -169,7 +202,7 @@ class DashboardAppHeader extends StatelessWidget
                       surfaceKey: const Key('dashboard-app-header'),
                       tint: scheme.surface,
                       opacity: DesignTokens.headerOpacity,
-                      child: content,
+                      child: band,
                     ),
                   ),
                 ),
@@ -179,23 +212,80 @@ class DashboardAppHeader extends StatelessWidget
   }
 }
 
-/// Back to the start of the list: a disc as big as the logo, in a full-sized
-/// touch target.
-class _ScrollUpButton extends StatelessWidget {
-  const _ScrollUpButton({required this.onPressed});
+/// The way to the new entries, and to dismiss them.
+class _NewEntriesStrip extends StatelessWidget {
+  const _NewEntriesStrip({
+    required this.horizontalPadding,
+    required this.onShow,
+    required this.onDismiss,
+  });
+
+  final double horizontalPadding;
+  final VoidCallback? onShow;
+  final VoidCallback onDismiss;
+
+  @override
+  Widget build(BuildContext context) {
+    final l10n = context.l10n;
+    return SizedBox(
+      key: const Key('dashboard-new-entries'),
+      height: DashboardAppHeader.newEntriesHeight,
+      child: Padding(
+        padding: EdgeInsets.symmetric(horizontal: horizontalPadding),
+        child: Row(
+          mainAxisAlignment: MainAxisAlignment.end,
+          children: [
+            Flexible(
+              child: FilledButton.icon(
+                key: const Key('dashboard-show-new-entries'),
+                onPressed: onShow,
+                style: glassControlStyle(Theme.of(context).colorScheme),
+                icon: const Icon(
+                  Icons.keyboard_double_arrow_down_rounded,
+                  size: 20,
+                ),
+                label: Text(
+                  l10n.text('dashboard.newEntries'),
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                ),
+              ),
+            ),
+            _HeaderDiscButton(
+              key: const Key('dashboard-dismiss-new-entries'),
+              tooltip: l10n.text('dashboard.banner.dismiss'),
+              icon: Icons.close_rounded,
+              onPressed: onDismiss,
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+/// A disc as big as the logo, in a full-sized touch target.
+class _HeaderDiscButton extends StatelessWidget {
+  const _HeaderDiscButton({
+    super.key,
+    required this.tooltip,
+    required this.icon,
+    required this.onPressed,
+  });
 
   static const double _discSize = 36;
 
+  final String tooltip;
+  final IconData icon;
   final VoidCallback onPressed;
 
   @override
   Widget build(BuildContext context) {
     final scheme = Theme.of(context).colorScheme;
     return IconButton(
-      key: const Key('dashboard-scroll-up'),
-      tooltip: context.t('dashboard.scrollToTop'),
+      tooltip: tooltip,
       onPressed: onPressed,
-      icon: const Icon(Icons.arrow_upward_rounded, size: 20),
+      icon: Icon(icon, size: 20),
       style: IconButton.styleFrom(
         fixedSize: const Size.square(_discSize),
         minimumSize: const Size.square(_discSize),
