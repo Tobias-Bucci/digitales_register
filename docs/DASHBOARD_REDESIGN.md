@@ -273,6 +273,28 @@ und die beiden Rechner. Sie liegen auf dem Root-Navigator, also außerhalb von
 
 Die Texte `grades.*` in `lld.json` sind neu und noch ungeprüft, siehe Beta-Rollout.
 
+### Leistung
+
+Gemessen am 06.11.2026 mit einem Profile-Build unter Windows (Impeller), 22 Fächern
+und isolierten Daten. Je zwei abwechselnde Läufe pro Variante, nach einem
+Aufwärmdurchgang, in Millisekunden pro Frame:
+
+| Vorgang | Breite | Design | Raster Ø | Raster p99 | Build Ø | Frames über 16,7 ms |
+| --- | --- | --- | --- | --- | --- | --- |
+| Scrollen | 412 | Neu | 5,9–6,2 | 10,8 | 0,2 | 2 von 5929 |
+| Scrollen | 412 | Legacy | 1,1 | 1,8 | 0,5 | 0 von 7088 |
+| Scrollen | 1280 | Neu | 5,9–6,1 | 9,2–10,2 | 0,2 | 0 von 6025 |
+| Scrollen | 1280 | Legacy | 2,1 | 3,5 | 0,5 | 0 von 7052 |
+| Auf- und Zuklappen | 412 | Neu | 4,3–4,6 | 7,0 | 0,9 | 0 von 5131 |
+| Auf- und Zuklappen | 412 | Legacy | 1,1–1,3 | 2,1 | 1,1–1,5 | 0 von 4613 |
+| Auf- und Zuklappen | 1280 | Neu | 4,8 | 7,1 | 0,6 | 0 von 4965 |
+| Auf- und Zuklappen | 1280 | Legacy | 2,0 | 3,5 | 1,3 | 0 von 4684 |
+
+Der höhere Rasterwert ist der Preis des Blurs von Kopfzeile und Leiste, den Legacy
+nicht hat. Der Build ist niedriger als in Legacy. Die Liste ist in Neu kürzer, die
+Wege beim Scrollen sind also nicht gleich lang. Geräte mit schwacher GPU fängt
+`GlassPerformance` ab; auf einem Handy gemessen wurde das nicht.
+
 ## Beta-Rollout
 
 Die Veröffentlichung erfolgt manuell und zuerst im Beta-Kanal.
