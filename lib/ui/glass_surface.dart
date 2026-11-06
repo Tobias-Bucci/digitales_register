@@ -17,6 +17,7 @@
 
 import 'dart:math' as math;
 import 'dart:ui';
+import 'dart:ui' as ui show Gradient;
 
 import 'package:flutter/material.dart';
 import 'package:flutter/scheduler.dart';
@@ -117,6 +118,8 @@ class GlassLight {
     required this.rimStrength,
     required this.shadeStrength,
     required this.sheenStrength,
+    required this.glowStrength,
+    required this.reflectionStrength,
   });
 
   factory GlassLight.of(ColorScheme scheme) {
@@ -127,11 +130,17 @@ class GlassLight {
       rimStrength: dark ? 0.42 : 0.95,
       shadeStrength: dark ? 0.1 : 0.26,
       sheenStrength: dark ? 0.06 : 0.26,
+      glowStrength: dark ? 0.16 : 0.6,
+      reflectionStrength: dark ? 0.07 : 0.3,
     );
   }
 
   final Color highlight, shade;
   final double rimStrength, shadeStrength, sheenStrength;
+
+  /// The light inside a lens, which gathers it, and what its lower edge throws
+  /// back.
+  final double glowStrength, reflectionStrength;
 
   @override
   bool operator ==(Object other) =>
@@ -140,11 +149,20 @@ class GlassLight {
       other.shade == shade &&
       other.rimStrength == rimStrength &&
       other.shadeStrength == shadeStrength &&
-      other.sheenStrength == sheenStrength;
+      other.sheenStrength == sheenStrength &&
+      other.glowStrength == glowStrength &&
+      other.reflectionStrength == reflectionStrength;
 
   @override
-  int get hashCode =>
-      Object.hash(highlight, shade, rimStrength, shadeStrength, sheenStrength);
+  int get hashCode => Object.hash(
+        highlight,
+        shade,
+        rimStrength,
+        shadeStrength,
+        sheenStrength,
+        glowStrength,
+        reflectionStrength,
+      );
 }
 
 /// Where a surface shows the rim of its glass.
@@ -329,6 +347,88 @@ class GlassRimPainter extends CustomPainter {
   bool shouldRepaint(GlassRimPainter oldDelegate) =>
       oldDelegate.shape != shape ||
       oldDelegate.rim != rim ||
+      oldDelegate.light != light;
+}
+
+/// A drop of glass on a surface that is glass already: [fill] with a glow from
+/// straight above, the light its lower edge throws back, and a soft shadow.
+///
+/// The shadow only falls outside of the lens. Below a translucent fill it would
+/// otherwise show as a dirty core. The rim comes from [GlassEdge], as everywhere.
+class GlassLensPainter extends CustomPainter {
+  const GlassLensPainter({
+    required this.fill,
+    required this.shadow,
+    required this.light,
+  });
+
+  final Color fill, shadow;
+  final GlassLight light;
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final rect = Offset.zero & size;
+    final lens = RRect.fromRectAndRadius(
+      rect,
+      Radius.circular(size.shortestSide / 2),
+    );
+    canvas
+      ..save()
+      ..clipPath(
+        Path()
+          ..fillType = PathFillType.evenOdd
+          ..addRect(rect.inflate(24))
+          ..addRRect(lens),
+      )
+      ..drawRRect(
+        lens.shift(const Offset(0, 3)),
+        Paint()
+          ..color = shadow.withValues(alpha: 0.2)
+          ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 5),
+      )
+      ..restore();
+
+    final centerX = size.width / 2;
+    final height = size.height;
+    // A circle above the lens, drawn out to its width: still the same left and
+    // right, but round enough to look like light and not like a stripe.
+    final stretch = math.max(1.0, size.width / height) * 1.15;
+    final glow = ui.Gradient.radial(
+      Offset(centerX, -height * 0.3),
+      height * 1.05,
+      [
+        light.highlight.withValues(alpha: light.glowStrength),
+        light.highlight.withValues(alpha: 0),
+      ],
+      null,
+      TileMode.clamp,
+      (Matrix4.identity()
+            ..translateByDouble(centerX, 0, 0, 1)
+            ..scaleByDouble(stretch, 1, 1, 1)
+            ..translateByDouble(-centerX, 0, 0, 1))
+          .storage,
+    );
+    final reflection = ui.Gradient.linear(
+      Offset(0, height * 0.66),
+      Offset(0, height),
+      [
+        light.highlight.withValues(alpha: 0),
+        light.highlight.withValues(alpha: light.reflectionStrength),
+      ],
+    );
+    canvas
+      ..drawRRect(lens, Paint()..color = fill)
+      ..drawRRect(lens, Paint()..shader = glow)
+      ..drawRRect(lens, Paint()..shader = reflection);
+  }
+
+  @override
+  bool hitTest(Offset position) => false;
+
+  @override
+  bool shouldRepaint(GlassLensPainter oldDelegate) =>
+      oldDelegate.fill != fill ||
+      oldDelegate.shadow != shadow ||
       oldDelegate.light != light;
 }
 
@@ -688,6 +788,12 @@ class FloatingGlass extends StatelessWidget {
             blurRadius: shadowBlur,
             offset: const Offset(0, 6),
           ),
+          // Holds the glass on the page where the wide shadow is too soft to.
+          BoxShadow(
+            color: scheme.shadow.withValues(alpha: 0.1),
+            blurRadius: 3,
+            offset: const Offset(0, 1),
+          ),
         ],
       ),
       child: GlassSurface(
@@ -697,7 +803,7 @@ class FloatingGlass extends StatelessWidget {
         borderRadius: _radius,
         rim: GlassRim.around,
         border: Border.all(
-          color: scheme.outlineVariant.withValues(alpha: 0.6),
+          color: scheme.outlineVariant.withValues(alpha: 0.3),
         ),
         child: child,
       ),
