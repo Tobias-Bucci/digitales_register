@@ -60,7 +60,11 @@ Noch mit echten Daten zu prüfen:
 
 Echten Blur haben nur Kopfzeile, Navigationsleiste (in einer gemeinsamen
 `BackdropGroup`) und die modalen Sheets. Ein Sheet deckt die Seite ab und scrollt
-nicht über ihr, sein Blur bleibt also bezahlbar. In der Liste gibt es keinen Blur,
+nicht über ihr, sein Blur bleibt also bezahlbar. Solange die Route es bewegt, auch
+unter dem Finger, ist es einfarbig. Erst wenn es ruht, kommt der Blur unter dem noch
+deckenden Ton dazu, und der Ton klart in 140 ms zum Glas auf. Sein Inhalt liegt auf
+einer eigenen Ebene und wird einmal gemalt, nicht in jedem Frame der Bewegung. In
+der Liste gibt es keinen Blur,
 weil er dort beim Scrollen am teuersten wäre. `GlassPerformance` misst die
 Raster-Zeit: Verpassen über 25 % von 120 Frames das Budget, bleibt die Oberfläche
 für die Sitzung einfarbig. Das gilt auch im Hochkontrastmodus.

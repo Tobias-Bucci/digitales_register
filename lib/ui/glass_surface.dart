@@ -693,6 +693,7 @@ class GlassSurface extends StatefulWidget {
     required this.child,
     this.opacity = DesignTokens.headerOpacity,
     this.blur = true,
+    this.blurPaused = false,
     this.borderRadius = BorderRadius.zero,
     this.border,
     this.rim = GlassRim.none,
@@ -701,6 +702,10 @@ class GlassSurface extends StatefulWidget {
   final Color tint;
   final double opacity;
   final bool blur;
+
+  /// Leaves out the blur for a moment without touching what is below, which
+  /// would lose its state if the tree changed. The caller sees to the [opacity].
+  final bool blurPaused;
   final BorderRadius borderRadius;
   final BoxBorder? border;
   final GlassRim rim;
@@ -747,6 +752,7 @@ class _GlassSurfaceState extends State<GlassSurface> {
         return ClipRRect(
           borderRadius: widget.borderRadius,
           child: BackdropFilter.grouped(
+            enabled: !widget.blurPaused,
             filter: ImageFilter.blur(sigmaX: 18, sigmaY: 18),
             child: surface,
           ),
@@ -866,7 +872,13 @@ Future<T?> showGlassSheet<T>({
 
 /// The body of [showGlassSheet]. It covers what is below it and does not scroll
 /// over it, so its blur stays affordable.
-class GlassSheet extends StatelessWidget {
+///
+/// While the route moves it, by itself or under a finger, it is solid: a blur
+/// would have to be rendered anew in every frame just where the eye follows the
+/// edge. Once it rests, the blur comes on below a tint that is still opaque, so
+/// that it does not show, and the tint then clears up to the glass of the open
+/// sheet. The content sits on layers of its own and is painted once.
+class GlassSheet extends StatefulWidget {
   const GlassSheet({
     super.key,
     required this.showDragHandle,
@@ -886,49 +898,108 @@ class GlassSheet extends StatelessWidget {
   final Widget child;
 
   @override
+  State<GlassSheet> createState() => _GlassSheetState();
+}
+
+class _GlassSheetState extends State<GlassSheet>
+    with SingleTickerProviderStateMixin {
+  /// 0 while the sheet moves, 1 once it has become glass.
+  late final AnimationController _frost = AnimationController(
+    vsync: this,
+    duration: const Duration(milliseconds: 140),
+  );
+
+  Animation<double>? _route;
+  bool _resting = true;
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    final route = ModalRoute.of(context)?.animation;
+    if (route == _route) return;
+    _route?.removeStatusListener(_onRouteStatus);
+    _route = route?..addStatusListener(_onRouteStatus);
+    _resting = route == null || route.isCompleted;
+    _frost.value = _resting ? 1 : 0;
+  }
+
+  @override
+  void dispose() {
+    _route?.removeStatusListener(_onRouteStatus);
+    _frost.dispose();
+    super.dispose();
+  }
+
+  void _onRouteStatus(AnimationStatus status) {
+    final resting = status.isCompleted;
+    if (resting == _resting) return;
+    setState(() => _resting = resting);
+    if (MediaQuery.disableAnimationsOf(context)) {
+      _frost.value = resting ? 1 : 0;
+    } else if (resting) {
+      _frost.forward();
+    } else {
+      _frost.reverse();
+    }
+  }
+
+  @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final scheme = theme.colorScheme;
-    final glass = GlassSurface(
-      key: const Key('glass-sheet'),
-      tint: scheme.surfaceContainer,
-      opacity: DesignTokens.sheetOpacity,
-      borderRadius: _panel ? panelRadius : _sheetRadius,
-      rim: GlassRim.around,
-      // Below a light sheet lies the dark scrim, on which the primary colour
-      // would no longer reach the contrast of text.
-      child: Theme(
-        data: theme.copyWith(
-          colorScheme: scheme.copyWith(primary: scheme.onPrimaryContainer),
-        ),
-        // Ink has to be painted on top of the tint.
-        child: Material(
-          type: MaterialType.transparency,
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: [
-              if (showDragHandle) const _SheetHandle(),
-              if (_panel) const SizedBox(height: 20),
-              Flexible(child: child),
-            ],
+    final panel = widget._panel;
+    final glass = AnimatedBuilder(
+      animation: _frost,
+      builder: (context, content) => GlassSurface(
+        key: const Key('glass-sheet'),
+        tint: scheme.surfaceContainer,
+        opacity: lerpDouble(1, DesignTokens.sheetOpacity, _frost.value)!,
+        blurPaused: !_resting,
+        borderRadius: panel ? GlassSheet.panelRadius : GlassSheet._sheetRadius,
+        rim: GlassRim.around,
+        child: content!,
+      ),
+      // Clearing up the tint must not paint the content again.
+      child: RepaintBoundary(
+        // Below a light sheet lies the dark scrim, on which the primary colour
+        // would no longer reach the contrast of text.
+        child: Theme(
+          data: theme.copyWith(
+            colorScheme: scheme.copyWith(primary: scheme.onPrimaryContainer),
+          ),
+          // Ink has to be painted on top of the tint.
+          child: Material(
+            type: MaterialType.transparency,
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                if (widget.showDragHandle) const _SheetHandle(),
+                if (panel) const SizedBox(height: 20),
+                Flexible(child: widget.child),
+              ],
+            ),
           ),
         ),
       ),
     );
-    if (!_panel) return glass;
-    return DecoratedBox(
-      decoration: BoxDecoration(
-        borderRadius: panelRadius,
-        boxShadow: [
-          BoxShadow(
-            color: scheme.shadow.withValues(alpha: 0.24),
-            blurRadius: 32,
-            offset: const Offset(0, 12),
-          ),
-        ],
+    // A route moves the sheet by laying it out anew in each frame. Without a
+    // layer of its own, all of it would be painted again each time.
+    if (!panel) return RepaintBoundary(child: glass);
+    return RepaintBoundary(
+      child: DecoratedBox(
+        decoration: BoxDecoration(
+          borderRadius: GlassSheet.panelRadius,
+          boxShadow: [
+            BoxShadow(
+              color: scheme.shadow.withValues(alpha: 0.24),
+              blurRadius: 32,
+              offset: const Offset(0, 12),
+            ),
+          ],
+        ),
+        child: glass,
       ),
-      child: glass,
     );
   }
 }
