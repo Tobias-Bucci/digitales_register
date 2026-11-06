@@ -18,6 +18,7 @@
 import 'dart:async';
 import 'dart:convert';
 import 'dart:io';
+import 'dart:typed_data';
 
 import 'package:built_redux/built_redux.dart';
 import 'package:dio/dio.dart';
@@ -29,6 +30,7 @@ import 'package:dr/course_materials.dart';
 import 'package:dr/data.dart';
 import 'package:dr/main.dart';
 import 'package:dr/middleware/middleware.dart';
+import 'package:dr/profile_picture.dart';
 import 'package:dr/reducer/reducer.dart';
 import 'package:dr/serializers.dart';
 import 'package:dr/utc_date_time.dart';
@@ -65,7 +67,8 @@ class HoldingWrapper extends MockWrapper {
   void Function()? onLogout;
 
   final List<String> sent = <String>[];
-  final Map<String, Completer<dynamic>> _pending = <String, Completer<dynamic>>{};
+  final Map<String, Completer<dynamic>> _pending =
+      <String, Completer<dynamic>>{};
   final Set<String> _delivered = <String>{};
 
   int count(String path) => sent.where((p) => p == path).length;
@@ -91,8 +94,7 @@ class HoldingWrapper extends MockWrapper {
   void release(String path, dynamic response) =>
       _pending[path]!.complete(response);
 
-  void fail(String path, Object error) =>
-      _pending[path]!.completeError(error);
+  void fail(String path, Object error) => _pending[path]!.completeError(error);
 
   @override
   Future<dynamic> send(String path,
@@ -256,8 +258,7 @@ void main() {
     );
   });
 
-  test('the same account signing in again does not revive old work',
-      () async {
+  test('the same account signing in again does not revive old work', () async {
     final store = signedInStore();
     first.hold('api/profile/get');
     final load = store.actions.profileActions.load();
@@ -347,9 +348,9 @@ void main() {
       wrapper = b;
       b.answer.complete(pdf);
       a.contentType = 'text/html';
-      a.answer.complete(utf8.encode(
-          '<!DOCTYPE html><html><head><title>Login</title></head>'
-          '<body><form></form></body></html>'));
+      a.answer.complete(
+          utf8.encode('<!DOCTYPE html><html><head><title>Login</title></head>'
+              '<body><form></form></body></html>'));
       await download;
 
       expect(b.requests, isEmpty);
@@ -366,6 +367,61 @@ void main() {
       a.answer.complete(pdf);
 
       expect(await bytes, isA<StaleSessionException>());
+    });
+
+    test('without a session, authenticated bytes are not even requested',
+        () async {
+      final session = _NoSessionWrapper();
+      wrapper = session;
+
+      await expectLater(
+        fetchAuthenticatedBytes('$_school/avatar.png'),
+        throwsA(isA<AuthenticatedBytesUnavailable>()),
+      );
+      expect(session.requests, isEmpty);
+    });
+
+    test('signing in sends missing pictures back to the server', () async {
+      final store = signedInStore();
+      final before = profilePictureRetries.value;
+
+      final login = store.actions.loginActions.loggedIn(
+        LoggedInPayload((b) => b
+          ..username = 'a'
+          ..fromStorage = true),
+      );
+      await login.timeout(const Duration(seconds: 1), onTimeout: () {});
+
+      expect(profilePictureRetries.value, greaterThan(before));
+    });
+
+    test('coming back online sends missing pictures back to the server',
+        () async {
+      final store = createStore(
+        withMiddleware: true,
+        initialState: AppState((b) => b
+          ..loginState.loggedIn = true
+          ..loginState.username = 'a'
+          ..url = _school
+          ..noInternet = true),
+      );
+      addTearDown(store.dispose);
+      final before = profilePictureRetries.value;
+
+      final online = store.actions.noInternet(false);
+      await online.timeout(const Duration(seconds: 1), onTimeout: () {});
+
+      expect(profilePictureRetries.value, greaterThan(before));
+    });
+
+    test('no profile picture stays behind for the next account', () async {
+      final store = signedInStore();
+      cacheProfilePicture(
+          '$_school/avatar.png', MemoryImage(Uint8List.fromList(pdf)));
+
+      await switchAccount(store);
+
+      expect(cachedProfilePicture('$_school/avatar.png'), isNull);
     });
 
     test('a course document of a left account is neither saved nor opened',
@@ -431,8 +487,8 @@ void main() {
   test('a switch while signing in does not mount the saved state', () async {
     final key = escapeKey(getStorageKey('a', first.loginAddress));
     final storage = _HoldingStorage(key)
-      ..storage[key] = json.encode(serializers.serialize(AppState(
-          (b) => b.settingsState.languageCode = 'lld')));
+      ..storage[key] = json.encode(serializers
+          .serialize(AppState((b) => b.settingsState.languageCode = 'lld')));
     secureStorage = storage;
     final store = createStore(
       withMiddleware: true,
@@ -515,9 +571,29 @@ class _AnyPathWrapper extends HoldingWrapper {
 }
 
 /// A session whose HTTP answers the test releases by hand.
+class _NoSessionWrapper extends HoldingWrapper {
+  _NoSessionWrapper() : super('nobody');
+
+  final List<String> requests = <String>[];
+
+  @override
+  Dio get dio => Dio()
+    ..interceptors.add(InterceptorsWrapper(
+      onRequest: (options, handler) => requests.add(options.path),
+    ));
+
+  @override
+  Future<bool> ensureLoggedIn({
+    bool isRetryAfterUnexpectedLogout = false,
+    bool forceRelogin = false,
+  }) async =>
+      false;
+}
+
 class _DownloadingWrapper extends HoldingWrapper {
   _DownloadingWrapper(super.name) {
-    _dio.interceptors.add(InterceptorsWrapper(onRequest: (options, handler) async {
+    _dio.interceptors
+        .add(InterceptorsWrapper(onRequest: (options, handler) async {
       requests.add(options.uri.toString());
       if (!_requested.isCompleted) _requested.complete();
       final bytes = await answer.future;

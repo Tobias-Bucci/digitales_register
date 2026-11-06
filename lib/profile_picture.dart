@@ -15,6 +15,36 @@
 // You should have received a copy of the GNU General Public License
 // along with digitales_register.  If not, see <http://www.gnu.org/licenses/>.
 
+import 'dart:async';
+
+import 'package:flutter/foundation.dart';
+import 'package:flutter/painting.dart';
+
+/// The pictures of this session that are known to decode, by their address.
+final Map<String, MemoryImage> _pictures = <String, MemoryImage>{};
+
+MemoryImage? cachedProfilePicture(String url) => _pictures[url];
+
+void cacheProfilePicture(String url, MemoryImage picture) {
+  _pictures[url] = picture;
+}
+
+/// Forgets every picture. A picture belongs to the session that loaded it, and a
+/// new one can replace an old one at the same address.
+void forgetProfilePictures() {
+  for (final picture in _pictures.values) {
+    unawaited(picture.evict());
+  }
+  _pictures.clear();
+}
+
+/// Changes when it is worth loading a missing picture again at once.
+final ValueNotifier<int> profilePictureRetries = ValueNotifier<int>(0);
+
+/// Sends every avatar that lacks its picture back to the server, as the reason
+/// of an earlier failure is gone: the app has signed in or is back online.
+void retryProfilePictures() => profilePictureRetries.value++;
+
 String? buildProfilePictureUrl({
   required String? baseUrl,
   required String? picture,

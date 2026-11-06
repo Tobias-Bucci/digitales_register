@@ -111,6 +111,31 @@ Bewusst nicht verwendet:
 - Fragment-Shader für Brechung: Shader in `ImageFilter` gibt es nur mit Impeller,
   Linux und Windows wären außen vor.
 
+## Profilbild
+
+Der Avatar in der Leiste lebt so lange wie die App, anders als der in der alten
+Seitenleiste, der bei jedem Öffnen neu entstand und dadurch nebenbei neu lud.
+`ProfileAvatar` findet deshalb selbst zum Bild:
+
+- Solange kein Bild gezeigt werden kann, steht die Figur, nie eine leere Fläche.
+  Gilt für fehlend, ladend, fehlgeschlagen und nicht dekodierbar. Leiste und
+  Profilmenü zeigen dabei keinen Spinner.
+- Gespeichert und gezeigt wird nur, was sich dekodieren lässt. Eine abgelaufene
+  Sitzung antwortet mit Status 200 und der Anmeldeseite; `fetchAuthenticatedBytes`
+  meldet sich dann einmal neu an und liefert sonst einen Fehler, statt die Seite
+  als Bild weiterzureichen. Ohne Sitzung geht keine Anfrage hinaus.
+- Nach einem Fehler versucht es der Avatar nach 2, 5, 15, 30 und 60 Sekunden noch
+  einmal und wartet danach. `retryProfilePictures()` weckt es sofort, wenn der
+  Grund weg sein kann: nach der Anmeldung und wenn die App wieder online ist.
+  Das deckt auch den Neustart ab, bei dem die gespeicherte Adresse vor der Sitzung
+  da ist.
+- Bilder gehören zur Sitzung: `_clearRuntimeCaches()` vergisst sie, und bei einer
+  neuen Adresse verschwindet das alte Bild sofort. Nach einem Upload wird neu
+  geladen, auch wenn die Adresse gleich bleibt.
+
+Bilder liegen nur im Speicher. Nach einem Neustart ohne Netz steht deshalb die
+Figur, bis die App wieder online ist.
+
 ## Breite Fenster
 
 Ab 720 px ist die Navigation dieselbe Leiste wie auf dem Handy, nur hochkant: am
