@@ -88,8 +88,6 @@ class GlassSegmentedControl<T> extends StatelessWidget {
               Positioned.fill(
                 top: _trackInset + _lensInset,
                 bottom: _trackInset + _lensInset,
-                left: _lensInset,
-                right: _lensInset,
                 child: AnimatedAlign(
                   key: const Key('glass-segment-lens'),
                   alignment: Alignment(
@@ -105,7 +103,10 @@ class GlassSegmentedControl<T> extends StatelessWidget {
                   child: FractionallySizedBox(
                     widthFactor: 1 / segments.length,
                     heightFactor: 1,
-                    child: const GlassLens(),
+                    child: const Padding(
+                      padding: EdgeInsets.symmetric(horizontal: _lensInset),
+                      child: GlassLens(),
+                    ),
                   ),
                 ),
               ),
@@ -177,8 +178,10 @@ class _SegmentState extends State<_Segment> {
       button: true,
       selected: selected,
       inMutuallyExclusiveGroup: true,
+      label: widget.fullLabel,
       child: Tooltip(
         message: widget.fullLabel,
+        excludeFromSemantics: true,
         child: FocusableActionDetector(
           actions: _actions,
           mouseCursor: NewDesignTheme.clickCursor,
