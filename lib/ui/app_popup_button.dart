@@ -15,6 +15,7 @@
 // You should have received a copy of the GNU General Public License
 // along with digitales_register.  If not, see <http://www.gnu.org/licenses/>.
 
+import 'package:dr/ui/glass_surface.dart';
 import 'package:flutter/material.dart';
 
 class AppPopupButtonEntry<T> {
@@ -193,8 +194,9 @@ class _AppPopupButtonState<T> extends State<AppPopupButton<T>> {
           ? Colors.transparent
           : Theme.of(context).colorScheme.surfaceTint,
       shadowColor: Theme.of(context).colorScheme.shadow.withValues(alpha: 0.18),
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(18),
+      shape: glassRimShape(
+        context,
+        RoundedRectangleBorder(borderRadius: BorderRadius.circular(18)),
       ),
       items: widget.entries
           .map(

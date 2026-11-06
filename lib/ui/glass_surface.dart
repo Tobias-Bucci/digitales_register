@@ -485,11 +485,21 @@ class GlassRimBorder extends ShapeBorder {
   int get hashCode => Object.hash(shape, light);
 }
 
+/// [shape] with the rim of the glass where [NewDesignTheme] applies, for menus
+/// that bring a shape of their own and also serve Legacy.
+ShapeBorder glassRimShape(BuildContext context, ShapeBorder shape) {
+  final dialog = Theme.of(context).dialogTheme.shape;
+  return dialog is GlassRimBorder
+      ? GlassRimBorder(shape: shape, light: dialog.light)
+      : shape;
+}
+
 /// What everything below it shares in the new design. Dialogs and sheets take
 /// over the theme of the place they are opened from, which keeps Legacy out.
 ///
-/// Dialogs get the rim of the glass, and whatever can be clicked gets the hand
-/// cursor, which Flutter leaves out in native desktop apps.
+/// Whatever floats above the page gets the rim of the glass, also where it is
+/// not a [GlassSheet], and whatever can be clicked gets the hand cursor, which
+/// Flutter leaves out in native desktop apps.
 class NewDesignTheme extends StatelessWidget {
   const NewDesignTheme({super.key, required this.child});
 
@@ -508,18 +518,37 @@ class NewDesignTheme extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
+    final rim = !MediaQuery.highContrastOf(context);
+    final light = GlassLight.of(theme.colorScheme);
+    ShapeBorder rimmed(BorderRadius radius) => GlassRimBorder(
+          shape: RoundedRectangleBorder(borderRadius: radius),
+          light: light,
+        );
     return Theme(
       data: theme.copyWith(
-        dialogTheme: MediaQuery.highContrastOf(context)
-            ? null
-            : theme.dialogTheme.copyWith(
-                shape: GlassRimBorder(
-                  shape: const RoundedRectangleBorder(
-                    borderRadius: BorderRadius.all(Radius.circular(28)),
-                  ),
-                  light: GlassLight.of(theme.colorScheme),
-                ),
-              ),
+        dialogTheme: rim
+            ? theme.dialogTheme.copyWith(shape: rimmed(GlassSheet.panelRadius))
+            : null,
+        bottomSheetTheme: rim
+            ? theme.bottomSheetTheme.copyWith(
+                shape: rimmed(GlassSheet.sheetRadius),
+              )
+            : null,
+        popupMenuTheme: rim
+            ? theme.popupMenuTheme.copyWith(
+                shape: rimmed(DesignTokens.cardBorderRadius),
+              )
+            : null,
+        datePickerTheme: rim
+            ? theme.datePickerTheme.copyWith(
+                shape: rimmed(GlassSheet.panelRadius),
+              )
+            : null,
+        timePickerTheme: rim
+            ? theme.timePickerTheme.copyWith(
+                shape: rimmed(GlassSheet.panelRadius),
+              )
+            : null,
         filledButtonTheme: FilledButtonThemeData(
           style: _clickableStyle(theme.filledButtonTheme.style),
         ),
@@ -873,6 +902,8 @@ Future<T?> showGlassSheet<T>({
     showDragHandle: false,
     backgroundColor: Colors.transparent,
     elevation: 0,
+    // The rim is the one of the glass inside.
+    shape: const RoundedRectangleBorder(borderRadius: GlassSheet.sheetRadius),
     builder: (context) => GlassSheet(
       showDragHandle: showDragHandle,
       child: builder(context),
@@ -902,7 +933,7 @@ class GlassSheet extends StatefulWidget {
 
   static const panelMaxWidth = 520.0;
   static const panelRadius = BorderRadius.all(Radius.circular(28));
-  static const _sheetRadius = BorderRadius.vertical(top: Radius.circular(28));
+  static const sheetRadius = BorderRadius.vertical(top: Radius.circular(28));
 
   final bool showDragHandle, _panel;
   final Widget child;
@@ -965,7 +996,7 @@ class _GlassSheetState extends State<GlassSheet>
         tint: scheme.surfaceContainer,
         opacity: lerpDouble(1, DesignTokens.sheetOpacity, _frost.value)!,
         blurPaused: !_resting,
-        borderRadius: panel ? GlassSheet.panelRadius : GlassSheet._sheetRadius,
+        borderRadius: panel ? GlassSheet.panelRadius : GlassSheet.sheetRadius,
         rim: GlassRim.around,
         child: content!,
       ),
