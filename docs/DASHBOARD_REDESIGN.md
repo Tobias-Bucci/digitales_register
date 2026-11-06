@@ -177,6 +177,55 @@ Design setzt über `NewDesignTheme` die Hand, die Tastatur bekommt auf Glas eine
 deutlichen Ring (`GlassFocusRing`). Seiten, die Legacy mitbenutzt, begrenzen ihre
 Breite nur im neuen Design (`NewDesignReadable`).
 
+## Notenseite
+
+Die Notenseite bekommt im neuen Design eine eigene Darstellung. Daten, Zustand und
+Aktionen bleiben dieselben, Legacy bleibt unverändert.
+
+### Ausgangslage
+
+`GradesPage` im neuen Design, aus dem Code und aus Renderings bei 412 × 900:
+
+- Normale `AppBar` mit Titel, Verlauf und Semester-Dropdown, ohne Glas.
+- Karte mit dem Diagramm, 220 px hoch, und einem Knopf zum Vollbild.
+- Drei Zeilen für Durchschnitt (Zahnrad), Zeugnisdurchschnitt (Info) und Prognose
+  (Info).
+- Drei Schalter über die volle Breite: nach Art sortieren, gelöschte Noten, farbig.
+- Ein Filter für Lieblingsfächer, wenn welche gesetzt sind.
+- Fächer als `ExpansionTile`, 58 px pro Zeile. Vom Bildschirm bleibt Platz für vier
+  Fächer, die Schalter und Durchschnitte nehmen mehr Höhe ein als die Fächerliste.
+- Eine Note hat drei bis fünf Textzeilen, darunter Kompetenzen mit 24-px-Sternen.
+  Beobachtungen stehen als `ListTile` dazwischen. Nach Art sortiert kommen
+  aufklappbare Gruppen dazu.
+- Unten Hinweis auf ausgeschlossene Fächer, Rechner, Statistik (Dialog).
+- Offline eine schwarze Pille unten rechts, ohne Daten `NoInternet`, beim Laden ein
+  Spinner. Pull-to-Refresh gibt es nicht: `load` holt ohnehin nur veraltete Daten.
+
+### Aufbau
+
+```text
+Handy                                 Breites Fenster ab 1080 px
+┌──────────────────────────────┐      ┌─────────────────────────────────────────┐
+│ Noten      [1|2|Alle]    (⟲) │ Glas │ (Noten            [1. | 2. | Beide] (⟲))│
+├──────────────────────────────┤      ├───────────────┬─────────────────────────┤
+│ ┌ 1. Semester ─────────────┐ │      │ Übersicht     │ Fächer 12          (⚙) │
+│ │ 7,64       7,73 ⓘ        │ │      │ Diagramm      │ (D) Deutsch      7,50 ⌄ │
+│ │ ↗ Prognose ca. 7,6     ⓘ │ │      │ Statistik     │ (E) Englisch     8,63 ⌄ │
+│ └──────────────────────────┘ │      │ Rechner       │ (M) Mathematik   5,40 ⌄ │
+│ ┌ Notenverlauf ──────── ⤢ ─┐ │      │ bleibt stehen │ scrollt für sich        │
+│ │ Diagramm, Legende        │ │      └───────────────┴─────────────────────────┘
+│ └──────────────────────────┘ │
+│ [Statistik]      [Rechner]   │
+│ Fächer 12               (⚙)  │
+│ (D) Deutsch  ②   7,50     ⌄  │
+│ (E) Englisch     8,63     ⌄  │
+│     02.10. Test  Vokabeln  8 │
+└──────────────────────────────┘
+```
+
+Die Wahl trifft `GradesPageContainer` mit `ResponsiveNavigationScope.isActive`, wie
+die anderen geteilten Seiten. Einen zweiten Schalter gibt es nicht.
+
 ## Beta-Rollout
 
 Die Veröffentlichung erfolgt manuell und zuerst im Beta-Kanal.
