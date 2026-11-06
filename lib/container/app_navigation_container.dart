@@ -24,6 +24,7 @@ import 'package:dr/main.dart';
 import 'package:dr/middleware/middleware.dart';
 import 'package:dr/profile_picture.dart';
 import 'package:dr/ui/app_navigation.dart';
+import 'package:dr/ui/profile_avatar.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_built_redux/flutter_built_redux.dart';
 import 'package:responsive_scaffold/responsive_scaffold.dart';
@@ -74,12 +75,17 @@ class AppNavigationContainer extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     diagnostics.screen(current.name);
-    return StoreConnection<AppState, AppActions, (int, String?)>(
+    return StoreConnection<AppState, AppActions,
+        (int, String?, ProfileIdentity)>(
       connect: (state) => (
         unreadMessageCount(state),
         buildProfilePictureUrl(
           baseUrl: state.url,
           picture: state.profileState.picture,
+        ),
+        ProfileIdentity(
+          name: state.config?.fullName ?? state.loginState.username,
+          account: state.loginState.username,
         ),
       ),
       builder: (context, vm, actions) {
@@ -92,12 +98,14 @@ class AppNavigationContainer extends StatelessWidget {
                 onSelected: onSelected,
                 unreadMessages: vm.$1,
                 userIcon: vm.$2,
+                user: vm.$3,
               )
             : FloatingNavigationBar(
                 selected: selected,
                 onSelected: onSelected,
                 unreadMessages: vm.$1,
                 userIcon: vm.$2,
+                user: vm.$3,
               );
       },
     );

@@ -26,10 +26,14 @@ import 'package:dr/ui/glass_surface.dart';
 import 'package:dr/ui/profile_avatar.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:material_color_utilities/material_color_utilities.dart';
 
 import '../support/test_harness.dart';
 
 const _url = 'https://example.org/picture';
+
+/// The colour of the account `anna` in the light theme.
+const _annaTop = 0xFFFFDFCD;
 
 /// A red pixel.
 final _png = base64Decode(
@@ -110,8 +114,8 @@ Widget _app(String? url, {double size = 32, bool showProgress = false}) =>
       ),
     );
 
-/// Lets real asynchronous work such as decoding finish, then shows its result.
-Future<void> _settle(WidgetTester tester) async {
+/// Lets real asynchronous work such as decoding finish.
+Future<void> _finishLoad(WidgetTester tester) async {
   for (var i = 0; i < 6; i++) {
     await tester.pump(const Duration(milliseconds: 1));
     await tester.runAsync(
@@ -119,6 +123,13 @@ Future<void> _settle(WidgetTester tester) async {
     );
   }
   await tester.pump();
+}
+
+/// Lets a load finish, and then shows its result.
+Future<void> _settle(WidgetTester tester) async {
+  await _finishLoad(tester);
+  // The fade of a picture that has just arrived.
+  await tester.pump(const Duration(milliseconds: 300));
 }
 
 void _expectFigure(WidgetTester tester) {
@@ -559,6 +570,264 @@ void main() {
           }
         }
       }
+    });
+  });
+
+  group('initials', () {
+    for (final (name, initials) in const [
+      ('Anna', 'A'),
+      ('anna', 'A'),
+      ('Max Muster', 'MM'),
+      ('  Max   Muster  ', 'MM'),
+      ('Maria von der Heide', 'MH'),
+      ('Anna-Lena Meier', 'AM'),
+      ('max.muster', 'MM'),
+      ('anna_lena', 'AL'),
+      ('Änne Öttl', 'ÄÖ'),
+      ('émile zola', 'ÉZ'),
+      ('Élodie', 'É'),
+      ('ßeta', 'ß'),
+      (
+        'Wolfeschlegelsteinhausenbergerdorff Hubert Blaine Sprechgesangmeister',
+        'WS',
+      ),
+      ('Wolfeschlegelsteinhausenbergerdorff', 'W'),
+      ('😀 Anna', 'A'),
+      ('Anna 😀', 'A'),
+      ('😀Anna', 'A'),
+      ('Max 😀 Muster', 'MM'),
+      ('😀', ''),
+      ('👨‍👩‍👧', ''),
+      ('12345', ''),
+      ('', ''),
+      ('   ', ''),
+    ]) {
+      test('of "$name" are "$initials"', () {
+        expect(profileInitials(name), initials);
+      });
+    }
+
+    test('of nobody are empty', () {
+      expect(profileInitials(null), '');
+    });
+
+    test('never have more than two letters', () {
+      expect(
+        profileInitials('Ana Bea Cleo Dora Eva').characters.length,
+        2,
+      );
+    });
+  });
+
+  group('the colour of an account', () {
+    final schemes = [
+      for (final accent in AppAccent.values)
+        for (final (brightness, amoled) in const [
+          (Brightness.light, false),
+          (Brightness.dark, false),
+          (Brightness.dark, true),
+        ])
+          AppPalette.scheme(
+            brightness: brightness,
+            amoled: amoled,
+            accent: accent,
+          ),
+    ];
+    final accounts = [
+      for (var index = 0; index < 200; index++) 'account$index',
+      'anna',
+      'max.muster',
+      'Änne',
+    ];
+
+    test('stays the same', () {
+      final scheme = schemes.first;
+      expect(
+        ProfileAvatarColors.of(scheme, 'anna').top,
+        ProfileAvatarColors.of(scheme, 'anna').top,
+      );
+      // Pinned: a hash that changes would recolour everybody on an update.
+      expect(ProfileAvatarColors.of(scheme, 'anna').top.toARGB32(), _annaTop);
+    });
+
+    test('differs between accounts', () {
+      final tops = {
+        for (final account in accounts)
+          ProfileAvatarColors.of(schemes.first, account).top,
+      };
+      expect(tops.length, greaterThanOrEqualTo(6));
+    });
+
+    test('does not depend on the accent', () {
+      final light = schemes.where((s) => s.brightness == Brightness.light);
+      expect(
+        {for (final s in light) ProfileAvatarColors.of(s, 'anna').top},
+        hasLength(1),
+      );
+    });
+
+    test('keeps the text at AA contrast in every theme', () {
+      for (final scheme in schemes) {
+        for (final account in accounts) {
+          final colors = ProfileAvatarColors.of(scheme, account);
+          for (final fill in [colors.top, colors.bottom]) {
+            expect(
+              AppPalette.contrastRatio(colors.foreground, fill),
+              greaterThanOrEqualTo(4.5),
+              reason: '$account ${scheme.brightness}',
+            );
+          }
+        }
+      }
+    });
+
+    test('stays calm', () {
+      for (final account in accounts) {
+        final top = ProfileAvatarColors.of(schemes.first, account).top;
+        expect(Hct.fromInt(top.toARGB32()).chroma, lessThan(33));
+      }
+    });
+  });
+
+  group('with a name', () {
+    const anna = ProfileIdentity(name: 'Anna Maier', account: 'anna');
+
+    Future<void> pumpNamed(
+      WidgetTester tester, {
+      String? url = _url,
+      double size = 48,
+      ProfileIdentity? identity = anna,
+      bool showProgress = false,
+    }) async {
+      await tester.pumpWidget(MaterialApp(
+        home: Scaffold(
+          body: Center(
+            child: ProfileAvatar(
+              imageUrl: url,
+              identity: identity,
+              size: size,
+              showProgress: showProgress,
+            ),
+          ),
+        ),
+      ));
+    }
+
+    testWidgets('shows the initials and no figure', (tester) async {
+      await pumpNamed(tester, url: null);
+      expect(find.text('AM'), findsOneWidget);
+      expect(find.byKey(ProfileAvatar.figureKey), findsNothing);
+    });
+
+    testWidgets('a name without a letter falls back to the figure',
+        (tester) async {
+      await pumpNamed(
+        tester,
+        url: null,
+        identity: const ProfileIdentity(name: '😀', account: 'anna'),
+      );
+      expect(find.byKey(ProfileAvatar.figureKey), findsOneWidget);
+    });
+
+    testWidgets('without a name it stays the figure, as in Legacy',
+        (tester) async {
+      await pumpNamed(tester, url: null, identity: null);
+      expect(find.byKey(ProfileAvatar.figureKey), findsOneWidget);
+      expect(find.byKey(ProfileAvatar.initialsKey), findsNothing);
+    });
+
+    testWidgets('stand while loading and after a failure', (tester) async {
+      start((_) => (404, 'text/html', utf8.encode('nothing here')));
+      await pumpNamed(tester);
+      expect(find.byKey(ProfileAvatar.initialsKey), findsOneWidget);
+      await _settle(tester);
+      expect(find.byKey(ProfileAvatar.initialsKey), findsOneWidget);
+      expect(find.byKey(ProfileAvatar.pictureKey), findsNothing);
+      await tester.pumpWidget(const SizedBox());
+    });
+
+    testWidgets('the picture fades in without moving anything', (tester) async {
+      start(_picture);
+      await pumpNamed(tester);
+      final before = tester.getRect(find.byType(ProfileAvatar));
+      await _finishLoad(tester);
+      // Mid-fade the initials still stand opaque below the picture.
+      await tester.pump(const Duration(milliseconds: 100));
+      expect(find.byKey(ProfileAvatar.pictureKey), findsOneWidget);
+      expect(find.byKey(ProfileAvatar.initialsKey), findsOneWidget);
+      final fade = tester.widget<FadeTransition>(find
+          .ancestor(
+            of: find.byKey(ProfileAvatar.pictureKey),
+            matching: find.byType(FadeTransition),
+          )
+          .first);
+      expect(fade.opacity.value, inExclusiveRange(0.0, 1.0));
+      await tester.pump(const Duration(milliseconds: 300));
+      expect(find.byKey(ProfileAvatar.initialsKey), findsNothing);
+      expect(tester.getRect(find.byType(ProfileAvatar)), before);
+    });
+
+    testWidgets('a picture from the cache is simply there', (tester) async {
+      start(_picture);
+      await pumpNamed(tester);
+      await _settle(tester);
+      await tester.pumpWidget(const SizedBox());
+      await pumpNamed(tester);
+      expect(find.byKey(ProfileAvatar.initialsKey), findsNothing);
+      expect(find.byKey(ProfileAvatar.pictureKey), findsOneWidget);
+    });
+
+    testWidgets('with reduced motion the picture does not fade',
+        (tester) async {
+      start(_picture);
+      await tester.pumpWidget(const MaterialApp(
+        home: MediaQuery(
+          data: MediaQueryData(disableAnimations: true),
+          child: ProfileAvatar(imageUrl: _url, identity: anna),
+        ),
+      ));
+      await _finishLoad(tester);
+      expect(find.byKey(ProfileAvatar.pictureKey), findsOneWidget);
+      expect(find.byKey(ProfileAvatar.initialsKey), findsNothing);
+    });
+
+    for (final size in const [28.0, 32.0, 48.0, 104.0]) {
+      testWidgets('the initials fit the circle at $size px', (tester) async {
+        tester.platformDispatcher.textScaleFactorTestValue = 2;
+        addTearDown(tester.platformDispatcher.clearTextScaleFactorTestValue);
+        await pumpNamed(
+          tester,
+          url: null,
+          size: size,
+          identity: const ProfileIdentity(name: 'Wanda Wemm', account: 'w'),
+        );
+        expect(tester.getSize(find.byType(ProfileAvatar)), Size.square(size));
+        final text = tester.getSize(find.text('WW'));
+        expect(text.height, lessThan(size));
+        expect(tester.takeException(), isNull);
+      });
+    }
+
+    testWidgets('adds nothing for a screen reader to read out', (tester) async {
+      final semantics = tester.ensureSemantics();
+      await pumpNamed(tester, url: null);
+      expect(find.bySemanticsLabel('AM'), findsNothing);
+      semantics.dispose();
+    });
+
+    testWidgets('has no rim in high contrast mode', (tester) async {
+      tester.platformDispatcher.accessibilityFeaturesTestValue =
+          const FakeAccessibilityFeatures(highContrast: true);
+      addTearDown(
+        tester.platformDispatcher.clearAccessibilityFeaturesTestValue,
+      );
+      await pumpNamed(tester, url: null);
+      expect(
+        tester
+            .widgetList<CustomPaint>(find.byType(CustomPaint))
+            .where((paint) => paint.foregroundPainter is GlassRimPainter),
+        isEmpty,
+      );
     });
   });
 }
