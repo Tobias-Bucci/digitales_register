@@ -1939,6 +1939,7 @@ void main() {
       final selected = <int>[];
       final menu = ProfileMenu(
         name: 'anna',
+        username: 'anna',
         account: null,
         userIcon: null,
         otherAccounts: const ['Ben'],
@@ -1983,6 +1984,7 @@ void main() {
               builder: (_) => Dialog(
                 child: ProfileMenu(
                   name: 'anna',
+                  username: 'anna',
                   account: null,
                   userIcon: null,
                   otherAccounts: const [],
@@ -2816,10 +2818,11 @@ void main() {
         final sheet = find.byKey(const Key('glass-sheet'));
         expect(tester.getRect(sheet).left, 0);
         expect(tester.getRect(sheet).right, width);
-        expect(
-          find.descendant(of: sheet, matching: find.byType(GlassEdge)),
-          findsOneWidget,
+        // The first one is the rim of the sheet, the avatar has its own.
+        final edge = tester.widget<GlassEdge>(
+          find.descendant(of: sheet, matching: find.byType(GlassEdge)).first,
         );
+        expect(edge.rim, GlassRim.around);
         // Only the glass inside has a rim, not the route around it as well.
         final material = tester.widget<Material>(find
             .descendant(

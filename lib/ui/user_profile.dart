@@ -19,6 +19,7 @@
 import 'package:dr/i18n/app_localizations.dart';
 import 'package:dr/ui/profile_avatar.dart';
 import 'package:flutter/material.dart';
+import 'package:responsive_scaffold/responsive_scaffold.dart';
 
 class UserProfile extends StatelessWidget {
   final String name, username, role;
@@ -46,6 +47,10 @@ class UserProfile extends StatelessWidget {
           children: <Widget>[
             ProfileAvatar(
               imageUrl: imageUrl,
+              // Legacy keeps its figure.
+              identity: ResponsiveNavigationScope.isActive(context)
+                  ? ProfileIdentity(name: name, account: username)
+                  : null,
               size: 104,
             ),
             const SizedBox(height: 16),

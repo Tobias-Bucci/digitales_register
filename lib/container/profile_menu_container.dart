@@ -67,7 +67,7 @@ class ProfileMenuContainer extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) => StoreConnection<AppState, AppActions,
-          (String?, String?, String?, BuiltList<String>)>(
+          (String?, String?, String?, BuiltList<String>, String?)>(
         connect: (state) {
           final username = state.loginState.username;
           final school = schoolNameForUrl(state.url);
@@ -80,10 +80,12 @@ class ProfileMenuContainer extends StatelessWidget {
               picture: state.profileState.picture,
             ),
             state.loginState.otherAccounts,
+            username,
           );
         },
         builder: (context, vm, actions) => ProfileMenu(
           name: vm.$1,
+          username: vm.$5,
           account: vm.$2?.isEmpty ?? true ? null : vm.$2,
           userIcon: vm.$3,
           otherAccounts: vm.$4.toList(),

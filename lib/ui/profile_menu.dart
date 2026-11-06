@@ -27,6 +27,7 @@ class ProfileMenu extends StatelessWidget {
   const ProfileMenu({
     super.key,
     required this.name,
+    required this.username,
     required this.account,
     required this.userIcon,
     required this.otherAccounts,
@@ -38,7 +39,7 @@ class ProfileMenu extends StatelessWidget {
     required this.logout,
   });
 
-  final String? name;
+  final String? name, username;
 
   /// The account, shown below [name]: user name and school.
   final String? account;
@@ -112,6 +113,10 @@ class ProfileMenu extends StatelessWidget {
                   children: [
                     ProfileAvatar(
                       imageUrl: userIcon,
+                      identity: ProfileIdentity(
+                        name: name,
+                        account: username,
+                      ),
                       size: 48,
                       showProgress: false,
                     ),
@@ -156,6 +161,14 @@ class ProfileMenu extends StatelessWidget {
             _MenuEntry(
               key: ValueKey('profile-menu-account-$index'),
               icon: Icons.switch_account_rounded,
+              leading: ProfileAvatar(
+                imageUrl: null,
+                identity: ProfileIdentity(
+                  name: otherAccounts[index],
+                  account: otherAccounts[index],
+                ),
+                size: 28,
+              ),
               label: otherAccounts[index],
               tooltip: l10n.text('sidebar.switchAccount'),
               onTap: _closingFirst(context, () => selectAccount(index)),
@@ -192,9 +205,13 @@ class _MenuEntry extends StatelessWidget {
     required this.label,
     required this.onTap,
     this.tooltip,
+    this.leading,
   });
 
   final IconData icon;
+
+  /// Takes the place of [icon].
+  final Widget? leading;
   final String label;
   final String? tooltip;
   final VoidCallback onTap;
@@ -202,7 +219,7 @@ class _MenuEntry extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final tile = ListTile(
-      leading: Icon(icon),
+      leading: leading ?? Icon(icon),
       title: Text(label, maxLines: 1, overflow: TextOverflow.ellipsis),
       onTap: onTap,
     );

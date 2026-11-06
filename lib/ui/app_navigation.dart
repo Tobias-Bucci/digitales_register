@@ -202,6 +202,7 @@ class _DestinationTrack extends StatelessWidget {
     required this.onSelected,
     required this.unreadMessages,
     required this.userIcon,
+    required this.user,
   });
 
   final Axis axis;
@@ -209,6 +210,7 @@ class _DestinationTrack extends StatelessWidget {
   final DestinationCallback onSelected;
   final int unreadMessages;
   final String? userIcon;
+  final ProfileIdentity? user;
 
   @override
   Widget build(BuildContext context) {
@@ -226,6 +228,7 @@ class _DestinationTrack extends StatelessWidget {
           label: _destinationLabel(l10n, destination, unreadMessages),
           unreadMessages: unreadMessages,
           userIcon: userIcon,
+          user: user,
           onPressed: () => onSelected(destination),
         );
       },
@@ -241,12 +244,14 @@ class FloatingNavigationBar extends StatelessWidget {
     required this.onSelected,
     required this.unreadMessages,
     required this.userIcon,
+    this.user,
   });
 
   final AppDestination selected;
   final DestinationCallback onSelected;
   final int unreadMessages;
   final String? userIcon;
+  final ProfileIdentity? user;
 
   @override
   Widget build(BuildContext context) {
@@ -313,6 +318,7 @@ class FloatingNavigationBar extends StatelessWidget {
                       onSelected: onSelected,
                       unreadMessages: unreadMessages,
                       userIcon: userIcon,
+                      user: user,
                     ),
                   ),
                 ),
@@ -493,6 +499,7 @@ class _BarItem extends StatefulWidget {
     required this.label,
     required this.unreadMessages,
     required this.userIcon,
+    required this.user,
     required this.onPressed,
   });
 
@@ -502,6 +509,7 @@ class _BarItem extends StatefulWidget {
   final String label;
   final int unreadMessages;
   final String? userIcon;
+  final ProfileIdentity? user;
   final VoidCallback onPressed;
 
   @override
@@ -532,6 +540,7 @@ class _BarItemState extends State<_BarItem> {
     final icon = destination == AppDestination.profile
         ? ProfileAvatar(
             imageUrl: widget.userIcon,
+            identity: widget.user,
             size: 32,
             showProgress: false,
           )
@@ -608,12 +617,14 @@ class AppNavigationRail extends StatelessWidget {
     required this.onSelected,
     required this.unreadMessages,
     required this.userIcon,
+    this.user,
   });
 
   final AppDestination selected;
   final DestinationCallback onSelected;
   final int unreadMessages;
   final String? userIcon;
+  final ProfileIdentity? user;
 
   @override
   Widget build(BuildContext context) {
@@ -642,6 +653,7 @@ class AppNavigationRail extends StatelessWidget {
                   onSelected: onSelected,
                   unreadMessages: unreadMessages,
                   userIcon: userIcon,
+                  user: user,
                 ),
               ),
             ),
