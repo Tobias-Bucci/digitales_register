@@ -22,6 +22,7 @@ import 'package:dr/container/grades_page_new_container.dart';
 import 'package:dr/data.dart';
 import 'package:dr/grade_forecast.dart';
 import 'package:dr/grade_history.dart';
+import 'package:dr/grade_statistics.dart';
 import 'package:dr/i18n/app_localizations.dart';
 import 'package:dr/ui/animated_linear_progress_indicator.dart';
 import 'package:dr/ui/dashboard_app_header.dart';
@@ -272,7 +273,71 @@ class _Summary extends StatelessWidget {
             padding: const EdgeInsets.only(bottom: 8),
             child: GradesChartCard(onOpen: callbacks.showGradesChart),
           ),
+        // Demo mode moves the clock, and with it what counts for the statistics.
+        AnimatedBuilder(
+          animation: appClock,
+          builder: (context, _) => _Insights(vm: vm, callbacks: callbacks),
+        ),
       ],
+    );
+  }
+}
+
+/// Statistics and the calculators.
+class _Insights extends StatelessWidget {
+  const _Insights({required this.vm, required this.callbacks});
+
+  final NewGradesViewModel vm;
+  final GradesPageCallbacks callbacks;
+
+  @override
+  Widget build(BuildContext context) {
+    final l10n = context.l10n;
+    final statistics = calculateGradeStatistics(
+      subjects: vm.list.subjects,
+      semester: vm.page.showSemester,
+      ignoredSubjects: vm.list.ignoredSubjectsForAverage,
+    );
+    final best = statistics.subjectAverages.firstOrNull;
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 8),
+      child: IntrinsicHeight(
+        child: Row(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            Expanded(
+              child: GradesInsightTile(
+                key: const Key('grades-statistics'),
+                icon: Icons.bar_chart_rounded,
+                title: l10n.text('grades.statistics'),
+                subtitle: best == null
+                    ? l10n.text('grades.statistics.subtitle')
+                    : l10n.text(
+                        'grades.statistics.best',
+                        args: {
+                          'subject': l10n.translateSubjectName(best.name),
+                        },
+                      ),
+                onTap: () => showStatisticsPanel(
+                  context,
+                  statistics: statistics,
+                  colorGrades: vm.colorGrades,
+                ),
+              ),
+            ),
+            const SizedBox(width: 8),
+            Expanded(
+              child: GradesInsightTile(
+                key: const Key('grades-calculator'),
+                icon: Icons.calculate_outlined,
+                title: l10n.text('grades.calculator'),
+                subtitle: l10n.text('grades.calculator.subtitle'),
+                onTap: callbacks.showGradeCalculator,
+              ),
+            ),
+          ],
+        ),
+      ),
     );
   }
 }

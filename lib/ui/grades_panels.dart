@@ -20,6 +20,7 @@ import 'package:dr/app_state.dart';
 import 'package:dr/data.dart';
 import 'package:dr/grade_forecast.dart';
 import 'package:dr/grade_history.dart';
+import 'package:dr/grade_statistics.dart';
 import 'package:dr/i18n/app_localizations.dart';
 import 'package:dr/theme/app_palette.dart';
 import 'package:dr/ui/glass_surface.dart';
@@ -642,4 +643,110 @@ void showGradesDisplayPanel(
       ),
     ),
   );
+}
+
+void showStatisticsPanel(
+  BuildContext context, {
+  required GradeStatistics statistics,
+  required bool colorGrades,
+}) {
+  showGlassSheet<void>(
+    context: context,
+    builder: (context) => GradesPanel(
+      key: const Key('grades-statistics-panel'),
+      title: context.t('grades.statistics'),
+      child: _StatisticsDetails(
+        statistics: statistics,
+        colorGrades: colorGrades,
+      ),
+    ),
+  );
+}
+
+class _StatisticsDetails extends StatelessWidget {
+  const _StatisticsDetails({
+    required this.statistics,
+    required this.colorGrades,
+  });
+
+  static const double _barHeight = 8;
+
+  final GradeStatistics statistics;
+  final bool colorGrades;
+
+  @override
+  Widget build(BuildContext context) {
+    final l10n = context.l10n;
+    final theme = Theme.of(context);
+    final scheme = theme.colorScheme;
+    final format = GradesFormat.of(context);
+    final subjects = statistics.subjectAverages;
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        if (subjects.isEmpty)
+          Padding(
+            padding: const EdgeInsets.only(bottom: 12),
+            child: Text(l10n.text('grades.statistics.empty')),
+          )
+        else ...[
+          Text(
+            l10n.text('grades.statistics.subjects'),
+            style: theme.textTheme.labelLarge?.copyWith(
+              color: scheme.onSurfaceVariant,
+            ),
+          ),
+          const SizedBox(height: 8),
+          for (final subject in subjects)
+            Padding(
+              padding: const EdgeInsets.only(bottom: 8),
+              child: Semantics(
+                label: '${l10n.translateSubjectName(subject.name)}, '
+                    '${format.spoken(format.average(subject.average), subject.average)}',
+                excludeSemantics: true,
+                child: Row(
+                  children: [
+                    Expanded(
+                      flex: 5,
+                      child: Text(
+                        l10n.translateSubjectName(subject.name),
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: theme.textTheme.bodySmall,
+                      ),
+                    ),
+                    const SizedBox(width: 8),
+                    Expanded(
+                      flex: 6,
+                      child: ClipRRect(
+                        borderRadius: BorderRadius.circular(_barHeight / 2),
+                        child: LinearProgressIndicator(
+                          value: subject.average / 1000,
+                          minHeight: _barHeight,
+                          color: (colorGrades
+                                  ? gradeColor(subject.average)
+                                  : null) ??
+                              scheme.primary,
+                          backgroundColor:
+                              scheme.onSurface.withValues(alpha: 0.08),
+                        ),
+                      ),
+                    ),
+                    const SizedBox(width: 8),
+                    Text(
+                      format.average(subject.average),
+                      style: theme.textTheme.labelMedium?.copyWith(
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          const SizedBox(height: 4),
+        ],
+        _PanelText(l10n.text('grades.statistics.body')),
+      ],
+    );
+  }
 }
