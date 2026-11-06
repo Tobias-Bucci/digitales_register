@@ -18,6 +18,7 @@
 import 'package:dr/i18n/app_localizations.dart';
 import 'package:dr/ui/glass_surface.dart';
 import 'package:dr/ui/notepad_mark.dart';
+import 'package:flutter/foundation.dart' show ValueListenable;
 import 'package:flutter/material.dart';
 
 /// The slim header of the new design: app logo, school and app name. The
@@ -33,6 +34,8 @@ class DashboardAppHeader extends StatelessWidget
     required this.noInternet,
     required this.onRetry,
     this.floatingMaxWidth,
+    this.showScrollUp,
+    this.onScrollUp,
   });
 
   static const double height = 56;
@@ -43,6 +46,13 @@ class DashboardAppHeader extends StatelessWidget
   final String? schoolName;
   final bool noInternet;
   final VoidCallback onRetry;
+
+  /// Whether the button back to the start of the list shows. It belongs here
+  /// and not over the list, where the controls of the days would pass under it.
+  final ValueListenable<bool>? showScrollUp;
+
+  /// Null while there is no list to scroll, which leaves out the button.
+  final VoidCallback? onScrollUp;
 
   @override
   Size get preferredSize => Size.fromHeight(
@@ -115,6 +125,13 @@ class DashboardAppHeader extends StatelessWidget
                   foregroundColor: scheme.onSecondaryContainer,
                 ),
               ),
+            if (showScrollUp != null && onScrollUp != null)
+              ValueListenableBuilder(
+                valueListenable: showScrollUp!,
+                builder: (context, show, _) => show
+                    ? _ScrollUpButton(onPressed: onScrollUp!)
+                    : const SizedBox.shrink(),
+              ),
           ],
         ),
       ),
@@ -158,6 +175,35 @@ class DashboardAppHeader extends StatelessWidget
                 ),
               ),
             ),
+    );
+  }
+}
+
+/// Back to the start of the list: a disc as big as the logo, in a full-sized
+/// touch target.
+class _ScrollUpButton extends StatelessWidget {
+  const _ScrollUpButton({required this.onPressed});
+
+  static const double _discSize = 36;
+
+  final VoidCallback onPressed;
+
+  @override
+  Widget build(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
+    return IconButton(
+      key: const Key('dashboard-scroll-up'),
+      tooltip: context.t('dashboard.scrollToTop'),
+      onPressed: onPressed,
+      icon: const Icon(Icons.arrow_upward_rounded, size: 20),
+      style: IconButton.styleFrom(
+        fixedSize: const Size.square(_discSize),
+        minimumSize: const Size.square(_discSize),
+        padding: EdgeInsets.zero,
+        // The compact density of desktops would shrink the target to 40.
+        visualDensity: VisualDensity.standard,
+        tapTargetSize: MaterialTapTargetSize.padded,
+      ).merge(glassControlStyle(scheme, shape: const CircleBorder())),
     );
   }
 }

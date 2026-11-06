@@ -1104,6 +1104,144 @@ void main() {
     });
   });
 
+  group('scroll to top button', () {
+    final button = find.byKey(const Key('dashboard-scroll-up'));
+    final header = find.byKey(const Key('dashboard-app-header'));
+
+    AppState longList() => _dashboardState(updates: (b) {
+          b.noInternet = false;
+          b.dashboardState.future = true;
+          b.dashboardState.allDays = ListBuilder<Day>([
+            for (var day = 0; day < 14; day++)
+              buildDay(
+                date: _today.add(Duration(days: day)),
+                homework: [
+                  for (var entry = 0; entry < 1 + day % 3; entry++)
+                    buildHomework(
+                      id: day * 10 + entry + 1,
+                      title: 'Hausaufgabe',
+                      label: 'Deutsch',
+                      checkable: true,
+                    ),
+                ],
+              ),
+          ]);
+        });
+
+    ScrollController list(WidgetTester tester) => tester
+        .widgetList<ListView>(find.byType(ListView))
+        .firstWhere((list) => list.controller != null)
+        .controller!;
+
+    Future<void> scrollTo(WidgetTester tester, double offset) async {
+      list(tester).jumpTo(offset);
+      await tester.pump();
+    }
+
+    for (final window in const [
+      Size(320, 640),
+      Size(412, 915),
+      Size(800, 1100),
+      Size(1100, 800),
+      Size(1920, 1080),
+    ]) {
+      testWidgets('stays in the header at every offset in a $window window',
+          (tester) async {
+        await _pumpDashboard(tester, longList(), size: window);
+        var checked = 0;
+        final end = list(tester).position.maxScrollExtent;
+        for (var offset = 0.0; offset <= end; offset += 8) {
+          await scrollTo(tester, offset);
+          if (button.evaluate().isEmpty) continue;
+          checked++;
+          final rect = tester.getRect(button);
+          // The header stands above the list, so the controls of a day can
+          // only be under the button where the header covers them anyway.
+          expect(tester.getRect(header).expandToInclude(rect),
+              tester.getRect(header));
+        }
+        expect(checked, greaterThan(0));
+        expect(find.byType(FloatingActionButton), findsNothing);
+      });
+    }
+
+    testWidgets('appears only once the list has scrolled', (tester) async {
+      await _pumpDashboard(tester, longList(), size: const Size(412, 915));
+      expect(button, findsNothing);
+
+      await scrollTo(tester, 251);
+      expect(button, findsOneWidget);
+
+      await scrollTo(tester, 100);
+      expect(button, findsNothing);
+    });
+
+    testWidgets('has a label and a full touch target', (tester) async {
+      final semantics = tester.ensureSemantics();
+      await _pumpDashboard(tester, longList(), size: const Size(320, 640));
+      await scrollTo(tester, 400);
+
+      expect(
+        tester.getSemantics(find.byTooltip('Nach oben')),
+        matchesSemantics(
+          tooltip: 'Nach oben',
+          isButton: true,
+          hasEnabledState: true,
+          isEnabled: true,
+          isFocusable: true,
+          hasFocusAction: true,
+          hasTapAction: true,
+        ),
+      );
+      expect(tester.getSize(button), const Size.square(48));
+      semantics.dispose();
+    });
+
+    testWidgets('scrolls back to the start', (tester) async {
+      await _pumpDashboard(tester, longList(), size: const Size(412, 915));
+      await scrollTo(tester, 600);
+
+      await tester.tap(button);
+      await settleFor(tester, duration: const Duration(milliseconds: 700));
+
+      expect(list(tester).offset, 0);
+      expect(button, findsNothing);
+    });
+
+    testWidgets('goes away with the list', (tester) async {
+      final store =
+          await _pumpDashboard(tester, longList(), size: const Size(412, 915));
+      await scrollTo(tester, 600);
+      expect(button, findsOneWidget);
+
+      // All days lie ahead, so the past has nothing to show.
+      store.actions.dashboardActions.switchFuture();
+      await settleFor(tester);
+
+      expect(find.byType(CompactDayWidget), findsNothing);
+      expect(button, findsNothing);
+    });
+
+    testWidgets('stays a floating button in Legacy', (tester) async {
+      await _pumpDashboard(
+        tester,
+        longList(),
+        size: const Size(800, 915),
+        newDesign: false,
+      );
+      await scrollTo(tester, 600);
+
+      expect(button, findsNothing);
+      final legacyButton =
+          find.widgetWithIcon(FloatingActionButton, Icons.arrow_upward_rounded);
+      await tester.tap(legacyButton);
+      await settleFor(tester, duration: const Duration(milliseconds: 700));
+
+      expect(list(tester).offset, 0);
+      expect(legacyButton, findsNothing);
+    });
+  });
+
   group('editing cards', () {
     AppState editState() => _dashboardState(
           updates: (b) {

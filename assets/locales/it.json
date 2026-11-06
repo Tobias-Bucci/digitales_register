@@ -1099,6 +1099,7 @@
   "dashboard.dayHeading.relative": "{relative}, {weekday} {date}",
   "dashboard.progress": "{done}/{total} completati",
   "dashboard.addEntry": "Nuova voce",
+  "dashboard.scrollToTop": "Torna su",
   "dashboard.editEntry": "Modifica",
   "dashboard.entryDone": "completato",
   "dashboard.entryOpen": "da fare",
