@@ -352,6 +352,33 @@ bool isSafeFileNameSegment(String name) =>
     !_unsafeFileNameCharacters.hasMatch(name) &&
     !_trailingDotsOrSpaces.hasMatch(name);
 
+/// The pauses between the attempts of a write to the storage of the device.
+/// A virus scanner or a keystore that is still waking up only blocks it briefly.
+@visibleForTesting
+List<Duration> storageRetryDelays = const [
+  Duration(milliseconds: 200),
+  Duration(seconds: 1),
+  Duration(seconds: 3),
+];
+
+/// Runs [action] until it works, at most once more for each of the
+/// [storageRetryDelays], and then fails like its last attempt. With [giveUp],
+/// no further attempt is made once it returns true.
+Future<void> retryStorageWrite(
+  Future<void> Function() action, {
+  bool Function()? giveUp,
+}) async {
+  for (var attempt = 0;; attempt++) {
+    try {
+      return await action();
+    } catch (_) {
+      if (attempt >= storageRetryDelays.length) rethrow;
+      await Future<void>.delayed(storageRetryDelays[attempt]);
+      if (giveUp?.call() ?? false) return;
+    }
+  }
+}
+
 Future<bool> cannotConnectTo(String url) async {
   final uri = Uri.parse(url);
   if (uri.scheme != 'https') {

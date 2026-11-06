@@ -116,7 +116,20 @@ part 'settings.dart';
 
 late FlutterSecureStorage secureStorage;
 final AppStatePersistenceService statePersistenceService =
-    AppStatePersistenceService();
+    AppStatePersistenceService(onWriteFailed: _warnAboutLocalSave);
+
+/// When the user was last told that this device did not take a change.
+DateTime? _lastLocalSaveWarning;
+
+/// Retries go on in the background, which must not repeat the message.
+void _warnAboutLocalSave() {
+  final now = DateTime.now();
+  final last = _lastLocalSaveWarning;
+  if (last != null && now.difference(last) < const Duration(minutes: 2)) return;
+  _lastLocalSaveWarning = now;
+  showSnackBar(tr('error.localSave'));
+}
+
 final StudyDataService studyDataService =
     StudyDataService(storage: () => secureStorage);
 final StudyDataMigration studyDataMigration = StudyDataMigration(
@@ -1228,6 +1241,9 @@ void resetNoInternetRetryForTest() {
 void resetMiddlewareStateForTest() {
   schoolNotificationStartupReady.value = false;
   _unreadableStorageKeys.clear();
+  _lastUnreadableRetry = null;
+  _retryingUnreadable = false;
+  _lastLocalSaveWarning = null;
   localDataPolicy.reset();
   _studyDataScope = null;
   resetNoInternetRetryForTest();
@@ -1401,6 +1417,50 @@ Future<void> _refresh(
   ]);
 }
 
+/// Puts the saved [state] of the account of [session] into the store.
+Future<void> _mountSavedState(
+  MiddlewareApi<AppState, AppStateBuilder, AppActions> api,
+  _Session session,
+  String state,
+) async {
+  final serializedState = serializers.deserialize(
+    json.decode(state) as Object,
+  );
+  if (serializedState is SettingsState) {
+    final currentSettings = await _settingsForAccountLoad(
+      legacySettings: serializedState,
+    );
+    session.ensureCurrent();
+    await api.actions.mountAppState(
+      api.state.rebuild(
+        (b) => b..settingsState.replace(currentSettings),
+      ),
+    );
+  } else if (serializedState is AppState) {
+    final currentState = api.state;
+    final currentSettings = await _settingsForAccountLoad(
+      legacySettings: serializedState.settingsState,
+    );
+    session.ensureCurrent();
+    await api.actions.mountAppState(
+      serializedState.rebuild(
+        (b) => b
+          ..loginState.replace(currentState.loginState)
+          ..url = currentState.url
+          ..noInternet = currentState.noInternet
+          ..config = currentState.config?.toBuilder()
+          ..dashboardState.future = true
+          ..gradesState.semester.replace(
+                currentState.gradesState.semester == Semester.all
+                    ? serializedState.gradesState.semester
+                    : currentState.gradesState.semester,
+              )
+          ..settingsState.replace(currentSettings),
+      ),
+    );
+  }
+}
+
 Future<void> _loggedIn(
   MiddlewareApi<AppState, AppStateBuilder, AppActions> api,
   ActionHandler next,
@@ -1422,42 +1482,7 @@ Future<void> _loggedIn(
     session.ensureCurrent();
     if (state != null) {
       try {
-        final serializedState = serializers.deserialize(
-          json.decode(state) as Object,
-        );
-        if (serializedState is SettingsState) {
-          final currentSettings = await _settingsForAccountLoad(
-            legacySettings: serializedState,
-          );
-          session.ensureCurrent();
-          await api.actions.mountAppState(
-            api.state.rebuild(
-              (b) => b..settingsState.replace(currentSettings),
-            ),
-          );
-        } else if (serializedState is AppState) {
-          final currentState = api.state;
-          final currentSettings = await _settingsForAccountLoad(
-            legacySettings: serializedState.settingsState,
-          );
-          session.ensureCurrent();
-          await api.actions.mountAppState(
-            serializedState.rebuild(
-              (b) => b
-                ..loginState.replace(currentState.loginState)
-                ..url = currentState.url
-                ..noInternet = currentState.noInternet
-                ..config = currentState.config?.toBuilder()
-                ..dashboardState.future = true
-                ..gradesState.semester.replace(
-                      currentState.gradesState.semester == Semester.all
-                          ? serializedState.gradesState.semester
-                          : currentState.gradesState.semester,
-                    )
-                ..settingsState.replace(currentSettings),
-            ),
-          );
-        }
+        await _mountSavedState(api, session, state);
 
         // next not at the beginning: bug fix (serialization)
         await next(action);
@@ -1545,8 +1570,9 @@ AccountScope _studyScopeOf(String? username) =>
 Future<void> _mountStudyData(
   MiddlewareApi<AppState, AppStateBuilder, AppActions> api,
   _Session session,
-  String? username,
-) async {
+  String? username, {
+  bool quiet = false,
+}) async {
   final scope = _studyScopeOf(username);
   _studyDataScope = null;
   var unreadable = false;
@@ -1568,11 +1594,11 @@ Future<void> _mountStudyData(
   } on StudyDataUnreadable catch (error, stack) {
     session.ensureCurrent();
     diagnostics.report(error, stack, DiagnosticError.storage);
-    showSnackBar(tr('error.savedDataUnreadable'));
+    if (!quiet) showSnackBar(tr('error.savedDataUnreadable'));
     return;
   }
   session.ensureCurrent();
-  if (unreadable) showSnackBar(tr('error.savedDataUnreadable'));
+  if (unreadable && !quiet) showSnackBar(tr('error.savedDataUnreadable'));
   await api.actions.mountAppState(
     api.state.rebuild((b) => b
       ..settingsState.replace(
@@ -1839,7 +1865,12 @@ NextActionHandler _saveStateHandler(
                   action.name == SettingsActionsNames.dashboardItems.name ||
                   action.name ==
                       SettingsActionsNames.setDashboardConfiguration.name)) {
-            await settingsPersistenceService.save(api.state.settingsState);
+            // The change stays in the store, and every later one saves it too.
+            try {
+              await settingsPersistenceService.save(api.state.settingsState);
+            } catch (_) {
+              _warnAboutLocalSave();
+            }
           }
           if (action.name != AppActionsNames.mountAppState.name &&
               _studyDataChanged(previousSettings, api.state.settingsState)) {
@@ -1847,6 +1878,7 @@ NextActionHandler _saveStateHandler(
           }
           if (api.state.loginState.loggedIn &&
               api.state.loginState.username != null) {
+            unawaited(_retryUnreadableSavedState(api));
             final immediately = action.name == AppActionsNames.saveState.name ||
                 action.name == DashboardActionsNames.updateBlacklist.name ||
                 action.name == DashboardActionsNames.setFavoriteSubject.name ||
@@ -1857,13 +1889,16 @@ NextActionHandler _saveStateHandler(
                 action.name ==
                     SettingsActionsNames.showCalendarSubstituteBar.name;
             if (immediately) {
-              await statePersistenceService.flush(
-                state: api.state,
-                deletedData: deletedData,
-                server: wrapper.loginAddress,
-                writer: _persistWriter(),
-                keyFactory: getStorageKey,
-              );
+              // It has told the user, and tries again by itself.
+              try {
+                await statePersistenceService.flush(
+                  state: api.state,
+                  deletedData: deletedData,
+                  server: wrapper.loginAddress,
+                  writer: _persistWriter(),
+                  keyFactory: getStorageKey,
+                );
+              } catch (_) {}
               if (deletedData) {
                 await androidWidgetSnapshotService.clear(reason: action.name);
               } else {
@@ -1912,6 +1947,59 @@ final Set<String> _unreadableStorageKeys = <String>{};
 
 @visibleForTesting
 Duration storageReadRetryDelay = const Duration(milliseconds: 200);
+
+/// How often an unreadable entry is looked at again during a session.
+@visibleForTesting
+Duration unreadableRetryInterval = const Duration(seconds: 30);
+
+DateTime? _lastUnreadableRetry;
+bool _retryingUnreadable = false;
+
+/// Looks at the saved data of this account again if it could not be read. The
+/// keystore is often back moments later, and then the session goes on as after
+/// a restart: the saved data is mounted and saving works again.
+Future<void> _retryUnreadableSavedState(
+  MiddlewareApi<AppState, AppStateBuilder, AppActions> api,
+) async {
+  final username = api.state.loginState.username;
+  final key = getStorageKey(username, wrapper.loginAddress);
+  final studyDataMissing = _studyDataScope == null;
+  if (_retryingUnreadable ||
+      (!_unreadableStorageKeys.contains(key) && !studyDataMissing)) {
+    return;
+  }
+  final now = DateTime.now();
+  final last = _lastUnreadableRetry;
+  if (last == null) {
+    // The first look comes one interval after the read that failed.
+    _lastUnreadableRetry = now;
+    return;
+  }
+  if (now.difference(last) < unreadableRetryInterval) return;
+  _lastUnreadableRetry = now;
+  _retryingUnreadable = true;
+  final session = _Session.capture();
+  try {
+    if (_unreadableStorageKeys.contains(key)) {
+      final state = await secureStorage.read(key: escapeKey(key));
+      session.ensureCurrent();
+      _unreadableStorageKeys.remove(key);
+      if (state != null) await _mountSavedState(api, session, state);
+    }
+    if (_studyDataScope == null) {
+      await _mountStudyData(api, session, username, quiet: true);
+    }
+    session.ensureCurrent();
+    await api.actions.dashboardActions.refresh();
+  } on StaleSessionException {
+    // The account was left in the meantime.
+  } catch (_) {
+    // Still unreadable. The next action looks again after the interval.
+    privacyLog('technical_operation');
+  } finally {
+    _retryingUnreadable = false;
+  }
+}
 
 /// Whether data deletion is active is decided when a write is requested, not
 /// when it finally runs behind the writes in front of it.

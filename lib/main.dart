@@ -509,6 +509,12 @@ class LifecycleObserver with WidgetsBindingObserver {
                 : state.name);
     if (state == AppLifecycleState.resumed) {
       _foreground = true;
+      // On every resume, also while an earlier one still runs: its prompt may
+      // have hidden the app in between, which paused all requests. Left paused,
+      // every request of this session would fail until a restart. It also
+      // resumes them when the user later retries the prompt using the overlay
+      // button, which does not emit a new lifecycle event.
+      resumeNetworkRequests();
       _resumeInFlight ??=
           _handleResumed().whenComplete(() => _resumeInFlight = null);
     }
@@ -524,9 +530,6 @@ class LifecycleObserver with WidgetsBindingObserver {
 
   Future<void> _handleResumed() async {
     final timer = Stopwatch()..start();
-    // Resume existing requests even when the user later retries the prompt
-    // using the overlay button (which does not emit a new lifecycle event).
-    resumeNetworkRequests();
     runtimeTrace('AppStartup', 'resume-auth-start');
     final authenticated =
         await biometricAppLockController.authenticateIfNeeded();
@@ -573,13 +576,22 @@ String tr(String key, {Map<String, String> args = const {}}) {
   return AppLocalizations.of(context).text(key, args: args);
 }
 
-/// Utility to show a global Snack Bar
-void showSnackBar(String message) {
+/// Utility to show a global Snack Bar, with a button if [onAction] is given.
+void showSnackBar(
+  String message, {
+  String? actionLabel,
+  VoidCallback? onAction,
+}) {
   final messengerState = scaffoldMessengerKey?.currentState;
   if (messengerState == null) {
     return;
   }
-  messengerState.showSnackBar(SnackBar(content: Text(message)));
+  messengerState.showSnackBar(SnackBar(
+    content: Text(message),
+    action: actionLabel == null || onAction == null
+        ? null
+        : SnackBarAction(label: actionLabel, onPressed: onAction),
+  ));
 }
 
 class _UnknownRoutePage extends StatelessWidget {

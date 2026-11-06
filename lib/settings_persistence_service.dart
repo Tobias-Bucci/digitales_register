@@ -23,11 +23,15 @@ import 'package:dr/privacy_log.dart';
 import 'package:dr/serializers.dart';
 import 'package:dr/study_data_service.dart';
 import 'package:dr/theme/app_palette.dart';
+import 'package:dr/util.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 const globalSettingsPreferenceKey = 'globalSettingsState';
 
 class SettingsPersistenceService {
+  /// Counts the writes, so that the retry of an older one gives way to a newer.
+  int _writes = 0;
+
   /// The settings shared by all accounts, without any learning notes.
   ///
   /// The shared blob used to hold the learning notes of every account that
@@ -98,11 +102,17 @@ class SettingsPersistenceService {
 
   Future<void> _write(SettingsState settings) async {
     final prefs = await SharedPreferences.getInstance();
+    final encoded = json.encode(serializers.serialize(settings));
+    final write = ++_writes;
     try {
-      if (!await prefs.setString(globalSettingsPreferenceKey,
-          json.encode(serializers.serialize(settings)))) {
-        throw StateError('Settings write failed');
-      }
+      await retryStorageWrite(
+        () async {
+          if (!await prefs.setString(globalSettingsPreferenceKey, encoded)) {
+            throw StateError('Settings write failed');
+          }
+        },
+        giveUp: () => write != _writes,
+      );
     } catch (e, stack) {
       diagnostics.report(e, stack, DiagnosticError.storage);
       rethrow;

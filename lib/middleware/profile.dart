@@ -279,9 +279,7 @@ Future<void> _updateCodiceFiscale(
 }
 
 void _showProfileRequestFailedMessage(String message) {
-  if (!wrapper.noInternet) {
-    showSnackBar(message);
-  }
+  showSnackBar(wrapper.noInternet ? tr('error.saveOffline') : message);
 }
 
 Future<SelectedProfilePicture?> _defaultPickProfilePicture() async {
