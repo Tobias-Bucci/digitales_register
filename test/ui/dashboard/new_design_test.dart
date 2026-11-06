@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:convert';
 import 'dart:math' as math;
 import 'dart:ui' as ui;
@@ -153,6 +154,49 @@ List<ColorScheme> _allSchemes() => [
           AppPalette.scheme(
               brightness: brightness, amoled: amoled, accent: accent),
     ];
+
+class _SheetCosts {
+  int states = 0, builds = 0, paints = 0;
+}
+
+class _CountingPainter extends CustomPainter {
+  const _CountingPainter(this.costs);
+
+  final _SheetCosts costs;
+
+  @override
+  void paint(Canvas canvas, Size size) => costs.paints++;
+
+  @override
+  bool shouldRepaint(_CountingPainter oldDelegate) => false;
+}
+
+/// Content of a sheet that keeps count of what happens to it.
+class _CountingContent extends StatefulWidget {
+  const _CountingContent(this.costs);
+
+  final _SheetCosts costs;
+
+  @override
+  State<_CountingContent> createState() => _CountingContentState();
+}
+
+class _CountingContentState extends State<_CountingContent> {
+  @override
+  void initState() {
+    super.initState();
+    widget.costs.states++;
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    widget.costs.builds++;
+    return CustomPaint(
+      painter: _CountingPainter(widget.costs),
+      child: const SizedBox(height: 300),
+    );
+  }
+}
 
 void main() {
   setUp(() async {
@@ -3275,6 +3319,138 @@ void main() {
       selected.value = AppDestination.grades;
       await tester.pumpAndSettle();
       expect(tester.widget<DashboardBackdrop>(wash).visible, isFalse);
+    });
+  });
+
+  group('a sheet in motion', () {
+    tearDown(GlassPerformance.instance.reset);
+
+    final sheetBlur = find.descendant(
+      of: find.byKey(const Key('glass-sheet')),
+      matching: find.byType(BackdropFilter),
+    );
+    bool blurs(WidgetTester tester) =>
+        tester.widget<BackdropFilter>(sheetBlur).enabled;
+    double tint(WidgetTester tester) => (tester
+            .widget<DecoratedBox>(find
+                .descendant(
+                  of: find.byKey(const Key('glass-sheet')),
+                  matching: find.byType(DecoratedBox),
+                )
+                .first)
+            .decoration as BoxDecoration)
+        .color!
+        .a;
+
+    /// Opens a sheet and counts what its content costs.
+    Future<_SheetCosts> open(
+      WidgetTester tester, {
+      Size size = const Size(400, 800),
+    }) async {
+      await _pumpDashboard(tester, _dashboardState(), size: size);
+      final costs = _SheetCosts();
+      unawaited(showGlassSheet<void>(
+        context: tester.element(find.byType(CompactDayWidget).first),
+        builder: (_) => _CountingContent(costs),
+      ));
+      await tester.pump();
+      return costs;
+    }
+
+    Future<void> frames(WidgetTester tester, int count) async {
+      for (var frame = 0; frame < count; frame++) {
+        await tester.pump(const Duration(milliseconds: 16));
+      }
+    }
+
+    for (final (name, size) in const [
+      ('sheet', Size(400, 800)),
+      ('panel', Size(1200, 800)),
+    ]) {
+      testWidgets('the content of a $name is built and painted only once',
+          (tester) async {
+        final costs = await open(tester, size: size);
+        await frames(tester, 40);
+
+        expect(costs.states, 1);
+        expect(costs.builds, 1);
+        expect(costs.paints, 1);
+
+        Navigator.of(tester.element(find.byType(GlassSheet))).pop();
+        await tester.pump();
+        await frames(tester, 30);
+        expect(find.byType(GlassSheet), findsNothing);
+        expect(costs.builds, 1);
+        expect(costs.paints, 1);
+      });
+
+      testWidgets('a $name only blurs once it has settled', (tester) async {
+        await open(tester, size: size);
+        await frames(tester, 6);
+        expect(blurs(tester), isFalse);
+        expect(tint(tester), 1);
+
+        await settleFor(tester, duration: const Duration(milliseconds: 600));
+        expect(blurs(tester), isTrue);
+        expect(tint(tester), moreOrLessEquals(DesignTokens.sheetOpacity));
+      });
+    }
+
+    testWidgets('it stops blurring as soon as it closes', (tester) async {
+      await open(tester);
+      await settleFor(tester, duration: const Duration(milliseconds: 600));
+
+      Navigator.of(tester.element(find.byType(GlassSheet))).pop();
+      await tester.pump();
+      await frames(tester, 1);
+
+      expect(blurs(tester), isFalse);
+    });
+
+    testWidgets('dragging pauses the blur, and it returns after a release',
+        (tester) async {
+      await open(tester);
+      await settleFor(tester, duration: const Duration(milliseconds: 600));
+
+      final gesture = await tester.startGesture(
+        tester.getCenter(find.byKey(const Key('glass-sheet'))),
+      );
+      await gesture.moveBy(const Offset(0, 30));
+      await tester.pump();
+      await gesture.moveBy(const Offset(0, 30));
+      await tester.pump();
+      expect(blurs(tester), isFalse);
+
+      await gesture.up();
+      await settleFor(tester, duration: const Duration(milliseconds: 800));
+      expect(blurs(tester), isTrue);
+      expect(tint(tester), moreOrLessEquals(DesignTokens.sheetOpacity));
+    });
+
+    testWidgets('with reduced motion the glass does not fade in',
+        (tester) async {
+      tester.platformDispatcher.accessibilityFeaturesTestValue =
+          const FakeAccessibilityFeatures(disableAnimations: true);
+      addTearDown(
+          tester.platformDispatcher.clearAccessibilityFeaturesTestValue);
+      await open(tester);
+      await settleFor(tester, duration: const Duration(milliseconds: 500));
+      expect(blurs(tester), isTrue);
+      await tester.pump();
+
+      expect(tint(tester), moreOrLessEquals(DesignTokens.sheetOpacity));
+      expect(tester.hasRunningAnimations, isFalse);
+    });
+
+    testWidgets('without blur it never asks for it', (tester) async {
+      GlassPerformance.instance.blurAllowed.value = false;
+      await open(tester);
+      await frames(tester, 6);
+      expect(sheetBlur, findsNothing);
+
+      await settleFor(tester, duration: const Duration(milliseconds: 600));
+      expect(sheetBlur, findsNothing);
+      expect(tint(tester), 1);
     });
   });
 
