@@ -25,7 +25,9 @@ import 'package:dr/grade_history.dart';
 import 'package:dr/grade_statistics.dart';
 import 'package:dr/i18n/app_localizations.dart';
 import 'package:dr/ui/animated_linear_progress_indicator.dart';
+import 'package:dr/ui/compact_day_list.dart' show compactRowHeight;
 import 'package:dr/ui/dashboard_app_header.dart';
+import 'package:dr/ui/dashboard_columns.dart';
 import 'package:dr/ui/glass_segmented_control.dart';
 import 'package:dr/ui/glass_surface.dart';
 import 'package:dr/ui/grades_overview.dart';
@@ -174,57 +176,36 @@ class GradesPageNew extends StatelessWidget {
   Widget build(BuildContext context) {
     final page = vm.page;
     final width = MediaQuery.sizeOf(context).width;
+    final columns = DashboardColumns.forWindow(width);
+    final wide = width >= tabletLayoutBreakpoint;
     return Scaffold(
       extendBodyBehindAppBar: true,
       appBar: GradesPageHeader(
         semester: page.showSemester,
         onSemesterChanged: callbacks.changeSemester,
         onShowHistory: () => _showHistory(context),
-        floatingMaxWidth: width < tabletLayoutBreakpoint
+        floatingMaxWidth: !wide
             ? null
-            : DesignTokens.contentMaxWidth,
+            : columns == null
+                ? DesignTokens.contentMaxWidth
+                : DashboardColumns.maxWidth,
       ),
       body: DashboardBackdrop(
         child: Builder(
           builder: (context) {
-            final padding = MediaQuery.paddingOf(context);
+            final top = MediaQuery.paddingOf(context).top;
             return Stack(
               children: [
-                ReadableContent(
-                  maxWidth: DesignTokens.contentMaxWidth,
-                  child: ListView(
-                    padding: EdgeInsets.only(
-                      top: padding.top + 8,
-                      bottom: padding.bottom + 8,
-                    ),
-                    children: [
-                      Padding(
-                        padding: const EdgeInsets.symmetric(
-                          horizontal: DesignTokens.gutter,
-                        ),
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.stretch,
-                          children: [
-                            _Summary(vm: vm, callbacks: callbacks),
-                            GradesSubjectList(
-                              vm: vm.list,
-                              colorGrades: vm.colorGrades,
-                              viewSubjectDetail: callbacks.viewSubjectDetail,
-                              onOpenDisplayOptions: () =>
-                                  showGradesDisplayPanel(
-                                context,
-                                onShowAverageSettings:
-                                    callbacks.showGradesSettings,
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
-                    ],
+                // Above this, slim rows would no longer be slim, and no system
+                // setting of the phones in use asks for more.
+                MediaQuery.withClampedTextScaling(
+                  maxScaleFactor: 2,
+                  child: Builder(
+                    builder: (context) => _body(context, columns, wide: wide),
                   ),
                 ),
                 Padding(
-                  padding: EdgeInsets.only(top: padding.top),
+                  padding: EdgeInsets.only(top: top),
                   child: AnimatedLinearProgressIndicator(show: page.loading),
                 ),
               ],
@@ -234,14 +215,349 @@ class GradesPageNew extends StatelessWidget {
       ),
     );
   }
+
+  Widget _body(
+    BuildContext context,
+    DashboardColumns? columns, {
+    required bool wide,
+  }) {
+    final page = vm.page;
+    if (!page.hasData && page.noInternet) {
+      return GradesStateCard(
+        key: const Key('grades-offline'),
+        icon: Icons.wifi_off_rounded,
+        title: context.t('offline.title'),
+        body: context.t('offline.body'),
+        actionLabel: context.t('common.retry'),
+        onAction: callbacks.retry,
+      );
+    }
+    if (!page.hasData && !page.loading) {
+      return GradesStateCard(
+        key: const Key('grades-empty'),
+        icon: Icons.auto_graph_rounded,
+        title: context.t('grades.empty.title'),
+        body: context.t('grades.empty.body'),
+      );
+    }
+    final Widget side, main;
+    if (page.hasData) {
+      side = Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          if (page.noInternet)
+            _OfflineHint(
+              message: page.lastFetchedMessage ?? context.t('offline.title'),
+              onRetry: callbacks.retry,
+            ),
+          _Summary(
+            vm: vm,
+            callbacks: callbacks,
+            chartHeight: wide ? 170 : 128,
+          ),
+        ],
+      );
+      main = GradesSubjectList(
+        vm: vm.list,
+        colorGrades: vm.colorGrades,
+        viewSubjectDetail: callbacks.viewSubjectDetail,
+        onOpenDisplayOptions: () => showGradesDisplayPanel(
+          context,
+          onShowAverageSettings: callbacks.showGradesSettings,
+        ),
+      );
+    } else {
+      side = const _SummarySkeleton();
+      main = const _SubjectsSkeleton();
+    }
+    const gutter = EdgeInsets.fromLTRB(
+      DesignTokens.gutter,
+      8,
+      DesignTokens.gutter,
+      DesignTokens.gutter,
+    );
+    if (columns != null) {
+      return DashboardColumnsView(
+        columns: columns,
+        side: Padding(padding: gutter, child: side),
+        main: Builder(
+          builder: (context) => ListView(
+            key: const Key('grades-list'),
+            padding: columns.listPadding(MediaQuery.paddingOf(context)),
+            children: [Padding(padding: gutter, child: main)],
+          ),
+        ),
+      );
+    }
+    final padding = MediaQuery.paddingOf(context);
+    return ReadableContent(
+      maxWidth: DesignTokens.contentMaxWidth,
+      child: ListView(
+        key: const Key('grades-list'),
+        padding: EdgeInsets.only(top: padding.top, bottom: padding.bottom),
+        children: [
+          Padding(
+            padding: gutter,
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [side, main],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+/// A message instead of the grades, in the middle of the page.
+class GradesStateCard extends StatelessWidget {
+  const GradesStateCard({
+    super.key,
+    required this.icon,
+    required this.title,
+    required this.body,
+    this.actionLabel,
+    this.onAction,
+  });
+
+  final IconData icon;
+  final String title, body;
+  final String? actionLabel;
+  final VoidCallback? onAction;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final scheme = theme.colorScheme;
+    final padding = MediaQuery.paddingOf(context);
+    final actionLabel = this.actionLabel;
+    return Center(
+      child: SingleChildScrollView(
+        padding: EdgeInsets.fromLTRB(
+          DesignTokens.gutter,
+          padding.top + 8,
+          DesignTokens.gutter,
+          padding.bottom + 8,
+        ),
+        child: ConstrainedBox(
+          constraints: const BoxConstraints(maxWidth: 420),
+          child: GlassCard(
+            padding: const EdgeInsets.fromLTRB(20, 24, 20, 20),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                DecoratedBox(
+                  decoration: ShapeDecoration(
+                    color: scheme.primaryContainer,
+                    shape: const CircleBorder(),
+                  ),
+                  child: SizedBox.square(
+                    dimension: 56,
+                    child: Icon(icon, color: scheme.onPrimaryContainer),
+                  ),
+                ),
+                const SizedBox(height: 14),
+                Semantics(
+                  header: true,
+                  child: Text(
+                    title,
+                    textAlign: TextAlign.center,
+                    style: theme.textTheme.titleMedium?.copyWith(
+                      fontWeight: FontWeight.w700,
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 6),
+                Text(
+                  body,
+                  textAlign: TextAlign.center,
+                  style: theme.textTheme.bodyMedium?.copyWith(
+                    color: scheme.onSurfaceVariant,
+                  ),
+                ),
+                if (actionLabel != null) ...[
+                  const SizedBox(height: 16),
+                  FilledButton.icon(
+                    onPressed: onAction,
+                    style: glassControlStyle(scheme),
+                    icon: const Icon(Icons.refresh_rounded, size: 20),
+                    label: Text(actionLabel),
+                  ),
+                ],
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+/// That these grades are from an earlier visit, and how to try again.
+class _OfflineHint extends StatelessWidget {
+  const _OfflineHint({required this.message, required this.onRetry});
+
+  final String message;
+  final VoidCallback onRetry;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final scheme = theme.colorScheme;
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 8),
+      child: GlassCard(
+        key: const Key('grades-last-fetched'),
+        padding: const EdgeInsets.only(left: 12, right: 2),
+        child: Row(
+          children: [
+            Icon(
+              Icons.wifi_off_rounded,
+              size: 18,
+              color: scheme.onSurfaceVariant,
+            ),
+            const SizedBox(width: 8),
+            Expanded(
+              child: Semantics(
+                liveRegion: true,
+                child: Text(
+                  message,
+                  style: theme.textTheme.bodySmall?.copyWith(
+                    color: scheme.onSurfaceVariant,
+                  ),
+                ),
+              ),
+            ),
+            IconButton(
+              tooltip: context.t('common.retry'),
+              onPressed: onRetry,
+              visualDensity: VisualDensity.compact,
+              icon: const Icon(Icons.refresh_rounded, size: 20),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+/// A quiet bar in place of text that is on its way. It stands still, the bar
+/// below the header shows that something is happening.
+class _SkeletonBar extends StatelessWidget {
+  const _SkeletonBar({required this.width, required this.height});
+
+  final double width, height;
+
+  @override
+  Widget build(BuildContext context) => Container(
+        width: width,
+        height: height,
+        decoration: BoxDecoration(
+          color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.1),
+          borderRadius: BorderRadius.circular(height / 2),
+        ),
+      );
+}
+
+class _SummarySkeleton extends StatelessWidget {
+  const _SummarySkeleton();
+
+  @override
+  Widget build(BuildContext context) => Semantics(
+        key: const Key('grades-loading'),
+        label: context.t('grades.loading'),
+        liveRegion: true,
+        excludeSemantics: true,
+        child: const Padding(
+          padding: EdgeInsets.only(bottom: 8),
+          child: GlassCard(
+            padding: EdgeInsets.fromLTRB(14, 12, 14, 12),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                _SkeletonBar(width: 72, height: 12),
+                SizedBox(height: 12),
+                Row(
+                  children: [
+                    Expanded(
+                      child: Align(
+                        alignment: AlignmentDirectional.centerStart,
+                        child: _SkeletonBar(width: 76, height: 36),
+                      ),
+                    ),
+                    Expanded(
+                      child: Align(
+                        alignment: AlignmentDirectional.centerStart,
+                        child: _SkeletonBar(width: 76, height: 36),
+                      ),
+                    ),
+                  ],
+                ),
+                SizedBox(height: 12),
+                _SkeletonBar(width: double.infinity, height: 28),
+              ],
+            ),
+          ),
+        ),
+      );
+}
+
+class _SubjectsSkeleton extends StatelessWidget {
+  const _SubjectsSkeleton();
+
+  static const _rows = 7;
+
+  @override
+  Widget build(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
+    return ExcludeSemantics(
+      child: Column(
+        children: [
+          for (var row = 0; row < _rows; row++)
+            Padding(
+              padding: const EdgeInsets.only(bottom: 4),
+              child: DecoratedBox(
+                decoration: ShapeDecoration(
+                  color: scheme.surfaceContainerLowest,
+                  shape: StadiumBorder(
+                    side: BorderSide(color: scheme.outlineVariant),
+                  ),
+                ),
+                child: SizedBox(
+                  height: compactRowHeight,
+                  child: Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 8),
+                    child: Row(
+                      children: [
+                        const _SkeletonBar(width: 28, height: 28),
+                        const SizedBox(width: 8),
+                        _SkeletonBar(width: 88.0 + row % 3 * 24, height: 12),
+                        const Spacer(),
+                        const _SkeletonBar(width: 48, height: 22),
+                        const SizedBox(width: 26),
+                      ],
+                    ),
+                  ),
+                ),
+              ),
+            ),
+        ],
+      ),
+    );
+  }
 }
 
 /// The cards above the subjects, or beside them in a wide window.
 class _Summary extends StatelessWidget {
-  const _Summary({required this.vm, required this.callbacks});
+  const _Summary({
+    required this.vm,
+    required this.callbacks,
+    required this.chartHeight,
+  });
 
   final NewGradesViewModel vm;
   final GradesPageCallbacks callbacks;
+  final double chartHeight;
 
   @override
   Widget build(BuildContext context) {
@@ -271,7 +587,10 @@ class _Summary extends StatelessWidget {
         if (page.showGradesDiagram)
           Padding(
             padding: const EdgeInsets.only(bottom: 8),
-            child: GradesChartCard(onOpen: callbacks.showGradesChart),
+            child: GradesChartCard(
+              onOpen: callbacks.showGradesChart,
+              chartHeight: chartHeight,
+            ),
           ),
         // Demo mode moves the clock, and with it what counts for the statistics.
         AnimatedBuilder(

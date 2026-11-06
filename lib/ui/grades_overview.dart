@@ -131,16 +131,30 @@ class _Figure extends StatelessWidget {
           constraints: const BoxConstraints(minHeight: 40),
           child: Row(
             children: [
-              Semantics(
-                label: format.spoken(text, hundredths),
-                excludeSemantics: true,
-                child: GradeBadge(
-                  text: text,
-                  hundredths: hundredths,
-                  colorized: colorGrades,
-                  style: theme.textTheme.headlineSmall?.copyWith(
-                    fontWeight: FontWeight.w700,
-                    height: 1.15,
+              Flexible(
+                child: Semantics(
+                  label: format.spoken(text, hundredths),
+                  excludeSemantics: true,
+                  // With very large text, the number gets smaller instead of
+                  // breaking the card.
+                  child: FittedBox(
+                    fit: BoxFit.scaleDown,
+                    alignment: AlignmentDirectional.centerStart,
+                    child: AnimatedSwitcher(
+                      duration: MediaQuery.disableAnimationsOf(context)
+                          ? Duration.zero
+                          : const Duration(milliseconds: 200),
+                      child: GradeBadge(
+                        key: ValueKey(text),
+                        text: text,
+                        hundredths: hundredths,
+                        colorized: colorGrades,
+                        style: theme.textTheme.headlineSmall?.copyWith(
+                          fontWeight: FontWeight.w700,
+                          height: 1.15,
+                        ),
+                      ),
+                    ),
                   ),
                 ),
               ),
