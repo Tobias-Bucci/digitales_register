@@ -429,7 +429,7 @@ class _LensTrackState extends State<_LensTrack>
                   top: horizontal ? side : start,
                   width: horizontal ? along : across,
                   height: horizontal ? across : along,
-                  child: const _GlassLens(),
+                  child: const GlassLens(),
                 ),
                 Flex(
                   direction: widget.axis,
@@ -452,8 +452,9 @@ class _LensTrackState extends State<_LensTrack>
   }
 }
 
-class _GlassLens extends StatelessWidget {
-  const _GlassLens();
+/// The lens of the selected place, on the bar and on other controls of glass.
+class GlassLens extends StatelessWidget {
+  const GlassLens({super.key});
 
   @override
   Widget build(BuildContext context) {
