@@ -1099,6 +1099,7 @@
   "dashboard.dayHeading.relative": "{relative}, {weekday}, {date}",
   "dashboard.progress": "{done}/{total} done",
   "dashboard.addEntry": "New entry",
+  "dashboard.scrollToTop": "Back to top",
   "dashboard.editEntry": "Edit",
   "dashboard.entryDone": "done",
   "dashboard.entryOpen": "open",

@@ -1099,6 +1099,7 @@
   "dashboard.dayHeading.relative": "{relative}, {weekday} {date}",
   "dashboard.progress": "{done}/{total} fać",
   "dashboard.addEntry": "Nöia anotaziun",
+  "dashboard.scrollToTop": "Zoruch sö",
   "dashboard.editEntry": "Mudè",
   "dashboard.entryDone": "fat",
   "dashboard.entryOpen": "da fà",

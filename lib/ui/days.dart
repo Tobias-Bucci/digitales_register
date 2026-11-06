@@ -589,12 +589,22 @@ class _DaysWidgetState extends State<DaysWidget> {
     );
   }
 
-  PreferredSizeWidget _modernAppBar() {
+  void _scrollToTop() {
+    controller.animateTo(
+      0,
+      duration: const Duration(milliseconds: 500),
+      curve: Curves.decelerate,
+    );
+  }
+
+  PreferredSizeWidget _modernAppBar({required bool hasList}) {
     final width = MediaQuery.sizeOf(context).width;
     return DashboardAppHeader(
       schoolName: widget.vm.schoolName,
       noInternet: widget.vm.noInternet,
       onRetry: widget.refreshNoInternet,
+      showScrollUp: _showScrollUp,
+      onScrollUp: hasList ? _scrollToTop : null,
       floatingMaxWidth: width < tabletLayoutBreakpoint
           ? null
           : DashboardColumns.forWindow(width) == null
@@ -810,30 +820,26 @@ class _DaysWidgetState extends State<DaysWidget> {
         crossAxisAlignment: CrossAxisAlignment.end,
         mainAxisAlignment: MainAxisAlignment.end,
         children: <Widget>[
-          ValueListenableBuilder(
-            valueListenable: _showScrollUp,
-            builder: (context, bool value, child) {
-              if (value) {
-                return child!;
-              } else {
-                return const SizedBox();
-              }
-            },
-            child: FloatingActionButton(
-              backgroundColor: Theme.of(context).colorScheme.surface,
-              foregroundColor: Theme.of(context).colorScheme.onSurface,
-              heroTag: null,
-              onPressed: () {
-                controller.animateTo(
-                  0,
-                  duration: const Duration(milliseconds: 500),
-                  curve: Curves.decelerate,
-                );
+          // The new design has this button in its header.
+          if (!modern)
+            ValueListenableBuilder(
+              valueListenable: _showScrollUp,
+              builder: (context, bool value, child) {
+                if (value) {
+                  return child!;
+                } else {
+                  return const SizedBox();
+                }
               },
-              mini: true,
-              child: const Icon(Icons.arrow_upward_rounded),
+              child: FloatingActionButton(
+                backgroundColor: Theme.of(context).colorScheme.surface,
+                foregroundColor: Theme.of(context).colorScheme.onSurface,
+                heroTag: null,
+                onPressed: _scrollToTop,
+                mini: true,
+                child: const Icon(Icons.arrow_upward_rounded),
+              ),
             ),
-          ),
           if (_targets.isNotEmpty || _focused.isNotEmpty)
             FloatingActionButton(
               backgroundColor: Theme.of(context).colorScheme.errorContainer,
@@ -861,7 +867,7 @@ class _DaysWidgetState extends State<DaysWidget> {
         ],
       ),
       homeAppBar: modern
-          ? _modernAppBar()
+          ? _modernAppBar(hasList: !noEntries)
           : ResponsiveAppBar(
               leading: Builder(
                 builder: (context) => IconButton(
