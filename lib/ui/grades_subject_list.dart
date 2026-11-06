@@ -45,6 +45,9 @@ const _subjectShape = RoundedRectangleBorder(
 const _gradeRowHeight = 38.0;
 const _gradeRowShape = StadiumBorder();
 
+/// Up to this text size, all of a grade fits on one line of a phone.
+const _oneLineTextScale = 1.3;
+
 Duration _motion(BuildContext context, int milliseconds) =>
     MediaQuery.disableAnimationsOf(context)
         ? Duration.zero
@@ -640,6 +643,7 @@ class _SubjectDetails extends StatelessWidget {
           grade: entry,
           colorGrades: colorGrades,
           competenceStarsScale: competenceStarsScale,
+          showType: !sortByType,
         )
       : ObservationEntryRow(observation: entry as Observation);
 
@@ -794,6 +798,7 @@ class _EntryRow extends StatelessWidget {
     required this.child,
     this.fill,
     this.trailing,
+    this.weight,
   });
 
   final String semanticsLabel;
@@ -803,11 +808,21 @@ class _EntryRow extends StatelessWidget {
   final Widget child;
   final Widget? trailing;
 
+  /// Null for what has no weight.
+  final String? weight;
+
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final scheme = theme.colorScheme;
     final format = GradesFormat.of(context);
+    final date = format.shortDate(this.date);
+    final weight = this.weight;
+    final small = theme.textTheme.labelSmall?.copyWith(
+      color: scheme.onSurfaceVariant,
+    );
+    // Large text has no room for all of it on one line.
+    final large = MediaQuery.textScalerOf(context).scale(1) > _oneLineTextScale;
     return Padding(
       padding: const EdgeInsets.only(bottom: 3),
       child: GlassFocusRing(
@@ -833,19 +848,35 @@ class _EntryRow extends StatelessWidget {
                   padding: const EdgeInsets.fromLTRB(12, 3, 6, 3),
                   child: Row(
                     children: [
-                      ConstrainedBox(
-                        constraints: BoxConstraints(
-                          minWidth: MediaQuery.textScalerOf(context).scale(40),
-                        ),
-                        child: Text(
-                          format.shortDate(date),
-                          style: theme.textTheme.labelSmall?.copyWith(
-                            color: scheme.onSurfaceVariant,
+                      if (!large) ...[
+                        ConstrainedBox(
+                          constraints: BoxConstraints(
+                            minWidth:
+                                MediaQuery.textScalerOf(context).scale(40),
                           ),
+                          child: Text(date, style: small),
                         ),
+                        const SizedBox(width: 6),
+                      ],
+                      Expanded(
+                        child: large
+                            ? Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  child,
+                                  Text(
+                                    [date, if (weight != null) weight]
+                                        .join(' · '),
+                                    style: small,
+                                  ),
+                                ],
+                              )
+                            : child,
                       ),
-                      const SizedBox(width: 6),
-                      Expanded(child: child),
+                      if (!large && weight != null) ...[
+                        const SizedBox(width: 6),
+                        Text(weight, style: small),
+                      ],
                       if (trailing != null) trailing!,
                     ],
                   ),
@@ -867,11 +898,15 @@ class GradeEntryRow extends StatelessWidget {
     required this.grade,
     required this.colorGrades,
     required this.competenceStarsScale,
+    this.showType = true,
   });
 
   final GradeDetail grade;
   final bool colorGrades;
   final int? competenceStarsScale;
+
+  /// Off where the heading above the rows already says it.
+  final bool showType;
 
   @override
   Widget build(BuildContext context) {
@@ -880,6 +915,7 @@ class GradeEntryRow extends StatelessWidget {
     final scheme = theme.colorScheme;
     final format = GradesFormat.of(context);
     final type = l10n.translateSchoolTerm(grade.type);
+    final showType = this.showType || grade.name.isEmpty;
     final value = format.grade(grade.gradeFormatted);
     final weight = format.weight(grade.weightPercentage);
     final cancelled = grade.cancelled;
@@ -907,42 +943,36 @@ class GradeEntryRow extends StatelessWidget {
             colorGrades: colorGrades,
             competenceStarsScale: competenceStarsScale,
           ),
-          trailing: Row(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              const SizedBox(width: 6),
-              Text(
-                weight,
-                style: theme.textTheme.labelSmall?.copyWith(
-                  color: scheme.onSurfaceVariant,
-                ),
+          weight: weight,
+          trailing: Padding(
+            padding: const EdgeInsets.only(left: 6),
+            child: GradeBadge(
+              text: value,
+              hundredths: grade.grade,
+              colorized: colorGrades,
+              cancelled: cancelled,
+              style: theme.textTheme.labelMedium?.copyWith(
+                fontWeight: FontWeight.w600,
               ),
-              const SizedBox(width: 6),
-              GradeBadge(
-                text: value,
-                hundredths: grade.grade,
-                colorized: colorGrades,
-                cancelled: cancelled,
-                style: theme.textTheme.labelMedium?.copyWith(
-                  fontWeight: FontWeight.w600,
-                ),
-              ),
-            ],
+            ),
           ),
           child: Text.rich(
             TextSpan(
               children: [
-                TextSpan(
-                  text: type,
-                  style: TextStyle(
-                    color: foreground,
-                    fontWeight: FontWeight.w600,
+                if (showType)
+                  TextSpan(
+                    text: type,
+                    style: TextStyle(
+                      color: foreground,
+                      fontWeight: FontWeight.w600,
+                    ),
                   ),
-                ),
                 if (grade.name.isNotEmpty)
                   TextSpan(
-                    text: '  ${grade.name}',
-                    style: TextStyle(color: scheme.onSurfaceVariant),
+                    text: showType ? '  ${grade.name}' : grade.name,
+                    style: TextStyle(
+                      color: showType ? scheme.onSurfaceVariant : foreground,
+                    ),
                   ),
               ],
             ),

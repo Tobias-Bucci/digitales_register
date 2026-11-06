@@ -71,6 +71,9 @@ class GradesPageHeader extends StatelessWidget implements PreferredSizeWidget {
 
   static const double height = 56;
 
+  /// What the semester control leaves to the title, for very large text.
+  static const double _minTitleWidth = 56;
+
   final Semester semester;
   final ValueChanged<Semester> onSemesterChanged;
   final VoidCallback onShowHistory;
@@ -102,49 +105,59 @@ class GradesPageHeader extends StatelessWidget implements PreferredSizeWidget {
             left: floatingMaxWidth == null ? 16 : 20,
             right: floatingMaxWidth == null ? 4 : 8,
           ),
-          child: Row(
-            children: [
-              Expanded(
-                child: Semantics(
-                  header: true,
-                  child: Align(
-                    alignment: AlignmentDirectional.centerStart,
-                    // A long word gets smaller, it is the only word there is.
-                    child: FittedBox(
-                      fit: BoxFit.scaleDown,
-                      child: Text(
-                        l10n.text('sidebar.grades'),
-                        key: const Key('grades-header-title'),
-                        maxLines: 1,
-                        style: theme.textTheme.titleLarge?.copyWith(
-                          fontWeight: FontWeight.w700,
+          child: LayoutBuilder(
+            builder: (context, constraints) => Row(
+              children: [
+                Expanded(
+                  child: Semantics(
+                    header: true,
+                    child: Align(
+                      alignment: AlignmentDirectional.centerStart,
+                      // A long word gets smaller, it is the only word there is.
+                      child: FittedBox(
+                        fit: BoxFit.scaleDown,
+                        child: Text(
+                          l10n.text('sidebar.grades'),
+                          key: const Key('grades-header-title'),
+                          maxLines: 1,
+                          style: theme.textTheme.titleLarge?.copyWith(
+                            fontWeight: FontWeight.w700,
+                          ),
                         ),
                       ),
                     ),
                   ),
                 ),
-              ),
-              const SizedBox(width: 8),
-              GlassSegmentedControl<Semester>(
-                key: const Key('grades-semester'),
-                selected: semester,
-                onChanged: onSemesterChanged,
-                segments: [
-                  for (final value in Semester.values)
-                    GlassSegment(
-                      value: value,
-                      label: _shortLabel(l10n, value),
-                      fullLabel: l10n.semesterLabel(value),
+                const SizedBox(width: 8),
+                ConstrainedBox(
+                  constraints: BoxConstraints(
+                    maxWidth: constraints.maxWidth - _minTitleWidth - 56,
+                  ),
+                  child: FittedBox(
+                    fit: BoxFit.scaleDown,
+                    child: GlassSegmentedControl<Semester>(
+                      key: const Key('grades-semester'),
+                      selected: semester,
+                      onChanged: onSemesterChanged,
+                      segments: [
+                        for (final value in Semester.values)
+                          GlassSegment(
+                            value: value,
+                            label: _shortLabel(l10n, value),
+                            fullLabel: l10n.semesterLabel(value),
+                          ),
+                      ],
                     ),
-                ],
-              ),
-              HeaderDiscButton(
-                key: const Key('grades-history'),
-                tooltip: l10n.text('grades.history.title'),
-                icon: Icons.history_rounded,
-                onPressed: onShowHistory,
-              ),
-            ],
+                  ),
+                ),
+                HeaderDiscButton(
+                  key: const Key('grades-history'),
+                  tooltip: l10n.text('grades.history.title'),
+                  icon: Icons.history_rounded,
+                  onPressed: onShowHistory,
+                ),
+              ],
+            ),
           ),
         ),
       ),

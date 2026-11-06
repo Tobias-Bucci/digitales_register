@@ -224,7 +224,54 @@ Handy                                 Breites Fenster ab 1080 px
 ```
 
 Die Wahl trifft `GradesPageContainer` mit `ResponsiveNavigationScope.isActive`, wie
-die anderen geteilten Seiten. Einen zweiten Schalter gibt es nicht.
+die anderen geteilten Seiten. Einen zweiten Schalter gibt es nicht. Die Navigation
+verschwindet beim Wechsel aus dem Baum, die Seite baut sich dadurch sofort als die
+andere auf, ohne Neustart.
+
+### Umsetzung
+
+| Datei | Inhalt |
+| --- | --- |
+| `grades_page_new_container.dart` | Dieselben View-Models wie Legacy, dazu die Farbregel. |
+| `grades_page_new.dart` | Kopfzeile, Aufteilung, Zustände. |
+| `grades_overview.dart` | Durchschnitte, Prognose, Diagramm, Kacheln. |
+| `grades_subject_list.dart` | Fächer und Notenzeilen. |
+| `grades_panels.dart` | Alles, was die Seite als Sheet oder Panel öffnet. |
+| `grades_format.dart` | Zahlen und Daten nach Sprache, gesprochene Kategorie. |
+| `glass_segmented_control.dart` | Der Semesterschalter mit der Linse der Navigation. |
+
+Das Glas ist das des Dashboards: `GlassHeaderShell` ist die Hülle von
+`DashboardAppHeader`, `GlassCard` die Box oben auf dem Dashboard, die Linse ist
+`GlassLens`. Blur hat nur die Kopfzeile; alles in der Liste hat bloß Licht. Fächer
+und Notenzeilen stehen auf deckenden Farben. Jedes Fach liegt auf einer eigenen
+Ebene: Öffnet sich eines, rücken die darunter nur, ohne neu gemalt zu werden. Was
+zu ist, wird nicht gebaut. Die Fächer stehen trotzdem in einer `Column`, nicht in
+einer Lazy-Liste, weil der Sprung vom Banner das Ziel sonst nicht fände.
+
+Bewusste Abweichungen von Legacy:
+
+- Farben folgen `gradeColorsTurnedOff` wie die Banner: Noten sind farbig, bis der
+  Schalter ausgeschaltet wird. Der Schalter im Anzeige-Panel zeigt deshalb diesen
+  Wert. Das Diagramm liest weiter `colorGrades`, seine Punkte bleiben also, wie sie
+  in Legacy sind.
+- Die drei Schalter und „Durchschnitt anpassen“ (früher das Zahnrad) liegen im Panel
+  „Anzeige“ hinter dem Knopf neben „Fächer“.
+- Null Absenzen zeigen kein Abzeichen mehr. In einer Liste, in der fast alle Fächer
+  null haben, ist das nur Rauschen.
+- Jahr, Beschreibung, Eintragung und Löschgrund einer Note stehen erst im Panel einer
+  Note. Die Zeile bleibt so einzeilig. Kompetenzen und Beobachtungen bleiben im Fach.
+- Nach Art sortiert wiederholt die Zeile die Art nicht, sie steht in der Überschrift.
+- Zahlen und Daten folgen der Sprache, also 7.64 auf Englisch. Der Zustand speichert
+  weiterhin die deutsche Schreibweise, und Legacy zeigt sie.
+
+Über 130 % Textgröße rutschen Datum und Gewichtung unter den Titel der Zeile, sonst
+reicht ein Handy mit 320 px nicht. Die Seite begrenzt die Textgröße bei 200 %.
+
+Unverändert und für beide Designs gleich bleiben die Vollbildseite des Diagramms
+und die beiden Rechner. Sie liegen auf dem Root-Navigator, also außerhalb von
+`NewDesignTheme`.
+
+Die Texte `grades.*` in `lld.json` sind neu und noch ungeprüft, siehe Beta-Rollout.
 
 ## Beta-Rollout
 
@@ -232,7 +279,7 @@ Die Veröffentlichung erfolgt manuell und zuerst im Beta-Kanal.
 
 - [ ] Beta-Build verteilen und Rückmeldung des Testers einholen
 - [ ] Offene Punkte aus „Herkunft der Banner-Daten“ mit einem echten Konto prüfen
-- [ ] Ladinische Texte (`lld.json`) von einer Muttersprachlerin oder einem
+- [ ] Ladinische Texte (`lld.json`, auch die neuen `grades.*`) von einer Muttersprachlerin oder einem
       Muttersprachler prüfen lassen
 - [ ] Nach der Freigabe `screenshots/01-dashboard.png` bis
       `05-pruefungskalender.png` für Store und Flathub neu aufnehmen
