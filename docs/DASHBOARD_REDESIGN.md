@@ -82,10 +82,18 @@ Tests spiegeln gerenderte Flächen pixelgenau.
 
 Die Bindung links am Notizblock-Kästchen gehört zum App-Logo und ist kein Licht.
 
-Die Linse der Navigationsleiste gleitet auf einer Feder zum gewählten Eintrag,
-streckt sich dabei mit ihrer Geschwindigkeit, und Symbole unter ihr wachsen leicht.
-Das ersetzt Brechung, die einen zweiten Backdrop bräuchte. Bei „Bewegung
-reduzieren“ springt sie.
+Die Linse der Navigationsleiste gleitet auf einer kritisch gedämpften Feder zum
+gewählten Eintrag, ohne über ihn hinauszuschwingen, und streckt sich dabei nur
+leicht. Sie ist die einzige Antwort auf einen Tipp: Einträge sind deshalb keine
+`IconButton`, haben weder Ink noch einen Pressed-Zustand, und Symbole bleiben
+gleich groß. Maus und Tastatur sehen trotzdem, wo sie sind (`navigationHoverTint`,
+Ring von `GlassFocusRingPainter`), und die Hand bleibt. Bei „Bewegung reduzieren“
+springt die Linse.
+
+`GlassLensPainter` malt die Linse: eine durchscheinende Füllung, ein Schein von
+genau oben, das Licht, das ihr unterer Rand zurückwirft, und ein Schatten, der nur
+außerhalb fällt, weil er sonst durch die Füllung schmutzig wirkt. Das ersetzt
+Brechung, die einen zweiten Backdrop bräuchte.
 
 Die Deckkraft ist so gewählt, dass Text über dem ungünstigsten Hintergrund AA
 erreicht; die Tests rechnen das für jede Akzentfarbe nach. Auf hellen Sheets

@@ -127,7 +127,16 @@ Color navigationBarTint(ColorScheme scheme) => Color.alphaBlend(
 
 /// The fill of the lens over the selected item.
 Color navigationLensFill(ColorScheme scheme) =>
-    scheme.primaryContainer.withValues(alpha: 0.86);
+    scheme.primaryContainer.withValues(alpha: 0.74);
+
+/// The ring of an item that has the keyboard focus. It has to stand out on the
+/// bar and on the lens alike, which the primary colour does not always do.
+Color navigationFocusRing(ColorScheme scheme) => scheme.onSurface;
+
+/// What the mouse leaves on an item, on the bar or on the lens.
+Color navigationHoverTint(ColorScheme scheme, {required bool onLens}) =>
+    (onLens ? scheme.onPrimaryContainer : scheme.onSurface)
+        .withValues(alpha: 0.1);
 
 /// How far the bar reaches above the bottom safe area, including the gap to the
 /// content above it.
@@ -267,9 +276,10 @@ class FloatingNavigationBar extends StatelessWidget {
   }
 }
 
-/// The items of the bar with a lens that marks the selected one. The lens slides
-/// over on a spring, stretches with its speed, and what it passes grows a little
-/// as under real glass. With reduced motion it simply is at the new place.
+/// The items of the bar with a lens that marks the selected one. The lens glides
+/// over on a spring and stretches a little with its speed. It is the only thing
+/// that moves: an item does not react to a press in any other way. With reduced
+/// motion the lens simply is at the new place.
 class _LensTrack extends StatefulWidget {
   const _LensTrack({
     required this.axis,
@@ -291,9 +301,11 @@ class _LensTrack extends StatefulWidget {
 
 class _LensTrackState extends State<_LensTrack>
     with SingleTickerProviderStateMixin {
-  // Slightly underdamped, so that the lens settles with a small overshoot.
-  static const _spring =
-      SpringDescription(mass: 1, stiffness: 300, damping: 26);
+  // Critically damped: the lens arrives without swinging past its place.
+  static final _spring = SpringDescription.withDampingRatio(
+    mass: 1,
+    stiffness: 260,
+  );
 
   /// The speed, in items per second, at which the lens is stretched the most.
   static const _fullStretchSpeed = 14.0;
@@ -345,8 +357,8 @@ class _LensTrackState extends State<_LensTrack>
             final position = _position.value;
             final speed = _position.isAnimating ? _position.velocity.abs() : 0;
             final stretch = (speed / _fullStretchSpeed).clamp(0.0, 1.0);
-            final along = lensLength * (1 + 0.32 * stretch);
-            final across = _lensHeight * (1 - 0.1 * stretch);
+            final along = lensLength * (1 + 0.16 * stretch);
+            final across = _lensHeight * (1 - 0.04 * stretch);
             final center = gap + _barItemExtent / 2 + position * pitch;
             final start = (center - along / 2).clamp(
               _lensEdgeGap,
@@ -391,29 +403,29 @@ class _GlassLens extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final scheme = Theme.of(context).colorScheme;
-    final highContrast = MediaQuery.highContrastOf(context);
-    return ExcludeSemantics(
-      child: DecoratedBox(
-        decoration: ShapeDecoration(
-          color: highContrast
-              ? scheme.primaryContainer
-              : navigationLensFill(scheme),
-          shape: StadiumBorder(
-            side: highContrast
-                ? BorderSide(color: scheme.onPrimaryContainer)
-                : BorderSide.none,
+    if (MediaQuery.highContrastOf(context)) {
+      return ExcludeSemantics(
+        child: DecoratedBox(
+          decoration: ShapeDecoration(
+            color: scheme.primaryContainer,
+            shape: StadiumBorder(
+              side: BorderSide(color: scheme.onPrimaryContainer),
+            ),
           ),
-          shadows: [
-            if (!highContrast)
-              BoxShadow(
-                color: scheme.shadow.withValues(alpha: 0.2),
-                blurRadius: 8,
-                offset: const Offset(0, 2),
-              ),
-          ],
+          child: const SizedBox.expand(),
+        ),
+      );
+    }
+    return ExcludeSemantics(
+      child: CustomPaint(
+        painter: GlassLensPainter(
+          fill: navigationLensFill(scheme),
+          shadow: scheme.shadow,
+          light: GlassLight.of(scheme),
         ),
         child: const GlassEdge(
           shape: StadiumBorder(),
+          sheen: false,
           child: SizedBox.expand(),
         ),
       ),
@@ -421,7 +433,10 @@ class _GlassLens extends StatelessWidget {
   }
 }
 
-class _BarItem extends StatelessWidget {
+/// One destination. It has no ink and no pressed state on purpose: the lens is
+/// the whole answer to a tap. Hover and keyboard focus still show, as they say
+/// where the pointer is and not that something was pressed.
+class _BarItem extends StatefulWidget {
   const _BarItem({
     required this.destination,
     required this.selected,
@@ -441,40 +456,88 @@ class _BarItem extends StatelessWidget {
   final VoidCallback onPressed;
 
   @override
+  State<_BarItem> createState() => _BarItemState();
+}
+
+class _BarItemState extends State<_BarItem> {
+  bool _focused = false, _hovered = false;
+
+  late final _actions = <Type, Action<Intent>>{
+    ActivateIntent: CallbackAction<ActivateIntent>(onInvoke: _activate),
+    ButtonActivateIntent:
+        CallbackAction<ButtonActivateIntent>(onInvoke: _activate),
+  };
+
+  void _activate(Intent _) => widget.onPressed();
+
+  void _tap() {
+    Feedback.forTap(context);
+    widget.onPressed();
+  }
+
+  @override
   Widget build(BuildContext context) {
     final scheme = Theme.of(context).colorScheme;
+    final destination = widget.destination;
+    final onLens = widget.nearness > 0.5;
     final icon = destination == AppDestination.profile
-        ? ProfileAvatar(imageUrl: userIcon, size: 32)
+        ? ProfileAvatar(imageUrl: widget.userIcon, size: 32)
         : _withBadge(
             context,
-            Icon(selected ? destination.selectedIcon : destination.icon),
-            destination == AppDestination.messages ? unreadMessages : 0,
+            Icon(
+              widget.selected && onLens
+                  ? destination.selectedIcon
+                  : destination.icon,
+            ),
+            destination == AppDestination.messages ? widget.unreadMessages : 0,
           );
     return Semantics(
-      selected: selected,
-      child: IconButton(
-        key: ValueKey('app-navigation-${destination.name}'),
-        tooltip: label,
-        onPressed: onPressed,
-        icon: Transform.scale(scale: 1 + 0.08 * nearness, child: icon),
-        isSelected: selected,
-        style: IconButton.styleFrom(
-          fixedSize: const Size.square(44),
-          minimumSize: const Size.square(44),
-          padding: EdgeInsets.zero,
-          // Always the same target, the lens depends on it.
-          tapTargetSize: MaterialTapTargetSize.padded,
-          visualDensity: VisualDensity.standard,
-          hoverColor: scheme.onSurface.withValues(alpha: 0.08),
-          backgroundColor: Colors.transparent,
-          foregroundColor: Color.lerp(
-            scheme.onSurfaceVariant,
-            scheme.onPrimaryContainer,
-            nearness,
+      key: ValueKey('app-navigation-${destination.name}'),
+      container: true,
+      button: true,
+      selected: widget.selected,
+      child: Tooltip(
+        message: widget.label,
+        child: FocusableActionDetector(
+          actions: _actions,
+          mouseCursor: NewDesignTheme.clickCursor,
+          onShowFocusHighlight: (value) => setState(() => _focused = value),
+          onShowHoverHighlight: (value) => setState(() => _hovered = value),
+          child: GestureDetector(
+            behavior: HitTestBehavior.opaque,
+            onTap: _tap,
+            child: SizedBox.square(
+              // Always the same target, the lens depends on it.
+              dimension: _barItemExtent,
+              child: Center(
+                child: CustomPaint(
+                  painter: _focused || _hovered
+                      ? GlassFocusRingPainter(
+                          shape: const CircleBorder(),
+                          ring: _focused ? navigationFocusRing(scheme) : null,
+                          tint: navigationHoverTint(scheme, onLens: onLens),
+                        )
+                      : null,
+                  child: SizedBox.square(
+                    dimension: _lensHeight,
+                    child: Center(
+                      child: IconTheme.merge(
+                        data: IconThemeData(
+                          size: 24,
+                          color: Color.lerp(
+                            scheme.onSurfaceVariant,
+                            scheme.onPrimaryContainer,
+                            widget.nearness,
+                          ),
+                        ),
+                        child: icon,
+                      ),
+                    ),
+                  ),
+                ),
+              ),
+            ),
           ),
-        ).copyWith(
-          side: glassFocusSide(scheme),
-          mouseCursor: const WidgetStatePropertyAll(NewDesignTheme.clickCursor),
         ),
       ),
     );

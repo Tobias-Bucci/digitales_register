@@ -605,10 +605,24 @@ void main() {
         // The bar holds only icons, and the sheen hardly reaches them.
         expect(AppPalette.contrastRatio(scheme.onSurfaceVariant, lit(bar)),
             greaterThanOrEqualTo(3));
-        final lens = Color.alphaBlend(navigationLensFill(scheme), bar);
-        for (final surface in [lens, lit(lens)]) {
-          expect(AppPalette.contrastRatio(scheme.onPrimaryContainer, surface),
-              greaterThanOrEqualTo(4.5));
+        // With blur off, the bar below the lens is solid.
+        for (final below in [bar, navigationBarTint(scheme)]) {
+          final lens = Color.alphaBlend(navigationLensFill(scheme), below);
+          for (final surface in [
+            lens,
+            over(light.highlight, light.glowStrength, lens),
+            over(light.highlight, light.reflectionStrength, lens),
+          ]) {
+            expect(AppPalette.contrastRatio(scheme.onPrimaryContainer, surface),
+                greaterThanOrEqualTo(4.5));
+          }
+          // The ring of the keyboard is no text, 3:1 is what it needs.
+          for (final surface in [below, lens]) {
+            expect(
+              AppPalette.contrastRatio(navigationFocusRing(scheme), surface),
+              greaterThanOrEqualTo(3),
+            );
+          }
         }
       }
     });
@@ -1525,9 +1539,11 @@ void main() {
 
       expect(AppDestination.values, hasLength(6));
       for (final destination in AppDestination.values) {
-        final button = tester.widget<IconButton>(
-            find.byKey(ValueKey('app-navigation-${destination.name}')));
-        expect(button.tooltip, isNotEmpty);
+        final tooltip = tester.widget<Tooltip>(find.descendant(
+          of: find.byKey(ValueKey('app-navigation-${destination.name}')),
+          matching: find.byType(Tooltip),
+        ));
+        expect(tooltip.message, isNotEmpty);
       }
     });
 
@@ -2462,8 +2478,7 @@ void main() {
       debugDefaultTargetPlatformOverride = null;
     });
 
-    testWidgets('controls and the rail show their focus with a ring',
-        (tester) async {
+    testWidgets('controls show their focus with a ring', (tester) async {
       await pumpDesktop(tester);
       final scheme =
           Theme.of(tester.element(find.byType(CompactDayWidget))).colorScheme;
@@ -2472,13 +2487,6 @@ void main() {
       expect(side.resolve({WidgetState.focused})?.color, scheme.primary);
       expect(side.resolve({WidgetState.focused})?.width, 2);
       expect(side.resolve({}), isNull);
-      final button = tester.widget<IconButton>(
-        find.byKey(const ValueKey('app-navigation-grades')),
-      );
-      expect(
-        button.style?.side?.resolve({WidgetState.focused})?.color,
-        scheme.primary,
-      );
       debugDefaultTargetPlatformOverride = null;
     });
 
@@ -2664,6 +2672,30 @@ void main() {
       }
     });
 
+    testWidgets('a lens is lit the same on its left and right', (tester) async {
+      const canvasSize = Size(120, 80);
+      for (final scheme in schemes) {
+        for (final lens in const [Size(44, 44), Size(60, 44), Size(100, 42)]) {
+          final pixels = await render(tester, canvasSize, (canvas) {
+            canvas.translate(
+              (canvasSize.width - lens.width) / 2,
+              (canvasSize.height - lens.height) / 2,
+            );
+            GlassLensPainter(
+              fill: navigationLensFill(scheme),
+              shadow: scheme.shadow,
+              light: GlassLight.of(scheme),
+            ).paint(canvas, lens);
+          });
+          // Four layers add up on the curve. Light from the side reaches 40.
+          expect(
+            mirrorDifference(pixels, canvasSize),
+            lessThan(antialiasing + 4),
+          );
+        }
+      }
+    });
+
     testWidgets('the mirror test sees light that comes from the side',
         (tester) async {
       const size = Size(120, 60);
@@ -2842,7 +2874,7 @@ void main() {
               valueListenable: selected,
               builder: (context, destination, _) => FloatingNavigationBar(
                 selected: destination,
-                onSelected: (_) {},
+                onSelected: (tapped) => selected.value = tapped,
                 unreadMessages: 0,
                 userIcon: null,
               ),
@@ -2907,6 +2939,157 @@ void main() {
         tester.getRect(lens).center.dx,
         moreOrLessEquals(target, epsilon: 0.05),
       );
+    });
+
+    testWidgets('arrives without swinging past its place', (tester) async {
+      final selected = await pumpBar(tester);
+      final target = tester.getCenter(item(AppDestination.extras)).dx;
+
+      selected.value = AppDestination.extras;
+      await tester.pump();
+      for (var frame = 0; frame < 90; frame++) {
+        await tester.pump(const Duration(milliseconds: 16));
+        expect(tester.getCenter(lens).dx, lessThanOrEqualTo(target + 0.01));
+      }
+    });
+
+    testWidgets('a tap moves the lens to the item, and nothing else moves',
+        (tester) async {
+      final selected = await pumpBar(tester);
+      final calendar = item(AppDestination.calendar);
+      final icons = find.descendant(
+        of: find.byKey(const Key('app-navigation-bar')),
+        matching: find.byType(Icon),
+      );
+      List<Rect> places() => icons.evaluate().map((element) {
+            final box = element.renderObject! as RenderBox;
+            return box.localToGlobal(Offset.zero) & box.size;
+          }).toList();
+      final before = places();
+
+      await tester.tap(calendar);
+      expect(selected.value, AppDestination.calendar);
+      await tester.pump();
+      for (var frame = 0; frame < 40; frame++) {
+        await tester.pump(const Duration(milliseconds: 16));
+        expect(places(), before);
+      }
+      await tester.pumpAndSettle();
+
+      expect(
+        tester.getCenter(lens).dx,
+        moreOrLessEquals(tester.getCenter(calendar).dx, epsilon: 0.05),
+      );
+      expect(places(), before);
+    });
+
+    testWidgets('a press alone shows nothing at all', (tester) async {
+      final selected = await pumpBar(tester);
+      final bar = find.byKey(const Key('app-navigation-bar'));
+      final grades = item(AppDestination.grades);
+      final rest = tester.getRect(lens);
+
+      expect(
+        find.descendant(of: bar, matching: find.byType(InkResponse)),
+        findsNothing,
+      );
+      expect(
+        find.descendant(of: bar, matching: find.byType(IconButton)),
+        findsNothing,
+      );
+      expect(
+        find.descendant(of: bar, matching: find.byType(Transform)),
+        findsNothing,
+      );
+      final gesture = await tester.startGesture(tester.getCenter(grades));
+      for (var frame = 0; frame < 20; frame++) {
+        await tester.pump(const Duration(milliseconds: 16));
+        expect(tester.hasRunningAnimations, isFalse);
+        expect(tester.getRect(lens), rest);
+      }
+      final material = Material.of(tester.element(grades)) as dynamic;
+      expect(material.debugInkFeatures ?? const <Object>[], isEmpty);
+      expect(selected.value, AppDestination.dashboard);
+
+      await gesture.up();
+      await tester.pumpAndSettle();
+      expect(selected.value, AppDestination.grades);
+    });
+
+    Iterable<GlassFocusRingPainter> marks(WidgetTester tester) => tester
+        .widgetList<CustomPaint>(find.byType(CustomPaint))
+        .map((paint) => paint.painter)
+        .whereType<GlassFocusRingPainter>();
+
+    testWidgets('the mouse leaves a mark and the hand cursor', (tester) async {
+      debugDefaultTargetPlatformOverride = TargetPlatform.windows;
+      await pumpBar(tester);
+      final scheme = Theme.of(tester.element(lens)).colorScheme;
+      final mouse = await tester.createGesture(kind: PointerDeviceKind.mouse);
+      await mouse.addPointer(location: Offset.zero);
+      addTearDown(mouse.removePointer);
+      expect(marks(tester), isEmpty);
+
+      await mouse.moveTo(tester.getCenter(item(AppDestination.grades)));
+      await tester.pump();
+      expect(marks(tester).single.tint,
+          navigationHoverTint(scheme, onLens: false));
+      expect(marks(tester).single.ring, isNull);
+      expect(
+        RendererBinding.instance.mouseTracker.debugDeviceActiveCursor(1),
+        SystemMouseCursors.click,
+      );
+
+      await mouse.moveTo(tester.getCenter(item(AppDestination.dashboard)));
+      await tester.pump();
+      expect(
+          marks(tester).single.tint, navigationHoverTint(scheme, onLens: true));
+
+      await mouse.moveTo(Offset.zero);
+      await tester.pump();
+      expect(marks(tester), isEmpty);
+      debugDefaultTargetPlatformOverride = null;
+    });
+
+    testWidgets('the keyboard gets a ring and can pick an item',
+        (tester) async {
+      debugDefaultTargetPlatformOverride = TargetPlatform.windows;
+      final selected = await pumpBar(tester);
+      final scheme = Theme.of(tester.element(lens)).colorScheme;
+      expect(marks(tester), isEmpty);
+
+      await tester.sendKeyEvent(LogicalKeyboardKey.tab);
+      await tester.pump();
+      expect(marks(tester).single.ring, navigationFocusRing(scheme));
+
+      await tester.sendKeyEvent(LogicalKeyboardKey.tab);
+      await tester.pump();
+      expect(marks(tester).single.ring, navigationFocusRing(scheme));
+      await tester.sendKeyEvent(LogicalKeyboardKey.enter);
+      await tester.pumpAndSettle();
+      expect(selected.value, AppDestination.grades);
+
+      await tester.sendKeyEvent(LogicalKeyboardKey.tab);
+      await tester.pump();
+      await tester.sendKeyEvent(LogicalKeyboardKey.space);
+      await tester.pumpAndSettle();
+      expect(selected.value, AppDestination.calendar);
+      expect(
+        tester.getCenter(lens).dx,
+        moreOrLessEquals(
+          tester.getCenter(item(AppDestination.calendar)).dx,
+          epsilon: 0.05,
+        ),
+      );
+      debugDefaultTargetPlatformOverride = null;
+    });
+
+    testWidgets('every item keeps a full touch target on a small phone',
+        (tester) async {
+      await pumpBar(tester, width: 320);
+      for (final destination in AppDestination.values) {
+        expect(tester.getSize(item(destination)), const Size.square(48));
+      }
     });
 
     testWidgets('follows a new selection in mid-flight', (tester) async {
@@ -2976,11 +3159,18 @@ void main() {
 
       expect(
         tester.getSemantics(item(AppDestination.calendar)),
-        containsSemantics(isSelected: true, hasTapAction: true),
+        containsSemantics(
+          isButton: true,
+          isSelected: true,
+          isFocusable: true,
+          hasTapAction: true,
+          tooltip: 'Kalender',
+        ),
       );
       expect(
         tester.getSemantics(item(AppDestination.dashboard)),
-        containsSemantics(isSelected: false, hasTapAction: true),
+        containsSemantics(
+            isButton: true, isSelected: false, hasTapAction: true),
       );
       expect(find.byTooltip('Kalender'), findsOneWidget);
       handle.dispose();
