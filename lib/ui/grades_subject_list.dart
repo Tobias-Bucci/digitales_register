@@ -511,12 +511,15 @@ class _SubjectHeader extends StatelessWidget {
                       ),
                     ),
                   const SizedBox(width: 6),
-                  GradeBadge(
-                    text: average,
-                    hundredths: hundredths,
-                    colorized: colorGrades,
-                    style: theme.textTheme.labelLarge?.copyWith(
-                      fontWeight: FontWeight.w600,
+                  Tooltip(
+                    message: format.spoken(average, hundredths),
+                    child: GradeBadge(
+                      text: average,
+                      hundredths: hundredths,
+                      colorized: colorGrades,
+                      style: theme.textTheme.labelLarge?.copyWith(
+                        fontWeight: FontWeight.w600,
+                      ),
                     ),
                   ),
                   SizedBox(
@@ -946,13 +949,16 @@ class GradeEntryRow extends StatelessWidget {
           weight: weight,
           trailing: Padding(
             padding: const EdgeInsets.only(left: 6),
-            child: GradeBadge(
-              text: value,
-              hundredths: grade.grade,
-              colorized: colorGrades,
-              cancelled: cancelled,
-              style: theme.textTheme.labelMedium?.copyWith(
-                fontWeight: FontWeight.w600,
+            child: Tooltip(
+              message: format.spoken(value, grade.grade),
+              child: GradeBadge(
+                text: value,
+                hundredths: grade.grade,
+                colorized: colorGrades,
+                cancelled: cancelled,
+                style: theme.textTheme.labelMedium?.copyWith(
+                  fontWeight: FontWeight.w600,
+                ),
               ),
             ),
           ),

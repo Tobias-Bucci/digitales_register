@@ -684,6 +684,12 @@ void main() {
         find.byType(SizeTransition).first,
       );
       expect(transition.sizeFactor.value, 1);
+
+      await tester.tap(find.byKey(_open('Fach1')));
+      await tester.pump();
+      await tester.pump();
+      expect(find.byType(GradeEntryRow), findsNothing);
+      expect(tester.takeException(), isNull);
     });
   });
 
