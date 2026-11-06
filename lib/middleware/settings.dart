@@ -525,11 +525,12 @@ Future<void> _reconcileCalendarSync(
     MiddlewareApi<AppState, AppStateBuilder, AppActions> api,
     ActionHandler next,
     Action action) async {
-  // The dashboard middleware owns the conditional reducer step for toggles:
-  // failed server updates must not be committed locally. Calling `next` here
-  // would bypass that decision because combined middleware handlers each get
-  // the same reducer continuation.
-  if (action.name != DashboardActionsNames.toggleDone.name) {
+  // The dashboard middleware owns the conditional reducer step for toggles and
+  // deletions: failed server updates must not be committed locally. Calling
+  // `next` here would bypass that decision because combined middleware handlers
+  // each get the same reducer continuation.
+  if (action.name != DashboardActionsNames.toggleDone.name &&
+      action.name != DashboardActionsNames.deleteHomework.name) {
     await next(action);
   }
   if (!api.state.settingsState.calendarSyncEnabled) {

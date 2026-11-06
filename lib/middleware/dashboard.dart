@@ -83,6 +83,26 @@ Future<void> _switchFuture(
   await api.actions.dashboardActions.load(api.state.dashboardState.future);
 }
 
+/// Says that a change did not reach the server. With [retry] the user can send
+/// it again, as long as the app is still in the session that made it: what they
+/// entered is kept by the button even when the screen they entered it on is gone.
+Future<void> _showSaveFailed(
+  MiddlewareApi<AppState, AppStateBuilder, AppActions> api,
+  _Session session, {
+  Future<void> Function()? retry,
+}) async {
+  final l10n = await _loadMiddlewareLocalizations(api.state);
+  showSnackBar(
+    l10n.text(wrapper.noInternet ? 'error.saveOffline' : 'error.save'),
+    actionLabel: retry == null ? null : l10n.text('common.retry'),
+    onAction: retry == null
+        ? null
+        : () {
+            if (session.isCurrent) unawaited(retry());
+          },
+  );
+}
+
 Future<void> _addReminder(
   MiddlewareApi<AppState, AppStateBuilder, AppActions> api,
   ActionHandler next,
@@ -98,9 +118,12 @@ Future<void> _addReminder(
       "text": action.payload.msg,
     },
   );
-  if (result == null && !wrapper.noInternet) {
-    showSnackBar(
-        (await _loadMiddlewareLocalizations(api.state)).text('error.save'));
+  if (result == null) {
+    await _showSaveFailed(
+      api,
+      session,
+      retry: () => api.actions.dashboardActions.addReminder(action.payload),
+    );
     return;
   }
   await api.actions.dashboardActions.homeworkAdded(
@@ -120,6 +143,13 @@ Future<void> _deleteHomework(
   // Remove the entry from the dashboard immediately and reconcile with the
   // server afterwards, so reminder deletes behave responsively.
   final session = _Session.capture();
+  Future<void> retry() =>
+      api.actions.dashboardActions.deleteHomework(action.payload);
+  // Offline it could not come back, so it does not go away in the first place.
+  if (wrapper.noInternet) {
+    await _showSaveFailed(api, session, retry: retry);
+    return;
+  }
   await next(action);
   _markRuntimeCacheStale(_dashboardCacheKey(api.state.dashboardState.future));
   final dynamic result = await session.send(
@@ -127,11 +157,8 @@ Future<void> _deleteHomework(
     args: {"id": action.payload.id},
   );
   if (result == null || result["success"] != true) {
-    if (!wrapper.noInternet) {
-      await api.actions.dashboardActions.load(api.state.dashboardState.future);
-      showSnackBar(
-          (await _loadMiddlewareLocalizations(api.state)).text('error.save'));
-    }
+    await api.actions.dashboardActions.load(api.state.dashboardState.future);
+    await _showSaveFailed(api, session, retry: retry);
   }
 }
 
@@ -142,20 +169,8 @@ Future<void> _editReminder(
 ) async {
   final session = _Session.capture();
   _markRuntimeCacheStale(_dashboardCacheKey(api.state.dashboardState.future));
-  final deleteResult = await session.send(
-    "api/student/dashboard/delete_reminder",
-    args: {"id": action.payload.previousHomework.id},
-  );
-  if (deleteResult == null ||
-      deleteResult["success"] != true ||
-      wrapper.noInternet) {
-    if (!wrapper.noInternet) {
-      showSnackBar(
-          (await _loadMiddlewareLocalizations(api.state)).text('error.save'));
-    }
-    return;
-  }
-
+  // The new text first: if anything fails, the worst case is that both entries
+  // exist, and not that the old one is gone and the new one was never saved.
   final dynamic saveResult = await session.send(
     "api/student/dashboard/save_reminder",
     args: {
@@ -163,13 +178,22 @@ Future<void> _editReminder(
       "text": action.payload.msg,
     },
   );
-
   if (saveResult == null) {
+    await _showSaveFailed(
+      api,
+      session,
+      retry: () => api.actions.dashboardActions.editReminder(action.payload),
+    );
+    return;
+  }
+
+  final deleteResult = await session.send(
+    "api/student/dashboard/delete_reminder",
+    args: {"id": action.payload.previousHomework.id},
+  );
+  if (deleteResult == null || deleteResult["success"] != true) {
     await api.actions.dashboardActions.load(api.state.dashboardState.future);
-    if (!wrapper.noInternet) {
-      showSnackBar(
-          (await _loadMiddlewareLocalizations(api.state)).text('error.save'));
-    }
+    await _showSaveFailed(api, session);
     return;
   }
 
@@ -201,10 +225,11 @@ Future<void> _toggleDone(
   if (result != null && result["success"] == true) {
     await next(action);
   } else {
-    if (!wrapper.noInternet) {
-      showSnackBar(
-          (await _loadMiddlewareLocalizations(api.state)).text('error.save'));
-    }
+    await _showSaveFailed(
+      api,
+      session,
+      retry: () => api.actions.dashboardActions.toggleDone(action.payload),
+    );
   }
 }
 

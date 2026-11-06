@@ -67,17 +67,30 @@ class AppRequestException implements Exception {
     required this.message,
     this.isTimeout = false,
     this.isConnectionIssue = false,
+    this.isLostConnection = false,
+    this.isSessionRejected = false,
   });
 
   final String message;
   final bool isTimeout;
   final bool isConnectionIssue;
 
+  /// The connection broke, which an idle one does after a while. Unlike after
+  /// a timeout, the server has most likely not processed the request.
+  final bool isLostConnection;
+
+  /// The server refused the request as such (401 or 403).
+  final bool isSessionRejected;
+
   @override
   String toString() => message;
 }
 
 const String _serverLogoutExtra = 'serverLogout';
+
+/// How long to wait before sending a request again on a new connection.
+@visibleForTesting
+Duration requestRetryDelay = const Duration(milliseconds: 400);
 
 class Wrapper {
   static bool _networkActivityEnabled = true;
@@ -446,10 +459,19 @@ class Wrapper {
           error.type == DioExceptionType.receiveTimeout;
       final isConnectionIssue =
           isTimeout || error.type == DioExceptionType.connectionError;
+      final status = error.response?.statusCode;
       return AppRequestException(
         message: isTimeout ? 'error.timeout' : 'error.network',
         isTimeout: isTimeout,
         isConnectionIssue: isConnectionIssue,
+        // A closed keep-alive connection surfaces as an HttpException, which
+        // dio reports as an unknown error.
+        isLostConnection: error.type == DioExceptionType.connectionError ||
+            (error.type == DioExceptionType.unknown &&
+                (error.error is HttpException ||
+                    error.error is SocketException)),
+        isSessionRejected: error.type == DioExceptionType.badResponse &&
+            (status == 401 || status == 403),
       );
     }
     return const AppRequestException(
@@ -462,10 +484,19 @@ class Wrapper {
     return mapped.isConnectionIssue;
   }
 
+  /// Leaves a trace of a request that was never answered, without any data.
+  void _logDropped(String reason, String url) {
+    logPerformanceEvent("request_dropped", <String, Object?>{
+      "reason": reason,
+      "endpoint": DiagnosticSanitizer.endpoint(url),
+    });
+  }
+
   Future<T> _runRequest<T>(
     String operation,
     Future<T> Function() request, {
     bool allowSingleRetry = false,
+    bool retryLostConnection = false,
   }) async {
     final stopwatch = Stopwatch()..start();
     var didRetry = false;
@@ -487,7 +518,10 @@ class Wrapper {
         );
         return result;
       } catch (error) {
-        if (allowSingleRetry && !didRetry && _isTransientRequestError(error)) {
+        final mayRetry = allowSingleRetry
+            ? _isTransientRequestError(error)
+            : retryLostConnection && _mapRequestError(error).isLostConnection;
+        if (mayRetry && !didRetry) {
           didRetry = true;
           diagnostics.update('request_retry_count', 1);
           diagnostics.safeLog('request_retry');
@@ -498,6 +532,7 @@ class Wrapper {
               "reason": _mapRequestError(error).message,
             },
           );
+          await Future<void>.delayed(requestRetryDelay);
           continue;
         }
         stopwatch.stop();
@@ -804,7 +839,10 @@ class Wrapper {
     int unexpectedLogoutRetryCount = 0,
     bool acceptEmptyResponse = false,
   }) async {
-    if (!_appInForeground) return null;
+    if (!_appInForeground) {
+      _logDropped('background', url);
+      return null;
+    }
     if (demoMode) {
       diagnostics.resetRequest();
       diagnostics.update('data_source', 'local');
@@ -817,11 +855,16 @@ class Wrapper {
       forceRelogin: forceRelogin,
     )) {
       privacyLog('technical_operation');
+      _logDropped('no_session', url);
       return null;
     }
-    if (!_appInForeground) return null;
+    if (!_appInForeground) {
+      _logDropped('background', url);
+      return null;
+    }
 
     dynamic responseData;
+    var sessionRejected = false;
     try {
       final response = await _runRequest(
         "$method $url",
@@ -838,6 +881,7 @@ class Wrapper {
                     "invalid method: $method; expected POST or GET",
                   ),
         allowSingleRetry: method == "GET",
+        retryLostConnection: true,
       );
       responseData = response.data;
       // Some mutation endpoints acknowledge success with an empty HTTP body.
@@ -849,17 +893,38 @@ class Wrapper {
         responseData = true;
       }
     } on Exception catch (e) {
-      await _handleError(e);
-      onAddProtocolItem?.call(NetworkProtocolItem((b) => b
-        ..address = DiagnosticSanitizer.endpoint(url)
-        ..response = responseData == null ? 'failed' : 'completed'
-        ..parameters = '[redacted]'));
-      return null;
+      sessionRejected = e is AppRequestException && e.isSessionRejected;
+      if (!sessionRejected) {
+        await _handleError(e);
+        onAddProtocolItem?.call(NetworkProtocolItem((b) => b
+          ..address = DiagnosticSanitizer.endpoint(url)
+          ..response = responseData == null ? 'failed' : 'completed'
+          ..parameters = '[redacted]'));
+        _logDropped('request_failed', url);
+        return null;
+      }
     }
     onAddProtocolItem?.call(NetworkProtocolItem((b) => b
       ..address = DiagnosticSanitizer.endpoint(url)
       ..response = responseData == null ? 'failed' : 'completed'
       ..parameters = '[redacted]'));
+
+    // A refused request may also just be one this account may not make, so it
+    // gets a single new session, at most once a minute.
+    if (sessionRejected) {
+      if (unexpectedLogoutRetryCount >= 1) {
+        _logDropped('refused', url);
+        return null;
+      }
+      return send(
+        url,
+        args: args,
+        method: method,
+        isRetryAfterUnexpectedLogout: true,
+        unexpectedLogoutRetryCount: 1,
+        acceptEmptyResponse: acceptEmptyResponse,
+      );
+    }
 
     // returned if we were logged out (there should be whitespace at both ends, but the editor is removing it):
     //	<script type="text/javascript">
@@ -877,6 +942,7 @@ class Wrapper {
         privacyLog('technical_operation');
         error = "Die Sitzung konnte nicht automatisch erneuert werden.";
         _loggedIn = Future.value(false);
+        _logDropped('session_not_renewed', url);
         return null;
       }
 
@@ -924,6 +990,7 @@ class Wrapper {
     if (!_appInForeground) return null;
 
     dynamic responseData;
+    var sessionRejected = false;
     try {
       final formData = FormData.fromMap(
         <String, Object>{
@@ -943,19 +1010,34 @@ class Wrapper {
       );
       responseData = response.data;
     } on Exception catch (e) {
-      await _handleError(e);
-      onAddProtocolItem?.call(NetworkProtocolItem((b) => b
-        ..address = DiagnosticSanitizer.endpoint(url)
-        ..response = responseData == null ? 'failed' : 'completed'
-        ..parameters = '[redacted]'));
-      return null;
+      sessionRejected = e is AppRequestException && e.isSessionRejected;
+      if (!sessionRejected) {
+        await _handleError(e);
+        onAddProtocolItem?.call(NetworkProtocolItem((b) => b
+          ..address = DiagnosticSanitizer.endpoint(url)
+          ..response = responseData == null ? 'failed' : 'completed'
+          ..parameters = '[redacted]'));
+        return null;
+      }
     }
     onAddProtocolItem?.call(NetworkProtocolItem((b) => b
       ..address = DiagnosticSanitizer.endpoint(url)
       ..response = responseData == null ? 'failed' : 'completed'
       ..parameters = '[redacted]'));
 
-    if (responseData is String && _isLoginRedirectPage(responseData)) {
+    if (sessionRejected) {
+      if (unexpectedLogoutRetryCount >= 1) return null;
+      return sendBytes(
+        url,
+        bytes: bytes,
+        contentType: contentType,
+        fileName: fileName,
+        isRetryAfterUnexpectedLogout: true,
+        unexpectedLogoutRetryCount: 1,
+      );
+    }
+
+    if (responseData is String && _isLoginPage(responseData)) {
       if (unexpectedLogoutRetryCount >= 2) {
         privacyLog('technical_operation');
         error = "Die Sitzung konnte nicht automatisch erneuert werden.";

@@ -29,9 +29,18 @@ typedef StorageKeyFactory = String Function(String? user, String server);
 class AppStatePersistenceService {
   AppStatePersistenceService({
     this.debounce = const Duration(seconds: 5),
+    this.failureRetry = const Duration(seconds: 30),
+    this.onWriteFailed,
   });
 
   final Duration debounce;
+
+  /// How long to wait for another try after a write has failed for good.
+  final Duration failureRetry;
+
+  /// Told each time a write has failed despite its retries. It stays pending
+  /// and is tried again after [failureRetry].
+  final void Function()? onWriteFailed;
 
   Timer? _pendingSave;
   _PendingPersistenceRequest? _pendingRequest;
@@ -64,10 +73,20 @@ class AppStatePersistenceService {
       keyFactory: keyFactory,
     );
     _pendingSave?.cancel();
-    _pendingSave = Timer(
-      debounce,
-      () => unawaited(flush()),
-    );
+    _pendingSave = Timer(debounce, _flushInBackground);
+  }
+
+  /// Nobody waits for this one. A failure has been reported in [_write] and
+  /// stays pending.
+  void _flushInBackground() => unawaited(flush().catchError((Object _) {}));
+
+  /// Keeps [request] for another try. A newer request replaces it anyway, and
+  /// after a [clear] it describes a state nobody has any more.
+  void _tryAgainLater(_PendingPersistenceRequest request, int generation) {
+    if (generation != _generation || _pendingRequest != null) return;
+    _pendingRequest = request;
+    _pendingSave?.cancel();
+    _pendingSave = Timer(failureRetry, _flushInBackground);
   }
 
   /// Runs [action] after every write requested so far has finished, and
@@ -145,9 +164,14 @@ class AppStatePersistenceService {
     final stopwatch = Stopwatch()..start();
     diagnostics.values({'operation': 'save', 'data_source': 'local'});
     try {
-      await request.writer(storageKey, toPersist);
+      await retryStorageWrite(
+        () => request.writer(storageKey, toPersist),
+        giveUp: () => generation != _generation,
+      );
     } catch (e, stack) {
       diagnostics.report(e, stack, DiagnosticError.storage);
+      _tryAgainLater(request, generation);
+      onWriteFailed?.call();
       rethrow;
     }
     stopwatch.stop();
