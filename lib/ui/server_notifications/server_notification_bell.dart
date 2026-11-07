@@ -14,6 +14,7 @@ class ServerNotificationBell extends StatelessWidget {
     this.hideWhenEmpty = false,
     this.style,
     this.iconSize,
+    this.schoolUnread,
   });
 
   final ServerNotificationRepository? repository;
@@ -28,9 +29,13 @@ class ServerNotificationBell extends StatelessWidget {
   final ButtonStyle? style;
   final double? iconSize;
 
+  /// The unread notifications of the school, for a bell that covers them too.
+  final int? schoolUnread;
+
   @override
   Widget build(BuildContext context) {
-    if (!(enabled ?? serverNotifications.enabled)) {
+    final school = schoolUnread;
+    if (!(enabled ?? serverNotifications.enabled) && (school ?? 0) == 0) {
       return const SizedBox.shrink();
     }
     final source = repository ?? serverNotifications.repository;
@@ -41,15 +46,20 @@ class ServerNotificationBell extends StatelessWidget {
           return const SizedBox.shrink();
         }
         final l10n = context.l10n;
-        final unread = source.unreadCount;
+        final unread = source.unreadCount + (school ?? 0);
+        final title = school == null
+            ? l10n.text('appNotifications.title')
+            : l10n.text('notifications.title');
+        final unreadKey = school == null
+            ? 'appNotifications.bellUnread'
+            : 'notifications.bellUnread';
         return IconButton(
           key: const Key('server-notification-bell'),
           style: style,
           iconSize: iconSize,
           tooltip: unread == 0
-              ? l10n.text('appNotifications.title')
-              : l10n.text('appNotifications.bellUnread',
-                  args: {'count': '$unread'}),
+              ? title
+              : l10n.text(unreadKey, args: {'count': '$unread'}),
           onPressed: onPressed ??
               () => showServerNotificationCenter(Navigator.of(context),
                   repository: source),

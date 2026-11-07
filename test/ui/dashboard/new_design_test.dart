@@ -1054,7 +1054,7 @@ void main() {
 
       expect(find.byType(DashboardAppHeader), findsOneWidget);
       expect(find.byType(FloatingNavigationBar), findsOneWidget);
-      expect(find.byType(NotificationIconContainer), findsNothing);
+      expect(find.byKey(const Key('server-notification-bell')), findsOneWidget);
       expect(find.byType(Sidebar), findsNothing);
       expect(find.byIcon(Icons.menu), findsNothing);
       expect(find.byType(DayWidget), findsNothing);
@@ -1078,9 +1078,31 @@ void main() {
       expect(find.byKey(bell), findsOneWidget);
     });
 
+    testWidgets('both designs have one bell, counting both sources',
+        (tester) async {
+      const bell = Key('server-notification-bell');
+      final state = _dashboardState(
+        notifications: [buildNotification(type: 'grade')],
+      );
+
+      await _pumpDashboard(tester, state);
+      expect(find.byKey(bell), findsOneWidget);
+      expect(
+        find.descendant(of: find.byKey(bell), matching: find.text('1')),
+        findsOneWidget,
+      );
+
+      await _pumpDashboard(tester, state, newDesign: false);
+      expect(find.byKey(bell), findsOneWidget);
+      expect(
+        find.descendant(of: find.byKey(bell), matching: find.text('1')),
+        findsOneWidget,
+      );
+    });
+
     testWidgets('the list of the app notifications clears the bar',
         (tester) async {
-      await _pumpDashboard(tester, _dashboardState());
+      await _pumpDashboard(tester, _dashboardState(), withMiddleware: true);
 
       await tester.tap(find.byKey(const Key('server-notification-bell')));
       await settleFor(tester, duration: const Duration(seconds: 1));

@@ -62,6 +62,8 @@ final routingMiddleware =
       ..add(RoutingActionsNames.showMessages, _showMessages)
       ..add(RoutingActionsNames.showMessage, _showMessage);
 
+const _notificationsRoute = "/notifications";
+
 Future<void> _showLogin(
     MiddlewareApi<AppState, AppStateBuilder, AppActions> api,
     ActionHandler next,
@@ -125,7 +127,16 @@ Future<void> _showNotifications(
     MiddlewareApi<AppState, AppStateBuilder, AppActions> api,
     ActionHandler next,
     Action<void> action) async {
-  unawaited(navigatorKey!.currentState!.pushNamed("/notifications"));
+  // Inside the home route, so that the navigation stays in reach.
+  final nested = nestedNavKey.currentState;
+  if (nested != null) {
+    unawaited(nested.push(MaterialPageRoute<void>(
+      settings: const RouteSettings(name: _notificationsRoute),
+      builder: (_) => NotificationPageContainer(),
+    )));
+  } else {
+    unawaited(navigatorKey!.currentState!.pushNamed(_notificationsRoute));
+  }
   await next(action);
 }
 
@@ -239,8 +250,12 @@ Future<void> _showMessage(
     MiddlewareApi<AppState, AppStateBuilder, AppActions> api,
     ActionHandler next,
     Action<int> action) async {
-  navigatorKey?.currentState
-      ?.popUntil((route) => route.settings.name != '/notifications');
+  for (final navigator in [
+    navigatorKey?.currentState,
+    nestedNavKey.currentState
+  ]) {
+    navigator?.popUntil((route) => route.settings.name != _notificationsRoute);
+  }
   await api.actions.routingActions.showMessages();
   await next(action);
 }
