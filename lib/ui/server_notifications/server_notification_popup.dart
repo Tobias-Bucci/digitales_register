@@ -7,6 +7,7 @@ import 'package:dr/main.dart' show navigatorKey;
 import 'package:dr/server_notifications/server_notification_models.dart';
 import 'package:dr/server_notifications/server_notification_repository.dart';
 import 'package:dr/server_notifications/server_notification_service.dart';
+import 'package:dr/ui/glass_surface.dart';
 import 'package:dr/ui/server_notifications/server_notification_center.dart';
 import 'package:dr/ui/server_notifications/server_notification_visuals.dart';
 import 'package:flutter/material.dart';
@@ -34,7 +35,17 @@ class ServerNotificationHost extends StatefulWidget {
     this.isBlocked,
     this.blockedChanges,
     this.onLanguage,
+    this.newDesign = false,
+    this.navigationClearance = 0,
   });
+
+  /// Glass at the bottom, in the look of the new dashboard. The top belongs to
+  /// its header and the bell in it there, so the popup keeps away from it.
+  final bool newDesign;
+
+  /// The height of the floating navigation bar of narrow windows, which the
+  /// popup of the new design stays above. Wide windows have a rail instead.
+  final double navigationClearance;
 
   final Widget child;
   final ServerNotificationRepository? repository;
@@ -175,22 +186,51 @@ class _ServerNotificationHostState extends State<ServerNotificationHost> {
   Widget build(BuildContext context) {
     final reducedMotion = MediaQuery.disableAnimationsOf(context);
     final wide = MediaQuery.sizeOf(context).width >= _wideLayoutWidth;
+    final glass = widget.newDesign;
+    final alignment = glass
+        ? (wide ? AlignmentDirectional.bottomEnd : Alignment.bottomCenter)
+        : (wide ? AlignmentDirectional.topEnd : Alignment.topCenter);
+    // Above the keyboard too, which the safe area leaves out.
+    final bottom = glass
+        ? (wide ? 0.0 : widget.navigationClearance) +
+            MediaQuery.viewInsetsOf(context).bottom
+        : 0.0;
     return Stack(
       fit: StackFit.expand,
       children: [
         widget.child,
         Align(
-          alignment: wide ? AlignmentDirectional.topEnd : Alignment.topCenter,
+          alignment: alignment,
           child: SafeArea(
             child: AnimatedSwitcher(
               duration: reducedMotion
                   ? Duration.zero
                   : const Duration(milliseconds: 180),
+              transitionBuilder: (child, animation) => glass
+                  ? FadeTransition(
+                      opacity: animation,
+                      child: SlideTransition(
+                        position: Tween(
+                          begin: const Offset(0, 0.2),
+                          end: Offset.zero,
+                        ).animate(CurvedAnimation(
+                          parent: animation,
+                          curve: Curves.easeOutCubic,
+                        )),
+                        child: child,
+                      ),
+                    )
+                  : FadeTransition(opacity: animation, child: child),
               child: _shown.isEmpty
                   ? const SizedBox.shrink()
                   : Padding(
                       key: const Key('server-notification-popup'),
-                      padding: const EdgeInsets.all(12),
+                      padding: EdgeInsets.fromLTRB(
+                        glass ? DesignTokens.gutter : 12,
+                        12,
+                        glass ? DesignTokens.gutter : 12,
+                        12 + bottom,
+                      ),
                       child: ConstrainedBox(
                         constraints:
                             const BoxConstraints(maxWidth: _popupMaxWidth),
@@ -201,12 +241,19 @@ class _ServerNotificationHostState extends State<ServerNotificationHost> {
                             canRequestFocus: false,
                             skipTraversal: true,
                             onFocusChange: _hold,
-                            child: _Popup(
-                              items: _shown,
-                              primaryAction: _primaryAction,
-                              onOpen: _open,
-                              onClose: _close,
-                            ),
+                            child: glass
+                                ? _GlassPopup(
+                                    items: _shown,
+                                    primaryAction: _primaryAction,
+                                    onOpen: _open,
+                                    onClose: _close,
+                                  )
+                                : _Popup(
+                                    items: _shown,
+                                    primaryAction: _primaryAction,
+                                    onOpen: _open,
+                                    onClose: _close,
+                                  ),
                           ),
                         ),
                       ),
@@ -215,6 +262,177 @@ class _ServerNotificationHostState extends State<ServerNotificationHost> {
           ),
         ),
       ],
+    );
+  }
+}
+
+String _heading(AppLocalizations l10n, List<ServerNotification> items) {
+  final critical = items.any((item) => item.type.critical);
+  if (items.length != 1) {
+    return l10n
+        .text('appNotifications.summary', args: {'count': '${items.length}'});
+  }
+  return l10n.text(critical
+      ? 'appNotifications.popupCritical'
+      : 'appNotifications.popupNew');
+}
+
+/// The popup in the look of the new dashboard: a card of glass with the
+/// radius, rim and edge of the event banners, and controls of glass.
+class _GlassPopup extends StatelessWidget {
+  const _GlassPopup({
+    required this.items,
+    required this.primaryAction,
+    required this.onOpen,
+    required this.onClose,
+  });
+
+  static const _edgeWidth = 1.5;
+  static const _discSize = 36.0;
+
+  final List<ServerNotification> items;
+  final FocusNode primaryAction;
+  final VoidCallback onOpen;
+  final VoidCallback onClose;
+
+  @override
+  Widget build(BuildContext context) {
+    final l10n = context.l10n;
+    final theme = Theme.of(context);
+    final scheme = theme.colorScheme;
+    final dark = theme.brightness == Brightness.dark;
+    final highContrast = MediaQuery.highContrastOf(context);
+    final critical = items.any((item) => item.type.critical);
+    final single = items.length == 1 ? items.single : null;
+    final heading = _heading(l10n, items);
+    final edge = critical
+        ? scheme.error
+        : highContrast
+            ? scheme.outline
+            : scheme.outline.withValues(alpha: dark ? 0.45 : 0.2);
+    return Semantics(
+      container: true,
+      liveRegion: true,
+      label: single == null ? heading : '$heading: ${single.title}',
+      child: DecoratedBox(
+        decoration: BoxDecoration(
+          borderRadius: DesignTokens.cardBorderRadius,
+          boxShadow: [
+            BoxShadow(
+              color: scheme.shadow.withValues(alpha: dark ? 0.5 : 0.16),
+              blurRadius: 18,
+              offset: const Offset(0, 6),
+            ),
+          ],
+        ),
+        child: GlassSurface(
+          tint: scheme.surfaceContainerHigh,
+          opacity: DesignTokens.sheetOpacity,
+          borderRadius: DesignTokens.cardBorderRadius,
+          rim: GlassRim.around,
+          border: Border.all(
+            color: edge,
+            width: critical ? _edgeWidth : 1,
+          ),
+          child: Material(
+            type: MaterialType.transparency,
+            child: Padding(
+              padding: const EdgeInsets.fromLTRB(14, 10, 6, 12),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
+                    children: [
+                      Expanded(
+                        child: ExcludeSemantics(
+                          child: Text(
+                            heading,
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            style: theme.textTheme.labelLarge?.copyWith(
+                              fontWeight: FontWeight.w700,
+                              color: critical ? scheme.error : scheme.onSurface,
+                            ),
+                          ),
+                        ),
+                      ),
+                      // No tooltip: the popup is outside the navigator's
+                      // overlay. The label keeps the button its own node.
+                      IconButton(
+                        key: const Key('server-notification-popup-close'),
+                        style: IconButton.styleFrom(
+                          fixedSize: const Size.square(_discSize),
+                          minimumSize: const Size.square(_discSize),
+                          padding: EdgeInsets.zero,
+                          visualDensity: VisualDensity.standard,
+                          tapTargetSize: MaterialTapTargetSize.padded,
+                        ).merge(glassControlStyle(scheme,
+                            shape: const CircleBorder())),
+                        iconSize: 20,
+                        icon: Icon(
+                          Icons.close_rounded,
+                          semanticLabel: l10n.text('appNotifications.close'),
+                        ),
+                        onPressed: onClose,
+                      ),
+                    ],
+                  ),
+                  if (single != null)
+                    Padding(
+                      padding: const EdgeInsets.only(right: 8, bottom: 4),
+                      child: Row(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          ServerNotificationTypeIcon(type: single.type),
+                          const SizedBox(width: 12),
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                ExcludeSemantics(
+                                  child: Text(
+                                    single.title,
+                                    maxLines: 2,
+                                    overflow: TextOverflow.ellipsis,
+                                    style: theme.textTheme.titleSmall
+                                        ?.copyWith(fontWeight: FontWeight.w700),
+                                  ),
+                                ),
+                                const SizedBox(height: 2),
+                                Text(
+                                  single.body,
+                                  maxLines: 2,
+                                  overflow: TextOverflow.ellipsis,
+                                  style: theme.textTheme.bodyMedium?.copyWith(
+                                      color: scheme.onSurfaceVariant),
+                                ),
+                              ],
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  const SizedBox(height: 6),
+                  FilledButton.icon(
+                    key: const Key('server-notification-popup-open'),
+                    focusNode: primaryAction,
+                    onPressed: onOpen,
+                    style: glassControlStyle(scheme).merge(
+                      FilledButton.styleFrom(
+                        minimumSize: const Size(0, 40),
+                        tapTargetSize: MaterialTapTargetSize.padded,
+                      ),
+                    ),
+                    icon: const Icon(Icons.arrow_forward_rounded, size: 18),
+                    label: Text(l10n.text('appNotifications.open')),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ),
+      ),
     );
   }
 }
@@ -239,12 +457,7 @@ class _Popup extends StatelessWidget {
     final scheme = theme.colorScheme;
     final critical = items.any((item) => item.type.critical);
     final single = items.length == 1 ? items.single : null;
-    final heading = single != null
-        ? (critical
-            ? l10n.text('appNotifications.popupCritical')
-            : l10n.text('appNotifications.popupNew'))
-        : l10n.text('appNotifications.summary',
-            args: {'count': '${items.length}'});
+    final heading = _heading(l10n, items);
     return Semantics(
       container: true,
       liveRegion: true,

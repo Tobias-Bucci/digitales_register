@@ -53,6 +53,7 @@ import 'package:dr/school_notification_service.dart';
 import 'package:dr/server_notifications/server_notification_service.dart';
 import 'package:dr/settings_persistence_service.dart';
 import 'package:dr/theme_controller.dart';
+import 'package:dr/ui/app_navigation.dart' show appNavigationBarExtent;
 import 'package:dr/ui/grade_calculator.dart';
 import 'package:dr/ui/grades_chart_page.dart';
 import 'package:dr/ui/launch/app_launch_animation.dart';
@@ -350,6 +351,7 @@ class RegisterApp extends StatelessWidget {
             StoreConnection<AppState, AppActions, _RegisterAppViewModel>(
           connect: (state) => _RegisterAppViewModel(
             amoledMode: state.settingsState.amoledMode,
+            legacyDesign: state.settingsState.legacyDesign,
             biometricAppLockEnabled:
                 state.settingsState.biometricAppLockEnabled,
             locale: AppLanguage.fromCode(
@@ -481,6 +483,8 @@ class RegisterApp extends StatelessWidget {
                     child: SafeArea(
                       top: false,
                       child: ServerNotificationHost(
+                        newDesign: !vm.legacyDesign,
+                        navigationClearance: appNavigationBarExtent,
                         child: child ?? const SizedBox.shrink(),
                       ),
                     ),
@@ -560,11 +564,13 @@ class LifecycleObserver with WidgetsBindingObserver {
 class _RegisterAppViewModel {
   const _RegisterAppViewModel({
     required this.amoledMode,
+    required this.legacyDesign,
     required this.biometricAppLockEnabled,
     required this.locale,
   });
 
   final bool amoledMode;
+  final bool legacyDesign;
   final bool biometricAppLockEnabled;
   final Locale locale;
 
@@ -573,12 +579,14 @@ class _RegisterAppViewModel {
     return identical(this, other) ||
         other is _RegisterAppViewModel &&
             other.amoledMode == amoledMode &&
+            other.legacyDesign == legacyDesign &&
             other.biometricAppLockEnabled == biometricAppLockEnabled &&
             other.locale == locale;
   }
 
   @override
-  int get hashCode => Object.hash(amoledMode, biometricAppLockEnabled, locale);
+  int get hashCode =>
+      Object.hash(amoledMode, legacyDesign, biometricAppLockEnabled, locale);
 }
 
 String tr(String key, {Map<String, String> args = const {}}) {
