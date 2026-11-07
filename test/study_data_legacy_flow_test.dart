@@ -84,6 +84,7 @@ void main() {
     );
     SharedPreferences.setMockInitialValues({
       'tutorial.v3.seen': true,
+      'designChoiceMade': true,
       globalSettingsPreferenceKey: jsonEncode(serializers.serialize(
           legacy.applyTo(SettingsState((b) => b..languageCode = 'en')))),
     });

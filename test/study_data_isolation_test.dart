@@ -252,6 +252,7 @@ void main() {
     Future<void> storeLegacyNotes() async {
       SharedPreferences.setMockInitialValues({
         'tutorial.v3.seen': true,
+        'designChoiceMade': true,
         globalSettingsPreferenceKey: jsonEncode(serializers.serialize(
             SettingsState((b) => b
               ..languageCode = 'en'

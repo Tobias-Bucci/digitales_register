@@ -13,6 +13,13 @@
 > boolean inside the existing device-scoped record, see the row "App
 > announcements". Nothing is sent to the server and no new key is stored.
 
+> 2026-11-07 addition: design choice (issue #108). One boolean `designChoiceMade`
+> in SharedPreferences, next to `tutorial.v3.seen`, records that the user chose
+> between the new and the legacy design; the design itself stays `legacyDesign`
+> in the settings. Device scoped, kept across logout and app updates, removed only
+> with the app data. Not sent anywhere and no analytics event. See the row
+> "Settings, favorites, …".
+
 > 2026-11-07 review: the public privacy policy (de, en, it, lld) now matches this
 > notice. The open review notes in the notice were resolved: register data stay
 > between the device and the school register, announcements rest on legitimate
@@ -33,7 +40,7 @@ The app uses the selected school's existing API, not a newly introduced first-pa
 | Absences, dates, reasons, API/user submissions | Display, justification and future absence operations with school API | Personal; illness reasons may be health data | Same local/provider distinction; never diagnostic or Analytics input | Necessary requested processing; sensitive-data basis and roles: Legal review required | Same |
 | Timetable, lesson topics, homework, class-register entries and course materials, API | Requested educational display and downloads | Personal or contextual education data | Caches/downloads remain until replaced/deleted; provider duration unknown | Necessary functions; Legal review required | Same |
 | School messages, confirmation actions and attachments, API | Requested communication functions with register provider | Personal/free text | Local cache/removal; remote message retention set by provider | Necessary functions; Legal review required | Same |
-| Settings, favorites, subject aliases, study notes, reminder/assessment plans, user | SharedPreferences and existing locally persisted app state; local functionality | Can contain personal free text | Change/remove entries or delete app data; no uniform TTL | Requested local functionality; Legal review required | Same |
+| Settings, favorites, subject aliases, study notes, reminder/assessment plans, user | SharedPreferences and existing locally persisted app state; local functionality. Includes the markers that the intro was seen and a design was chosen (`designChoiceMade`) | Can contain personal free text | Change/remove entries or delete app data; no uniform TTL | Requested local functionality; Legal review required | Same |
 | Privacy choices, current notice version, coarse age state and change time, user | One local SharedPreferences record; authorize separate telemetry purposes | Local personal preference; no exact age/birth date/year | New decision replaces record; app-data deletion removes it. Never uploaded as age/consent properties | Local consent management; Legal review required for necessary storage | Same |
 | Random UUIDv4 per installation/local saved account; installation namespace | Analytics account separation; encrypted local lookup map. Uploaded UUID never encodes username/email; no cross-device identity | Pseudonymous, not anonymous | Local map until removal/storage deletion. SDK user ID clears on logout/revocation; server history is separate | Usage consent, current v4 and atLeast14 | Firebase only on supported configured mobile/Apple targets; Windows no-op |
 | Fixed screens/actions/results and nine allowlisted properties | Optional usage statistics to Google/Firebase; school_id additionally requires academic consent and non-demo | Pseudonymous; automatic SDK app/device/session and network context can identify indirectly | Project-reported GA4 14 months/reset on activity; not a blanket TTL for aggregate reports. Separate BigQuery retention required | Usage consent, current v4 and atLeast14 | Android; iOS only with real Firebase config; existing macOS guarded; no Windows/Linux |

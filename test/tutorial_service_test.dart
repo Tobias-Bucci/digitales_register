@@ -22,14 +22,13 @@ void main() {
     {'tutorial.v2.completed.dashboard': true},
     {'tutorial.v2.progress': 40},
   ]) {
-    test('users of the old tour are not offered the intro: $history',
-        () async {
+    test('users of the old tour are not offered the intro: $history', () async {
       SharedPreferences.setMockInitialValues(history);
       final tour = TutorialService();
       expect(await tour.shouldOffer(), isFalse);
       final prefs = await SharedPreferences.getInstance();
-      expect(prefs.getKeys().where((k) => k.startsWith('tutorial.v2.')),
-          isEmpty);
+      expect(
+          prefs.getKeys().where((k) => k.startsWith('tutorial.v2.')), isEmpty);
       expect(prefs.getBool(TutorialService.seenKey), isTrue);
       expect(await tour.shouldOffer(), isFalse);
       tour.dispose();
@@ -47,7 +46,7 @@ void main() {
 
   test('the intro stays short and focused', () {
     expect(introTourPages.map((p) => p.key),
-        ['welcome', 'dashboard', 'grades', 'calendar', 'settings']);
+        ['welcome', 'dashboard', 'grades', 'calendar', 'settings', 'design']);
   });
 
   for (final language in AppLanguage.values) {
@@ -78,13 +77,30 @@ void main() {
       ]) {
         expect(l10n.text('tutorial.$key'), isNot('tutorial.$key'));
       }
+      for (final key in [
+        'eyebrow',
+        'title',
+        'body',
+        'recommended',
+        'newCaption',
+        'legacyCaption',
+        'later',
+        'legacyNote',
+        'confirmNew',
+        'confirmLegacy',
+      ]) {
+        final text = l10n.text('design.choice.$key');
+        expect(text, isNot('design.choice.$key'));
+        expect(text.trim(), isNotEmpty);
+      }
     });
   }
 
-  testWidgets('an idle dashboard shows the intro without a tap; skip ends it',
-      (tester) async {
+  testWidgets(
+      'an idle dashboard shows the intro without a tap; skip leads to the '
+      'design choice', (tester) async {
     final tour = TutorialService();
-    final store = createStore();
+    final store = createStore(newDesign: true);
     await pumpApp(tester,
         store: store, home: const Scaffold(body: Text('Dashboard')));
     await tester.pumpAndSettle();
@@ -96,13 +112,27 @@ void main() {
     expect(find.byType(IntroTour), findsOneWidget);
     expect(tour.active, isTrue);
     expect(find.text('Willkommen!'), findsOneWidget);
-    expect(find.text('Schritt 1 von 5'), findsOneWidget);
+    expect(find.text('Schritt 1 von 6'), findsOneWidget);
 
     await tester.tap(find.text('Überspringen'));
+    await tester.pumpAndSettle();
+    expect(find.byType(IntroTour), findsOneWidget,
+        reason: 'the design has to be chosen once');
+    expect(find.text('Schritt 6 von 6'), findsOneWidget);
+    expect(find.text('Wähle dein Design'), findsOneWidget);
+    expect(
+        tester
+            .widget<TextButton>(find.widgetWithText(TextButton, 'Überspringen'))
+            .onPressed,
+        isNull);
+
+    await tester.tap(find.byKey(const Key('intro-next')));
     await tester.pumpAndSettle();
     expect(find.byType(IntroTour), findsNothing);
     expect(tour.active, isFalse);
     expect(await tour.shouldOffer(), isFalse);
+    expect(await tour.designChoicePending(), isFalse);
+    expect(store.state.settingsState.legacyDesign, isFalse);
     tour.dispose();
     store.dispose();
   });
@@ -118,17 +148,17 @@ void main() {
     final next = find.byKey(const Key('intro-next'));
     await tester.tap(next);
     await tester.pumpAndSettle();
-    expect(find.text('Schritt 2 von 5'), findsOneWidget);
+    expect(find.text('Schritt 2 von 6'), findsOneWidget);
     expect(find.text('Alles auf einen Blick'), findsOneWidget);
     await tester.tap(find.text('Zurück'));
     await tester.pumpAndSettle();
-    expect(find.text('Schritt 1 von 5'), findsOneWidget);
+    expect(find.text('Schritt 1 von 6'), findsOneWidget);
 
-    for (var i = 0; i < 4; i++) {
+    for (var i = 0; i < 5; i++) {
       await tester.tap(next);
       await tester.pumpAndSettle();
     }
-    expect(find.text('Schritt 5 von 5'), findsOneWidget);
+    expect(find.text('Schritt 6 von 6'), findsOneWidget);
     expect(find.text("Los geht's"), findsOneWidget);
     await tester.tap(next);
     await tester.pumpAndSettle();
@@ -152,6 +182,8 @@ void main() {
     expect(store.state.settingsState.languageCode, 'it');
     expect(appLanguageController.language, AppLanguage.it);
     await tester.tap(find.text('Überspringen'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.byKey(const Key('intro-next')));
     await tester.pumpAndSettle();
     await starting;
     await tester.pumpWidget(const SizedBox.shrink());
