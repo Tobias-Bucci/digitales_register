@@ -49,11 +49,14 @@ import 'package:dr/reminder_sync.dart';
 import 'package:dr/runtime_trace.dart';
 import 'package:dr/school_notification_engine.dart';
 import 'package:dr/school_notification_service.dart';
+import 'package:dr/server_notifications/server_notification_service.dart';
 import 'package:dr/settings_persistence_service.dart';
 import 'package:dr/theme_controller.dart';
 import 'package:dr/ui/grade_calculator.dart';
 import 'package:dr/ui/grades_chart_page.dart';
 import 'package:dr/ui/launch/app_launch_animation.dart';
+import 'package:dr/ui/server_notifications/server_notification_bell.dart';
+import 'package:dr/ui/server_notifications/server_notification_popup.dart';
 import 'package:dr/util.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_built_redux/flutter_built_redux.dart';
@@ -112,7 +115,11 @@ Future<void> main() async {
       _initializeAfterFirstFrame(
         store: store,
         startupStopwatch: startupStopwatch,
-      ).whenComplete(appLaunchGate.open),
+      ).whenComplete(() {
+        appLaunchGate.open();
+        serverNotifications.isLoggedIn = () => store.state.loginState.loggedIn;
+        unawaited(serverNotifications.start());
+      }),
     ),
   );
 }
@@ -390,7 +397,8 @@ class RegisterApp extends StatelessWidget {
                   case "login":
                     return MaterialPageRoute<void>(
                       settings: settings,
-                      builder: (_) => LoginPage(),
+                      builder: (_) =>
+                          ServerNotificationCornerBell(child: LoginPage()),
                     );
                   case "request_pass_reset":
                     return MaterialPageRoute<void>(
@@ -460,7 +468,9 @@ class RegisterApp extends StatelessWidget {
                     color: Theme.of(context).scaffoldBackgroundColor,
                     child: SafeArea(
                       top: false,
-                      child: child ?? const SizedBox.shrink(),
+                      child: ServerNotificationHost(
+                        child: child ?? const SizedBox.shrink(),
+                      ),
                     ),
                   ),
                 ),

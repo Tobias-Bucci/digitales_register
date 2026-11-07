@@ -45,6 +45,7 @@ import 'package:dr/ui/favorite_subject_filter.dart';
 import 'package:dr/ui/grade_colors.dart';
 import 'package:dr/ui/last_fetched_overlay.dart';
 import 'package:dr/ui/no_internet.dart';
+import 'package:dr/ui/server_notifications/server_notification_bell.dart';
 import 'package:dr/utc_date_time.dart';
 import 'package:dr/util.dart';
 import 'package:flutter/material.dart';
@@ -766,6 +767,7 @@ class _DaysWidgetState extends State<DaysWidget> {
               ),
             ),
           if (widget.vm.showNotifications) NotificationIconContainer(),
+          const ServerNotificationBell(),
         ],
       ),
       drawerBuilder: (widgetSelected, goHome, currentSelected, tabletMode) {
