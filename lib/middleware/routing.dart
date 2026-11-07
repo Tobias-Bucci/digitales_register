@@ -130,9 +130,10 @@ Future<void> _showNotifications(
   // Inside the home route, so that the navigation stays in reach.
   final nested = nestedNavKey.currentState;
   if (nested != null) {
+    final focus = takeNotificationCenterFocus();
     unawaited(nested.push(MaterialPageRoute<void>(
       settings: const RouteSettings(name: _notificationsRoute),
-      builder: (_) => NotificationPageContainer(),
+      builder: (_) => NotificationPageContainer(focusSchoolId: focus),
     )));
   } else {
     unawaited(navigatorKey!.currentState!.pushNamed(_notificationsRoute));

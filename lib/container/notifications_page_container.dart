@@ -31,12 +31,18 @@ import 'package:tuple/tuple.dart';
 
 /// The notification center of the signed-in app, with both sources.
 class NotificationPageContainer extends StatelessWidget {
+  const NotificationPageContainer({super.key, this.focusSchoolId});
+
+  /// The school notification to open right away.
+  final int? focusSchoolId;
+
   @override
   Widget build(BuildContext context) {
     return StoreConnection<AppState, AppActions,
         Tuple3<BuiltList<Notification>, UtcDateTime?, bool>>(
       builder: (context, vm, actions) {
         return ServerNotificationCenterPage(
+          initialSchoolId: focusSchoolId,
           school: SchoolNotificationFeed(
             notifications: vm.item1.toList(),
             noInternet: vm.item3,

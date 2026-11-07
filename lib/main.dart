@@ -43,6 +43,7 @@ import 'package:dr/diagnostics_service.dart';
 import 'package:dr/i18n/app_language.dart';
 import 'package:dr/i18n/app_localizations.dart';
 import 'package:dr/middleware/middleware.dart';
+import 'package:dr/notification_feed.dart';
 import 'package:dr/reducer/reducer.dart';
 import 'package:dr/reminder_notifications.dart';
 import 'package:dr/reminder_sync.dart';
@@ -432,7 +433,9 @@ class RegisterApp extends StatelessWidget {
                   case "notifications":
                     return MaterialPageRoute<void>(
                       settings: settings,
-                      builder: (_) => NotificationPageContainer(),
+                      builder: (_) => NotificationPageContainer(
+                        focusSchoolId: takeNotificationCenterFocus(),
+                      ),
                       fullscreenDialog: true,
                     );
                   case "gradesChart":
