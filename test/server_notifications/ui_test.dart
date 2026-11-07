@@ -4,6 +4,9 @@ import 'package:dr/i18n/app_localizations.dart';
 import 'package:dr/server_notifications/server_notification_links.dart';
 import 'package:dr/server_notifications/server_notification_repository.dart';
 import 'package:dr/theme/app_palette.dart';
+import 'package:dr/ui/app_navigation.dart' show appNavigationBarExtent;
+import 'package:dr/ui/dashboard_app_header.dart' show DashboardAppHeader;
+import 'package:dr/ui/glass_surface.dart';
 import 'package:dr/ui/server_notifications/server_notification_bell.dart';
 import 'package:dr/ui/server_notifications/server_notification_center.dart';
 import 'package:dr/ui/server_notifications/server_notification_popup.dart';
@@ -22,6 +25,13 @@ const b = '5f0e2c1a-7f4d-4b52-9d43-2a6c0f3e1b10';
 const c = '2c9a7e44-1d6b-4c3f-8a55-73e1b9d0c2f4';
 
 final popup = find.byKey(const Key('server-notification-popup'));
+
+/// The bar of narrow windows, and the tallest header of the dashboard: the
+/// floating one of wide windows, with the strip for new entries.
+const navigationClearance = appNavigationBarExtent;
+const headerExtent = DesignTokens.gutter +
+    DashboardAppHeader.height +
+    DashboardAppHeader.newEntriesHeight;
 final popupClose = find.byKey(const Key('server-notification-popup-close'));
 final popupOpen = find.byKey(const Key('server-notification-popup-open'));
 
@@ -466,6 +476,7 @@ void main() {
       bool Function()? isBlocked,
       Listenable? blockedChanges,
       ThemeMode mode = ThemeMode.light,
+      bool newDesign = false,
     }) async {
       navigator = GlobalKey<NavigatorState>();
       await tester.pumpWidget(app(
@@ -473,6 +484,8 @@ void main() {
         navigator: navigator,
         home: const Scaffold(body: Text('App')),
         builder: (context, child) => ServerNotificationHost(
+          newDesign: newDesign,
+          navigationClearance: newDesign ? navigationClearance : 0,
           repository: repository,
           navigator: () => navigator.currentState,
           isBlocked: isBlocked ?? () => false,
@@ -729,6 +742,87 @@ void main() {
         await tester.pumpAndSettle();
       });
     }
+
+    group('in the new design', () {
+      for (final (name, size) in [
+        ('small phone', const Size(320, 568)),
+        ('phone', const Size(390, 844)),
+        ('tablet', const Size(1024, 768)),
+      ]) {
+        testWidgets('keeps clear of header and navigation on a $name',
+            (tester) async {
+          tester.view.physicalSize = size;
+          tester.view.devicePixelRatio = 1;
+          addTearDown(tester.view.reset);
+          final repository = await filled(tester, [
+            item(title: 'Neue Version', body: 'Lang ' * 60, critical: true),
+          ]);
+          await pumpHost(tester, repository, newDesign: true);
+
+          final rect = tester.getRect(
+              find.descendant(of: popup, matching: find.byType(GlassSurface)));
+          // Below the header of the dashboard and its bell.
+          expect(rect.top, greaterThan(headerExtent));
+          final wide = size.width >= 600;
+          expect(
+              rect.bottom,
+              lessThanOrEqualTo(
+                  size.height - (wide ? 0 : navigationClearance)));
+          if (wide) expect(rect.right, size.width - 12);
+          await tester.tap(popupClose);
+          await tester.pumpAndSettle();
+        });
+      }
+
+      testWidgets('fits with large text', (tester) async {
+        tester.view.physicalSize = const Size(320, 568);
+        tester.view.devicePixelRatio = 1;
+        tester.platformDispatcher.textScaleFactorTestValue = 2;
+        addTearDown(tester.view.reset);
+        addTearDown(tester.platformDispatcher.clearTextScaleFactorTestValue);
+        final repository = await filled(tester, [item(critical: true)]);
+        await pumpHost(tester, repository, newDesign: true);
+        expect(tester.takeException(), isNull);
+        expect(popupOpen, findsOneWidget);
+        await tester.tap(popupClose);
+        await tester.pumpAndSettle();
+      });
+
+      for (final mode in [ThemeMode.light, ThemeMode.dark]) {
+        testWidgets('meets contrast and target guidelines ($mode)',
+            (tester) async {
+          final semantics = tester.ensureSemantics();
+          final repository = await filled(tester, [item(critical: true)]);
+          await pumpHost(tester, repository, mode: mode, newDesign: true);
+          await expectLater(tester, meetsGuideline(textContrastGuideline));
+          await expectLater(tester, meetsGuideline(labeledTapTargetGuideline));
+          await expectLater(tester, meetsGuideline(androidTapTargetGuideline));
+          semantics.dispose();
+          await tester.tap(popupClose);
+          await tester.pumpAndSettle();
+        });
+      }
+
+      testWidgets('opens the detail, closes itself and takes the keyboard',
+          (tester) async {
+        final repository = await filled(tester, [item(title: 'Neu')]);
+        await pumpHost(tester, repository, newDesign: true);
+        await tester.sendKeyEvent(LogicalKeyboardKey.f6);
+        await tester.pump();
+        expect(
+            tester.widget<FilledButton>(popupOpen).focusNode!.hasFocus, isTrue);
+        await tester.tap(popupOpen);
+        await tester.pumpAndSettle();
+        expect(popup, findsNothing);
+        expect(find.byType(ServerNotificationDetailPage), findsOneWidget);
+
+        final again = await filled(tester, [item(id: b)]);
+        await pumpHost(tester, again, newDesign: true);
+        await tester.pump(serverNotificationPopupDuration);
+        await tester.pumpAndSettle();
+        expect(popup, findsNothing);
+      });
+    });
 
     testWidgets('respects reduced motion', (tester) async {
       final repository = await filled(tester, [item(critical: true)]);
