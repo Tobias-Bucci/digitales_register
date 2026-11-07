@@ -20,7 +20,9 @@ import 'package:built_collection/built_collection.dart';
 import 'package:dr/container/homework_filter_container.dart';
 import 'package:dr/data.dart';
 import 'package:dr/i18n/app_localizations.dart';
+import 'package:dr/ui/glass_surface.dart';
 import 'package:flutter/material.dart';
+import 'package:responsive_scaffold/responsive_scaffold.dart';
 
 typedef HomeworkBlacklistCallback = void Function(
     ListBuilder<HomeworkType> blacklist);
@@ -96,9 +98,12 @@ class _HomeworkFilterState extends State<HomeworkFilter>
       setSheetState(() {});
     }
 
-    await showModalBottomSheet<void>(
+    final newDesign = ResponsiveNavigationScope.isActive(context);
+    await showGlassSheet<void>(
       context: context,
-      isScrollControlled: true,
+      glass: newDesign,
+      useRootNavigator: newDesign,
+      showDragHandle: false,
       builder: (context) {
         return StatefulBuilder(
           builder: (context, setSheetState) {

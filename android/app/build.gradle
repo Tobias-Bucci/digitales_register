@@ -56,18 +56,18 @@ tasks.configureEach { task ->
 }
 
 android {
-    namespace "it.bucci.digitalesregister"
-    compileSdk 37
-    ndkVersion "28.2.13676358"
+    namespace = "it.bucci.digitalesregister"
+    compileSdk = 37
+    ndkVersion = "28.2.13676358"
 
     buildFeatures {
-        resValues true
+        resValues = true
     }
 
     compileOptions {
-        coreLibraryDesugaringEnabled true
-        sourceCompatibility JavaVersion.VERSION_17
-        targetCompatibility JavaVersion.VERSION_17
+        coreLibraryDesugaringEnabled = true
+        sourceCompatibility = JavaVersion.VERSION_17
+        targetCompatibility = JavaVersion.VERSION_17
     }
 
     sourceSets {
@@ -75,39 +75,39 @@ android {
     }
 
     defaultConfig {
-        applicationId "it.bucci.digitalesregister"
-        minSdkVersion flutter.minSdkVersion
-        targetSdk 37
-        versionCode flutterVersionCode.toInteger()
-        versionName flutterVersionName
+        applicationId = "it.bucci.digitalesregister"
+        minSdk = flutter.minSdkVersion
+        targetSdk = 37
+        versionCode = flutterVersionCode.toInteger()
+        versionName = flutterVersionName
         resValue "bool", "firebase_configured", "true"
     }
 
     signingConfigs {
         release {
-            keyAlias keystoreProperties['keyAlias']
-            keyPassword keystoreProperties['keyPassword']
-            storeFile keystoreProperties['storeFile'] ? file(keystoreProperties['storeFile']) : null
-            storePassword keystoreProperties['storePassword']
+            keyAlias = keystoreProperties['keyAlias']
+            keyPassword = keystoreProperties['keyPassword']
+            storeFile = keystoreProperties['storeFile'] ? file(keystoreProperties['storeFile']) : null
+            storePassword = keystoreProperties['storePassword']
         }
     }
     buildTypes {
         release {
             firebaseCrashlytics {
-                nativeSymbolUploadEnabled true
+                nativeSymbolUploadEnabled = true
                 // Supply unstripped native libraries for plugins/engine when available.
                 // Flutter AOT symbols are uploaded separately with the Firebase CLI.
                 def nativeSymbols = project.findProperty('crashlyticsNativeSymbolsDir')
-                if (nativeSymbols) unstrippedNativeLibsDir file(nativeSymbols)
+                if (nativeSymbols) unstrippedNativeLibsDir = file(nativeSymbols)
             }
             // Default: require the private release keystore.
             // Local override (explicit): set allowDebugSigningForRelease=true in local.properties
             // or ALLOW_DEBUG_SIGNING_FOR_RELEASE=true as environment variable.
-            signingConfig allowDebugSigningForRelease ? signingConfigs.debug : signingConfigs.release
+            signingConfig = allowDebugSigningForRelease ? signingConfigs.debug : signingConfigs.release
             proguardFiles getDefaultProguardFile('proguard-android-optimize.txt'), 'proguard-rules.pro'
             // this is my (michael) release key. Used for dev purposes only.
             if (signingConfigs.release.keyAlias == "myandroidkey") {
-                applicationIdSuffix ".irelease"
+                applicationIdSuffix = ".irelease"
                 resValue "string", "app_name", "Register"
             } else {
                 // This is the normal release build type
@@ -115,12 +115,12 @@ android {
             }
         }
         debug {
-            applicationIdSuffix ".debug"
+            applicationIdSuffix = ".debug"
             resValue "bool", "firebase_configured", debugFirebaseConfigured.toString()
             resValue "string", "app_name", "dr DEBUG"
         }
         profile {
-            applicationIdSuffix ".profile"
+            applicationIdSuffix = ".profile"
             resValue "bool", "firebase_configured", profileFirebaseConfigured.toString()
             resValue "string", "app_name", "dr PROFILE"
         }
@@ -128,7 +128,7 @@ android {
 }
 
 flutter {
-    source '../..'
+    source = '../..'
 }
 
 kotlin {

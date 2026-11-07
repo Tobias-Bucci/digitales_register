@@ -26,11 +26,16 @@ class GradesHistoryContainer extends StatelessWidget {
     );
   }
 
-  static void _showHistory(BuildContext context, AppState state) {
+  /// That the history was opened, in Legacy or in the new design.
+  static void logOpened() {
     AnalyticsService.product
         .event('tab_changed', {'feature': 'grades', 'tab_id': 'history'});
     AnalyticsService.product.event(
         'feature_action', {'feature': 'grades', 'action': 'change_view'});
+  }
+
+  static void _showHistory(BuildContext context, AppState state) {
+    logOpened();
     final comparison = compareGradeSemesters(
       subjects: state.gradesState.subjects,
       currentSemester: Semester.second,

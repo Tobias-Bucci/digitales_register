@@ -51,9 +51,69 @@ void main() {
           planReminders(_state(minute: 120), l10n).single.id);
     });
 
-    test('opens the sign-up page of the Mensa', () {
-      expect(
-          mensaReminderUri.toString(), 'https://mensa.franziskanergymnasium.it');
+  });
+
+  group('tapping the mensa reminder', () {
+    late List<Uri> opened;
+    late int dashboards;
+
+    Future<void> tap(
+      String url, {
+      String? payload = mensaReminderPayload,
+      Future<bool> Function(Uri uri)? launch,
+    }) =>
+        openReminderTarget(
+          payload,
+          mensaUrl: url,
+          openDashboard: () => dashboards++,
+          launch: launch ??
+              (uri) async {
+                opened.add(uri);
+                return true;
+              },
+        );
+
+    setUp(() {
+      opened = [];
+      dashboards = 0;
+    });
+
+    test('without a link it opens the dashboard', () async {
+      await tap('');
+
+      expect(opened, isEmpty);
+      expect(dashboards, 1);
+    });
+
+    test('opens the link of the user and nothing else', () async {
+      await tap('https://example.org/menu');
+
+      expect(opened, [Uri.parse('https://example.org/menu')]);
+      expect(dashboards, 0);
+    });
+
+    test('never opens an invalid value', () async {
+      for (final url in ['javascript:alert(1)', 'not a link', 'ftp://a.org']) {
+        await tap(url);
+      }
+
+      expect(opened, isEmpty);
+      expect(dashboards, 3);
+    });
+
+    test('falls back to the dashboard if the link cannot be opened', () async {
+      await tap('https://example.org', launch: (_) async => false);
+      await tap('https://example.org', launch: (_) => throw StateError('no'));
+
+      expect(dashboards, 2);
+    });
+
+    test('other reminders are left alone', () async {
+      await tap('https://example.org', payload: null);
+      await tap('https://example.org', payload: 'something-else');
+
+      expect(opened, isEmpty);
+      expect(dashboards, 0);
     });
   });
 
@@ -63,18 +123,21 @@ void main() {
 
       expect(settings.mensaReminderEnabled, isFalse);
       expect(settings.mensaReminderMinuteOfDay, 7 * 60 + 30);
+      expect(settings.mensaReminderUrl, isEmpty);
     });
 
     test('survives a restart', () async {
       SharedPreferences.setMockInitialValues({});
       await settingsPersistenceService.save(SettingsState((b) => b
         ..mensaReminderEnabled = true
-        ..mensaReminderMinuteOfDay = 9 * 60 + 15));
+        ..mensaReminderMinuteOfDay = 9 * 60 + 15
+        ..mensaReminderUrl = 'https://example.org/menu'));
 
       final restored = await settingsPersistenceService.load();
 
       expect(restored!.mensaReminderEnabled, isTrue);
       expect(restored.mensaReminderMinuteOfDay, 9 * 60 + 15);
+      expect(restored.mensaReminderUrl, 'https://example.org/menu');
     });
 
     test('settings saved by an older version get the defaults', () async {
@@ -93,6 +156,7 @@ void main() {
       expect(restored, isNotNull);
       expect(restored!.mensaReminderEnabled, isFalse);
       expect(restored.mensaReminderMinuteOfDay, 7 * 60 + 30);
+      expect(restored.mensaReminderUrl, isEmpty);
       expect(restored.assessmentReminderMinuteOfDay, 18 * 60);
     });
   });

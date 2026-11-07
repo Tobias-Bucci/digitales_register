@@ -401,7 +401,7 @@ void main() {
   });
 
   testWidgets(
-      'editing a reminder deletes the old entry and adds the updated one',
+      'editing a reminder saves the updated entry before deleting the old one',
       (tester) async {
     final mockWrapper = MockWrapper();
     when(() => mockWrapper.noInternet).thenReturn(false);
@@ -477,15 +477,15 @@ void main() {
 
     verifyInOrder(<void Function()>[
       () => mockWrapper.send(
-            'api/student/dashboard/delete_reminder',
-            args: <String, Object?>{'id': 7},
-          ),
-      () => mockWrapper.send(
             'api/student/dashboard/save_reminder',
             args: <String, Object?>{
               'date': '2050-01-01',
               'text': 'Neu formulierte Erinnerung',
             },
+          ),
+      () => mockWrapper.send(
+            'api/student/dashboard/delete_reminder',
+            args: <String, Object?>{'id': 7},
           ),
     ]);
 

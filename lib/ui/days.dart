@@ -24,6 +24,8 @@ import 'package:built_collection/built_collection.dart';
 import 'package:dr/actions/app_actions.dart';
 import 'package:dr/app_clock.dart';
 import 'package:dr/app_state.dart';
+import 'package:dr/container/app_navigation_container.dart';
+import 'package:dr/container/dashboard_events_container.dart';
 import 'package:dr/container/dashboard_overview.dart';
 import 'package:dr/container/days_container.dart';
 import 'package:dr/container/homework_filter_container.dart';
@@ -39,12 +41,17 @@ import 'package:dr/school_timeline.dart';
 import 'package:dr/theme/app_palette.dart';
 import 'package:dr/ui/animated_linear_progress_indicator.dart';
 import 'package:dr/ui/committed_deleteable.dart';
+import 'package:dr/ui/compact_day_list.dart';
 import 'package:dr/ui/controlled_text_builder.dart';
+import 'package:dr/ui/dashboard_app_header.dart';
+import 'package:dr/ui/dashboard_columns.dart';
 import 'package:dr/ui/dialog.dart';
 import 'package:dr/ui/favorite_subject_filter.dart';
+import 'package:dr/ui/glass_surface.dart';
 import 'package:dr/ui/grade_colors.dart';
 import 'package:dr/ui/last_fetched_overlay.dart';
 import 'package:dr/ui/no_internet.dart';
+import 'package:dr/ui/readable_content.dart';
 import 'package:dr/ui/server_notifications/server_notification_bell.dart';
 import 'package:dr/utc_date_time.dart';
 import 'package:dr/util.dart';
@@ -478,47 +485,52 @@ class _DaysWidgetState extends State<DaysWidget> {
     required List<String> availableFavoriteSubjects,
     required String? activeFavoriteSubject,
   }) {
+    final modern = !widget.vm.legacyDesign;
     if (n == 0) {
-      final timeline = _schoolTimeline();
-      return DashboardHeader(
-        future: widget.vm.future,
-        onSwitchFuture: widget.onSwitchFuture,
-        favoriteSubjects: availableFavoriteSubjects,
-        selectedFavoriteSubject: activeFavoriteSubject,
-        onFavoriteSubjectChanged: (favoriteSubject) {
-          setState(() {
-            _favoriteSubject = favoriteSubject;
-            widget.onFavoriteSubjectChanged?.call(favoriteSubject);
-            updateValues(_filteredDays(favoriteSubject));
-            update();
-          });
-        },
-        showEmptyDays: _showEmptyDays,
-        onShowEmptyDaysChanged: (value) {
-          setState(() {
-            _showEmptyDays = value;
-            widget.onShowEmptyDaysChanged?.call(value);
-            updateValues(_filteredDays(activeFavoriteSubject));
-            update();
-          });
-        },
-        subjectThemes: widget.vm.subjectThemes,
-        schoolTimeline: timeline,
-        openCalendarAt: widget.openCalendarAt,
-        editGradeDeadline: _editGradeDeadline,
+      if (_dashboardColumns(modern) != null) return const SizedBox(height: 4);
+      final header = _dashboardHeader(
+        availableFavoriteSubjects,
+        activeFavoriteSubject,
+        modern: modern,
       );
+      return modern ? _modernTop(header) : header;
     }
     if (isLast) {
-      return const SizedBox(
-        height: 160,
+      // The list view already ends above the navigation bar.
+      return SizedBox(
+        height: modern ? 72 : 160,
       );
     }
     if (n.isEven) {
-      return const Divider(
-        height: 16,
-      );
+      return modern
+          ? const SizedBox(height: 4)
+          : const Divider(
+              height: 16,
+            );
     }
     final itemIndex = (n - 1) ~/ 2;
+    if (modern) {
+      return ReadableContent(
+        maxWidth: DesignTokens.contentMaxWidth,
+        child: CompactDayWidget(
+          day: visibleDays[itemIndex],
+          vm: widget.vm,
+          controller: controller,
+          index: _dayStartIndices[itemIndex]!,
+          addReminderCallback: widget.addReminderCallback,
+          editReminderCallback: widget.editReminderCallback,
+          removeReminderCallback: widget.removeReminderCallback,
+          toggleDoneCallback: widget.toggleDoneCallback,
+          setDoNotAskWhenDeleteCallback: widget.setDoNotAskWhenDeleteCallback,
+          onOpenAttachment: widget.onOpenAttachment,
+          colorBorders: widget.vm.colorBorders,
+          colorTestsInRed: widget.vm.colorTestsInRed,
+          subjectThemes: widget.vm.subjectThemes,
+          allSubjects: widget.vm.allSubjects,
+          showLastFetched: showLastFetched,
+        ),
+      );
+    }
     return DayWidget(
       day: visibleDays[itemIndex],
       vm: widget.vm,
@@ -537,6 +549,89 @@ class _DaysWidgetState extends State<DaysWidget> {
       showLastFetched: showLastFetched,
     );
   }
+
+  /// The two columns of a wide window, or null.
+  DashboardColumns? _dashboardColumns(bool modern) => modern
+      ? DashboardColumns.forWindow(MediaQuery.sizeOf(context).width)
+      : null;
+
+  Widget _dashboardHeader(
+    List<String> availableFavoriteSubjects,
+    String? activeFavoriteSubject, {
+    required bool modern,
+  }) {
+    return DashboardHeader(
+      future: widget.vm.future,
+      onSwitchFuture: widget.onSwitchFuture,
+      favoriteSubjects: availableFavoriteSubjects,
+      selectedFavoriteSubject: activeFavoriteSubject,
+      onFavoriteSubjectChanged: (favoriteSubject) {
+        setState(() {
+          _favoriteSubject = favoriteSubject;
+          widget.onFavoriteSubjectChanged?.call(favoriteSubject);
+          updateValues(_filteredDays(favoriteSubject));
+          update();
+        });
+      },
+      showEmptyDays: _showEmptyDays,
+      onShowEmptyDaysChanged: (value) {
+        setState(() {
+          _showEmptyDays = value;
+          widget.onShowEmptyDaysChanged?.call(value);
+          updateValues(_filteredDays(activeFavoriteSubject));
+          update();
+        });
+      },
+      subjectThemes: widget.vm.subjectThemes,
+      schoolTimeline: _schoolTimeline(),
+      openCalendarAt: widget.openCalendarAt,
+      editGradeDeadline: _editGradeDeadline,
+      modern: modern,
+    );
+  }
+
+  void _scrollToTop() {
+    controller.animateTo(
+      0,
+      duration: const Duration(milliseconds: 500),
+      curve: Curves.decelerate,
+    );
+  }
+
+  Future<void> _showNextNewEntry() => controller.scrollToIndex(
+        _targets.first,
+        preferPosition: AutoScrollPosition.middle,
+      );
+
+  PreferredSizeWidget _modernAppBar(List<Day> visibleDays) {
+    final width = MediaQuery.sizeOf(context).width;
+    return DashboardAppHeader(
+      schoolName: widget.vm.schoolName,
+      noInternet: widget.vm.noInternet,
+      onRetry: widget.refreshNoInternet,
+      showScrollUp: _showScrollUp,
+      onScrollUp: visibleDays.isEmpty ? null : _scrollToTop,
+      onShowNewEntries:
+          _targets.isNotEmpty && _afterFirstFrame ? _showNextNewEntry : null,
+      onDismissNewEntries: _targets.isNotEmpty || _focused.isNotEmpty
+          ? () => _markVisibleAsSeen(visibleDays)
+          : null,
+      floatingMaxWidth: width < tabletLayoutBreakpoint
+          ? null
+          : DashboardColumns.forWindow(width) == null
+              ? DesignTokens.contentMaxWidth
+              : DashboardColumns.maxWidth,
+    );
+  }
+
+  /// What the new design shows above the day list.
+  Widget _modernTop(Widget header) => ReadableContent(
+        maxWidth: DesignTokens.contentMaxWidth,
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [header, const DashboardEventsContainer()],
+        ),
+      );
 
   void _markVisibleAsSeen(List<Day> visibleDays) {
     for (final day in visibleDays) {
@@ -560,6 +655,8 @@ class _DaysWidgetState extends State<DaysWidget> {
     final visibleDays = _filteredDays(activeFavoriteSubject);
     final noInternet = widget.vm.noInternet;
     final noEntries = visibleDays.isEmpty;
+    final modern = !widget.vm.legacyDesign;
+    final columns = _dashboardColumns(modern);
     final schoolTimeline = _schoolTimeline();
     Widget body;
     if (noEntries) {
@@ -587,42 +684,65 @@ class _DaysWidgetState extends State<DaysWidget> {
           ),
         );
       }
-      body = CustomScrollView(
-        slivers: [
-          SliverToBoxAdapter(
-              child: DashboardHeader(
-            future: widget.vm.future,
-            onSwitchFuture: widget.onSwitchFuture,
-            favoriteSubjects: availableFavoriteSubjects,
-            selectedFavoriteSubject: activeFavoriteSubject,
-            onFavoriteSubjectChanged: (favoriteSubject) {
-              setState(() {
-                _favoriteSubject = favoriteSubject;
-                widget.onFavoriteSubjectChanged?.call(favoriteSubject);
-                widget.onFavoriteSubjectChanged?.call(favoriteSubject);
-                updateValues(_filteredDays(favoriteSubject));
-                update();
-              });
-            },
-            showEmptyDays: _showEmptyDays,
-            onShowEmptyDaysChanged: (value) {
-              setState(() {
-                _showEmptyDays = value;
-                widget.onShowEmptyDaysChanged?.call(value);
-                updateValues(_filteredDays(activeFavoriteSubject));
-                update();
-              });
-            },
-            subjectThemes: widget.vm.subjectThemes,
-            schoolTimeline: schoolTimeline,
-            openCalendarAt: widget.openCalendarAt,
-            editGradeDeadline: _editGradeDeadline,
-          )),
-          SliverFillRemaining(
-            hasScrollBody: false,
-            child: Center(child: fullScreenBody),
-          ),
-        ],
+      final emptyHeader = DashboardHeader(
+        modern: modern,
+        future: widget.vm.future,
+        onSwitchFuture: widget.onSwitchFuture,
+        favoriteSubjects: availableFavoriteSubjects,
+        selectedFavoriteSubject: activeFavoriteSubject,
+        onFavoriteSubjectChanged: (favoriteSubject) {
+          setState(() {
+            _favoriteSubject = favoriteSubject;
+            widget.onFavoriteSubjectChanged?.call(favoriteSubject);
+            widget.onFavoriteSubjectChanged?.call(favoriteSubject);
+            updateValues(_filteredDays(favoriteSubject));
+            update();
+          });
+        },
+        showEmptyDays: _showEmptyDays,
+        onShowEmptyDaysChanged: (value) {
+          setState(() {
+            _showEmptyDays = value;
+            widget.onShowEmptyDaysChanged?.call(value);
+            updateValues(_filteredDays(activeFavoriteSubject));
+            update();
+          });
+        },
+        subjectThemes: widget.vm.subjectThemes,
+        schoolTimeline: schoolTimeline,
+        openCalendarAt: widget.openCalendarAt,
+        editGradeDeadline: _editGradeDeadline,
+      );
+      // Unlike a list view, a sliver list leaves the padding of the header and
+      // the navigation bar to its slivers.
+      body = Builder(
+        builder: (context) {
+          final padding = MediaQuery.paddingOf(context);
+          if (columns != null) {
+            return DashboardColumnsView(
+              columns: columns,
+              side: _modernTop(emptyHeader),
+              main: Padding(
+                padding: EdgeInsets.only(right: columns.margin),
+                child: Center(child: fullScreenBody),
+              ),
+            );
+          }
+          return CustomScrollView(
+            slivers: [
+              if (modern)
+                SliverPadding(padding: EdgeInsets.only(top: padding.top)),
+              SliverToBoxAdapter(
+                  child: modern ? _modernTop(emptyHeader) : emptyHeader),
+              SliverFillRemaining(
+                hasScrollBody: false,
+                child: Center(child: fullScreenBody),
+              ),
+              if (modern)
+                SliverPadding(padding: EdgeInsets.only(bottom: padding.bottom)),
+            ],
+          );
+        },
       );
     } else {
       UtcDateTime? lastFetched;
@@ -637,139 +757,168 @@ class _DaysWidgetState extends State<DaysWidget> {
       body = LastFetchedOverlay(
         noInternet: widget.vm.noInternet,
         lastFetched: lastFetched,
-        child: ListView.builder(
-          physics: const AlwaysScrollableScrollPhysics(),
-          controller: controller,
-          // Times two for the divider, minus one because there's no divider after the last item.
-          // The first item is the DashboardHeader, the last one a SizedBox (a spacer).
-          itemCount: (visibleDays.length * 2 - 1) + 2,
-          itemBuilder: (context, n) {
-            return getItem(
-              visibleDays,
-              n,
-              isLast: n == (visibleDays.length * 2 - 1) + 1,
-              showLastFetched:
-                  widget.vm.noInternet && daysShouldShowLastFetched,
-              availableFavoriteSubjects: availableFavoriteSubjects,
-              activeFavoriteSubject: activeFavoriteSubject,
-            );
-          },
-        ),
+        child: Builder(builder: (context) {
+          return ListView.builder(
+            padding: columns?.listPadding(MediaQuery.paddingOf(context)),
+            physics: const AlwaysScrollableScrollPhysics(),
+            controller: controller,
+            // Times two for the divider, minus one because there's no divider after the last item.
+            // The first item is the DashboardHeader, the last one a SizedBox (a spacer).
+            itemCount: (visibleDays.length * 2 - 1) + 2,
+            itemBuilder: (context, n) {
+              return getItem(
+                visibleDays,
+                n,
+                isLast: n == (visibleDays.length * 2 - 1) + 1,
+                showLastFetched:
+                    widget.vm.noInternet && daysShouldShowLastFetched,
+                availableFavoriteSubjects: availableFavoriteSubjects,
+                activeFavoriteSubject: activeFavoriteSubject,
+              );
+            },
+          );
+        }),
       );
-      if (!noInternet && !widget.vm.loading) {
-        body = RefreshIndicator(
-          onRefresh: widget.refresh,
-          child: body,
+      final list = body;
+      body = Builder(
+        builder: (context) {
+          // Below the header of the new design, this is its bottom edge.
+          final top = modern ? MediaQuery.paddingOf(context).top : 0.0;
+          return Stack(
+            children: [
+              if (!noInternet && !widget.vm.loading)
+                RefreshIndicator(
+                  edgeOffset: top,
+                  onRefresh: widget.refresh,
+                  child: list,
+                )
+              else
+                list,
+              Padding(
+                padding: EdgeInsets.only(top: top),
+                child: AnimatedLinearProgressIndicator(show: widget.vm.loading),
+              ),
+            ],
+          );
+        },
+      );
+      if (columns != null) {
+        final days = body;
+        body = Builder(
+          builder: (context) => DashboardColumnsView(
+            columns: columns,
+            side: _modernTop(_dashboardHeader(
+              availableFavoriteSubjects,
+              activeFavoriteSubject,
+              modern: modern,
+            )),
+            main: days,
+          ),
         );
       }
-      body = Stack(
-        children: [
-          body,
-          AnimatedLinearProgressIndicator(show: widget.vm.loading),
-        ],
-      );
     }
-    return ResponsiveScaffold<Pages>(
+    final scaffold = ResponsiveScaffold<Pages>(
       key: scaffoldKey,
-      homeBody: body,
+      navigation: modern ? appNavigation() : null,
+      extendHomeBodyBehindAppBar: modern,
+      homeBody: modern ? DashboardBackdrop(child: body) : body,
       onRouteChanged: (route) {
         if (route == Pages.homework) {
           widget.refresh();
         }
       },
-      homeFloatingActionButton: Column(
-        crossAxisAlignment: CrossAxisAlignment.end,
-        mainAxisAlignment: MainAxisAlignment.end,
-        children: <Widget>[
-          ValueListenableBuilder(
-            valueListenable: _showScrollUp,
-            builder: (context, bool value, child) {
-              if (value) {
-                return child!;
-              } else {
-                return const SizedBox();
-              }
-            },
-            child: FloatingActionButton(
-              backgroundColor: Theme.of(context).colorScheme.surface,
-              foregroundColor: Theme.of(context).colorScheme.onSurface,
-              heroTag: null,
-              onPressed: () {
-                controller.animateTo(
-                  0,
-                  duration: const Duration(milliseconds: 500),
-                  curve: Curves.decelerate,
-                );
-              },
-              mini: true,
-              child: const Icon(Icons.arrow_upward_rounded),
+      // The new design has these controls in its header, clear of the list.
+      homeFloatingActionButton: modern
+          ? null
+          : Column(
+              crossAxisAlignment: CrossAxisAlignment.end,
+              mainAxisAlignment: MainAxisAlignment.end,
+              children: <Widget>[
+                ValueListenableBuilder(
+                  valueListenable: _showScrollUp,
+                  builder: (context, bool value, child) {
+                    if (value) {
+                      return child!;
+                    } else {
+                      return const SizedBox();
+                    }
+                  },
+                  child: FloatingActionButton(
+                    backgroundColor: Theme.of(context).colorScheme.surface,
+                    foregroundColor: Theme.of(context).colorScheme.onSurface,
+                    heroTag: null,
+                    onPressed: _scrollToTop,
+                    mini: true,
+                    child: const Icon(Icons.arrow_upward_rounded),
+                  ),
+                ),
+                if (_targets.isNotEmpty || _focused.isNotEmpty)
+                  FloatingActionButton(
+                    backgroundColor:
+                        Theme.of(context).colorScheme.errorContainer,
+                    foregroundColor:
+                        Theme.of(context).colorScheme.onErrorContainer,
+                    heroTag: null,
+                    onPressed: () {
+                      _markVisibleAsSeen(visibleDays);
+                    },
+                    mini: true,
+                    child: const Icon(Icons.close),
+                  ),
+                if (_targets.isNotEmpty && _afterFirstFrame)
+                  FloatingActionButton.extended(
+                    backgroundColor:
+                        Theme.of(context).colorScheme.primaryContainer,
+                    foregroundColor:
+                        Theme.of(context).colorScheme.onPrimaryContainer,
+                    icon: const Icon(Icons.keyboard_double_arrow_down_rounded),
+                    label: Text(l10n.text('dashboard.newEntries')),
+                    onPressed: _showNextNewEntry,
+                  ),
+              ],
             ),
-          ),
-          if (_targets.isNotEmpty || _focused.isNotEmpty)
-            FloatingActionButton(
-              backgroundColor: Theme.of(context).colorScheme.errorContainer,
-              foregroundColor: Theme.of(context).colorScheme.onErrorContainer,
-              heroTag: null,
-              onPressed: () {
-                _markVisibleAsSeen(visibleDays);
-              },
-              mini: true,
-              child: const Icon(Icons.close),
-            ),
-          if (_targets.isNotEmpty && _afterFirstFrame)
-            FloatingActionButton.extended(
-              backgroundColor: Theme.of(context).colorScheme.primaryContainer,
-              foregroundColor: Theme.of(context).colorScheme.onPrimaryContainer,
-              icon: const Icon(Icons.keyboard_double_arrow_down_rounded),
-              label: Text(l10n.text('dashboard.newEntries')),
-              onPressed: () async {
-                await controller.scrollToIndex(
-                  _targets.first,
-                  preferPosition: AutoScrollPosition.middle,
-                );
-              },
-            ),
-        ],
-      ),
-      homeAppBar: ResponsiveAppBar(
-        leading: Builder(
-          builder: (context) => IconButton(
-            tooltip: MaterialLocalizations.of(context).openAppDrawerTooltip,
-            icon: const Icon(Icons.menu),
-            onPressed: () => Scaffold.of(context).openDrawer(),
-          ),
-        ),
-        title: Row(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            const Icon(Icons.dashboard_customize_outlined),
-            const SizedBox(width: 8),
-            Flexible(
-              child: Text(l10n.text('dashboard.title'),
-                  maxLines: 1, overflow: TextOverflow.ellipsis),
-            ),
-          ],
-        ),
-        actions: <Widget>[
-          const DashboardCustomizeButton(),
-          if (widget.vm.noInternet)
-            Tooltip(
-              message: l10n.text('dashboard.noConnectionReload'),
-              child: IconButton(
-                onPressed: widget.refreshNoInternet,
-                icon: const Icon(Icons.wifi_off_rounded),
-                style: IconButton.styleFrom(
-                  backgroundColor:
-                      Theme.of(context).colorScheme.secondaryContainer,
-                  foregroundColor:
-                      Theme.of(context).colorScheme.onSecondaryContainer,
+      homeAppBar: modern
+          ? _modernAppBar(visibleDays)
+          : ResponsiveAppBar(
+              leading: Builder(
+                builder: (context) => IconButton(
+                  tooltip:
+                      MaterialLocalizations.of(context).openAppDrawerTooltip,
+                  icon: const Icon(Icons.menu),
+                  onPressed: () => Scaffold.of(context).openDrawer(),
                 ),
               ),
+              title: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  const Icon(Icons.dashboard_customize_outlined),
+                  const SizedBox(width: 8),
+                  Flexible(
+                    child: Text(l10n.text('dashboard.title'),
+                        maxLines: 1, overflow: TextOverflow.ellipsis),
+                  ),
+                ],
+              ),
+              actions: <Widget>[
+                const DashboardCustomizeButton(),
+                if (widget.vm.noInternet)
+                  Tooltip(
+                    message: l10n.text('dashboard.noConnectionReload'),
+                    child: IconButton(
+                      onPressed: widget.refreshNoInternet,
+                      icon: const Icon(Icons.wifi_off_rounded),
+                      style: IconButton.styleFrom(
+                        backgroundColor:
+                            Theme.of(context).colorScheme.secondaryContainer,
+                        foregroundColor:
+                            Theme.of(context).colorScheme.onSecondaryContainer,
+                      ),
+                    ),
+                  ),
+                if (widget.vm.showNotifications) NotificationIconContainer(),
+                const ServerNotificationBell(),
+              ],
             ),
-          if (widget.vm.showNotifications) NotificationIconContainer(),
-          const ServerNotificationBell(),
-        ],
-      ),
       drawerBuilder: (widgetSelected, goHome, currentSelected, tabletMode) {
         // _widgetSelected is not passed down because routing is done by
         // accessing the ResponsiveScaffoldState via the GlobalKey and calling
@@ -783,6 +932,8 @@ class _DaysWidgetState extends State<DaysWidget> {
       homeId: Pages.homework,
       navKey: nestedNavKey,
     );
+    final grouped = BackdropGroup(child: scaffold);
+    return modern ? NewDesignTheme(child: grouped) : grouped;
   }
 }
 
@@ -946,6 +1097,9 @@ class DashboardHeader extends StatelessWidget {
   final SchoolTimeline schoolTimeline;
   final OpenCalendarAtCallback openCalendarAt;
   final Future<void> Function(GradeDeadline deadline) editGradeDeadline;
+
+  /// Shows the translucent box of the new design with editable cards.
+  final bool modern;
   const DashboardHeader({
     super.key,
     required this.future,
@@ -959,6 +1113,7 @@ class DashboardHeader extends StatelessWidget {
     required this.schoolTimeline,
     required this.openCalendarAt,
     required this.editGradeDeadline,
+    this.modern = false,
   });
 
   @override
@@ -987,90 +1142,110 @@ class DashboardHeader extends StatelessWidget {
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            AnimatedContainer(
-              duration: const Duration(milliseconds: 240),
-              curve: Curves.easeOutCubic,
-              key: const ValueKey('dashboard-header-box'),
-              decoration: BoxDecoration(
-                color: scheme.surface,
-                borderRadius: BorderRadius.circular(16),
-                border: Border.all(
-                  color: scheme.outline.withValues(
-                    alpha: theme.brightness == Brightness.dark ? 0.45 : 0.2,
-                  ),
-                ),
-                boxShadow: [
-                  if (theme.brightness == Brightness.light)
-                    BoxShadow(
-                      color: Colors.black.withValues(alpha: 0.04),
-                      blurRadius: 16,
-                      offset: const Offset(0, 6),
+            GlassEdgeIf(
+              enabled: modern,
+              sheen: false,
+              child: AnimatedContainer(
+                duration: const Duration(milliseconds: 240),
+                curve: Curves.easeOutCubic,
+                key: const ValueKey('dashboard-header-box'),
+                decoration: BoxDecoration(
+                  color: modern
+                      ? scheme.surfaceContainerLowest
+                          .withValues(alpha: DesignTokens.cardOpacity)
+                      : scheme.surface,
+                  borderRadius: BorderRadius.circular(16),
+                  border: Border.all(
+                    color: scheme.outline.withValues(
+                      alpha: theme.brightness == Brightness.dark ? 0.45 : 0.2,
                     ),
-                ],
-              ),
-              child: Padding(
-                padding: const EdgeInsets.fromLTRB(8, 6, 8, 6),
-                child: DashboardOverview(
-                  timeline: schoolTimeline,
-                  onOpenCalendarAt: openCalendarAt,
-                  onEditGradeDeadline: editGradeDeadline,
-                  footer: Column(
-                    mainAxisSize: MainAxisSize.min,
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      LayoutBuilder(builder: (context, constraints) {
-                        final filter = HomeworkFilterContainer(
-                          showEmptyDays: showEmptyDays,
-                          onShowEmptyDaysChanged: onShowEmptyDaysChanged,
-                        );
-                        final past = AnimatedSwitcher(
-                          duration: const Duration(milliseconds: 220),
-                          transitionBuilder: (child, animation) {
-                            return FadeTransition(
-                              opacity: animation,
-                              child: ScaleTransition(
-                                  scale: animation, child: child),
+                  ),
+                  boxShadow: [
+                    if (theme.brightness == Brightness.light && !modern)
+                      BoxShadow(
+                        color: Colors.black.withValues(alpha: 0.04),
+                        blurRadius: 16,
+                        offset: const Offset(0, 6),
+                      ),
+                  ],
+                ),
+                child: GlassEdgeIf(
+                  enabled: modern,
+                  rim: GlassRim.none,
+                  child: Padding(
+                    padding: const EdgeInsets.fromLTRB(8, 6, 8, 6),
+                    child: DashboardOverview(
+                      editable: modern,
+                      timeline: schoolTimeline,
+                      onOpenCalendarAt: openCalendarAt,
+                      onEditGradeDeadline: editGradeDeadline,
+                      footer: Column(
+                        mainAxisSize: MainAxisSize.min,
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          LayoutBuilder(builder: (context, constraints) {
+                            final filter = HomeworkFilterContainer(
+                              showEmptyDays: showEmptyDays,
+                              onShowEmptyDaysChanged: onShowEmptyDaysChanged,
                             );
-                          },
-                          child: FilledButton.tonalIcon(
-                            key: ValueKey(future),
-                            onPressed: onSwitchFuture,
-                            icon: Icon(
-                              future
-                                  ? Icons.history_toggle_off
-                                  : Icons.upcoming_rounded,
-                            ),
-                            label: Text(future
-                                ? l10n.text('dashboard.past')
-                                : l10n.text('dashboard.future')),
-                            style: FilledButton.styleFrom(
-                              shape: const StadiumBorder(),
-                              visualDensity: VisualDensity.compact,
-                              padding: const EdgeInsets.symmetric(
-                                horizontal: 14,
-                                vertical: 12,
+                            final past = AnimatedSwitcher(
+                              duration: const Duration(milliseconds: 220),
+                              transitionBuilder: (child, animation) {
+                                return FadeTransition(
+                                  opacity: animation,
+                                  child: ScaleTransition(
+                                      scale: animation, child: child),
+                                );
+                              },
+                              child: FilledButton.tonalIcon(
+                                key: ValueKey(future),
+                                onPressed: onSwitchFuture,
+                                icon: Icon(
+                                  future
+                                      ? Icons.history_toggle_off
+                                      : Icons.upcoming_rounded,
+                                ),
+                                label: Text(future
+                                    ? l10n.text('dashboard.past')
+                                    : l10n.text('dashboard.future')),
+                                style: FilledButton.styleFrom(
+                                  shape: const StadiumBorder(),
+                                  visualDensity: VisualDensity.compact,
+                                  padding: const EdgeInsets.symmetric(
+                                    horizontal: 14,
+                                    vertical: 12,
+                                  ),
+                                ),
                               ),
-                            ),
-                          ),
-                        );
-                        return SizedBox(
-                          key: const ValueKey('dashboard-header-controls'),
-                          width: constraints.maxWidth,
-                          child: Wrap(
-                              alignment: WrapAlignment.spaceBetween,
-                              spacing: 8,
-                              runSpacing: 8,
-                              children: [
-                                filter,
-                                past,
-                              ]),
-                        );
-                      }),
-                      if (hasCards && favoriteSubjects.isNotEmpty) ...[
-                        const SizedBox(height: 8),
-                        favoriteFilter,
-                      ],
-                    ],
+                            );
+                            final controls = SizedBox(
+                              key: const ValueKey('dashboard-header-controls'),
+                              width: constraints.maxWidth,
+                              child: Wrap(
+                                  alignment: WrapAlignment.spaceBetween,
+                                  spacing: 8,
+                                  runSpacing: 8,
+                                  children: [
+                                    filter,
+                                    past,
+                                  ]),
+                            );
+                            return modern
+                                ? FilledButtonTheme(
+                                    data: FilledButtonThemeData(
+                                      style: glassControlStyle(scheme),
+                                    ),
+                                    child: controls,
+                                  )
+                                : controls;
+                          }),
+                          if (hasCards && favoriteSubjects.isNotEmpty) ...[
+                            const SizedBox(height: 8),
+                            favoriteFilter,
+                          ],
+                        ],
+                      ),
+                    ),
                   ),
                 ),
               ),
@@ -1302,39 +1477,6 @@ class ItemWidget extends StatelessWidget {
     required this.colorTestsInRed,
   });
 
-  Future<Tuple2<bool, bool>> _showConfirmDelete(BuildContext context) async {
-    final l10n = context.l10n;
-    var ask = true;
-    final delete = await showDialog<bool>(
-      context: context,
-      builder: (context) {
-        return InfoDialog(
-          content: StatefulBuilder(
-            builder: (context, setState) => SwitchListTile.adaptive(
-              title: Text(l10n.text('dashboard.neverAsk')),
-              onChanged: (bool value) {
-                setState(() => ask = !value);
-              },
-              value: !ask,
-            ),
-          ),
-          title: Text(l10n.text('dashboard.reminder.deleteQuestion')),
-          actions: <Widget>[
-            TextButton(
-              onPressed: () => Navigator.pop(context),
-              child: Text(l10n.text('common.cancel')),
-            ),
-            ElevatedButton(
-              onPressed: () => Navigator.pop(context, true),
-              child: Text(l10n.text('button.delete')),
-            )
-          ],
-        );
-      },
-    );
-    return Tuple2(delete ?? false, ask);
-  }
-
   void _showHistory(BuildContext context) {
     final l10n = context.l10n;
     // if we are in the deleted view, show the history for the previous item
@@ -1406,21 +1548,13 @@ class ItemWidget extends StatelessWidget {
         item.type == HomeworkType.homework &&
         item.deleteable &&
         editReminder != null;
-    Future<void> handleDelete(Future<void> Function() delete) async {
-      if (askWhenDelete) {
-        final confirmationResult = await _showConfirmDelete(context);
-        final shouldDelete = confirmationResult.item1;
-        final ask = confirmationResult.item2;
-        if (shouldDelete == true) {
-          if (!ask) {
-            setDoNotAskWhenDelete!();
-          }
-          await delete();
-        }
-      } else {
-        await delete();
-      }
-    }
+    Future<void> handleDelete(Future<void> Function() delete) =>
+        deleteReminderWithConfirmation(
+          context,
+          askWhenDelete: askWhenDelete,
+          setDoNotAskWhenDelete: setDoNotAskWhenDelete,
+          delete: delete,
+        );
 
     Widget child = CommittedDeleteable(
       key: ValueKey(item.id),
@@ -1665,6 +1799,61 @@ class ItemWidget extends StatelessWidget {
           ),
       ],
     );
+  }
+}
+
+Future<Tuple2<bool, bool>> _showConfirmDelete(BuildContext context) async {
+  final l10n = context.l10n;
+  var ask = true;
+  final delete = await showDialog<bool>(
+    context: context,
+    builder: (context) {
+      return InfoDialog(
+        content: StatefulBuilder(
+          builder: (context, setState) => SwitchListTile.adaptive(
+            title: Text(l10n.text('dashboard.neverAsk')),
+            onChanged: (bool value) {
+              setState(() => ask = !value);
+            },
+            value: !ask,
+          ),
+        ),
+        title: Text(l10n.text('dashboard.reminder.deleteQuestion')),
+        actions: <Widget>[
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: Text(l10n.text('common.cancel')),
+          ),
+          ElevatedButton(
+            onPressed: () => Navigator.pop(context, true),
+            child: Text(l10n.text('button.delete')),
+          )
+        ],
+      );
+    },
+  );
+  return Tuple2(delete ?? false, ask);
+}
+
+/// Runs [delete], after asking first if the user wants to be asked.
+Future<void> deleteReminderWithConfirmation(
+  BuildContext context, {
+  required bool askWhenDelete,
+  required VoidCallback? setDoNotAskWhenDelete,
+  required Future<void> Function() delete,
+}) async {
+  if (askWhenDelete) {
+    final confirmationResult = await _showConfirmDelete(context);
+    final shouldDelete = confirmationResult.item1;
+    final ask = confirmationResult.item2;
+    if (shouldDelete == true) {
+      if (!ask) {
+        setDoNotAskWhenDelete!();
+      }
+      await delete();
+    }
+  } else {
+    await delete();
   }
 }
 

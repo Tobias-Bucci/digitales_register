@@ -61,7 +61,10 @@ class Certificate extends StatelessWidget {
               noInternet: vm.noInternet,
               child: SingleChildScrollView(
                 child: Padding(
-                  padding: const EdgeInsets.all(8),
+                  padding: const EdgeInsets.all(8).copyWith(
+                    bottom:
+                        8 + ResponsiveNavigationScope.bottomInsetOf(context),
+                  ),
                   child: HtmlWidget(
                     vm.html!,
                     baseUrl: baseUrl,

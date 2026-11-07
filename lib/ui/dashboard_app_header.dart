@@ -1,0 +1,366 @@
+// Copyright (C) 2026 Tobias Bucci
+//
+// This file is part of digitales_register.
+//
+// digitales_register is free software: you can redistribute it and/or modify
+// it under the terms of the GNU General Public License as published by
+// the Free Software Foundation, either version 3 of the License, or
+// (at your option) any later version.
+//
+// digitales_register is distributed in the hope that it will be useful,
+// but WITHOUT ANY WARRANTY; without even the implied warranty of
+// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+// GNU General Public License for more details.
+//
+// You should have received a copy of the GNU General Public License
+// along with digitales_register.  If not, see <http://www.gnu.org/licenses/>.
+
+import 'package:dr/i18n/app_localizations.dart';
+import 'package:dr/ui/glass_surface.dart';
+import 'package:dr/ui/notepad_mark.dart';
+import 'package:dr/ui/server_notifications/server_notification_bell.dart';
+import 'package:flutter/foundation.dart' show ValueListenable;
+import 'package:flutter/material.dart';
+
+/// The slim header of the new design: app logo, school and app name. A long
+/// school name is cut off instead of changing the height. Only the strip for new
+/// entries adds to it, and the content below moves down with it, so that the
+/// strip never lies over the list.
+///
+/// With [floatingMaxWidth], as in wide windows, it is not a band from edge to
+/// edge but floats like the navigation and lines up with the content below it.
+class DashboardAppHeader extends StatelessWidget
+    implements PreferredSizeWidget {
+  const DashboardAppHeader({
+    super.key,
+    required this.schoolName,
+    required this.noInternet,
+    required this.onRetry,
+    this.floatingMaxWidth,
+    this.showScrollUp,
+    this.onScrollUp,
+    this.onShowNewEntries,
+    this.onDismissNewEntries,
+  });
+
+  static const double height = 56;
+  static const double newEntriesHeight = 48;
+
+  final double? floatingMaxWidth;
+
+  /// Null for an unknown school, which leaves only the app name.
+  final String? schoolName;
+  final bool noInternet;
+  final VoidCallback onRetry;
+
+  /// Whether the button back to the start of the list shows. It belongs here
+  /// and not over the list, where the controls of the days would pass under it.
+  final ValueListenable<bool>? showScrollUp;
+
+  /// Null while there is no list to scroll, which leaves out the button.
+  final VoidCallback? onScrollUp;
+
+  /// Jumps to the next new entry. Null once it is in view.
+  final VoidCallback? onShowNewEntries;
+
+  /// Null without new entries, which leaves out their strip.
+  final VoidCallback? onDismissNewEntries;
+
+  @override
+  Size get preferredSize => Size.fromHeight(
+        height +
+            (floatingMaxWidth == null ? 0 : DesignTokens.gutter) +
+            (onDismissNewEntries == null ? 0 : newEntriesHeight),
+      );
+
+  @override
+  Widget build(BuildContext context) {
+    final l10n = context.l10n;
+    final theme = Theme.of(context);
+    final scheme = theme.colorScheme;
+    final appName = l10n.text('login.appTitle');
+    final content = SizedBox(
+      height: height,
+      child: Padding(
+        padding: EdgeInsets.symmetric(
+          horizontal: floatingMaxWidth == null ? DesignTokens.gutter : 14,
+        ),
+        child: Row(
+          children: [
+            ExcludeSemantics(
+              child: NotepadMark(
+                checked: true,
+                size: 36,
+                fill: scheme.surfaceContainerLowest,
+              ),
+            ),
+            const SizedBox(width: 10),
+            Expanded(
+              child: Semantics(
+                header: true,
+                child: Column(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    if (schoolName != null)
+                      Text(
+                        schoolName!,
+                        key: const Key('dashboard-header-school'),
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: theme.textTheme.titleSmall?.copyWith(
+                          fontWeight: FontWeight.w700,
+                          height: 1.2,
+                        ),
+                      ),
+                    Text(
+                      appName,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: schoolName == null
+                          ? theme.textTheme.titleMedium
+                              ?.copyWith(fontWeight: FontWeight.w700)
+                          : theme.textTheme.bodySmall?.copyWith(
+                              color: scheme.onSurfaceVariant,
+                              height: 1.2,
+                            ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+            if (noInternet)
+              IconButton(
+                tooltip: l10n.text('dashboard.noConnectionReload'),
+                onPressed: onRetry,
+                icon: const Icon(Icons.wifi_off_rounded),
+                style: IconButton.styleFrom(
+                  backgroundColor: scheme.secondaryContainer,
+                  foregroundColor: scheme.onSecondaryContainer,
+                ),
+              ),
+            if (showScrollUp != null && onScrollUp != null)
+              ValueListenableBuilder(
+                valueListenable: showScrollUp!,
+                builder: (context, show, _) => show
+                    ? HeaderDiscButton(
+                        key: const Key('dashboard-scroll-up'),
+                        tooltip: l10n.text('dashboard.scrollToTop'),
+                        icon: Icons.arrow_upward_rounded,
+                        onPressed: onScrollUp!,
+                      )
+                    : const SizedBox.shrink(),
+              ),
+            // Last, so that it stays in place when the buttons before it come
+            // and go.
+            ServerNotificationBell(
+              style: HeaderDiscButton.styleOf(scheme),
+              iconSize: HeaderDiscButton.iconSize,
+            ),
+          ],
+        ),
+      ),
+    );
+    final dismiss = onDismissNewEntries;
+    final band = dismiss == null
+        ? content
+        : Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              content,
+              _NewEntriesStrip(
+                horizontalPadding:
+                    floatingMaxWidth == null ? DesignTokens.gutter : 14,
+                onShow: onShowNewEntries,
+                onDismiss: dismiss,
+              ),
+            ],
+          );
+    return GlassHeaderShell(
+      surfaceKey: const Key('dashboard-app-header'),
+      floatingMaxWidth: floatingMaxWidth,
+      child: band,
+    );
+  }
+}
+
+/// The glass of a page header: a band from edge to edge, or with
+/// [floatingMaxWidth], as in wide windows, a bar that floats like the navigation
+/// and lines up with the content below it.
+class GlassHeaderShell extends StatelessWidget {
+  const GlassHeaderShell({
+    super.key,
+    required this.surfaceKey,
+    required this.floatingMaxWidth,
+    required this.child,
+  });
+
+  final Key surfaceKey;
+  final double? floatingMaxWidth;
+  final Widget child;
+
+  @override
+  Widget build(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
+    final maxWidth = floatingMaxWidth;
+    // Two lines have to fit the fixed height, whatever the text size.
+    return MediaQuery.withClampedTextScaling(
+      maxScaleFactor: 1.5,
+      child: maxWidth == null
+          ? GlassSurface(
+              key: surfaceKey,
+              tint: scheme.surface,
+              rim: GlassRim.bottom,
+              border: Border(
+                bottom: BorderSide(
+                  color: scheme.outlineVariant.withValues(alpha: 0.5),
+                ),
+              ),
+              child: SafeArea(bottom: false, child: child),
+            )
+          : SafeArea(
+              bottom: false,
+              child: Align(
+                alignment: Alignment.topCenter,
+                child: ConstrainedBox(
+                  constraints: BoxConstraints(maxWidth: maxWidth),
+                  child: Padding(
+                    padding: const EdgeInsets.fromLTRB(
+                      DesignTokens.gutter,
+                      DesignTokens.gutter,
+                      DesignTokens.gutter,
+                      0,
+                    ),
+                    child: FloatingGlass(
+                      surfaceKey: surfaceKey,
+                      tint: scheme.surface,
+                      opacity: DesignTokens.headerOpacity,
+                      child: child,
+                    ),
+                  ),
+                ),
+              ),
+            ),
+    );
+  }
+}
+
+/// The way to the new entries, and to dismiss them.
+class _NewEntriesStrip extends StatelessWidget {
+  const _NewEntriesStrip({
+    required this.horizontalPadding,
+    required this.onShow,
+    required this.onDismiss,
+  });
+
+  final double horizontalPadding;
+  final VoidCallback? onShow;
+  final VoidCallback onDismiss;
+
+  @override
+  Widget build(BuildContext context) {
+    final l10n = context.l10n;
+    return SizedBox(
+      key: const Key('dashboard-new-entries'),
+      height: DashboardAppHeader.newEntriesHeight,
+      child: Padding(
+        padding: EdgeInsets.symmetric(horizontal: horizontalPadding),
+        child: Row(
+          mainAxisAlignment: MainAxisAlignment.end,
+          children: [
+            Flexible(
+              child: FilledButton.icon(
+                key: const Key('dashboard-show-new-entries'),
+                onPressed: onShow,
+                style: glassControlStyle(Theme.of(context).colorScheme),
+                icon: const Icon(
+                  Icons.keyboard_double_arrow_down_rounded,
+                  size: 20,
+                ),
+                label: Text(
+                  l10n.text('dashboard.newEntries'),
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                ),
+              ),
+            ),
+            HeaderDiscButton(
+              key: const Key('dashboard-dismiss-new-entries'),
+              tooltip: l10n.text('dashboard.banner.dismiss'),
+              icon: Icons.close_rounded,
+              onPressed: onDismiss,
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+/// A disc as big as the logo, in a full-sized touch target.
+class HeaderDiscButton extends StatelessWidget {
+  const HeaderDiscButton({
+    super.key,
+    required this.tooltip,
+    required this.icon,
+    required this.onPressed,
+  });
+
+  static const double _discSize = 36;
+  static const double iconSize = 20;
+
+  /// The disc, for icon buttons that cannot be a [HeaderDiscButton].
+  static ButtonStyle styleOf(ColorScheme scheme) => IconButton.styleFrom(
+        fixedSize: const Size.square(_discSize),
+        minimumSize: const Size.square(_discSize),
+        padding: EdgeInsets.zero,
+        // The compact density of desktops would shrink the target to 40.
+        visualDensity: VisualDensity.standard,
+        tapTargetSize: MaterialTapTargetSize.padded,
+      ).merge(glassControlStyle(scheme, shape: const CircleBorder()));
+
+  final String tooltip;
+  final IconData icon;
+  final VoidCallback onPressed;
+
+  @override
+  Widget build(BuildContext context) => IconButton(
+        tooltip: tooltip,
+        onPressed: onPressed,
+        icon: Icon(icon, size: iconSize),
+        style: styleOf(Theme.of(context).colorScheme),
+      );
+}
+
+/// A quiet accent wash behind the dashboard, so that its translucent surfaces
+/// have something to show. Pure black stays pure black on AMOLED.
+class DashboardBackdrop extends StatelessWidget {
+  const DashboardBackdrop(
+      {super.key, required this.child, this.visible = true});
+
+  /// Without it [child] stays where it is in the tree and keeps its state.
+  final bool visible;
+  final Widget child;
+
+  @override
+  Widget build(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
+    if (scheme.surface == const Color(0xFF000000)) return child;
+    return DecoratedBox(
+      decoration: BoxDecoration(
+        gradient: !visible
+            ? null
+            : LinearGradient(
+                begin: Alignment.topCenter,
+                end: Alignment.bottomCenter,
+                stops: const [0, 0.55],
+                colors: [
+                  scheme.primaryContainer.withValues(alpha: 0.42),
+                  scheme.primaryContainer.withValues(alpha: 0),
+                ],
+              ),
+      ),
+      child: child,
+    );
+  }
+}

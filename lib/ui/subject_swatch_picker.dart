@@ -18,6 +18,7 @@
 import 'package:dr/i18n/app_localizations.dart';
 import 'package:dr/theme/app_palette.dart';
 import 'package:flutter/material.dart';
+import 'package:responsive_scaffold/responsive_scaffold.dart';
 
 /// Lets the user pick a subject color from the curated palette.
 Future<Color?> showSubjectSwatchPicker(
@@ -27,6 +28,7 @@ Future<Color?> showSubjectSwatchPicker(
 }) {
   return showModalBottomSheet<Color>(
     context: context,
+    useRootNavigator: ResponsiveNavigationScope.isActive(context),
     showDragHandle: true,
     useSafeArea: true,
     builder: (context) => SubjectSwatchPicker(

@@ -10,6 +10,7 @@ import 'package:dr/main.dart' show secureStorage;
 import 'package:dr/middleware/middleware.dart';
 import 'package:dr/study_data_migration.dart';
 import 'package:dr/serializers.dart';
+import 'package:dr/util.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -108,6 +109,8 @@ void main() {
     when(() => session.ensureLoggedIn()).thenAnswer((_) async => true);
     await bootstrapTestEnvironment(wrapperOverride: session);
     storageReadRetryDelay = Duration.zero;
+    unreadableRetryInterval = Duration.zero;
+    storageRetryDelays = const [Duration.zero];
     original = _savedState('Synthetic saved subject');
     storage = _FlakyStorage(storage: {
       'login': _loginEntry,
@@ -188,6 +191,41 @@ void main() {
     expect(storage.storage['unrelated_account'], _unrelated);
   });
 
+  test('saved data that can be read again returns without a restart', () async {
+    storage.failingReads = {_accountKey};
+    final store = await logIn();
+    expect(subjects(store), isEmpty);
+    await store.actions.saveState();
+    expect(storage.writtenKeys, isNot(contains(_accountKey)));
+
+    storage.failingReads = {};
+    await store.actions.saveState();
+    await Future<void>.delayed(Duration.zero);
+    await store.actions.saveState();
+    await Future<void>.delayed(Duration.zero);
+
+    expect(subjects(store), ['Synthetic saved subject']);
+    await store.actions.saveState();
+    expect(storage.writtenKeys, contains(_accountKey));
+    final saved = serializers
+        .deserialize(jsonDecode(storage.storage[_accountKey]!) as Object);
+    expect(
+      (saved as AppState).gradesState.subjects.map((subject) => subject.name),
+      ['Synthetic saved subject'],
+    );
+  });
+
+  test('a keystore that stays away never replaces the saved data', () async {
+    storage.failingReads = {_accountKey};
+    final store = await logIn();
+    for (var attempt = 0; attempt < 3; attempt++) {
+      await store.actions.saveState();
+      await Future<void>.delayed(Duration.zero);
+    }
+    expect(storage.writtenKeys, isNot(contains(_accountKey)));
+    expect(storage.storage[_accountKey], original);
+  });
+
   test('deleting the data still replaces an unreadable entry', () async {
     storage.failingReads = {_accountKey};
     final store = await logIn();
@@ -220,7 +258,7 @@ void main() {
   test('a write error deletes nothing and leaves reads working', () async {
     final store = await logIn();
     storage.failWrites = true;
-    await expectLater(store.actions.saveState(), throwsA(anything));
+    await store.actions.saveState();
 
     expect(storage.deleteAllCalls, 0);
     expect(storage.storage, {
@@ -250,7 +288,7 @@ void main() {
     await tester.pump();
     expect(
       find.text('The saved data of this account could not be read right '
-          'now. It is kept and will be loaded again on the next start. '
+          'now. It is kept, and the app keeps trying. '
           'Until then, changes for this account are not saved.'),
       findsOneWidget,
     );

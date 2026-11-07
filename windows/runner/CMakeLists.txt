@@ -35,5 +35,12 @@ target_compile_definitions(${BINARY_NAME} PRIVATE "NOMINMAX")
 target_link_libraries(${BINARY_NAME} PRIVATE flutter flutter_wrapper_app shell32)
 target_include_directories(${BINARY_NAME} PRIVATE "${CMAKE_SOURCE_DIR}")
 
+# LNK4078 is harmless here and cannot be fixed from this project. firebase_core
+# links the prebuilt firebase_app.lib of the Firebase C++ SDK, compiled with
+# VS 2019, into this target. Its objects and those of the newer CRT both carry a
+# ".voltbl" section, but with different attributes. Both are marked for removal,
+# so neither reaches the executable, and both use the same CRT (/MD).
+target_link_options(${BINARY_NAME} PRIVATE "/ignore:4078")
+
 # Run the Flutter tool portions of the build. This must not be removed.
 add_dependencies(${BINARY_NAME} flutter_assemble)
