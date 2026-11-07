@@ -31,6 +31,7 @@ import 'package:dr/ui/days.dart' hide AsyncCallback;
 import 'package:dr/ui/dialog.dart';
 import 'package:dr/ui/glass_surface.dart';
 import 'package:dr/ui/grade_colors.dart';
+import 'package:dr/ui/linkified_text.dart';
 import 'package:dr/ui/notepad_mark.dart';
 import 'package:dr/util.dart';
 import 'package:flutter/material.dart';
@@ -683,7 +684,7 @@ class EntryDetailsSheet extends StatelessWidget {
             Text(type, style: theme.textTheme.titleLarge),
             if (title.isNotEmpty) ...[
               const SizedBox(height: 6),
-              SelectableText(title, style: theme.textTheme.bodyLarge),
+              LinkifiedText(title, style: theme.textTheme.bodyLarge),
             ],
             if (item.type == HomeworkType.grade) ...[
               const SizedBox(height: 8),

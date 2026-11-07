@@ -447,11 +447,15 @@ LessonContentSubmission? _parseLessonContentSubmission(
   CalendarHour? oldHour,
 ) {
   final type = getString(submission["type"]);
-  if (type != "file") {
+  final link = getString(submission["link"])?.trim();
+  final isLink = type == "link" && link != null && link.isNotEmpty;
+  if (type != "file" && !isLink) {
     return null;
   }
-  final originalName = getString(submission["originalName"]);
-  final id = getString(submission["id"]);
+  final originalName = getString(submission["originalName"]) ??
+      getString(submission["title"]) ??
+      (isLink ? link : null);
+  final id = getString(submission["id"]) ?? (isLink ? "" : null);
   final fileAvailable = oldHour?.lessonContents.any((content) =>
           content.submissions.any((submission) =>
               submission.originalName == originalName &&
@@ -464,7 +468,9 @@ LessonContentSubmission? _parseLessonContentSubmission(
       ..type = type
       ..originalName = originalName
       ..id = id
-      ..lessonContentId = getString(submission["lessonContentId"])
+      ..lessonContentId =
+          getString(submission["lessonContentId"]) ?? (isLink ? "" : null)
+      ..link = isLink ? link : null
       ..date = date
       ..fileAvailable = fileAvailable,
   );

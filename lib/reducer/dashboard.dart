@@ -248,15 +248,31 @@ Homework _parseHomework(Map data) {
 
 GradeGroupSubmission? _parseGradeGroupSubmission(Map data) {
   try {
+    final file = getString(data["file"]);
+    final link = getString(data["link"])?.trim();
+    final hasLink = link != null && link.isNotEmpty;
+    final isLink =
+        getString(data["type"]) == "link" || (file == null && hasLink);
+    if (isLink ? !hasLink : file == null) {
+      return null;
+    }
+    // A link has no upload behind it, so it may lack what a file always has.
+    final timestamp = getString(data["timestamp"]);
     return GradeGroupSubmission(
       (b) => b
-        ..file = getString(data["file"])
-        ..originalName = getString(data["originalName"])
-        ..timestamp = UtcDateTime.parse(getString(data["timestamp"])!)
-        ..typeName = getString(data["typeName"])
-        ..id = getInt(data["id"])
-        ..gradeGroupId = getInt(data["gradeGroupId"])
-        ..userId = getInt(data["userId"]),
+        ..type = isLink ? "link" : "file"
+        ..file = file
+        ..link = isLink ? link : null
+        ..originalName = getString(data["originalName"]) ??
+            getString(data["title"]) ??
+            (isLink ? link : null)
+        ..timestamp = isLink && timestamp == null
+            ? UtcDateTime(1970)
+            : UtcDateTime.parse(timestamp!)
+        ..typeName = getString(data["typeName"]) ?? (isLink ? "" : null)
+        ..id = getInt(data["id"]) ?? (isLink ? 0 : null)
+        ..gradeGroupId = getInt(data["gradeGroupId"]) ?? (isLink ? 0 : null)
+        ..userId = getInt(data["userId"]) ?? (isLink ? 0 : null),
     );
   } catch (e) {
     privacyLog('technical_operation');

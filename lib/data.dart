@@ -271,7 +271,15 @@ abstract class GradeGroupSubmission
       _$gradeGroupSubmissionSerializer;
 
   UtcDateTime get timestamp;
-  String get file;
+
+  /// `file` or `link`. Entries saved by older versions are always files.
+  String get type;
+
+  /// Null for a link, which has nothing to download.
+  String? get file;
+
+  /// Only set when [isLink].
+  String? get link;
   String get originalName;
   String get typeName;
   @BuiltValueField(serialize: false)
@@ -281,10 +289,13 @@ abstract class GradeGroupSubmission
   int get gradeGroupId;
   int get userId;
 
+  bool get isLink => type == "link";
+
   String get uniqueName =>
       "hw_${id}_${gradeGroupId}_${safeFileNameSegment(originalName)}";
 
   static void _initializeBuilder(GradeGroupSubmissionBuilder b) => b
+    ..type = "file"
     ..downloading = false
     ..fileAvailable = false;
 }
@@ -769,9 +780,14 @@ abstract class LessonContentSubmission
   String get lessonContentId;
   UtcDateTime get date;
 
+  /// Only set when [isLink].
+  String? get link;
+
   @BuiltValueField(serialize: false)
   bool get downloading;
   bool get fileAvailable;
+
+  bool get isLink => type == "link";
 
   String get uniqueName =>
       "cal_${lessonContentId}_${id}_${safeFileNameSegment(originalName)}";

@@ -306,6 +306,11 @@ Future<void> _openSubmission(
 ) async {
   await next(action);
 
+  if (action.payload.isLink) {
+    await openExternalLink(action.payload.link);
+    return;
+  }
+
   if (!action.payload.fileAvailable ||
       !await canOpenFile(action.payload.uniqueName)) {
     await api.actions.calendarActions.onDownloadFile(action.payload);

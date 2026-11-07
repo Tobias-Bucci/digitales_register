@@ -23,6 +23,7 @@ import 'package:dr/i18n/app_localizations.dart';
 import 'package:dr/middleware/middleware.dart';
 import 'package:dr/theme/app_palette.dart';
 import 'package:dr/ui/animated_linear_progress_indicator.dart';
+import 'package:dr/ui/linkified_text.dart';
 import 'package:dr/ui/no_internet.dart';
 import 'package:dr/ui/readable_content.dart';
 import 'package:dr/util.dart';
@@ -620,7 +621,7 @@ class _LessonTitle extends StatelessWidget {
         ),
         if (lesson.description.isNotEmpty) ...[
           const SizedBox(height: 8),
-          SelectableText(
+          LinkifiedText(
             lesson.description,
             style: theme.textTheme.bodyMedium?.copyWith(
               color: scheme.onSurfaceVariant,
@@ -726,7 +727,7 @@ class _DetailSection extends StatelessWidget {
                     ),
                     const SizedBox(height: 3),
                     for (final line in section.lines)
-                      SelectableText(
+                      LinkifiedText(
                         line,
                         style: theme.textTheme.bodyMedium,
                       ),
