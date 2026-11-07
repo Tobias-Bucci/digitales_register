@@ -1,13 +1,17 @@
 import 'dart:async';
 
+import 'package:dr/data.dart';
 import 'package:dr/i18n/app_localizations.dart';
+import 'package:dr/notification_feed.dart';
 import 'package:dr/server_notifications/server_notification_links.dart';
 import 'package:dr/server_notifications/server_notification_models.dart';
 import 'package:dr/server_notifications/server_notification_repository.dart';
 import 'package:dr/server_notifications/server_notification_service.dart';
+import 'package:dr/ui/last_fetched_overlay.dart';
+import 'package:dr/ui/linkified_text.dart';
 import 'package:dr/ui/server_notifications/server_notification_routes.dart';
 import 'package:dr/ui/server_notifications/server_notification_visuals.dart';
-import 'package:flutter/material.dart';
+import 'package:flutter/material.dart' hide Notification;
 import 'package:responsive_scaffold/responsive_scaffold.dart';
 
 /// From this width on, list and detail are shown side by side.
@@ -31,6 +35,14 @@ void showServerNotificationCenter(
         initialId: initialId,
       ))));
 }
+
+String _keyOfApp(String id) => 'app-$id';
+String _keyOfSchool(int id) => 'school-$id';
+
+/// Entries of the school's feed that lead to a message have no text of their
+/// own to show: they open the message.
+bool _opensMessage(Notification item) =>
+    item.type == 'message' && item.objectId != null;
 
 /// Asks before the final step, then hides [id] on this device for good.
 Future<bool> confirmServerNotificationDismissal(
@@ -61,7 +73,8 @@ Future<bool> confirmServerNotificationDismissal(
   return true;
 }
 
-/// All active notifications, newest first.
+/// All active notifications, newest first: the app's announcements and, with
+/// [school], the notifications of the school.
 class ServerNotificationCenterPage extends StatefulWidget {
   const ServerNotificationCenterPage({
     super.key,
@@ -69,9 +82,11 @@ class ServerNotificationCenterPage extends StatefulWidget {
     this.onRefresh,
     this.openLink = openServerNotificationLink,
     this.initialId,
+    this.school,
   });
 
   final ServerNotificationRepository? repository;
+  final SchoolNotificationFeed? school;
   final VoidCallback? onRefresh;
   final ServerNotificationLinkOpener openLink;
   final String? initialId;
@@ -86,13 +101,17 @@ class _ServerNotificationCenterPageState
   late final ServerNotificationRepository _repository =
       widget.repository ?? serverNotifications.repository;
   late String? _selectedId = widget.initialId;
+  Notification? _selectedSchool;
   bool _openedInitial = false;
 
   void _refresh() => (widget.onRefresh ?? serverNotifications.refresh)();
 
   void _open(String id, {required bool twoPanes}) {
     if (twoPanes) {
-      setState(() => _selectedId = id);
+      setState(() {
+        _selectedId = id;
+        _selectedSchool = null;
+      });
       return;
     }
     unawaited(Navigator.of(context).push(_route((_) =>
@@ -100,12 +119,59 @@ class _ServerNotificationCenterPageState
             id: id, repository: _repository, openLink: widget.openLink))));
   }
 
+  ValueChanged<Notification>? get _markSchoolRead {
+    final school = widget.school;
+    return school == null || school.noInternet ? null : school.onMarkRead;
+  }
+
+  void _openSchool(Notification item, {required bool twoPanes}) {
+    if (_opensMessage(item)) {
+      widget.school!.onOpenMessage(item.objectId!);
+      return;
+    }
+    if (twoPanes) {
+      setState(() {
+        _selectedId = null;
+        _selectedSchool = item;
+      });
+      return;
+    }
+    unawaited(Navigator.of(context).push(_route((_) =>
+        SchoolNotificationDetailPage(
+            notification: item, onShown: _markSchoolRead))));
+  }
+
+  void _openEntry(NotificationFeedEntry entry, {required bool twoPanes}) =>
+      switch (entry) {
+        AppFeedEntry(notification: final item) =>
+          _open(item.id, twoPanes: twoPanes),
+        SchoolFeedEntry(notification: final item) =>
+          _openSchool(item, twoPanes: twoPanes),
+      };
+
+  VoidCallback? get _markAllRead {
+    final school = widget.school;
+    if (school == null) return null;
+    final app = _repository.notifications.where(_repository.isUnread).toList();
+    final schoolPossible =
+        !school.noInternet && school.notifications.isNotEmpty;
+    if (!schoolPossible && app.isEmpty) return null;
+    return () {
+      if (schoolPossible) school.onMarkAllRead();
+      for (final item in app) {
+        unawaited(_repository.markRead(item.id));
+      }
+    };
+  }
+
   @override
   Widget build(BuildContext context) {
     final l10n = context.l10n;
     return Scaffold(
       appBar: AppBar(
-        title: Text(l10n.text('appNotifications.title')),
+        title: Text(l10n.text(widget.school == null
+            ? 'appNotifications.title'
+            : 'notifications.title')),
         actions: [
           IconButton(
             tooltip: l10n.text('appNotifications.refresh'),
@@ -125,32 +191,56 @@ class _ServerNotificationCenterPageState
                 if (mounted) _open(widget.initialId!, twoPanes: false);
               });
             }
-            final list = _NotificationList(
-              repository: _repository,
-              selectedId: twoPanes ? _selectedId : null,
-              onOpen: (id) => _open(id, twoPanes: twoPanes),
-              onRefresh: _refresh,
-            );
-            if (!twoPanes) return list;
+            final selectedSchool = _selectedSchool;
             final selectedId = _selectedId;
+            final school = widget.school;
+            final Widget list = _NotificationList(
+              repository: _repository,
+              school: school,
+              selectedKey: !twoPanes
+                  ? null
+                  : selectedSchool != null
+                      ? _keyOfSchool(selectedSchool.id)
+                      : selectedId == null
+                          ? null
+                          : _keyOfApp(selectedId),
+              onOpen: (entry) => _openEntry(entry, twoPanes: twoPanes),
+              onRefresh: _refresh,
+              onMarkAllRead: _markAllRead,
+            );
+            final feed = school == null
+                ? list
+                : LastFetchedOverlay(
+                    lastFetched: school.lastFetched,
+                    noInternet: school.noInternet,
+                    child: list,
+                  );
+            if (!twoPanes) return feed;
             return Row(
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
-                SizedBox(width: _listPaneWidth, child: list),
+                SizedBox(width: _listPaneWidth, child: feed),
                 const VerticalDivider(width: 1),
                 Expanded(
-                  child: selectedId == null
-                      ? _Placeholder(
-                          icon: Icons.mark_email_read_outlined,
-                          title: l10n.text('appNotifications.select'),
+                  child: selectedSchool != null
+                      ? SchoolNotificationDetailView(
+                          key: ValueKey(_keyOfSchool(selectedSchool.id)),
+                          notification: selectedSchool,
+                          onShown: _markSchoolRead,
                         )
-                      : ServerNotificationDetailView(
-                          key: ValueKey(selectedId),
-                          id: selectedId,
-                          repository: _repository,
-                          openLink: widget.openLink,
-                          onDismissed: () => setState(() => _selectedId = null),
-                        ),
+                      : selectedId == null
+                          ? _Placeholder(
+                              icon: Icons.mark_email_read_outlined,
+                              title: l10n.text('appNotifications.select'),
+                            )
+                          : ServerNotificationDetailView(
+                              key: ValueKey(selectedId),
+                              id: selectedId,
+                              repository: _repository,
+                              openLink: widget.openLink,
+                              onDismissed: () =>
+                                  setState(() => _selectedId = null),
+                            ),
                 ),
               ],
             );
@@ -164,20 +254,30 @@ class _ServerNotificationCenterPageState
 class _NotificationList extends StatelessWidget {
   const _NotificationList({
     required this.repository,
-    required this.selectedId,
+    required this.school,
+    required this.selectedKey,
     required this.onOpen,
     required this.onRefresh,
+    required this.onMarkAllRead,
   });
 
   final ServerNotificationRepository repository;
-  final String? selectedId;
-  final ValueChanged<String> onOpen;
+  final SchoolNotificationFeed? school;
+  final String? selectedKey;
+  final ValueChanged<NotificationFeedEntry> onOpen;
   final VoidCallback onRefresh;
+
+  /// Null where nothing can be marked read right now.
+  final VoidCallback? onMarkAllRead;
 
   @override
   Widget build(BuildContext context) {
     final l10n = context.l10n;
-    final items = repository.notifications;
+    final school = this.school;
+    final entries = combinedNotificationFeed(
+      school: school?.notifications ?? const [],
+      app: repository.notifications,
+    );
     return RefreshIndicator(
       onRefresh: () async => onRefresh(),
       child: Align(
@@ -195,24 +295,51 @@ class _NotificationList extends StatelessWidget {
             ),
             children: [
               if (repository.lastSyncFailed) const _StaleNotice(),
-              if (items.isEmpty)
+              if (school != null &&
+                  (school.notifications.isNotEmpty ||
+                      repository.unreadCount > 0))
+                Align(
+                  alignment: AlignmentDirectional.centerEnd,
+                  child: TextButton.icon(
+                    onPressed: onMarkAllRead,
+                    icon: const Icon(Icons.done_all),
+                    label: Text(l10n.text('notifications.markAllRead')),
+                  ),
+                ),
+              if (entries.isEmpty)
                 _Placeholder(
                   icon: Icons.notifications_none_rounded,
-                  title: l10n.text('appNotifications.emptyTitle'),
-                  body: l10n.text('appNotifications.emptyBody'),
+                  title: l10n.text(school != null
+                      ? 'notifications.none'
+                      : 'appNotifications.emptyTitle'),
+                  body: school != null
+                      ? null
+                      : l10n.text('appNotifications.emptyBody'),
                 )
               else
-                for (final item in items)
-                  _NotificationTile(
-                    key: ValueKey(item.id),
-                    item: item,
-                    unread: repository.isUnread(item),
-                    selected: item.id == selectedId,
-                    onTap: () => onOpen(item.id),
-                    onDismiss: () => unawaited(
-                        confirmServerNotificationDismissal(
-                            context, repository, item.id)),
-                  ),
+                for (final entry in entries)
+                  switch (entry) {
+                    AppFeedEntry(notification: final item) => _NotificationTile(
+                        key: ValueKey(_keyOfApp(item.id)),
+                        item: item,
+                        showSource: school != null,
+                        unread: repository.isUnread(item),
+                        selected: _keyOfApp(item.id) == selectedKey,
+                        onTap: () => onOpen(entry),
+                        onDismiss: () => unawaited(
+                            confirmServerNotificationDismissal(
+                                context, repository, item.id)),
+                      ),
+                    SchoolFeedEntry(notification: final item) =>
+                      _SchoolNotificationTile(
+                        key: ValueKey(_keyOfSchool(item.id)),
+                        item: item,
+                        noInternet: school!.noInternet,
+                        selected: _keyOfSchool(item.id) == selectedKey,
+                        onTap: () => onOpen(entry),
+                        onMarkRead: () => school.onMarkRead(item),
+                      ),
+                  },
             ],
           ),
         ),
@@ -290,29 +417,35 @@ class _Placeholder extends StatelessWidget {
   }
 }
 
-class _NotificationTile extends StatelessWidget {
-  const _NotificationTile({
-    super.key,
-    required this.item,
+/// The frame of an entry: what it is, what it says and when it came.
+class _FeedTile extends StatelessWidget {
+  const _FeedTile({
+    required this.leading,
+    required this.label,
+    required this.title,
+    required this.body,
+    required this.time,
     required this.unread,
     required this.selected,
     required this.onTap,
-    required this.onDismiss,
+    required this.action,
   });
 
-  final ServerNotification item;
+  final Widget leading;
+  final String label;
+  final String title;
+  final String? body;
+  final String time;
   final bool unread;
   final bool selected;
   final VoidCallback onTap;
-  final VoidCallback onDismiss;
+  final Widget action;
 
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final scheme = theme.colorScheme;
-    final l10n = context.l10n;
-    final time = formatServerNotificationTime(context, item.publishedAt);
-    final status = unread ? l10n.text('appNotifications.unread') : null;
+    final status = unread ? context.l10n.text('appNotifications.unread') : null;
     return Card(
       margin: const EdgeInsets.only(bottom: 8),
       clipBehavior: Clip.antiAlias,
@@ -326,8 +459,8 @@ class _NotificationTile extends StatelessWidget {
               selected: selected,
               label: [
                 if (status != null) status,
-                item.type.label,
-                item.title,
+                label,
+                title,
                 time,
               ].join(', '),
               excludeSemantics: true,
@@ -338,7 +471,7 @@ class _NotificationTile extends StatelessWidget {
                   child: Row(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      ServerNotificationTypeIcon(type: item.type),
+                      leading,
                       const SizedBox(width: 12),
                       Expanded(
                         child: Column(
@@ -361,7 +494,7 @@ class _NotificationTile extends StatelessWidget {
                                 ],
                                 Expanded(
                                   child: Text(
-                                    item.type.label,
+                                    label,
                                     maxLines: 1,
                                     overflow: TextOverflow.ellipsis,
                                     style: theme.textTheme.labelMedium
@@ -373,7 +506,7 @@ class _NotificationTile extends StatelessWidget {
                             ),
                             const SizedBox(height: 2),
                             Text(
-                              item.title,
+                              title,
                               maxLines: 2,
                               overflow: TextOverflow.ellipsis,
                               style: theme.textTheme.titleSmall?.copyWith(
@@ -381,14 +514,16 @@ class _NotificationTile extends StatelessWidget {
                                     unread ? FontWeight.w700 : FontWeight.w500,
                               ),
                             ),
-                            const SizedBox(height: 2),
-                            Text(
-                              item.body,
-                              maxLines: 2,
-                              overflow: TextOverflow.ellipsis,
-                              style: theme.textTheme.bodyMedium
-                                  ?.copyWith(color: scheme.onSurfaceVariant),
-                            ),
+                            if (body != null) ...[
+                              const SizedBox(height: 2),
+                              Text(
+                                body!,
+                                maxLines: 2,
+                                overflow: TextOverflow.ellipsis,
+                                style: theme.textTheme.bodyMedium
+                                    ?.copyWith(color: scheme.onSurfaceVariant),
+                              ),
+                            ],
                             const SizedBox(height: 6),
                             Text(
                               time,
@@ -406,16 +541,104 @@ class _NotificationTile extends StatelessWidget {
           ),
           Padding(
             padding: const EdgeInsets.only(top: 4, right: 4),
-            child: IconButton(
-              tooltip: l10n.text('appNotifications.dismiss'),
-              iconSize: 20,
-              color: scheme.onSurfaceVariant,
-              icon: const Icon(Icons.visibility_off_outlined),
-              onPressed: onDismiss,
-            ),
+            child: action,
           ),
         ],
       ),
+    );
+  }
+}
+
+class _NotificationTile extends StatelessWidget {
+  const _NotificationTile({
+    super.key,
+    required this.item,
+    required this.showSource,
+    required this.unread,
+    required this.selected,
+    required this.onTap,
+    required this.onDismiss,
+  });
+
+  final ServerNotification item;
+
+  /// Whether the list also holds entries of another source.
+  final bool showSource;
+  final bool unread;
+  final bool selected;
+  final VoidCallback onTap;
+  final VoidCallback onDismiss;
+
+  @override
+  Widget build(BuildContext context) {
+    final l10n = context.l10n;
+    return _FeedTile(
+      leading: ServerNotificationTypeIcon(type: item.type),
+      label: showSource
+          ? '${l10n.text('notifications.sourceApp')} · ${item.type.label}'
+          : item.type.label,
+      title: item.title,
+      body: item.body,
+      time: formatServerNotificationTime(context, item.publishedAt),
+      unread: unread,
+      selected: selected,
+      onTap: onTap,
+      action: IconButton(
+        tooltip: l10n.text('appNotifications.dismiss'),
+        iconSize: 20,
+        color: Theme.of(context).colorScheme.onSurfaceVariant,
+        icon: const Icon(Icons.visibility_off_outlined),
+        onPressed: onDismiss,
+      ),
+    );
+  }
+}
+
+class _SchoolNotificationTile extends StatelessWidget {
+  const _SchoolNotificationTile({
+    super.key,
+    required this.item,
+    required this.noInternet,
+    required this.selected,
+    required this.onTap,
+    required this.onMarkRead,
+  });
+
+  final Notification item;
+  final bool noInternet;
+  final bool selected;
+  final VoidCallback onTap;
+  final VoidCallback onMarkRead;
+
+  @override
+  Widget build(BuildContext context) {
+    final l10n = context.l10n;
+    final subTitle = item.subTitle;
+    final color = Theme.of(context).colorScheme.onSurfaceVariant;
+    return _FeedTile(
+      leading: const SchoolNotificationIcon(),
+      label: l10n.text('notifications.sourceSchool'),
+      title: item.title,
+      body: subTitle == null || subTitle.isEmpty ? null : subTitle,
+      time: formatSchoolNotificationTime(context, item.timeSent),
+      unread: true,
+      selected: selected,
+      onTap: onTap,
+      action: _opensMessage(item)
+          ? IconButton(
+              tooltip: l10n.text('notifications.openMessages'),
+              iconSize: 20,
+              color: color,
+              icon: const Icon(Icons.exit_to_app),
+              onPressed: onTap,
+            )
+          : IconButton(
+              tooltip: l10n.text('notifications.markRead'),
+              iconSize: 20,
+              color: color,
+              icon: const Icon(Icons.done),
+              onPressed: noInternet ? null : onMarkRead,
+            ),
     );
   }
 }
@@ -598,6 +821,107 @@ class _ServerNotificationDetailViewState
           ),
         );
       },
+    );
+  }
+}
+
+/// The full text of an entry of the school's feed.
+class SchoolNotificationDetailPage extends StatelessWidget {
+  const SchoolNotificationDetailPage({
+    super.key,
+    required this.notification,
+    this.onShown,
+  });
+
+  final Notification notification;
+  final ValueChanged<Notification>? onShown;
+
+  @override
+  Widget build(BuildContext context) => Scaffold(
+        appBar: AppBar(title: Text(context.l10n.text('notifications.title'))),
+        body: SchoolNotificationDetailView(
+          notification: notification,
+          onShown: onShown,
+        ),
+      );
+}
+
+/// Holds on to [notification] itself, as reading it removes it from the feed.
+/// Showing it is what marks it read, through [onShown].
+class SchoolNotificationDetailView extends StatefulWidget {
+  const SchoolNotificationDetailView({
+    super.key,
+    required this.notification,
+    this.onShown,
+  });
+
+  final Notification notification;
+
+  /// Null while it cannot be marked read, as offline.
+  final ValueChanged<Notification>? onShown;
+
+  @override
+  State<SchoolNotificationDetailView> createState() =>
+      _SchoolNotificationDetailViewState();
+}
+
+class _SchoolNotificationDetailViewState
+    extends State<SchoolNotificationDetailView> {
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted) widget.onShown?.call(widget.notification);
+    });
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final l10n = context.l10n;
+    final item = widget.notification;
+    final subTitle = item.subTitle;
+    return Align(
+      alignment: Alignment.topCenter,
+      child: ConstrainedBox(
+        constraints: const BoxConstraints(maxWidth: _readableWidth),
+        child: ListView(
+          padding: EdgeInsets.fromLTRB(
+            24,
+            24,
+            24,
+            32 + ResponsiveNavigationScope.bottomInsetOf(context),
+          ),
+          children: [
+            Row(
+              children: [
+                const SchoolNotificationIcon(size: 36),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Text(l10n.text('notifications.sourceSchool'),
+                      style: theme.textTheme.labelLarge),
+                ),
+              ],
+            ),
+            const SizedBox(height: 16),
+            Semantics(
+              header: true,
+              child: SelectableText(item.title,
+                  style: theme.textTheme.headlineSmall),
+            ),
+            const SizedBox(height: 8),
+            Text(
+              formatSchoolNotificationTime(context, item.timeSent),
+              style: theme.textTheme.bodySmall
+                  ?.copyWith(color: theme.colorScheme.onSurfaceVariant),
+            ),
+            if (subTitle != null && subTitle.isNotEmpty) ...[
+              const SizedBox(height: 20),
+              LinkifiedText(subTitle, style: theme.textTheme.bodyLarge),
+            ],
+          ],
+        ),
+      ),
     );
   }
 }

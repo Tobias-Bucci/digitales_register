@@ -17,18 +17,27 @@
 
 import 'package:dr/actions/app_actions.dart';
 import 'package:dr/app_state.dart';
-import 'package:dr/ui/notification_icon.dart';
+import 'package:dr/ui/server_notifications/server_notification_bell.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_built_redux/flutter_built_redux.dart';
 
+/// The one bell of the signed-in app: school notifications and app
+/// announcements, with a single count.
 class NotificationIconContainer extends StatelessWidget {
+  const NotificationIconContainer({super.key, this.style, this.iconSize});
+
+  final ButtonStyle? style;
+  final double? iconSize;
+
   @override
   Widget build(BuildContext context) {
     return StoreConnection<AppState, AppActions, int>(
-      builder: (context, vm, actions) {
-        return NotificationIcon(
-          notifications: vm,
-          onTap: actions.routingActions.showNotifications.call,
+      builder: (context, unread, actions) {
+        return ServerNotificationBell(
+          schoolUnread: unread,
+          style: style,
+          iconSize: iconSize,
+          onPressed: actions.routingActions.showNotifications.call,
         );
       },
       connect: (state) {

@@ -130,7 +130,6 @@ abstract class DaysViewModel
   String? get schoolName;
   BuiltMap<String, SubjectTheme> get subjectThemes;
 
-  bool get showNotifications;
   BuiltList<Day> get days;
   BuiltList<Day> get schoolTimelineDays;
   BuiltList<CalendarDay> get schoolTimelineCalendarDays;
@@ -161,8 +160,6 @@ abstract class DaysViewModel
         ..showAddReminder =
             !(state.dashboardState.blacklist?.contains(HomeworkType.homework) ??
                 false)
-        ..showNotifications =
-            (state.notificationState.notifications?.length ?? 0) > 0
         ..favoriteSubjects = state.settingsState.favoriteSubjects.toBuilder()
         ..allSubjects = state.extractAllSubjects().toBuiltList().toBuilder()
         ..favoriteSubject = state.dashboardState.favoriteSubject

@@ -17,35 +17,47 @@
 
 import 'package:built_collection/built_collection.dart';
 import 'package:dr/actions/app_actions.dart';
+import 'package:dr/analytics_service.dart';
 import 'package:dr/app_state.dart';
 import 'package:dr/data.dart';
-import 'package:dr/ui/notifications_page.dart';
+import 'package:dr/middleware/middleware.dart';
+import 'package:dr/notification_feed.dart';
+import 'package:dr/server_notifications/server_notification_service.dart';
+import 'package:dr/ui/server_notifications/server_notification_center.dart';
 import 'package:dr/utc_date_time.dart';
 import 'package:flutter/material.dart' hide Notification;
 import 'package:flutter_built_redux/flutter_built_redux.dart';
 import 'package:tuple/tuple.dart';
 
+/// The notification center of the signed-in app, with both sources.
 class NotificationPageContainer extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
-    return StoreConnection<
-      AppState,
-      AppActions,
-      Tuple3<BuiltList<Notification>, UtcDateTime?, bool>
-    >(
+    return StoreConnection<AppState, AppActions,
+        Tuple3<BuiltList<Notification>, UtcDateTime?, bool>>(
       builder: (context, vm, actions) {
-        return NotificationPage(
-          notifications: vm.item1.toList(),
-          noInternet: vm.item3,
-          deleteNotification: actions.notificationsActions.delete.call,
-          deleteAllNotifications: actions.notificationsActions.deleteAll.call,
-          goToMessage: actions.routingActions.showMessage.call,
-          lastFetched: vm.item2,
+        return ServerNotificationCenterPage(
+          school: SchoolNotificationFeed(
+            notifications: vm.item1.toList(),
+            noInternet: vm.item3,
+            onMarkRead: actions.notificationsActions.delete.call,
+            onMarkAllRead: actions.notificationsActions.deleteAll.call,
+            onOpenMessage: (id) {
+              AnalyticsService.product.event(
+                  'notification_opened', {'notification_type': 'general'});
+              actions.routingActions.showMessage(id);
+            },
+            lastFetched: vm.item2,
+          ),
+          onRefresh: () {
+            serverNotifications.refresh();
+            refreshSchoolNotificationFeed(actions);
+          },
         );
       },
       connect: (state) {
         return Tuple3(
-          state.notificationState.notifications!,
+          state.notificationState.notifications ?? BuiltList<Notification>(),
           state.notificationState.lastFetched,
           state.noInternet,
         );

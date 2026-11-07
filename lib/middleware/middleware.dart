@@ -56,6 +56,7 @@ import 'package:dr/container/certificate_container.dart';
 import 'package:dr/container/extras_page_container.dart';
 import 'package:dr/container/grades_page_container.dart';
 import 'package:dr/container/messages_container.dart';
+import 'package:dr/container/notifications_page_container.dart';
 import 'package:dr/container/settings_page.dart';
 import 'package:dr/course_materials.dart';
 import 'package:dr/data.dart';

@@ -107,6 +107,40 @@ class ServerNotificationTypeIcon extends StatelessWidget {
   }
 }
 
+/// Marks an entry of the school's feed, next to [ServerNotificationTypeIcon]s.
+class SchoolNotificationIcon extends StatelessWidget {
+  const SchoolNotificationIcon({super.key, this.size = 40});
+
+  final double size;
+
+  @override
+  Widget build(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
+    return ExcludeSemantics(
+      child: Container(
+        width: size,
+        height: size,
+        decoration: BoxDecoration(
+          color: scheme.secondaryContainer,
+          borderRadius: BorderRadius.circular(size * 0.3),
+        ),
+        child: Icon(
+          Icons.school_outlined,
+          size: size * 0.55,
+          color: scheme.onSecondaryContainer,
+        ),
+      ),
+    );
+  }
+}
+
+/// Like [formatServerNotificationTime] for the school's wall-clock timestamps,
+/// which must not be converted to another zone.
+String formatSchoolNotificationTime(BuildContext context, DateTime time) {
+  final tag = context.l10n.locale.toLanguageTag();
+  return DateFormat('d. MMM yyyy, HH:mm', tag).format(time);
+}
+
 /// Date and time in the user's language and time zone.
 String formatServerNotificationTime(BuildContext context, DateTime time) {
   final tag = context.l10n.locale.toLanguageTag();

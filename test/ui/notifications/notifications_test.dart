@@ -4,7 +4,6 @@ import 'package:dr/container/notification_icon_container.dart';
 import 'package:dr/container/notifications_page_container.dart';
 import 'package:dr/data.dart';
 import 'package:dr/middleware/middleware.dart';
-import 'package:dr/ui/notifications_page.dart';
 import 'package:dr/utc_date_time.dart';
 import 'package:flutter/material.dart' hide Notification;
 import 'package:flutter_test/flutter_test.dart';
@@ -38,11 +37,11 @@ void main() {
     await pumpApp(
       tester,
       store: store,
-      home: Material(child: NotificationIconContainer()),
+      home: const Material(child: NotificationIconContainer()),
     );
     await settleFor(tester, duration: const Duration(milliseconds: 200));
 
-    expect(find.byIcon(Icons.notifications), findsOneWidget);
+    expect(find.byKey(const Key('server-notification-bell')), findsOneWidget);
     expect(find.text('1'), findsOneWidget);
   });
 
@@ -76,14 +75,15 @@ void main() {
     await settleFor(tester, duration: const Duration(milliseconds: 200));
 
     expect(find.text('title1'), findsOneWidget);
-    expect(find.byType(NotificationWidget), findsNWidgets(2));
+    expect(find.byKey(const Key('server-notification-unread-dot')),
+        findsNWidgets(2));
 
     await tester.tap(find.byIcon(Icons.done).first);
     await tester.pump();
     await settleFor(tester, duration: const Duration(milliseconds: 350));
 
     expect(find.text('title1'), findsNothing);
-    expect(find.byType(NotificationWidget), findsOneWidget);
+    expect(find.text('title2'), findsOneWidget);
   });
 
   testWidgets('mark all as read clears notifications and linked messages',
@@ -156,6 +156,7 @@ void main() {
     await settleFor(tester, duration: const Duration(milliseconds: 350));
 
     expect(find.textContaining('title'), findsNothing);
-    expect(store.state.notificationState.notifications, BuiltList<Notification>());
+    expect(
+        store.state.notificationState.notifications, BuiltList<Notification>());
   });
 }

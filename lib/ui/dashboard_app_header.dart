@@ -15,10 +15,10 @@
 // You should have received a copy of the GNU General Public License
 // along with digitales_register.  If not, see <http://www.gnu.org/licenses/>.
 
+import 'package:dr/container/notification_icon_container.dart';
 import 'package:dr/i18n/app_localizations.dart';
 import 'package:dr/ui/glass_surface.dart';
 import 'package:dr/ui/notepad_mark.dart';
-import 'package:dr/ui/server_notifications/server_notification_bell.dart';
 import 'package:flutter/foundation.dart' show ValueListenable;
 import 'package:flutter/material.dart';
 
@@ -153,7 +153,7 @@ class DashboardAppHeader extends StatelessWidget
               ),
             // Last, so that it stays in place when the buttons before it come
             // and go.
-            ServerNotificationBell(
+            NotificationIconContainer(
               style: HeaderDiscButton.styleOf(scheme),
               iconSize: HeaderDiscButton.iconSize,
             ),
