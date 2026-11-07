@@ -5,6 +5,12 @@
 > default-off bootstrap and Windows/Linux exclusions remain. The v4/v3 reports
 > below are historical. See [iOS/CI setup](IOS_FIREBASE_SETUP.md).
 
+> 2026-11-07: the notice text of version 5 was extended for app announcements
+> and Cloudflare. `currentPrivacyNoticeVersion` stays 5 on purpose, because
+> raising it would withdraw all optional consents, while no optional purpose
+> changed. Whether users must be told actively is a legal question, see
+> [the data inventory](PRIVACY_DATA_INVENTORY.md).
+
 # Version 4 privacy update — 2026-09-30
 
 The authoritative current notice version is **4**. The original version-3 audit below is preserved as historical context; its all-or-nothing consent description and statement that no new product Analytics exists are superseded by this update.

@@ -4,6 +4,11 @@
 > gate. New decisions do not store age. Platform exclusions and data boundaries
 > remain. For current iOS provisioning, see [iOS setup](IOS_FIREBASE_SETUP.md).
 
+> 2026-11-07 addition: in-app announcements (issue #78). See the table rows
+> "App announcements" and the section "Notification server and Cloudflare". The
+> consent version stays **5**: no optional purpose changed, only the description
+> of required processing and recipients.
+
 # Privacy data inventory — version 4 (historical audit)
 
 Audited 2026-10-01 against this repository. Controller for this app fork, confirmed by the owner: see the privacy notice in the app. The school/register provider's roles and necessary-processing legal bases require legal review. This is an implementation inventory, not a legal compliance guarantee.
@@ -30,6 +35,14 @@ The app uses the selected school's existing API, not a newly introduced first-pa
 | Downloaded files / local assessment attachment copies | Filesystem and user-chosen external readers; Android external cache copy for opening | May contain personal school documents | Delete attachments/downloads; reader/calendar/provider copies independently | Requested file function; Legal review required | Same core platforms |
 | Register notifications and email preference / register API | In-app notifications and provider email setting; `notifications_enabled` reflects known email preference, not push permission | Message content/account preference | Provider retention unknown; cache/account controls | Necessary communication; usage consent only for coarse optional property | Same |
 | External links, manual support form, GitHub update queries | Browser/OS links and direct HTTP to external providers; network metadata processed there. Error form has no prefilled raw exception/URL/payload | IP/network context, user-supplied support text | External provider rules; no app-established TTL | Requested support/links/update functionality; Legal review required | Same |
+| App announcements, public API | Polling `api.digitalesregister.com` while the app is in the foreground, with `platform`, `app_version` (no build number) and `lang`, plus connection data of any HTTPS request (IP address, user agent). Recipients: the notification server, and Cloudflare as a proxy | Announcements are public and hold no user data. The request is anonymous, but IP addresses are personal data at Cloudflare | Read state, alert state and dismissals in SharedPreferences, device scoped, kept across logout. Unread content in a separate cache entry that follows `localDataPolicy`. Read records are removed 180 days after the last listing; dismissal tombstones until app data is deleted | Required for the feature; does not depend on any optional consent and sends no events. Legal basis to be reviewed | Android, iOS, Windows, Linux; web once a web build exists. Not on macOS, for which the API has no platform value |
+
+## Notification server and Cloudflare
+
+- Per the server's documentation it stores no IP addresses (memory only, for rate limiting), writes no access log, sets no cookies on the public API and has no analytics.
+- Cloudflare proxies the website and the API: it terminates TLS and sees visitor addresses and request metadata under its own terms. Its answers carry `Report-To` and `NEL` headers.
+- Sources for the policy text, read on 2026-11-07: [Cloudflare privacy policy](https://www.cloudflare.com/privacypolicy/) (effective 4 November 2025), [Customer DPA](https://www.cloudflare.com/cloudflare-customer-dpa/) (version 6.4, effective 3 April 2026), [GDPR FAQ](https://www.cloudflare.com/trust-hub/gdpr/), [sub-processors](https://www.cloudflare.com/gdpr/subprocessors/cloudflare-services/).
+- The app's own text only reports what Cloudflare states. It makes no legal assessment of those transfers.
 
 ## Explicit absences and engineering limits
 

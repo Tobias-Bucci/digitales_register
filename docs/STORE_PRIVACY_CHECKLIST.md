@@ -14,6 +14,7 @@ Audit date: 2026-10-01. This document prepares review; it does not submit or cer
 | Local credentials/settings/notes/cache/attachment copies | On-device-only treatment under applicable disclosure definitions | Distinguish local data from off-device requests, calendar/provider sync and OS backups |
 | In-app register notifications and email setting | App functionality and email/account preference where applicable | No active FCM push tokens. Do not disclose invented push collection; review if FCM is later actually added |
 | External support, project, update and donation links | Off-device service/network data under applicable rules | Raw exceptions no longer prefill the support form. Users can voluntarily send their own support content; linked services have their own privacy rules |
+| App announcements fetched from the notification server through Cloudflare | App functionality; IP address and user agent as connection data; review "collected" against each store's definition of data sent off the device, including a third-party proxy | Required for the feature, no account or device identifier, no analytics, independent of consent. Read and dismissal state stays on the device |
 
 Checklist for final submission:
 
