@@ -18,11 +18,13 @@
 
 import 'package:dr/app_state.dart';
 import 'package:dr/data.dart';
+import 'package:dr/external_links.dart';
 import 'package:dr/i18n/app_localizations.dart';
 import 'package:dr/local_reminder_assessments.dart';
 import 'package:dr/main.dart';
 import 'package:dr/theme/app_palette.dart';
 import 'package:dr/ui/animated_linear_progress_indicator.dart';
+import 'package:dr/ui/linkified_text.dart';
 import 'package:dr/utc_date_time.dart';
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
@@ -287,7 +289,7 @@ class _ContentItem extends StatelessWidget {
                 title,
                 style: const TextStyle(fontWeight: FontWeight.bold),
               ),
-              SelectableText(content),
+              LinkifiedText(content),
             ],
           ),
         )
@@ -308,13 +310,19 @@ class _SubmissionWidget extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final caption = submission.isLink
+        ? linkCaption(submission.originalName, submission.link)
+        : null;
+    final canOpen = submission.isLink
+        ? parseExternalLink(submission.link) != null
+        : submission.fileAvailable || !noInternet;
     return Row(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Padding(
           padding: const EdgeInsets.only(top: 4),
           child: Icon(
-            Icons.attachment,
+            submission.isLink ? Icons.link_rounded : Icons.attachment,
             color: Theme.of(context).colorScheme.onSurfaceVariant,
           ),
         ),
@@ -330,15 +338,20 @@ class _SubmissionWidget extends StatelessWidget {
               Text(
                 submission.originalName,
               ),
+              if (caption != null)
+                Text(
+                  caption,
+                  style: Theme.of(context).textTheme.bodySmall,
+                ),
               AnimatedLinearProgressIndicator(show: submission.downloading),
               SizedBox(
                 width: double.infinity,
                 child: TextButton(
-                  onPressed: !submission.fileAvailable && noInternet
-                      ? null
-                      : () {
+                  onPressed: canOpen
+                      ? () {
                           onOpenFile(submission);
-                        },
+                        }
+                      : null,
                   child: Align(
                     alignment: Alignment.centerLeft,
                     child: Text(context.l10n.text('common.open')),

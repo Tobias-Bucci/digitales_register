@@ -21,6 +21,7 @@ import 'package:dr/i18n/app_localizations.dart';
 import 'package:dr/middleware/middleware.dart';
 import 'package:dr/page_payload_cache.dart';
 import 'package:dr/ui/animated_linear_progress_indicator.dart';
+import 'package:dr/ui/linkified_text.dart';
 import 'package:dr/ui/no_internet.dart';
 import 'package:dr/ui/readable_content.dart';
 import 'package:flutter/material.dart';
@@ -530,7 +531,7 @@ class _HomeworkEntryTile extends StatelessWidget {
                 meta,
                 if (title.isNotEmpty) ...[
                   const SizedBox(height: 8),
-                  SelectableText(title, style: theme.textTheme.bodyLarge),
+                  LinkifiedText(title, style: theme.textTheme.bodyLarge),
                 ],
                 if (entry.extraCells.isNotEmpty)
                   _ExtraCellsRow(cells: entry.extraCells),
@@ -548,7 +549,7 @@ class _HomeworkEntryTile extends StatelessWidget {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     if (title.isNotEmpty)
-                      SelectableText(title, style: theme.textTheme.bodyLarge),
+                      LinkifiedText(title, style: theme.textTheme.bodyLarge),
                     if (entry.extraCells.isNotEmpty)
                       _ExtraCellsRow(cells: entry.extraCells),
                   ],

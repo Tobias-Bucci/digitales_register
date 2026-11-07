@@ -60,6 +60,7 @@ import 'package:dr/container/settings_page.dart';
 import 'package:dr/course_materials.dart';
 import 'package:dr/data.dart';
 import 'package:dr/diagnostics_service.dart';
+import 'package:dr/external_links.dart';
 import 'package:dr/i18n/app_language.dart';
 import 'package:dr/i18n/app_localizations.dart';
 import 'package:dr/local_data_inventory.dart';

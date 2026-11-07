@@ -33,6 +33,7 @@ import 'package:dr/container/notification_icon_container.dart';
 import 'package:dr/container/sidebar_container.dart';
 import 'package:dr/dashboard_items.dart';
 import 'package:dr/data.dart';
+import 'package:dr/external_links.dart';
 import 'package:dr/i18n/app_localizations.dart';
 import 'package:dr/local_reminder_assessments.dart';
 import 'package:dr/main.dart';
@@ -50,6 +51,7 @@ import 'package:dr/ui/favorite_subject_filter.dart';
 import 'package:dr/ui/glass_surface.dart';
 import 'package:dr/ui/grade_colors.dart';
 import 'package:dr/ui/last_fetched_overlay.dart';
+import 'package:dr/ui/linkified_text.dart';
 import 'package:dr/ui/no_internet.dart';
 import 'package:dr/ui/readable_content.dart';
 import 'package:dr/ui/server_notifications/server_notification_bell.dart';
@@ -1640,7 +1642,7 @@ class ItemWidget extends StatelessWidget {
                             ),
                             subtitle: displaySubtitle.isNullOrEmpty
                                 ? null
-                                : SelectableText(
+                                : LinkifiedText(
                                     l10n.translateDashboardServerText(
                                       displaySubtitle,
                                     ),
@@ -1913,6 +1915,7 @@ class AttachmentWidget extends StatelessWidget {
       required this.openCallback});
   @override
   Widget build(BuildContext context) {
+    final open = context.l10n.text('ui.open');
     return Padding(
       padding: const EdgeInsets.all(8.0),
       child: Column(
@@ -1921,17 +1924,38 @@ class AttachmentWidget extends StatelessWidget {
             indent: 16,
             height: 0,
           ),
-          ListTile(title: Text(ggs.originalName)),
-          AnimatedLinearProgressIndicator(show: ggs.downloading),
-          TextButton(
-            onPressed:
-                openCallback == null || (!ggs.fileAvailable && noInternet)
-                    ? null
-                    : () {
-                        openCallback!(ggs);
-                      },
-            child: Text(context.l10n.text('ui.open')),
-          )
+          if (ggs.isLink) ...[
+            ListTile(
+              leading: const Icon(Icons.link_rounded),
+              title: Text(ggs.originalName),
+              subtitle: linkCaption(ggs.originalName, ggs.link) == null
+                  ? null
+                  : Text(linkCaption(ggs.originalName, ggs.link)!),
+            ),
+            TextButton.icon(
+              // Opening a link is up to the browser, online or not.
+              onPressed:
+                  openCallback == null || parseExternalLink(ggs.link) == null
+                      ? null
+                      : () {
+                          openCallback!(ggs);
+                        },
+              icon: const Icon(Icons.open_in_new_rounded),
+              label: Text(open),
+            ),
+          ] else ...[
+            ListTile(title: Text(ggs.originalName)),
+            AnimatedLinearProgressIndicator(show: ggs.downloading),
+            TextButton(
+              onPressed:
+                  openCallback == null || (!ggs.fileAvailable && noInternet)
+                      ? null
+                      : () {
+                          openCallback!(ggs);
+                        },
+              child: Text(open),
+            ),
+          ],
         ],
       ),
     );
