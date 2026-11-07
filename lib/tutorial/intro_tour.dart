@@ -19,6 +19,7 @@ import 'dart:async';
 
 import 'package:dr/i18n/app_language.dart';
 import 'package:dr/i18n/app_localizations.dart';
+import 'package:dr/tutorial/design_choice.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
@@ -37,7 +38,11 @@ const introTourPages = <IntroTourPage>[
   IntroTourPage(key: 'grades', icon: Icons.insights_rounded),
   IntroTourPage(key: 'calendar', icon: Icons.calendar_month_rounded),
   IntroTourPage(key: 'settings', icon: Icons.tune_rounded),
+  // Always last: the choice between the new and the legacy design (#108).
+  IntroTourPage(key: 'design', icon: Icons.auto_awesome_rounded),
 ];
+
+const _designPage = 'design';
 
 /// A short, full-screen swipe intro. Pops with `true` when finished and
 /// `false` when skipped.
@@ -46,14 +51,30 @@ class IntroTour extends StatefulWidget {
     super.key,
     required this.language,
     required this.onLanguageSelected,
+    this.legacyDesign = false,
+    this.designChoicePending = false,
+    this.onDesignChosen,
   });
 
   final AppLanguage language;
   final ValueChanged<AppLanguage> onLanguageSelected;
 
+  /// The design selected on the last page until the user picks another.
+  final bool legacyDesign;
+
+  /// Whether the user has never chosen a design. Skipping then leads to the
+  /// last page instead of closing, since the choice cannot be skipped.
+  final bool designChoicePending;
+
+  /// Called with the chosen value of `legacyDesign` when the intro finishes.
+  final ValueChanged<bool>? onDesignChosen;
+
   static Route<bool> route({
     required AppLanguage language,
     required ValueChanged<AppLanguage> onLanguageSelected,
+    bool legacyDesign = false,
+    bool designChoicePending = false,
+    ValueChanged<bool>? onDesignChosen,
   }) =>
       PageRouteBuilder<bool>(
         settings: const RouteSettings(name: '/intro'),
@@ -63,6 +84,9 @@ class IntroTour extends StatefulWidget {
         pageBuilder: (_, __, ___) => IntroTour(
           language: language,
           onLanguageSelected: onLanguageSelected,
+          legacyDesign: legacyDesign,
+          designChoicePending: designChoicePending,
+          onDesignChosen: onDesignChosen,
         ),
         transitionsBuilder: (context, animation, _, child) => FadeTransition(
           opacity: CurvedAnimation(parent: animation, curve: Curves.easeOut),
@@ -77,6 +101,7 @@ class IntroTour extends StatefulWidget {
 class _IntroTourState extends State<IntroTour> {
   final _controller = PageController();
   late AppLanguage _language = widget.language;
+  late bool _legacyDesign = widget.legacyDesign;
   int _page = 0;
 
   bool get _isLast => _page == introTourPages.length - 1;
@@ -102,13 +127,20 @@ class _IntroTourState extends State<IntroTour> {
 
   void _next() {
     if (_isLast) {
+      widget.onDesignChosen?.call(_legacyDesign);
       Navigator.of(context).pop(true);
     } else {
       _goTo(_page + 1);
     }
   }
 
-  void _skip() => Navigator.of(context).pop(false);
+  void _skip() {
+    if (widget.designChoicePending && !_isLast) {
+      _goTo(introTourPages.length - 1);
+    } else {
+      Navigator.of(context).pop(false);
+    }
+  }
 
   void _selectLanguage(AppLanguage language) {
     setState(() => _language = language);
@@ -177,7 +209,20 @@ class _IntroTourState extends State<IntroTour> {
                                   selected: _language,
                                   onSelected: _selectLanguage,
                                 )
-                              : null,
+                              : introTourPages[index].key == _designPage
+                                  ? Column(
+                                      children: [
+                                        DesignChoicePicker(
+                                          legacySelected: _legacyDesign,
+                                          onChanged: (legacy) => setState(
+                                              () => _legacyDesign = legacy),
+                                        ),
+                                        const SizedBox(height: 16),
+                                        DesignChoiceLaterNote(
+                                            legacySelected: _legacyDesign),
+                                      ],
+                                    )
+                                  : null,
                         ),
                       ),
                     ),
@@ -258,23 +303,28 @@ class _IntroPageView extends StatelessWidget {
         final illustrationSize =
             (constraints.maxHeight * 0.38).clamp(120.0, 240.0);
         return SingleChildScrollView(
-          padding: const EdgeInsets.symmetric(horizontal: 28, vertical: 12),
+          // The two design cards need the width more than the margin.
+          padding: EdgeInsets.symmetric(
+              horizontal: page.key == _designPage ? 16 : 28, vertical: 12),
           child: ConstrainedBox(
             constraints: BoxConstraints(minHeight: constraints.maxHeight - 24),
             child: Column(
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
-                AnimatedScale(
-                  scale: active ? 1 : 0.85,
-                  duration: duration,
-                  curve: Curves.easeOutBack,
-                  child: _IntroIllustration(
-                    icon: page.icon,
-                    size: illustrationSize,
-                    accentIndex: accentIndex,
+                // The previews of the designs are the picture of that page.
+                if (page.key != _designPage) ...[
+                  AnimatedScale(
+                    scale: active ? 1 : 0.85,
+                    duration: duration,
+                    curve: Curves.easeOutBack,
+                    child: _IntroIllustration(
+                      icon: page.icon,
+                      size: illustrationSize,
+                      accentIndex: accentIndex,
+                    ),
                   ),
-                ),
-                SizedBox(height: illustrationSize * 0.18),
+                  SizedBox(height: illustrationSize * 0.18),
+                ],
                 AnimatedSlide(
                   offset: active ? Offset.zero : const Offset(0, 0.15),
                   duration: duration,

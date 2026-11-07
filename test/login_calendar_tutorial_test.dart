@@ -107,7 +107,11 @@ void main() {
       expect(store.state.calendarState.days, isEmpty);
       expect(find.text('Willkommen!'), findsOneWidget,
           reason: 'offer must appear before any tap on the dashboard');
+      // Skipping leads to the design choice, which a new installation has to
+      // answer once (#108).
       await tester.tap(find.text('Überspringen'));
+      await settleFor(tester);
+      await tester.tap(find.byKey(const Key('intro-next')));
       await settleFor(tester);
       expect(tutorialService.active, isFalse);
       session.release.complete();
