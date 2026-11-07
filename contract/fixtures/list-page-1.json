@@ -1,0 +1,48 @@
+{
+  "schema_version": 1,
+  "server_time": "2026-10-22T20:00:00Z",
+  "poll_after_seconds": 300,
+  "next_cursor": "djE6MTc2MDk0OTAwMDo1ZjBlMmMxYS03ZjRkLTRiNTItOWQ0My0yYTZjMGYzZTFiMTA",
+  "notifications": [
+    {
+      "id": "8a3b64cd-8f53-42f1-ae2b-4d9d095fa731",
+      "revision": 3,
+      "attention_revision": 2,
+      "title": "Wichtige Wartungsarbeiten",
+      "body": "Am Samstag kann es zu Ausfällen kommen.",
+      "type": {
+        "key": "maintenance",
+        "label": "Wartung",
+        "color": "#E9A23B",
+        "icon": "wrench",
+        "critical": true
+      },
+      "published_at": "2026-10-22T19:00:00Z",
+      "expires_at": null,
+      "link": {
+        "kind": "internal",
+        "target": "settings"
+      }
+    },
+    {
+      "id": "5f0e2c1a-7f4d-4b52-9d43-2a6c0f3e1b10",
+      "revision": 1,
+      "attention_revision": 1,
+      "title": "Version 2.0 ist da",
+      "body": "Die neue Version bringt einen Benachrichtigungsbereich.\nViel Spaß damit!",
+      "type": {
+        "key": "update",
+        "label": "Update",
+        "color": "#2E7D5B",
+        "icon": "update",
+        "critical": false
+      },
+      "published_at": "2026-10-20T08:30:00Z",
+      "expires_at": "2026-11-20T08:30:00Z",
+      "link": {
+        "kind": "external",
+        "target": "https://example.com/neuigkeiten"
+      }
+    }
+  ]
+}

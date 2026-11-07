@@ -1,0 +1,333 @@
+openapi: 3.1.0
+info:
+  title: Digitales Register Notifications API
+  version: 1.0.0
+  summary: Public, anonymous read API for in-app notifications.
+  description: |
+    Polling API consumed by the Digitales Register app on web, Android, iOS,
+    Windows and Linux. No login, no device identifiers.
+
+    **Not confidential.** `platform` and `app_version` are supplied by the
+    client and are not authenticated. Audience targeting decides what is
+    relevant, it is not access control. Nothing sensitive is ever published
+    through this API.
+
+    **Polling.** Poll while the app is active, waiting `poll_after_seconds`
+    between requests. Send the `ETag` of the last first-page response as
+    `If-None-Match`.
+
+    **ETag scope.** The `ETag` covers the *complete* applicable collection, not
+    just the returned page. `304` on the first page therefore means no page has
+    changed, and the client does not need to walk the cursors again.
+
+    **Stale content.** On `304` keep the cached list, and still apply known
+    `expires_at` values locally. On `429`, `5xx`, timeouts or offline keep the
+    cached list and retry with exponential backoff plus jitter, honouring
+    `Retry-After`. A client cannot learn about a revocation until it reconnects.
+
+    **Compatibility.** Ignore unknown fields. `schema_version` increases only
+    for breaking changes. Map unknown `type.icon` values to a safe fallback and
+    treat an unknown internal `link.target` as no link.
+  license:
+    name: Proprietary
+    identifier: LicenseRef-Proprietary
+servers:
+  - url: https://api.digitalesregister.com
+    description: Production. Clients must take the base URL from configuration.
+tags:
+  - name: notifications
+  - name: health
+paths:
+  /api/v1/notifications:
+    get:
+      operationId: listNotifications
+      tags: [notifications]
+      summary: List the active notifications applicable to this client.
+      description: |
+        Ordered by `published_at` descending, then `id` descending. `title` and
+        `body` are plain text and must be rendered as such.
+      parameters:
+        - name: platform
+          in: query
+          required: true
+          schema:
+            $ref: '#/components/schemas/Platform'
+        - name: app_version
+          in: query
+          required: true
+          description: Semantic version of the running app. Build metadata (`1.17.4+55`) is accepted and ignored.
+          schema:
+            type: string
+            maxLength: 64
+          example: 2.0.0
+        - name: lang
+          in: query
+          required: false
+          description: |
+            Language tag such as `de`, `en`, `it` or `de-AT`; only the primary
+            subtag is used. Missing, unsupported and untranslated languages
+            fall back to German.
+          schema:
+            type: string
+            maxLength: 35
+            default: de
+        - name: cursor
+          in: query
+          required: false
+          description: Opaque `next_cursor` of the previous page.
+          schema:
+            type: string
+            maxLength: 128
+        - name: limit
+          in: query
+          required: false
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 100
+            default: 100
+        - name: If-None-Match
+          in: header
+          required: false
+          schema:
+            type: string
+      responses:
+        '200':
+          description: One page of active notifications.
+          headers:
+            ETag:
+              $ref: '#/components/headers/ETag'
+            Cache-Control:
+              $ref: '#/components/headers/CacheControl'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/NotificationList'
+        '304':
+          description: The collection is unchanged since the supplied `ETag`. No body.
+          headers:
+            ETag:
+              $ref: '#/components/headers/ETag'
+            Cache-Control:
+              $ref: '#/components/headers/CacheControl'
+        '400':
+          description: A parameter is missing or invalid.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '429':
+          description: Too many requests. Wait for `Retry-After` seconds.
+          headers:
+            Retry-After:
+              description: Seconds to wait before retrying.
+              schema:
+                type: integer
+                minimum: 1
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '500':
+          description: Unexpected server error.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '503':
+          description: Temporarily unavailable.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+  /health/live:
+    get:
+      operationId: healthLive
+      tags: [health]
+      summary: Liveness. 200 whenever the process is running.
+      responses:
+        '200':
+          description: Running.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Health'
+  /health/ready:
+    get:
+      operationId: healthReady
+      tags: [health]
+      summary: Readiness. 200 when the database answers.
+      responses:
+        '200':
+          description: Ready.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Health'
+        '503':
+          description: Not ready.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+components:
+  headers:
+    ETag:
+      description: Weak validator of the complete applicable collection. Opaque; send it back unchanged.
+      schema:
+        type: string
+    CacheControl:
+      description: Always `no-cache`. Responses may be stored but must be revalidated.
+      schema:
+        type: string
+        const: no-cache
+  schemas:
+    Platform:
+      type: string
+      enum: [web, android, ios, windows, linux]
+    NotificationList:
+      type: object
+      additionalProperties: false
+      required: [schema_version, server_time, poll_after_seconds, next_cursor, notifications]
+      properties:
+        schema_version:
+          type: integer
+          const: 1
+        server_time:
+          $ref: '#/components/schemas/Timestamp'
+        poll_after_seconds:
+          type: integer
+          minimum: 1
+          description: Suggested delay before the next poll. Includes a small random jitter.
+        next_cursor:
+          type: [string, 'null']
+          description: Pass as `cursor` to get the next page. `null` on the last page.
+        notifications:
+          type: array
+          maxItems: 100
+          items:
+            $ref: '#/components/schemas/Notification'
+    Notification:
+      type: object
+      additionalProperties: false
+      required: [id, revision, attention_revision, title, body, type, published_at, expires_at, link]
+      properties:
+        id:
+          type: string
+          format: uuid
+          description: Stable across edits.
+        revision:
+          type: integer
+          minimum: 1
+          description: Incremented by every material edit. Update the content in place, do not re-alert.
+        attention_revision:
+          type: integer
+          minimum: 1
+          description: Incremented only by important edits. Re-alert if it is above the locally read value, unless the notification was dismissed on this device.
+        title:
+          type: string
+          minLength: 1
+          maxLength: 120
+          description: Plain text.
+        body:
+          type: string
+          minLength: 1
+          maxLength: 2000
+          description: Plain text, may contain line breaks.
+        type:
+          $ref: '#/components/schemas/NotificationType'
+        published_at:
+          $ref: '#/components/schemas/Timestamp'
+        expires_at:
+          oneOf:
+            - $ref: '#/components/schemas/Timestamp'
+            - type: 'null'
+        link:
+          oneOf:
+            - $ref: '#/components/schemas/Link'
+            - type: 'null'
+    NotificationType:
+      type: object
+      additionalProperties: false
+      required: [key, label, color, icon, critical]
+      properties:
+        key:
+          type: string
+          pattern: '^[a-z][a-z0-9_-]{1,31}$'
+        label:
+          type: string
+          minLength: 1
+          maxLength: 40
+        color:
+          type: string
+          pattern: '^#[0-9A-Fa-f]{6}$'
+        icon:
+          type: string
+          description: |
+            One of the allowlisted icon names `info`, `update`, `wrench`,
+            `warning`, `bell`, `calendar`, `megaphone`, `shield`, `star`. New
+            names can appear; map unknown names to a fallback.
+        critical:
+          type: boolean
+          description: If true the popup must be closed manually.
+    Link:
+      oneOf:
+        - type: object
+          additionalProperties: false
+          required: [kind, target]
+          properties:
+            kind:
+              type: string
+              const: internal
+            target:
+              type: string
+              description: |
+                App route key: `homework`, `grades`, `absences`, `calendar`,
+                `examCalendar`, `classRegister`, `courseMaterials`,
+                `homeworkSummary`, `certificate`, `messages`, `settings`,
+                `profile`.
+        - type: object
+          additionalProperties: false
+          required: [kind, target]
+          properties:
+            kind:
+              type: string
+              const: external
+            target:
+              type: string
+              format: uri
+              pattern: '^https://'
+              maxLength: 2048
+    Timestamp:
+      type: string
+      format: date-time
+      pattern: '^[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}Z$'
+      description: UTC, RFC 3339, whole seconds.
+    Health:
+      type: object
+      additionalProperties: false
+      required: [status]
+      properties:
+        status:
+          type: string
+          enum: [live, ready]
+    Error:
+      type: object
+      additionalProperties: false
+      required: [error]
+      properties:
+        error:
+          type: object
+          additionalProperties: false
+          required: [code, message]
+          properties:
+            code:
+              type: string
+              description: Stable machine-readable code.
+              examples: [invalid_parameter, invalid_cursor, rate_limited, not_found, internal_error]
+            message:
+              type: string
+              description: Human-readable English message. Do not parse it.
+            field:
+              type: string
+              description: Offending parameter, if there is exactly one.

@@ -1,0 +1,25 @@
+{
+  "schema_version": 1,
+  "server_time": "2026-10-22T20:00:00Z",
+  "poll_after_seconds": 300,
+  "next_cursor": null,
+  "notifications": [
+    {
+      "id": "8a3b64cd-8f53-42f1-ae2b-4d9d095fa731",
+      "revision": 1,
+      "attention_revision": 1,
+      "title": "Störung der Anmeldung",
+      "body": "Die Anmeldung ist aktuell gestört. Wir arbeiten an einer Lösung.",
+      "type": {
+        "key": "critical",
+        "label": "Kritisch",
+        "color": "#C4372C",
+        "icon": "warning",
+        "critical": true
+      },
+      "published_at": "2026-10-22T19:00:00Z",
+      "expires_at": null,
+      "link": null
+    }
+  ]
+}

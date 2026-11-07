@@ -1,0 +1,25 @@
+{
+  "schema_version": 1,
+  "server_time": "2026-10-22T20:00:00Z",
+  "poll_after_seconds": 300,
+  "next_cursor": null,
+  "notifications": [
+    {
+      "id": "2c9a7e44-1d6b-4c3f-8a55-73e1b9d0c2f4",
+      "revision": 1,
+      "attention_revision": 1,
+      "title": "Willkommen",
+      "body": "Hier erscheinen ab jetzt Mitteilungen zur App.",
+      "type": {
+        "key": "info",
+        "label": "Information",
+        "color": "#2F6FB5",
+        "icon": "info",
+        "critical": false
+      },
+      "published_at": "2026-10-01T07:00:00Z",
+      "expires_at": null,
+      "link": null
+    }
+  ]
+}

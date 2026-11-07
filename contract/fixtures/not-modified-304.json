@@ -1,0 +1,18 @@
+{
+  "_comment": "HTTP exchange, not a response body: 304 carries no body.",
+  "request": {
+    "method": "GET",
+    "url": "/api/v1/notifications?platform=android&app_version=2.0.0&lang=de",
+    "headers": {
+      "If-None-Match": "W/\"Yk3v1cQe0m2cR7sX9aBfZg\""
+    }
+  },
+  "response": {
+    "status": 304,
+    "headers": {
+      "ETag": "W/\"Yk3v1cQe0m2cR7sX9aBfZg\"",
+      "Cache-Control": "no-cache"
+    },
+    "body": null
+  }
+}
