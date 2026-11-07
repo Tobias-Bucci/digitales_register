@@ -84,7 +84,7 @@ Future<ServerNotificationRepository> synced(
   FakeServer server, {
   int syncs = 1,
 }) async {
-  final repository = repositoryFor(server, FakeStorage());
+  final repository = repositoryFor(server, FakeStorage.existingInstall());
   for (var i = 0; i < syncs; i++) {
     await drive(tester, repository.sync(selection));
   }
@@ -915,5 +915,102 @@ void main() {
         expect(find.textContaining('2026'), findsOneWidget);
       });
     }
+  });
+
+  group('fresh installation (#103)', () {
+    Future<ServerNotificationRepository> freshlyInstalled(
+      WidgetTester tester,
+      FakeServer server, {
+      int syncs = 1,
+    }) async {
+      final repository = repositoryFor(server, FakeStorage());
+      for (var i = 0; i < syncs; i++) {
+        await drive(tester, repository.sync(selection));
+      }
+      return repository;
+    }
+
+    final backlog = [
+      item(title: 'Alt 1', publishedAt: '2026-03-01T08:00:00Z'),
+      item(id: b, title: 'Alt 2', publishedAt: '2026-05-01T08:00:00Z'),
+      item(
+          id: c,
+          title: 'Alt 3',
+          critical: true,
+          publishedAt: '2026-07-01T08:00:00Z'),
+    ];
+
+    Future<void> pumpEverything(
+      WidgetTester tester,
+      ServerNotificationRepository repository,
+    ) async {
+      final navigator = GlobalKey<NavigatorState>();
+      await tester.pumpWidget(app(
+        navigator: navigator,
+        home: Scaffold(
+          appBar: AppBar(actions: [
+            ServerNotificationBell(
+              repository: repository,
+              enabled: true,
+              onPressed: () => showServerNotificationCenter(
+                navigator.currentState!,
+                repository: repository,
+              ),
+            ),
+          ]),
+          body: const Text('App'),
+        ),
+        builder: (context, child) => ServerNotificationHost(
+          newDesign: false,
+          navigationClearance: 0,
+          repository: repository,
+          navigator: () => navigator.currentState,
+          isBlocked: () => false,
+          blockedChanges: ChangeNotifier(),
+          onLanguage: (_) {},
+          child: child!,
+        ),
+      ));
+      await tester.pump();
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 300));
+    }
+
+    testWidgets('no popup and no badge, but the center lists the backlog',
+        (tester) async {
+      final server = FakeServer()..replyList(backlog);
+      final repository = await freshlyInstalled(tester, server);
+      await pumpEverything(tester, repository);
+      expect(popup, findsNothing);
+      expect(tester.widget<Badge>(find.byType(Badge)).isLabelVisible, isFalse);
+
+      await tester.tap(find.byKey(const Key('server-notification-bell')));
+      await tester.pumpAndSettle();
+      for (final title in ['Alt 1', 'Alt 2', 'Alt 3']) {
+        expect(find.text(title), findsOneWidget);
+      }
+      expect(
+          find.byKey(const Key('server-notification-unread-dot')), findsNothing,
+          reason: 'listed as read');
+    });
+
+    testWidgets('a notification after the first sync pops up and counts',
+        (tester) async {
+      final server = FakeServer()
+        ..replyList(backlog)
+        ..replyList([
+          item(
+              id: '00000000-0000-4000-8000-000000000099',
+              title: 'Neu',
+              publishedAt: '2026-10-22T20:05:00Z'),
+          ...backlog,
+        ]);
+      final repository = await freshlyInstalled(tester, server, syncs: 2);
+      await pumpEverything(tester, repository);
+      expect(popup, findsOneWidget);
+      expect(find.descendant(of: popup, matching: find.text('Neu')),
+          findsOneWidget);
+      expect(find.text('1'), findsOneWidget, reason: 'the badge');
+    });
   });
 }

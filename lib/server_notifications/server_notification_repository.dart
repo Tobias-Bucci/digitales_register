@@ -113,11 +113,16 @@ class ServerNotificationRepository extends ChangeNotifier {
     } catch (_) {
       _storageFailed = true;
       _deviceUnread = true;
+      // Unknown is not fresh: nothing may be marked read by guess.
+      _device.baselined = true;
     }
     try {
       final cache = ServerNotificationCache.decode(
           await _storage.read(serverNotificationCacheKey));
-      if (_mayStoreCaches()) {
+      // A cache without the device state it belongs to is left over from
+      // deleted data. Its items would alert, and its validator could turn the
+      // first sync into a 304 that never establishes the baseline.
+      if (_mayStoreCaches() && _device.baselined) {
         final now = _now;
         for (final item in cache.unread) {
           // Checked again: the cache may be older than the last dismissal.
@@ -197,6 +202,7 @@ class ServerNotificationRepository extends ChangeNotifier {
     _etag = result.etag;
     _etagSelection = selection.cacheKey;
     _collectionIds = result.notifications.map((item) => item.id).toSet();
+    if (!_device.baselined) _adoptBacklog(now);
     for (final id in _collectionIds) {
       final record = _device.records[id];
       if (record != null) _device.records[id] = record.copyWith(lastSeen: now);
@@ -205,6 +211,25 @@ class ServerNotificationRepository extends ChangeNotifier {
         !_collectionIds.contains(id) &&
         now.difference(record.lastSeen) > serverNotificationRecordRetention);
     _removeExpired();
+  }
+
+  /// The first complete list of a fresh installation is what was active
+  /// before it: recorded as read and announced, so it is listed in the center
+  /// without a popup and without a badge (#103).
+  ///
+  /// It is decided by membership in that list, never by comparing times, so
+  /// neither the device clock nor the moment of publishing can let a backlog
+  /// item through or silence one published after this sync.
+  void _adoptBacklog(DateTime now) {
+    for (final item in _items.values) {
+      _device.records[item.id] =
+          (_device.records[item.id] ?? ServerNotificationRecord(lastSeen: now))
+              .copyWith(
+        readAttentionRevision: item.attentionRevision,
+        alertedAttentionRevision: item.attentionRevision,
+      );
+    }
+    _device.baselined = true;
   }
 
   /// Opening a notification is what reads it. Its content leaves the offline
@@ -311,6 +336,7 @@ class ServerNotificationRepository extends ChangeNotifier {
     final stored = ServerNotificationDeviceState.decode(
         await _storage.read(serverNotificationDeviceKey));
     _deviceUnread = false;
+    _device.baselined = _device.baselined || stored.baselined;
     stored.dismissed.forEach((id, at) {
       _device.dismissed.putIfAbsent(id, () => at);
     });

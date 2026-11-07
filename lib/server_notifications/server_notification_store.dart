@@ -98,10 +98,20 @@ class ServerNotificationDeviceState {
   ServerNotificationDeviceState({
     Map<String, ServerNotificationRecord>? records,
     Map<String, DateTime>? dismissed,
+    this.baselined = false,
   })  : records = records ?? {},
         dismissed = dismissed ?? {};
 
   final Map<String, ServerNotificationRecord> records;
+
+  /// Whether a complete list has been received on this installation. The
+  /// first one is the backlog: it is recorded as read and announced, so a new
+  /// installation is not flooded with what was active before it (#103).
+  ///
+  /// Saved state from before this field counts as baselined: an existing
+  /// installation keeps its unread notifications. So does saved state that
+  /// cannot be read, because guessing must never mark anything as read.
+  bool baselined;
 
   /// Tombstones: id and time of dismissal. Checked before anything else and
   /// never cleaned up, because dismissal is final on this device.
@@ -112,13 +122,15 @@ class ServerNotificationDeviceState {
         'records': records.map((id, record) => MapEntry(id, record.toJson())),
         'dismissed':
             dismissed.map((id, at) => MapEntry(id, at.millisecondsSinceEpoch)),
+        'baselined': baselined,
       });
 
   /// Tolerates damage entry by entry, so that one bad record does not cost the
   /// tombstones. Data from a newer version is read as far as it is understood:
   /// a downgrade must not bring a dismissed notification back.
   static ServerNotificationDeviceState decode(String? raw) {
-    final state = ServerNotificationDeviceState();
+    // Only nothing saved at all is a fresh installation.
+    final state = ServerNotificationDeviceState(baselined: raw != null);
     if (raw == null) return state;
     final Object? json;
     try {
@@ -127,6 +139,7 @@ class ServerNotificationDeviceState {
       return state;
     }
     if (json is! Map) return state;
+    if (json['baselined'] == false) state.baselined = false;
     final records = json['records'];
     if (records is Map) {
       records.forEach((id, value) {

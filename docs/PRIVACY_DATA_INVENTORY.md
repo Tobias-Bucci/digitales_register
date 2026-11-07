@@ -9,6 +9,10 @@
 > consent version stays **5**: no optional purpose changed, only the description
 > of required processing and recipients.
 
+> 2026-11-07 addition: first-sync baseline for announcements (issue #103). One
+> boolean inside the existing device-scoped record, see the row "App
+> announcements". Nothing is sent to the server and no new key is stored.
+
 > 2026-11-07 review: the public privacy policy (de, en, it, lld) now matches this
 > notice. The open review notes in the notice were resolved: register data stay
 > between the device and the school register, announcements rest on legitimate
@@ -40,7 +44,7 @@ The app uses the selected school's existing API, not a newly introduced first-pa
 | Downloaded files / local assessment attachment copies | Filesystem and user-chosen external readers; Android external cache copy for opening | May contain personal school documents | Delete attachments/downloads; reader/calendar/provider copies independently | Requested file function; Legal review required | Same core platforms |
 | Register notifications and email preference / register API | In-app notifications and provider email setting; `notifications_enabled` reflects known email preference, not push permission | Message content/account preference | Provider retention unknown; cache/account controls | Necessary communication; usage consent only for coarse optional property | Same |
 | External links, manual support form, GitHub update queries | Browser/OS links and direct HTTP to external providers; network metadata processed there. Error form has no prefilled raw exception/URL/payload | IP/network context, user-supplied support text | External provider rules; no app-established TTL | Requested support/links/update functionality; Legal review required | Same |
-| App announcements, public API | Polling `api.digitalesregister.com` while the app is in the foreground, with `platform`, `app_version` (no build number) and `lang`, plus connection data of any HTTPS request (IP address, user agent). Recipients: the notification server, and Cloudflare as a proxy | Announcements are public and hold no user data. The request is anonymous, but IP addresses are personal data at Cloudflare | Read state, alert state and dismissals in SharedPreferences, device scoped, kept across logout. Unread content in a separate cache entry that follows `localDataPolicy`. Read records are removed 180 days after the last listing; dismissal tombstones until app data is deleted | Required for the feature; does not depend on any optional consent and sends no events. Legal basis to be reviewed | Android, iOS, Windows, Linux; web once a web build exists. Not on macOS, for which the API has no platform value |
+| App announcements, public API | Polling `api.digitalesregister.com` while the app is in the foreground, with `platform`, `app_version` (no build number) and `lang`, plus connection data of any HTTPS request (IP address, user agent). Recipients: the notification server, and Cloudflare as a proxy | Announcements are public and hold no user data. The request is anonymous, but IP addresses are personal data at Cloudflare | Read state, alert state and dismissals in SharedPreferences, device scoped, kept across logout. The same record holds a flag that the first complete list was received; that list is recorded as read and announced so a new installation is not flooded (issue #103). No new key, no content, no identifier. Unread content in a separate cache entry that follows `localDataPolicy`. Read records are removed 180 days after the last listing; dismissal tombstones until app data is deleted | Required for the feature; does not depend on any optional consent and sends no events. Legal basis to be reviewed | Android, iOS, Windows, Linux; web once a web build exists. Not on macOS, for which the API has no platform value |
 
 ## Notification server and Cloudflare
 

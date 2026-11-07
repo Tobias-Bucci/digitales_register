@@ -41,6 +41,17 @@ from the local reminders, which is why the app calls them "App-Mitteilungen".
 - **Alerts.** A popup is due if `attention_revision` is above both the read and
   the already announced revision. That is stored when a popup is actually shown,
   so a message that arrived behind the app lock is not lost.
+- **The backlog of a new installation is quiet (#103).** No saved device state
+  means a fresh installation (or deleted app data). Its first complete `200`
+  list is recorded as read and announced, so it is listed in the center without
+  popup or badge. Only what a later sync adds alerts. It is decided by
+  membership in that list, not by time, so no device clock or publishing moment
+  can let a backlog item through. A failed or partial sync, or a `304`, sets
+  nothing. Saved state from earlier versions, and state that cannot be read,
+  counts as baselined, so existing users keep their unread notifications. The
+  school's feed needs none of this: its unread state is the school's own,
+  shared with the website and other devices, and its system notifications have
+  their own quiet first baseline per account.
 - **Dismissal is final.** Tombstones are checked first and never cleaned up.
 - **No events.** The routes of this feature have no name on purpose: the navigator
   observer turns route names into screen events.
