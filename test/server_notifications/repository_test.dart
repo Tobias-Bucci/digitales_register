@@ -40,7 +40,7 @@ void main() {
 
   setUp(() {
     server = FakeServer();
-    storage = FakeStorage();
+    storage = FakeStorage.existingInstall();
     now = DateTime.utc(2026, 10, 22, 20);
   });
 

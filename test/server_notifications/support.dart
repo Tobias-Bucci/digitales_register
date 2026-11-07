@@ -94,6 +94,19 @@ http.Response jsonResponse(
 
 /// In-memory storage that can be made to fail.
 class FakeStorage implements ServerNotificationStorage {
+  /// A fresh installation: nothing was ever saved.
+  FakeStorage();
+
+  /// An installation that synced before, as an app version without the
+  /// first-sync baseline saved it. Its next sync behaves as every later sync:
+  /// what is unread alerts.
+  FakeStorage.existingInstall() {
+    values[serverNotificationDeviceKey] = legacyDeviceState;
+  }
+
+  /// The device state of the versions before the baseline, without its field.
+  static const legacyDeviceState = '{"version":1,"records":{},"dismissed":{}}';
+
   final Map<String, String> values = {};
   bool failReads = false;
   bool failWrites = false;
