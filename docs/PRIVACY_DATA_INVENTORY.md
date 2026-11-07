@@ -9,6 +9,11 @@
 > consent version stays **5**: no optional purpose changed, only the description
 > of required processing and recipients.
 
+> 2026-11-07 review: the public privacy policy (de, en, it, lld) now matches this
+> notice. The open review notes in the notice were resolved: register data stay
+> between the device and the school register, announcements rest on legitimate
+> interest, GA4 and BigQuery retention are 14 months as confirmed by the owner.
+
 # Privacy data inventory — version 4 (historical audit)
 
 Audited 2026-10-01 against this repository. Controller for this app fork, confirmed by the owner: see the privacy notice in the app. The school/register provider's roles and necessary-processing legal bases require legal review. This is an implementation inventory, not a legal compliance guarantee.
@@ -39,7 +44,8 @@ The app uses the selected school's existing API, not a newly introduced first-pa
 
 ## Notification server and Cloudflare
 
-- Per the server's documentation it stores no IP addresses (memory only, for rate limiting), writes no access log, sets no cookies on the public API and has no analytics.
+- In normal operation it stores no IP addresses (memory only, for rate limiting), writes no access log, sets no cookies on the public API and has no analytics. On a server error (5xx) the web server writes the client address, the URL and the request headers without cookies to the system log, which is deleted after 15 days at the latest.
+- The server runs on Oracle Cloud Infrastructure in the Milan region (eu-milan-1). Oracle states that it acts as a processor.
 - Cloudflare proxies the website and the API: it terminates TLS and sees visitor addresses and request metadata under its own terms. Its answers carry `Report-To` and `NEL` headers.
 - Sources for the policy text, read on 2026-11-07: [Cloudflare privacy policy](https://www.cloudflare.com/privacypolicy/) (effective 4 November 2025), [Customer DPA](https://www.cloudflare.com/cloudflare-customer-dpa/) (version 6.4, effective 3 April 2026), [GDPR FAQ](https://www.cloudflare.com/trust-hub/gdpr/), [sub-processors](https://www.cloudflare.com/gdpr/subprocessors/cloudflare-services/).
 - The app's own text only reports what Cloudflare states. It makes no legal assessment of those transfers.

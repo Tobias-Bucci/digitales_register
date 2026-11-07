@@ -25,6 +25,6 @@ Checklist for final submission:
 - Public privacy URL must show the same current notice/contact as the four in-app versions. Confirm URL availability and accessibility before store submission.
 - Account-removal behavior is local saved-account removal, not deletion of the school's account or already uploaded Firebase/BigQuery records. Ensure store deletion answers describe actual available processes; establish the manual privacy-request process via the confirmed contact.
 - Confirm contacts: see the privacy notice in the app.
-- Confirm actual BigQuery retention and contract/transfer/legal details before publication; review the Ladin legal text with a fluent reviewer.
+- Public privacy URL: https://tobias-bucci.github.io/privacy-policy-digitales_register/ (de.html, it.html, lld.html for the other languages). GA4 and BigQuery retention of 14 months confirmed by the owner on 2026-11-07. Review the Ladin legal text with a fluent reviewer.
 
 References: [Play Data Safety](https://support.google.com/googleplay/android-developer/answer/10787469), [Apple App Privacy](https://developer.apple.com/app-store/app-privacy-details/), [Firebase privacy](https://firebase.google.com/support/privacy). Forms and Console settings were not changed by this repository work.
