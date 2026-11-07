@@ -559,8 +559,9 @@ class _SubjectMark extends StatelessWidget {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final scheme = theme.colorScheme;
-    final color =
-        subjectTheme == null ? scheme.outline : Color(subjectTheme!.color);
+    final color = subjectTheme == null
+        ? scheme.outline
+        : AppPalette.subjectMarker(Color(subjectTheme!.color), scheme);
     return DecoratedBox(
       decoration: ShapeDecoration(
         color: color.withValues(alpha: 0.16),

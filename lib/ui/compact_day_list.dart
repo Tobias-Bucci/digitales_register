@@ -368,7 +368,7 @@ class CompactEntryRow extends StatelessWidget {
             label != null &&
             subjectThemes.containsKey(label) &&
             style == CompactRowStyle.normal
-        ? Color(subjectThemes[label]!.color)
+        ? AppPalette.subjectMarker(Color(subjectThemes[label]!.color), scheme)
         : null;
     final (background, foreground, muted) = switch (style) {
       CompactRowStyle.done => (

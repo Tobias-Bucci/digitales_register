@@ -32,13 +32,15 @@ void main() {
             ..color = 0xFF123456
             ..thick = 2),
     };
-    final colored = GradesChart.convert(graphs, colorGrades: true).single;
+    final colored =
+        GradesChart.convert(graphs, AppPalette.light, colorGrades: true).single;
     expect(colored.fillColorFn!(0)?.r, 0xC2);
     expect(colored.fillColorFn!(0)?.g, 0x7C);
     expect(colored.seriesColor?.r, 0x12);
     expect(colored.measureFn(0), 5.75);
     expect(colored.data.single.value.item1, 575);
-    expect(GradesChart.convert(graphs).single.fillColorFn, isNull);
+    expect(GradesChart.convert(graphs, AppPalette.light).single.fillColorFn,
+        isNull);
   });
 
   for (final dark in [false, true]) {

@@ -101,8 +101,8 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(find.byType(SubjectSwatchPicker), findsOneWidget);
-    expect(find.byTooltip('Blue'), findsOneWidget);
-    await tester.tap(find.byTooltip('Teal'));
+    expect(find.byTooltip('Standard, Blue'), findsOneWidget);
+    await tester.tap(find.byTooltip('Standard, Teal'));
     await tester.pumpAndSettle();
 
     expect(find.byType(SubjectSwatchPicker), findsNothing);

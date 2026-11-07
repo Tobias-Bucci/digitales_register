@@ -207,8 +207,9 @@ abstract final class AppPalette {
     );
   }
 
-  /// Subject colors. Each is a mid tone that keeps at least 3:1 contrast
-  /// against white and against black, so it works as a marker in every theme.
+  /// The default subject colors, handed out to subjects that have none yet.
+  /// Each is a mid tone that keeps at least 3:1 contrast against white and
+  /// against black, so it works as a marker in every theme unchanged.
   static const List<Color> subjectSwatches = [
     Color(0xFF3B7DD8), // blue
     Color(0xFF5C6BC0), // indigo
@@ -240,30 +241,100 @@ abstract final class AppPalette {
     'palette.swatch.slate',
   ];
 
-  static bool isSwatch(int argb) =>
-      subjectSwatches.any((swatch) => swatch.toARGB32() == argb);
+  /// The palettes a subject color can be picked from. All of them hold the same
+  /// hues in [subjectSwatchNameKeys] order, so the names fit every palette.
+  static const List<SubjectPalette> subjectPalettes = [
+    SubjectPalette('palette.group.standard', subjectSwatches),
+    SubjectPalette('palette.group.bright', [
+      Color(0xFF2196F3), // blue
+      Color(0xFF536DFE), // indigo
+      Color(0xFFB14DFF), // violet
+      Color(0xFFFF4F9A), // rose
+      Color(0xFFFF3D3D), // red
+      Color(0xFFFF8A00), // orange
+      Color(0xFFFFC400), // amber
+      Color(0xFFB5C800), // olive
+      Color(0xFF22C55E), // green
+      Color(0xFF00C9B7), // teal
+      Color(0xFFC98A5B), // brown
+      Color(0xFF8FA3B8), // slate
+    ]),
+    SubjectPalette('palette.group.light', [
+      Color(0xFF9CC5FF), // blue
+      Color(0xFFB3BCFF), // indigo
+      Color(0xFFD3B8FF), // violet
+      Color(0xFFFFB3D1), // rose
+      Color(0xFFFFADA8), // red
+      Color(0xFFFFC48F), // orange
+      Color(0xFFFFE08A), // amber
+      Color(0xFFDDE08A), // olive
+      Color(0xFFA8E6AE), // green
+      Color(0xFF9DE5DC), // teal
+      Color(0xFFDDBFA6), // brown
+      Color(0xFFC3CEDC), // slate
+    ]),
+    SubjectPalette('palette.group.deep', [
+      Color(0xFF1E4E9C), // blue
+      Color(0xFF303F9F), // indigo
+      Color(0xFF5B2A9D), // violet
+      Color(0xFF9C1F5C), // rose
+      Color(0xFFA32020), // red
+      Color(0xFFB0480F), // orange
+      Color(0xFF8F5B00), // amber
+      Color(0xFF5F6112), // olive
+      Color(0xFF1F6B2C), // green
+      Color(0xFF0B665F), // teal
+      Color(0xFF6B4430), // brown
+      Color(0xFF445064), // slate
+    ]),
+  ];
 
-  /// Returns the swatch closest to [argb], used to migrate colors that were
-  /// picked freely in earlier versions.
-  static Color nearestSwatch(int argb) {
-    final color = Color(argb);
-    Color best = subjectSwatches.first;
-    var bestDistance = double.infinity;
-    for (final swatch in subjectSwatches) {
-      // Weighted RGB distance ("redmean"), a cheap perceptual approximation.
-      final r = (color.r + swatch.r) / 2;
-      final dr = color.r - swatch.r;
-      final dg = color.g - swatch.g;
-      final db = color.b - swatch.b;
-      final distance = math.sqrt(
-        (2 + r) * dr * dr + 4 * dg * dg + (3 - r) * db * db,
-      );
-      if (distance < bestDistance) {
-        bestDistance = distance;
-        best = swatch;
-      }
+  /// Black or white, whichever is readable on a fill of [color]. One of the two
+  /// always reaches 4.5:1.
+  static Color onSubjectColor(Color color) =>
+      contrastRatio(color, Colors.white) >= contrastRatio(color, Colors.black)
+          ? Colors.white
+          : Colors.black;
+
+  static final Map<(int, int, int), Color> _markers = {};
+
+  /// [color] for a thin line, dot or letter on [scheme]'s cards. A color that
+  /// would fade into them moves towards more contrast in its own hue, until it
+  /// reaches 3:1. Anything visible already stays as it is.
+  static Color subjectMarker(Color color, ColorScheme scheme) {
+    final surface = scheme.surface;
+    final card = scheme.surfaceContainerLowest;
+    bool visible(Color candidate) =>
+        contrastRatio(candidate, surface) >= 3 &&
+        contrastRatio(candidate, card) >= 3;
+    if (visible(color)) return color;
+    return _markers.putIfAbsent(
+      (color.toARGB32(), surface.toARGB32(), card.toARGB32()),
+      () {
+        final hct = Hct.fromInt(color.toARGB32());
+        final step = scheme.brightness == Brightness.dark ? 2 : -2;
+        for (var tone = hct.tone; tone >= 0 && tone <= 100; tone += step) {
+          final candidate = Color(Hct.from(hct.hue, hct.chroma, tone).toInt());
+          if (visible(candidate)) return candidate;
+        }
+        return scheme.onSurface;
+      },
+    );
+  }
+
+  /// [color] as the background of text in [scheme]'s `onSurface`, as strong as
+  /// [alpha] asks for while the text keeps 4.5:1.
+  static Color subjectTint(Color color, ColorScheme scheme, double alpha) {
+    var tint = color.withValues(alpha: alpha);
+    while (tint.a > 0.05 &&
+        contrastRatio(
+              scheme.onSurface,
+              Color.alphaBlend(tint, scheme.surface),
+            ) <
+            4.5) {
+      tint = tint.withValues(alpha: tint.a - 0.05);
     }
-    return best;
+    return tint;
   }
 
   /// Tonal families of the dashboard's event roles. They grow out of the subject
@@ -298,6 +369,14 @@ abstract final class AppPalette {
     final darker = math.min(la, lb);
     return (lighter + 0.05) / (darker + 0.05);
   }
+}
+
+/// A named set of subject colors, in [AppPalette.subjectSwatchNameKeys] order.
+class SubjectPalette {
+  const SubjectPalette(this.nameKey, this.swatches);
+
+  final String nameKey;
+  final List<Color> swatches;
 }
 
 /// Status roles that Material's [ColorScheme] does not cover. They follow the

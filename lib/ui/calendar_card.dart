@@ -232,10 +232,7 @@ class CircledLetter extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final textColor =
-        ThemeData.estimateBrightnessForColor(color) == Brightness.dark
-            ? Colors.white
-            : Colors.black;
+    final textColor = AppPalette.onSubjectColor(color);
     return Container(
       width: 45,
       height: 45,

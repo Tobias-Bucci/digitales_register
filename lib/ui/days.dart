@@ -1528,7 +1528,10 @@ class ItemWidget extends StatelessWidget {
     if (colorBorder &&
         displayLabel != null &&
         subjectThemes.containsKey(displayLabel)) {
-      return Color(subjectThemes[displayLabel]!.color);
+      return AppPalette.subjectMarker(
+        Color(subjectThemes[displayLabel]!.color),
+        Theme.of(context).colorScheme,
+      );
     }
     return Theme.of(context).dividerColor.withValues(alpha: 0.3);
   }

@@ -18,6 +18,7 @@
 import 'package:built_collection/built_collection.dart';
 import 'package:dr/app_state.dart';
 import 'package:dr/i18n/app_localizations.dart';
+import 'package:dr/theme/app_palette.dart';
 import 'package:dr/util.dart';
 import 'package:flutter/material.dart';
 
@@ -74,7 +75,10 @@ class FavoriteSubjectFilter extends StatelessWidget {
                     equalsIgnoreCase(normalizedSelected, subject);
                 final subjectTheme = _subjectTheme(subject);
                 final chipColor = subjectTheme != null
-                    ? Color(subjectTheme.color)
+                    ? AppPalette.subjectMarker(
+                        Color(subjectTheme.color),
+                        theme.colorScheme,
+                      )
                     : theme.colorScheme.secondary;
                 return ChoiceChip(
                   label: Text(l10n.translateSubjectName(subject)),

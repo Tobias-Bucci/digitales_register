@@ -20,7 +20,7 @@ import 'package:dr/theme/app_palette.dart';
 import 'package:flutter/material.dart';
 import 'package:responsive_scaffold/responsive_scaffold.dart';
 
-/// Lets the user pick a subject color from the curated palette.
+/// Lets the user pick a subject color from the curated palettes.
 Future<Color?> showSubjectSwatchPicker(
   BuildContext context, {
   required String subject,
@@ -29,6 +29,7 @@ Future<Color?> showSubjectSwatchPicker(
   return showModalBottomSheet<Color>(
     context: context,
     useRootNavigator: ResponsiveNavigationScope.isActive(context),
+    isScrollControlled: true,
     showDragHandle: true,
     useSafeArea: true,
     builder: (context) => SubjectSwatchPicker(
@@ -55,6 +56,9 @@ class SubjectSwatchPicker extends StatelessWidget {
   Widget build(BuildContext context) {
     final l10n = context.l10n;
     final theme = Theme.of(context);
+    final currentArgb = current.toARGB32();
+    final inPalette = AppPalette.subjectPalettes.any((palette) =>
+        palette.swatches.any((swatch) => swatch.toARGB32() == currentArgb));
     return SingleChildScrollView(
       padding: const EdgeInsets.fromLTRB(24, 0, 24, 24),
       child: Column(
@@ -75,22 +79,56 @@ class SubjectSwatchPicker extends StatelessWidget {
               color: theme.colorScheme.onSurfaceVariant,
             ),
           ),
-          const SizedBox(height: 20),
-          Wrap(
-            spacing: 14,
-            runSpacing: 14,
-            children: [
-              for (var i = 0; i < AppPalette.subjectSwatches.length; i++)
-                _SwatchButton(
-                  color: AppPalette.subjectSwatches[i],
-                  label: l10n.text(AppPalette.subjectSwatchNameKeys[i]),
-                  selected: AppPalette.subjectSwatches[i].toARGB32() ==
-                      current.toARGB32(),
-                  onTap: () => onSelected(AppPalette.subjectSwatches[i]),
-                ),
-            ],
-          ),
+          if (!inPalette) ...[
+            _PaletteHeader(l10n.text('palette.group.current')),
+            _SwatchButton(
+              color: current,
+              label: l10n.text('palette.group.current'),
+              selected: true,
+              onTap: () => onSelected(current),
+            ),
+          ],
+          for (final palette in AppPalette.subjectPalettes) ...[
+            _PaletteHeader(l10n.text(palette.nameKey)),
+            Wrap(
+              spacing: 14,
+              runSpacing: 14,
+              children: [
+                for (var i = 0; i < palette.swatches.length; i++)
+                  _SwatchButton(
+                    color: palette.swatches[i],
+                    label: '${l10n.text(palette.nameKey)}, '
+                        '${l10n.text(AppPalette.subjectSwatchNameKeys[i])}',
+                    selected: palette.swatches[i].toARGB32() == currentArgb,
+                    onTap: () => onSelected(palette.swatches[i]),
+                  ),
+              ],
+            ),
+          ],
         ],
+      ),
+    );
+  }
+}
+
+class _PaletteHeader extends StatelessWidget {
+  const _PaletteHeader(this.title);
+
+  final String title;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    return Padding(
+      padding: const EdgeInsets.only(top: 20, bottom: 10),
+      child: Semantics(
+        header: true,
+        child: Text(
+          title,
+          style: theme.textTheme.labelLarge?.copyWith(
+            color: theme.colorScheme.onSurfaceVariant,
+          ),
+        ),
       ),
     );
   }
@@ -135,9 +173,17 @@ class _SwatchButton extends StatelessWidget {
               ),
             ),
             child: DecoratedBox(
-              decoration: BoxDecoration(color: color, shape: BoxShape.circle),
+              decoration: BoxDecoration(
+                color: color,
+                shape: BoxShape.circle,
+                // Keeps pale colors from melting into the sheet.
+                border: Border.all(color: scheme.outlineVariant),
+              ),
               child: selected
-                  ? const Icon(Icons.check_rounded, color: Colors.white)
+                  ? Icon(
+                      Icons.check_rounded,
+                      color: AppPalette.onSubjectColor(color),
+                    )
                   : null,
             ),
           ),

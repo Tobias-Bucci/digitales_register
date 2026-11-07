@@ -22,6 +22,7 @@ import 'package:dr/app_state.dart';
 import 'package:dr/container/grades_chart_container.dart';
 import 'package:dr/grade_forecast.dart';
 import 'package:dr/i18n/app_localizations.dart';
+import 'package:dr/theme/app_palette.dart';
 import 'package:dr/ui/glass_surface.dart';
 import 'package:dr/ui/grade_colors.dart';
 import 'package:dr/ui/grades_format.dart';
@@ -402,7 +403,10 @@ class _ChartLegend extends StatelessWidget {
               children: [
                 DecoratedBox(
                   decoration: ShapeDecoration(
-                    color: Color(subject.color),
+                    color: AppPalette.subjectMarker(
+                      Color(subject.color),
+                      Theme.of(context).colorScheme,
+                    ),
                     shape: const CircleBorder(),
                   ),
                   child: const SizedBox.square(dimension: 8),

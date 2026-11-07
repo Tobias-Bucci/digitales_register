@@ -3,6 +3,7 @@ import 'package:dr/app_selectors.dart';
 import 'package:dr/app_state.dart';
 import 'package:dr/container/chart_legend_entry_container.dart';
 import 'package:dr/data.dart';
+import 'package:dr/theme/app_palette.dart';
 import 'package:dr/ui/grades_chart.dart';
 import 'package:dr/utc_date_time.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -194,7 +195,7 @@ void main() {
       const Tuple2(850, 'Mündlich'),
     ]);
 
-    final series = GradesChart.convert(graphs).single;
+    final series = GradesChart.convert(graphs, AppPalette.light).single;
     expect(series.data, hasLength(3));
     expect([for (var i = 0; i < 3; i++) series.measureFn(i)], [10, 4, 8.5]);
     expect([for (var i = 0; i < 3; i++) series.domainFn(i)], [day, day, late]);
