@@ -69,6 +69,17 @@ List<NotificationFeedEntry> combinedNotificationFeed({
     });
 }
 
+/// The school notification the next notification center opens, as when an
+/// inline notification on the dashboard is tapped. Read once, then cleared.
+final ValueNotifier<int?> notificationCenterFocus = ValueNotifier(null);
+
+/// Reads [notificationCenterFocus] and clears it.
+int? takeNotificationCenterFocus() {
+  final id = notificationCenterFocus.value;
+  notificationCenterFocus.value = null;
+  return id;
+}
+
 /// What the notification center needs from the school's feed. Every entry of
 /// that feed is unread: reading one removes it.
 class SchoolNotificationFeed {

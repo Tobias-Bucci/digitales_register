@@ -82,6 +82,7 @@ class ServerNotificationCenterPage extends StatefulWidget {
     this.onRefresh,
     this.openLink = openServerNotificationLink,
     this.initialId,
+    this.initialSchoolId,
     this.school,
   });
 
@@ -90,6 +91,9 @@ class ServerNotificationCenterPage extends StatefulWidget {
   final VoidCallback? onRefresh;
   final ServerNotificationLinkOpener openLink;
   final String? initialId;
+
+  /// Preselects an entry of [school], by its id.
+  final int? initialSchoolId;
 
   @override
   State<ServerNotificationCenterPage> createState() =>
@@ -101,7 +105,17 @@ class _ServerNotificationCenterPageState
   late final ServerNotificationRepository _repository =
       widget.repository ?? serverNotifications.repository;
   late String? _selectedId = widget.initialId;
-  Notification? _selectedSchool;
+  late Notification? _selectedSchool = _initialSchool;
+
+  Notification? get _initialSchool {
+    final id = widget.initialSchoolId;
+    if (id == null) return null;
+    for (final item in widget.school?.notifications ?? const <Notification>[]) {
+      if (item.id == id) return item;
+    }
+    return null;
+  }
+
   bool _openedInitial = false;
 
   void _refresh() => (widget.onRefresh ?? serverNotifications.refresh)();
@@ -185,10 +199,18 @@ class _ServerNotificationCenterPageState
         builder: (context, _) => LayoutBuilder(
           builder: (context, constraints) {
             final twoPanes = constraints.maxWidth >= _twoPaneWidth;
-            if (!twoPanes && !_openedInitial && widget.initialId != null) {
+            final initialSchool = _initialSchool;
+            if (!twoPanes &&
+                !_openedInitial &&
+                (widget.initialId != null || initialSchool != null)) {
               _openedInitial = true;
               WidgetsBinding.instance.addPostFrameCallback((_) {
-                if (mounted) _open(widget.initialId!, twoPanes: false);
+                if (!mounted) return;
+                if (initialSchool != null) {
+                  _openSchool(initialSchool, twoPanes: false);
+                } else {
+                  _open(widget.initialId!, twoPanes: false);
+                }
               });
             }
             final selectedSchool = _selectedSchool;

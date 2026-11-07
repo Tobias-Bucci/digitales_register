@@ -18,6 +18,7 @@
 import 'package:dr/actions/app_actions.dart';
 import 'package:dr/app_state.dart';
 import 'package:dr/dashboard_events.dart';
+import 'package:dr/notification_feed.dart';
 import 'package:dr/ui/dashboard_event_banner.dart';
 import 'package:dr/ui/glass_surface.dart';
 import 'package:dr/ui/sorted_grades_widget.dart';
@@ -88,6 +89,8 @@ void openDashboardEvent(AppActions actions, DashboardEvent event) {
     case DashboardEventKind.absence:
       actions.routingActions.showAbsences();
     case DashboardEventKind.general:
+      // The banner only has room for the start: open the whole text.
+      notificationCenterFocus.value = event.notification?.id;
       actions.routingActions.showNotifications();
   }
 }

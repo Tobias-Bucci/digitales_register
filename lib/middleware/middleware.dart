@@ -66,6 +66,7 @@ import 'package:dr/i18n/app_language.dart';
 import 'package:dr/i18n/app_localizations.dart';
 import 'package:dr/local_data_inventory.dart';
 import 'package:dr/main.dart';
+import 'package:dr/notification_feed.dart';
 import 'package:dr/page_payload_cache.dart';
 import 'package:dr/platform_adapter.dart';
 import 'package:dr/privacy_log.dart';
