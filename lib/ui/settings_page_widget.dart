@@ -1534,6 +1534,9 @@ class _SubjectColorsSettingsPageState
                     decoration: BoxDecoration(
                       color: Color(entry.value.color),
                       shape: BoxShape.circle,
+                      border: Border.all(
+                        color: Theme.of(context).colorScheme.outlineVariant,
+                      ),
                     ),
                   ),
                   onTap: () async {

@@ -22,6 +22,7 @@ import 'package:dr/app_selectors.dart';
 import 'package:dr/app_state.dart';
 import 'package:dr/data.dart';
 import 'package:dr/i18n/app_localizations.dart';
+import 'package:dr/theme/app_palette.dart';
 import 'package:dr/ui/grade_colors.dart';
 import 'package:dr/utc_date_time.dart';
 import 'package:flutter/material.dart';
@@ -52,7 +53,8 @@ class GradesChart extends StatelessWidget {
     this.goFullscreen,
     this.colorGrades = false,
     required this.isFullscreen,
-  }) : grades = convert(graphs, colorGrades: colorGrades);
+    required ColorScheme scheme,
+  }) : grades = convert(graphs, scheme, colorGrades: colorGrades);
 
   bool get _shouldIncludePreviewPoints =>
       colorGrades ||
@@ -67,13 +69,14 @@ class GradesChart extends StatelessWidget {
   static List<
           charts
           .Series<MapEntry<UtcDateTime, Tuple2<int, String>>, UtcDateTime>>
-      convert(Map<SubjectGrades, SubjectTheme> data,
+      convert(Map<SubjectGrades, SubjectTheme> data, ColorScheme scheme,
           {bool colorGrades = false}) {
     return data.entries.where((entry) => entry.value.thick != 0).map(
       (entry) {
         final s = entry.key;
         final strokeWidth = entry.value.thick;
-        final color = Color(entry.value.color);
+        final color =
+            AppPalette.subjectMarker(Color(entry.value.color), scheme);
         return charts.Series<MapEntry<UtcDateTime, Tuple2<int, String>>,
             UtcDateTime>(
           domainFn: (grade, _) => grade.key,
@@ -374,11 +377,7 @@ class SelectionWidget extends StatelessWidget {
                     child: Text(
                       selection.text,
                       style: TextStyle(
-                        color: ThemeData.estimateBrightnessForColor(
-                                    selection.color) ==
-                                Brightness.light
-                            ? Colors.black
-                            : Colors.white,
+                        color: AppPalette.onSubjectColor(selection.color),
                       ),
                     ),
                   ),

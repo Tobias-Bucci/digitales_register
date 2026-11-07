@@ -18,6 +18,7 @@
 
 import 'package:dr/app_state.dart';
 import 'package:dr/i18n/app_localizations.dart';
+import 'package:dr/theme/app_palette.dart';
 import 'package:flutter/material.dart';
 
 typedef SetThickness = void Function(int thickness);
@@ -73,8 +74,14 @@ class GradesChartLegendEntry extends StatelessWidget {
                 value: thickness,
                 max: 5,
                 divisions: 5,
-                activeColor: Color(config.color),
-                inactiveColor: Color(config.color).withValues(alpha: 0.2),
+                activeColor: AppPalette.subjectMarker(
+                  Color(config.color),
+                  Theme.of(context).colorScheme,
+                ),
+                inactiveColor: AppPalette.subjectMarker(
+                  Color(config.color),
+                  Theme.of(context).colorScheme,
+                ).withValues(alpha: 0.2),
               );
             }),
           ),

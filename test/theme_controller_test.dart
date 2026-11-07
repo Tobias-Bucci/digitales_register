@@ -1,5 +1,3 @@
-﻿import 'package:dr/app_state.dart';
-import 'package:dr/settings_persistence_service.dart';
 import 'package:dr/theme/app_palette.dart';
 import 'package:dr/theme_controller.dart';
 import 'package:flutter/material.dart';
@@ -219,34 +217,4 @@ void main() {
       expect(prefs.getString(accentPreferenceKey), expected.name);
     });
   }
-
-  test('freely picked subject colors migrate to the nearest swatch', () {
-    final settings = SettingsState(
-      (b) => b
-        ..subjectThemes['Rot'] = SubjectTheme(
-          (t) => t
-            ..color = 0xFFFF0000
-            ..thick = 2,
-        )
-        ..subjectThemes['Swatch'] = SubjectTheme(
-          (t) => t
-            ..color = AppPalette.subjectSwatches[9].toARGB32()
-            ..thick = 3,
-        ),
-    );
-
-    final migrated = migrateSubjectColorsToPalette(settings);
-
-    expect(
-      migrated.subjectThemes['Rot']!.color,
-      const Color(0xFFD64545).toARGB32(),
-    );
-    expect(migrated.subjectThemes['Rot']!.thick, 2);
-    expect(migrated.subjectThemes['Swatch'], settings.subjectThemes['Swatch']);
-    expect(
-      migrated.subjectThemes.values.every((t) => AppPalette.isSwatch(t.color)),
-      isTrue,
-    );
-    expect(migrateSubjectColorsToPalette(migrated), same(migrated));
-  });
 }

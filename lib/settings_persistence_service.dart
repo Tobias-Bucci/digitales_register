@@ -22,7 +22,6 @@ import 'package:dr/diagnostics_service.dart';
 import 'package:dr/privacy_log.dart';
 import 'package:dr/serializers.dart';
 import 'package:dr/study_data_service.dart';
-import 'package:dr/theme/app_palette.dart';
 import 'package:dr/util.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
@@ -61,7 +60,7 @@ class SettingsPersistenceService {
     try {
       final deserialized = serializers.deserialize(json.decode(raw) as Object);
       if (deserialized is SettingsState) {
-        return migrateSubjectColorsToPalette(deserialized);
+        return deserialized;
       }
     } catch (error, stackTrace) {
       diagnostics.report(error, stackTrace, DiagnosticError.storage);
@@ -122,23 +121,6 @@ class SettingsPersistenceService {
 
 SettingsState _withoutStudyData(SettingsState settings) =>
     StudyData.empty.applyTo(settings);
-
-/// Snaps subject colors that were picked freely before the curated palette
-/// existed to the closest palette swatch.
-SettingsState migrateSubjectColorsToPalette(SettingsState settings) {
-  final needsMigration = settings.subjectThemes.values
-      .any((theme) => !AppPalette.isSwatch(theme.color));
-  if (!needsMigration) return settings;
-  return settings.rebuild(
-    (b) => b.subjectThemes.updateAllValues(
-      (_, theme) => AppPalette.isSwatch(theme.color)
-          ? theme
-          : theme.rebuild(
-              (t) => t.color = AppPalette.nearestSwatch(theme.color).toARGB32(),
-            ),
-    ),
-  );
-}
 
 final SettingsPersistenceService settingsPersistenceService =
     SettingsPersistenceService();

@@ -40,6 +40,7 @@ class GradesChartContainer extends StatelessWidget {
           colorGrades: vm.$2,
           isFullscreen: isFullscreen,
           goFullscreen: actions.routingActions.showGradesChart.call,
+          scheme: Theme.of(context).colorScheme,
         );
       },
     );
