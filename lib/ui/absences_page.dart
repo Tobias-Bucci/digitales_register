@@ -26,6 +26,7 @@ import 'package:dr/i18n/app_localizations.dart';
 import 'package:dr/ui/absence.dart';
 import 'package:dr/ui/last_fetched_overlay.dart';
 import 'package:dr/ui/no_internet.dart';
+import 'package:dr/ui/readable_content.dart';
 import 'package:dr/utc_date_time.dart';
 import 'package:dr/util.dart';
 import 'package:flutter/material.dart';
@@ -56,7 +57,8 @@ class AbsencesPage extends StatelessWidget {
       appBar: ResponsiveAppBar(
         title: Text(context.t('absences.title')),
       ),
-      body: LastFetchedOverlay(
+      body: NewDesignReadable(
+          child: LastFetchedOverlay(
         lastFetched: state.lastFetched,
         noInternet: noInternet,
         child: AbsencesBody(
@@ -66,7 +68,7 @@ class AbsencesPage extends StatelessWidget {
           onRemoveFutureAbsence: onRemoveFutureAbsence,
           onRetry: onRetry,
         ),
-      ),
+      )),
     );
   }
 }

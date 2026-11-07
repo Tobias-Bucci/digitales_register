@@ -81,8 +81,10 @@ final settingsReducerBuilder = NestedReducerBuilder<AppState, AppStateBuilder,
       _assessmentReminderMinuteOfDay)
   ..add(SettingsActionsNames.mensaReminderMinuteOfDay,
       _mensaReminderMinuteOfDay)
+  ..add(SettingsActionsNames.mensaReminderUrl, _mensaReminderUrl)
   ..add(SettingsActionsNames.calendarSyncCalendarId, _calendarSyncCalendarId)
   ..add(SettingsActionsNames.amoledMode, _amoledMode)
+  ..add(SettingsActionsNames.legacyDesign, _legacyDesign)
   ..add(SettingsActionsNames.biometricAppLockEnabled, _biometricAppLockEnabled)
   ..add(SettingsActionsNames.setAssessmentStudyProgress,
       _setAssessmentStudyProgress)
@@ -111,7 +113,9 @@ void _showCancelledGrades(
 
 void _colorGrades(
     SettingsState state, Action<bool> action, SettingsStateBuilder builder) {
-  builder.colorGrades = action.payload;
+  builder
+    ..colorGrades = action.payload
+    ..gradeColorsTurnedOff = !action.payload;
 }
 
 void _gradesTypeSorted(
@@ -284,6 +288,11 @@ void _mensaReminderMinuteOfDay(
   builder.mensaReminderMinuteOfDay = action.payload;
 }
 
+void _mensaReminderUrl(
+    SettingsState state, Action<String> action, SettingsStateBuilder builder) {
+  builder.mensaReminderUrl = action.payload;
+}
+
 void _calendarSyncEnabled(
     SettingsState state, Action<bool> action, SettingsStateBuilder builder) {
   builder.calendarSyncEnabled = action.payload;
@@ -302,6 +311,11 @@ void _dashboardColorTestsInRed(
 void _amoledMode(
     SettingsState state, Action<bool> action, SettingsStateBuilder builder) {
   builder.amoledMode = action.payload;
+}
+
+void _legacyDesign(
+    SettingsState state, Action<bool> action, SettingsStateBuilder builder) {
+  builder.legacyDesign = action.payload;
 }
 
 void _biometricAppLockEnabled(

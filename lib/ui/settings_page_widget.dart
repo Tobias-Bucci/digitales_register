@@ -22,6 +22,7 @@ import 'package:dr/app_clock.dart';
 import 'package:dr/app_state.dart';
 import 'package:dr/app_subject_translation_controller.dart';
 import 'package:dr/calendar_sync_service.dart';
+import 'package:dr/container/dashboard_overview.dart';
 import 'package:dr/container/export_container.dart';
 import 'package:dr/container/settings_page.dart';
 import 'package:dr/demo.dart';
@@ -39,6 +40,7 @@ import 'package:dr/ui/credits_page.dart';
 import 'package:dr/ui/dialog.dart';
 import 'package:dr/ui/network_protocol_page.dart';
 import 'package:dr/ui/privacy_data_details_page.dart';
+import 'package:dr/ui/readable_content.dart';
 import 'package:dr/ui/reminder_settings.dart';
 import 'package:dr/ui/school_notification_settings.dart';
 import 'package:dr/ui/subject_swatch_picker.dart';
@@ -81,10 +83,12 @@ class SettingsPageWidget extends StatefulWidget {
   final Future<void> Function() onRecreateMissingCalendarSyncEvents;
   final OnSettingChanged<bool> onSetMensaReminderEnabled;
   final OnSettingChanged<int> onSetMensaReminderMinuteOfDay;
+  final OnSettingChanged<String> onSetMensaReminderUrl;
   final OnSettingChanged<bool> onSetAssessmentRemindersEnabled;
   final OnSettingChanged<List<int>> onSetAssessmentReminderDays;
   final OnSettingChanged<int> onSetAssessmentReminderMinuteOfDay;
   final OnSettingChanged<bool> onSetAmoledMode;
+  final OnSettingChanged<bool> onSetLegacyDesign;
   final OnSettingChanged<AppAccent> onSetAccent;
   final OnSettingChanged<MapEntry<String, SubjectTheme>> onSetSubjectTheme;
   final OnSettingChanged<Map<String, String>> onSetSubjectNicks;
@@ -134,10 +138,12 @@ class SettingsPageWidget extends StatefulWidget {
     required this.onRecreateMissingCalendarSyncEvents,
     required this.onSetMensaReminderEnabled,
     required this.onSetMensaReminderMinuteOfDay,
+    required this.onSetMensaReminderUrl,
     required this.onSetAssessmentRemindersEnabled,
     required this.onSetAssessmentReminderDays,
     required this.onSetAssessmentReminderMinuteOfDay,
     required this.onSetAmoledMode,
+    required this.onSetLegacyDesign,
     required this.onSetAccent,
     required this.onSetFavoriteSubjects,
     required this.currentThemePreference,
@@ -824,6 +830,38 @@ class _SettingsPageWidgetState extends State<SettingsPageWidget> {
           ),
         ),
         ListTile(
+          key: const Key('settings-design-tile'),
+          title: Text(l10n.text('settings.design.title')),
+          subtitle: Text(l10n.text(widget.vm.legacyDesign
+              ? 'settings.design.legacyHint'
+              : 'settings.design.newHint')),
+        ),
+        Padding(
+          padding: const EdgeInsets.fromLTRB(16, 0, 16, 12),
+          child: SizedBox(
+            width: double.infinity,
+            child: SegmentedButton<bool>(
+              key: const Key('settings-design-switch'),
+              showSelectedIcon: false,
+              segments: [
+                ButtonSegment(
+                  value: false,
+                  icon: const Icon(Icons.auto_awesome_outlined),
+                  label: Text(l10n.text('settings.design.new')),
+                ),
+                ButtonSegment(
+                  value: true,
+                  icon: const Icon(Icons.history_rounded),
+                  label: Text(l10n.text('settings.design.legacy')),
+                ),
+              ],
+              selected: {widget.vm.legacyDesign},
+              onSelectionChanged: (selection) =>
+                  widget.onSetLegacyDesign(selection.first),
+            ),
+          ),
+        ),
+        ListTile(
           key: const Key('settings-language-tile'),
           title: Text(l10n.text('settings.language.label')),
           trailing: SizedBox(
@@ -918,6 +956,7 @@ class _SettingsPageWidgetState extends State<SettingsPageWidget> {
           onChanged: widget.onSetAskWhenDelete,
           value: widget.vm.askWhenDelete,
         ),
+        if (!widget.vm.legacyDesign) const DashboardCustomizeTile(),
         ListTile(
           key: const Key('settings-grades-tile'),
           title: Text(l10n.text('settings.section.grades')),
@@ -1188,8 +1227,14 @@ class _SettingsPageWidgetState extends State<SettingsPageWidget> {
       appBar: ResponsiveAppBar(
         title: Text(l10n.text('settings.title')),
       ),
-      body: ListView(
-        padding: const EdgeInsets.fromLTRB(16, 16, 16, 24),
+      body: NewDesignReadable(
+          child: ListView(
+        padding: EdgeInsets.fromLTRB(
+          16,
+          16,
+          16,
+          24 + ResponsiveNavigationScope.bottomInsetOf(context),
+        ),
         children: <Widget>[
           if (widget.vm.demoMode) ...[
             _buildDemoSection(l10n),
@@ -1212,8 +1257,10 @@ class _SettingsPageWidgetState extends State<SettingsPageWidget> {
           ReminderSettings(
             mensaEnabled: widget.vm.mensaReminderEnabled,
             mensaMinuteOfDay: widget.vm.mensaReminderMinuteOfDay,
+            mensaUrl: widget.vm.mensaReminderUrl,
             onSetMensaEnabled: widget.onSetMensaReminderEnabled,
             onSetMensaMinuteOfDay: widget.onSetMensaReminderMinuteOfDay,
+            onSetMensaUrl: widget.onSetMensaReminderUrl,
             assessmentsEnabled: widget.vm.assessmentRemindersEnabled,
             assessmentDays: widget.vm.assessmentReminderDays,
             onSetAssessmentsEnabled: widget.onSetAssessmentRemindersEnabled,
@@ -1265,7 +1312,7 @@ class _SettingsPageWidgetState extends State<SettingsPageWidget> {
               ),
             ),
         ],
-      ),
+      )),
     );
   }
 
@@ -1370,10 +1417,16 @@ class _SettingsDetailPage extends StatelessWidget {
       appBar: AppBar(
         title: Text(title),
       ),
-      body: ListView(
-        padding: const EdgeInsets.fromLTRB(16, 16, 16, 24),
+      body: NewDesignReadable(
+          child: ListView(
+        padding: EdgeInsets.fromLTRB(
+          16,
+          16,
+          16,
+          24 + ResponsiveNavigationScope.bottomInsetOf(context),
+        ),
         children: children,
-      ),
+      )),
     );
   }
 }

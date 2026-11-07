@@ -24,6 +24,7 @@ import 'package:dr/middleware/middleware.dart';
 import 'package:dr/theme/app_palette.dart';
 import 'package:dr/ui/animated_linear_progress_indicator.dart';
 import 'package:dr/ui/no_internet.dart';
+import 'package:dr/ui/readable_content.dart';
 import 'package:dr/util.dart';
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
@@ -214,12 +215,13 @@ class _ClassRegisterPageState extends State<ClassRegisterPage> {
           ],
         ),
       ),
-      body: Stack(
+      body: NewDesignReadable(
+          child: Stack(
         children: [
           _buildBody(),
           AnimatedLinearProgressIndicator(show: _loading),
         ],
-      ),
+      )),
     );
   }
 

@@ -12,6 +12,8 @@ class ServerNotificationBell extends StatelessWidget {
     this.enabled,
     this.onPressed,
     this.hideWhenEmpty = false,
+    this.style,
+    this.iconSize,
   });
 
   final ServerNotificationRepository? repository;
@@ -21,6 +23,10 @@ class ServerNotificationBell extends StatelessWidget {
   /// Takes no room while there is nothing to open, for screens that are not
   /// about notifications.
   final bool hideWhenEmpty;
+
+  /// For bars whose buttons look different from a plain icon button.
+  final ButtonStyle? style;
+  final double? iconSize;
 
   @override
   Widget build(BuildContext context) {
@@ -38,6 +44,8 @@ class ServerNotificationBell extends StatelessWidget {
         final unread = source.unreadCount;
         return IconButton(
           key: const Key('server-notification-bell'),
+          style: style,
+          iconSize: iconSize,
           tooltip: unread == 0
               ? l10n.text('appNotifications.title')
               : l10n.text('appNotifications.bellUnread',

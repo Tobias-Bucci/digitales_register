@@ -238,10 +238,14 @@ Store<AppState, AppStateBuilder, AppActions> createStore({
   AppState? initialState,
   AppActions? appActions,
   bool withMiddleware = false,
+  // The default of the app is the new design, which has its own tests. All
+  // other tests keep running against Legacy, which must not change.
+  bool newDesign = false,
 }) {
   return Store<AppState, AppStateBuilder, AppActions>(
     appReducerBuilder.build(),
-    initialState ?? AppState(),
+    (initialState ?? AppState())
+        .rebuild((b) => b.settingsState.legacyDesign = !newDesign),
     appActions ?? AppActions(),
     middleware: withMiddleware
         ? middleware(includeErrorMiddleware: false)

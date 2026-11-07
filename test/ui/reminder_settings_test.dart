@@ -21,6 +21,8 @@ class _Host extends StatefulWidget {
 }
 
 class _HostState extends State<_Host> {
+  static String savedUrl = '';
+
   late bool enabled = widget.enabled;
   late bool assessments = widget.assessments;
   int minute = 7 * 60 + 30;
@@ -43,8 +45,10 @@ class _HostState extends State<_Host> {
               service: widget.service,
               mensaEnabled: enabled,
               mensaMinuteOfDay: minute,
+              mensaUrl: savedUrl,
               onSetMensaEnabled: (value) => setState(() => enabled = value),
               onSetMensaMinuteOfDay: (value) => setState(() => minute = value),
+              onSetMensaUrl: (value) => setState(() => savedUrl = value),
               assessmentsEnabled: assessments,
               assessmentDays: days,
               onSetAssessmentsEnabled: (value) =>
@@ -85,6 +89,75 @@ void main() {
     await tester.pumpWidget(host);
     await tester.pumpAndSettle();
   }
+
+  group('link of the mensa reminder', () {
+    final field = find.byKey(const Key('mensa-reminder-url-field'));
+
+    Future<void> enter(WidgetTester tester, String text) async {
+      await tester.enterText(field, text);
+      await tester.testTextInput.receiveAction(TextInputAction.done);
+      await tester.pump();
+    }
+
+    setUp(() => _HostState.savedUrl = '');
+
+    testWidgets('can only be edited while the reminder is on', (tester) async {
+      await pump(tester, _Host(service: service()));
+      expect(field, findsNothing);
+
+      await tester.tap(find.byKey(const Key('mensa-reminder-toggle')));
+      await tester.pumpAndSettle();
+
+      expect(field, findsOneWidget);
+    });
+
+    testWidgets('saves a valid link and completes it', (tester) async {
+      await pump(tester, _Host(service: service(), enabled: true));
+
+      await enter(tester, '  example.org/menu ');
+
+      expect(_HostState.savedUrl, 'https://example.org/menu');
+      expect(
+        tester.widget<TextField>(field).controller!.text,
+        'https://example.org/menu',
+      );
+      expect(find.textContaining('gültigen Link'), findsNothing);
+    });
+
+    testWidgets('rejects an invalid link and keeps the last valid one',
+        (tester) async {
+      _HostState.savedUrl = 'https://example.org';
+      await pump(tester, _Host(service: service(), enabled: true));
+
+      await enter(tester, 'javascript:alert(1)');
+
+      expect(_HostState.savedUrl, 'https://example.org');
+      expect(find.textContaining('gültigen Link'), findsOneWidget);
+
+      await tester.enterText(field, 'example');
+      await tester.pump();
+      expect(find.textContaining('gültigen Link'), findsNothing);
+    });
+
+    testWidgets('an empty field removes the link', (tester) async {
+      _HostState.savedUrl = 'https://example.org';
+      await pump(tester, _Host(service: service(), enabled: true));
+
+      await enter(tester, '   ');
+
+      expect(_HostState.savedUrl, isEmpty);
+      expect(find.textContaining('gültigen Link'), findsNothing);
+    });
+
+    testWidgets('a link is not lost by leaving the page', (tester) async {
+      await pump(tester, _Host(service: service(), enabled: true));
+
+      await tester.enterText(field, 'example.org');
+      await tester.pumpWidget(const SizedBox());
+
+      expect(_HostState.savedUrl, 'https://example.org');
+    });
+  });
 
   testWidgets('the time can only be chosen while the reminder is on',
       (tester) async {
@@ -137,8 +210,16 @@ void main() {
     expect(find.textContaining('nicht erlaubt'), findsOneWidget);
 
     granted = true;
-    tester.binding.handleAppLifecycleStateChanged(AppLifecycleState.paused);
-    tester.binding.handleAppLifecycleStateChanged(AppLifecycleState.resumed);
+    for (final state in const [
+      AppLifecycleState.inactive,
+      AppLifecycleState.hidden,
+      AppLifecycleState.paused,
+      AppLifecycleState.hidden,
+      AppLifecycleState.inactive,
+      AppLifecycleState.resumed,
+    ]) {
+      tester.binding.handleAppLifecycleStateChanged(state);
+    }
     await tester.pumpAndSettle();
 
     expect(find.textContaining('nicht erlaubt'), findsNothing);

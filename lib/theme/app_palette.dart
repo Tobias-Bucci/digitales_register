@@ -266,6 +266,25 @@ abstract final class AppPalette {
     return best;
   }
 
+  /// Tonal families of the dashboard's event roles. They grow out of the subject
+  /// swatches instead of the accent, so a message stays blue on a green accent.
+  /// Yellow is the amber swatch turned towards yellow, the same way [_build]
+  /// derives the tertiary family from the seed.
+  static final TonalPalette _infoTones = _tonesOf(subjectSwatches[0]);
+  static final TonalPalette _observationTones = _tonesOf(subjectSwatches[2]);
+  static final TonalPalette _noticeTones =
+      _tonesOf(subjectSwatches[6], hueShift: 25, minChroma: 56);
+
+  static TonalPalette _tonesOf(
+    Color swatch, {
+    double hueShift = 0,
+    double minChroma = 0,
+  }) {
+    final hct = Hct.fromInt(swatch.toARGB32());
+    return TonalPalette.of(
+        (hct.hue + hueShift) % 360, math.max(hct.chroma, minChroma));
+  }
+
   /// Context-free status markers (chart dots, borders). Same mid tones as
   /// the red, amber and green subject swatches, visible in every theme.
   static const Color markerNegative = Color(0xFFD64545);
@@ -304,6 +323,10 @@ extension AppStatusColors on ColorScheme {
   /// orange next to the amber substitute marker.
   Color get exam => _isDark ? const Color(0xFFFF5449) : const Color(0xFFC62828);
 
+  /// Text on a solid [exam] fill. [onError] is only 4.1:1 on it in dark mode,
+  /// while the lowest surface keeps at least 4.5:1 in every mode.
+  Color get onExam => surfaceContainerLowest;
+
   Color get warning =>
       _isDark ? const Color(0xFFF5BF5B) : const Color(0xFF9A5B00);
   Color get onWarning =>
@@ -315,6 +338,29 @@ extension AppStatusColors on ColorScheme {
           : const Color(0xFFFCE7C2);
   Color get onWarningContainer =>
       _isDark ? const Color(0xFFFCE7C2) : const Color(0xFF3D2400);
+
+  Color _tone(TonalPalette palette, int tone) => Color(palette.get(tone));
+  Color _strong(TonalPalette palette) => _tone(palette, _isDark ? 80 : 40);
+  Color _container(TonalPalette palette) =>
+      _tone(palette, _isAmoled ? 20 : (_isDark ? 30 : 90));
+  Color _onContainer(TonalPalette palette) => _tone(palette, _isDark ? 90 : 10);
+
+  /// Blue, independent of the accent: school messages.
+  Color get info => _strong(AppPalette._infoTones);
+  Color get infoContainer => _container(AppPalette._infoTones);
+  Color get onInfoContainer => _onContainer(AppPalette._infoTones);
+
+  /// Yellow, independent of the accent: absences. Next to [warning], which
+  /// reads as orange, it stays clearly distinguishable.
+  Color get notice => _strong(AppPalette._noticeTones);
+  Color get noticeContainer => _container(AppPalette._noticeTones);
+  Color get onNoticeContainer => _onContainer(AppPalette._noticeTones);
+
+  /// Violet, independent of the accent: observations.
+  Color get observation => _strong(AppPalette._observationTones);
+  Color get observationContainer => _container(AppPalette._observationTones);
+  Color get onObservationContainer =>
+      _onContainer(AppPalette._observationTones);
 }
 
 /// Curated accent colors. Each [seed] is the exact light-mode primary and was

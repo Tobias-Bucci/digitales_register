@@ -9,14 +9,49 @@ const drawerWidth = 304.0;
 
 class _PopObserver extends NavigatorObserver {
   final VoidCallback onReturnedToRoot;
+  final void Function(Object? routeArguments) onReturnedTo;
 
-  _PopObserver(this.onReturnedToRoot);
+  _PopObserver(this.onReturnedToRoot, this.onReturnedTo);
   @override
   void didPop(Route<dynamic> route, Route<dynamic>? previousRoute) {
     if (previousRoute?.isFirst == true) {
       onReturnedToRoot();
+    } else if (previousRoute != null) {
+      onReturnedTo(previousRoute.settings.arguments);
     }
   }
+}
+
+/// Replaces the drawer and sidebar of a [ResponsiveScaffold] with persistent
+/// navigation: a bar floating above the content on phones and a rail next to
+/// it on tablets and desktop windows.
+class ResponsiveNavigation<T> {
+  const ResponsiveNavigation({
+    required this.barBuilder,
+    required this.railBuilder,
+    required this.barExtent,
+    required this.isTopLevel,
+    this.keepsRouteBelow,
+  });
+
+  /// Builds the floating bar. It is aligned to the bottom of the scaffold and
+  /// has to respect the bottom safe area itself.
+  final Widget Function(BuildContext context, T currentSelected) barBuilder;
+
+  /// Builds the rail shown to the left of the content in tablet mode.
+  final Widget Function(BuildContext context, T currentSelected) railBuilder;
+
+  /// How far the bar reaches above the bottom safe area. Pages receive this as
+  /// additional bottom padding, so scroll views end above the bar.
+  final double barExtent;
+
+  /// Whether a page is a destination of its own. Those pages have no back
+  /// button; every other page gets one.
+  final bool Function(T page) isTopLevel;
+
+  /// Whether selecting `next` from `current` keeps `current` below it, so that
+  /// going back returns to `current` instead of the home page.
+  final bool Function(T current, T next)? keepsRouteBelow;
 }
 
 /// A widget that provides a responsive scaffold implementation.
@@ -69,6 +104,13 @@ class ResponsiveScaffold<T> extends StatefulWidget {
 
   final void Function(T newSelectedRoute)? onRouteChanged;
 
+  /// Persistent navigation that replaces the drawer and sidebar; null keeps
+  /// them. [drawerBuilder] is not used while this is set.
+  final ResponsiveNavigation<T>? navigation;
+
+  /// Lets the body of the home page scroll underneath [homeAppBar].
+  final bool extendHomeBodyBehindAppBar;
+
   const ResponsiveScaffold({
     Key? key,
     required this.homeBody,
@@ -78,6 +120,8 @@ class ResponsiveScaffold<T> extends StatefulWidget {
     required this.homeAppBar,
     this.homeFloatingActionButton,
     this.onRouteChanged,
+    this.navigation,
+    this.extendHomeBodyBehindAppBar = false,
   }) : super(key: key);
 
   @override
@@ -100,6 +144,8 @@ class ResponsiveScaffoldState<T> extends State<ResponsiveScaffold<T>>
   // right when the app is opened
   bool isInitialized = false;
   bool? _previousTabletMode;
+  // The route kept below a page by [ResponsiveNavigation.keepsRouteBelow].
+  Route<dynamic>? _routeKeptBelow;
   late final ValueNotifier<T> _currentSelected;
   T get currentSelected => _currentSelected.value;
   set currentSelected(T v) {
@@ -131,7 +177,8 @@ class ResponsiveScaffoldState<T> extends State<ResponsiveScaffold<T>>
   /// Pushes [content] to the body of the scaffold, associating [data] with it.
   void selectContentWidget(Widget content, T data) {
     closeDrawerIfOpen();
-    final route = tabletMode
+    final navigation = widget.navigation;
+    final route = tabletMode || navigation != null
         ? PageRouteBuilder(
             settings: RouteSettings(arguments: data),
             pageBuilder: (_, animation, secondaryAnimation) => FadeTransition(
@@ -146,12 +193,28 @@ class ResponsiveScaffoldState<T> extends State<ResponsiveScaffold<T>>
             builder: (context) => content,
           );
     // Make sure that there are no other routes pushed on our navigator
-    navigatorKey.currentState!
-        .popUntil((route) => route.settings.arguments == currentSelected);
-    if (currentSelected == widget.homeId) {
-      navigatorKey.currentState!.push(route);
+    final navigator = navigatorKey.currentState!;
+    navigator.popUntil((route) => route.settings.arguments == currentSelected);
+    final keepCurrent =
+        navigation?.keepsRouteBelow?.call(currentSelected, data) ?? false;
+    final keptBelow = _routeKeptBelow;
+    if (!keepCurrent &&
+        keptBelow != null &&
+        keptBelow.isActive &&
+        !keptBelow.isCurrent) {
+      navigator.removeRoute(keptBelow);
+    }
+    if (keepCurrent) {
+      // popUntil is the only way to read the current route.
+      navigator.popUntil((route) {
+        _routeKeptBelow = route;
+        return true;
+      });
+      navigator.push(route);
+    } else if (currentSelected == widget.homeId) {
+      navigator.push(route);
     } else {
-      navigatorKey.currentState!.pushReplacement(route);
+      navigator.pushReplacement(route);
     }
     setState(() {
       currentSelected = data;
@@ -169,6 +232,14 @@ class ResponsiveScaffoldState<T> extends State<ResponsiveScaffold<T>>
     setState(() {
       currentSelected = widget.homeId;
     });
+  }
+
+  void _returnedTo(Object? routeArguments) {
+    if (routeArguments is T && routeArguments != currentSelected) {
+      setState(() {
+        currentSelected = routeArguments;
+      });
+    }
   }
 
   @override
@@ -199,6 +270,12 @@ class ResponsiveScaffoldState<T> extends State<ResponsiveScaffold<T>>
           }
           _previousTabletMode = tabletMode;
           isInitialized = true;
+          final navigation = widget.navigation;
+          final body = _Body<T>(
+            navKey: navigatorKey,
+            navObserver: _PopObserver(_wentHome, _returnedTo),
+            homeId: widget.homeId,
+          );
           return _InheritedTabletMode(
             tabletMode: tabletMode,
             child: _InheritedHomePage(
@@ -206,7 +283,8 @@ class ResponsiveScaffoldState<T> extends State<ResponsiveScaffold<T>>
               scaffoldKey: scaffoldKey,
               body: widget.homeBody,
               appBar: widget.homeAppBar,
-              drawer: !tabletMode
+              extendBodyBehindAppBar: widget.extendHomeBodyBehindAppBar,
+              drawer: !tabletMode && navigation == null
                   ? widget.drawerBuilder(
                       selectContentWidget,
                       goHome,
@@ -215,31 +293,28 @@ class ResponsiveScaffoldState<T> extends State<ResponsiveScaffold<T>>
                     )
                   : null,
               child: Material(
-                child: Row(
-                  children: [
-                    SizeTransition(
-                      axis: Axis.horizontal,
-                      sizeFactor: _drawerAnimationController,
-                      axisAlignment: 1,
-                      child: _Drawer(
-                        drawerAnimationController: _drawerAnimationController,
-                        child: widget.drawerBuilder(
-                          selectContentWidget,
-                          goHome,
-                          currentSelected,
-                          true,
-                        ),
+                child: navigation != null
+                    ? _buildWithNavigation(context, navigation, body)
+                    : Row(
+                        children: [
+                          SizeTransition(
+                            axis: Axis.horizontal,
+                            sizeFactor: _drawerAnimationController,
+                            axisAlignment: 1,
+                            child: _Drawer(
+                              drawerAnimationController:
+                                  _drawerAnimationController,
+                              child: widget.drawerBuilder(
+                                selectContentWidget,
+                                goHome,
+                                currentSelected,
+                                true,
+                              ),
+                            ),
+                          ),
+                          Expanded(child: body),
+                        ],
                       ),
-                    ),
-                    Expanded(
-                      child: _Body<T>(
-                        navKey: navigatorKey,
-                        navObserver: _PopObserver(_wentHome),
-                        homeId: widget.homeId,
-                      ),
-                    ),
-                  ],
-                ),
               ),
             ),
           );
@@ -247,6 +322,89 @@ class ResponsiveScaffoldState<T> extends State<ResponsiveScaffold<T>>
       ),
     );
   }
+
+  Widget _buildWithNavigation(
+    BuildContext context,
+    ResponsiveNavigation<T> navigation,
+    Widget body,
+  ) {
+    final media = MediaQuery.of(context);
+    // The keyboard covers the bar, so nothing has to stay clear of it then.
+    final showBar = !tabletMode && media.viewInsets.bottom == 0;
+    final inset = showBar ? navigation.barExtent : 0.0;
+    return Row(
+      children: [
+        if (tabletMode) navigation.railBuilder(context, currentSelected),
+        Expanded(
+          child: Stack(
+            children: [
+              Positioned.fill(
+                child: MediaQuery(
+                  data: media.copyWith(
+                    padding: media.padding
+                        .copyWith(bottom: media.padding.bottom + inset),
+                    viewPadding: media.viewPadding
+                        .copyWith(bottom: media.viewPadding.bottom + inset),
+                  ),
+                  child: _InheritedNavigation(
+                    bottomInset: inset,
+                    isTopLevelRoute: (arguments) =>
+                        arguments is T && navigation.isTopLevel(arguments),
+                    child: body,
+                  ),
+                ),
+              ),
+              if (showBar)
+                Align(
+                  alignment: Alignment.bottomCenter,
+                  child: navigation.barBuilder(context, currentSelected),
+                ),
+            ],
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+/// Describes the [ResponsiveNavigation] around a page.
+class _InheritedNavigation extends InheritedWidget {
+  final double bottomInset;
+  final bool Function(Object? routeArguments) isTopLevelRoute;
+
+  const _InheritedNavigation({
+    required this.bottomInset,
+    required this.isTopLevelRoute,
+    required Widget child,
+  }) : super(child: child);
+
+  static _InheritedNavigation? of(BuildContext context) {
+    return context.dependOnInheritedWidgetOfExactType<_InheritedNavigation>();
+  }
+
+  @override
+  bool updateShouldNotify(_InheritedNavigation oldWidget) {
+    return oldWidget.bottomInset != bottomInset;
+  }
+}
+
+/// What a page has to know about the navigation around it.
+abstract final class ResponsiveNavigationScope {
+  /// Whether [context] is below a [ResponsiveNavigation].
+  static bool isActive(BuildContext context) =>
+      _InheritedNavigation.of(context) != null;
+
+  /// The height of the floating bar above the bottom safe area, or 0 without
+  /// one. [MediaQuery] already includes it: scroll views without an explicit
+  /// padding need nothing else, but an explicit padding has to add this.
+  static double bottomInsetOf(BuildContext context) =>
+      _InheritedNavigation.of(context)?.bottomInset ?? 0;
+
+  /// For [Scaffold.bottomNavigationBar] of a page whose body does not scroll
+  /// as a whole: keeps the body clear of the floating bar, or null without one.
+  static Widget? spacerOf(BuildContext context) => bottomInsetOf(context) > 0
+      ? SizedBox(height: MediaQuery.paddingOf(context).bottom)
+      : null;
 }
 
 class _Drawer extends StatefulWidget {
@@ -338,6 +496,7 @@ class _InheritedHomePage extends InheritedWidget {
   final PreferredSizeWidget appBar;
   final Widget? fab;
   final Key scaffoldKey;
+  final bool extendBodyBehindAppBar;
 
   const _InheritedHomePage({
     required this.body,
@@ -345,6 +504,7 @@ class _InheritedHomePage extends InheritedWidget {
     required this.appBar,
     required this.drawer,
     required this.scaffoldKey,
+    required this.extendBodyBehindAppBar,
     this.fab,
   }) : super(child: child);
 
@@ -404,28 +564,38 @@ typedef DrawerBuilder<T> = Widget Function(
 
 /// An Appbar that will not show a back button if not appropriate.
 ///
-/// The back button will not be shown if we are in tablet mode.
+/// The back button will not be shown if we are in tablet mode. Below a
+/// [ResponsiveNavigation] it is shown on every page that is not a destination
+/// of its own, whatever the width of the window.
 class ResponsiveAppBar extends StatelessWidget implements PreferredSizeWidget {
   final Widget title;
   final List<Widget>? actions;
   final Widget? leading;
+  final PreferredSizeWidget? bottom;
 
   const ResponsiveAppBar(
-      {Key? key, required this.title, this.actions, this.leading})
+      {Key? key, required this.title, this.actions, this.leading, this.bottom})
       : super(key: key);
   @override
   Widget build(BuildContext context) {
     final tabletMode = _InheritedTabletMode.of(context)?.tabletMode ?? false;
+    final navigation = _InheritedNavigation.of(context);
+    final showBack = navigation == null
+        ? !tabletMode
+        : !navigation
+            .isTopLevelRoute(ModalRoute.settingsOf(context)?.arguments);
     return AppBar(
       actions: actions,
       leading: tabletMode ? null : leading,
       title: title,
-      automaticallyImplyLeading: !tabletMode,
+      automaticallyImplyLeading: showBack,
+      bottom: bottom,
     );
   }
 
   @override
-  Size get preferredSize => const Size.fromHeight(56);
+  Size get preferredSize =>
+      Size.fromHeight(56 + (bottom?.preferredSize.height ?? 0));
 }
 
 class _HomePage extends StatelessWidget {
@@ -439,6 +609,7 @@ class _HomePage extends StatelessWidget {
       key: widgets.scaffoldKey,
       floatingActionButton: widgets.fab,
       drawerEdgeDragWidth: double.infinity,
+      extendBodyBehindAppBar: widgets.extendBodyBehindAppBar,
     );
   }
 }

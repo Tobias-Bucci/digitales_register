@@ -15,6 +15,25 @@
 // You should have received a copy of the GNU General Public License
 // along with digitales_register.  If not, see <http://www.gnu.org/licenses/>.
 
+/// The name of the school served at [url], or null for an address that is not
+/// in [schools].
+String? schoolNameForUrl(String? url) {
+  final normalized = _normalizeSchoolUrl(url);
+  if (normalized.isEmpty) return null;
+  for (final school in schools.entries) {
+    if (_normalizeSchoolUrl(school.value) == normalized) return school.key;
+  }
+  return null;
+}
+
+String _normalizeSchoolUrl(String? url) {
+  var normalized = url?.trim().toLowerCase() ?? '';
+  while (normalized.endsWith('/')) {
+    normalized = normalized.substring(0, normalized.length - 1);
+  }
+  return normalized;
+}
+
 const Map<String, String> schools = {
   "Landesberufsschule für das Gastgewerbe Savoy": "https://savoy.digitalesregister.it",
   "Kunstgymnasium und Landesberufsschule Cademia":

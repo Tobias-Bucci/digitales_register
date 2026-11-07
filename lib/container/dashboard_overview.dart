@@ -14,6 +14,7 @@ import 'package:dr/i18n/app_localizations.dart';
 import 'package:dr/school_timeline.dart';
 import 'package:dr/theme/app_palette.dart';
 import 'package:dr/ui/dashboard_customize_dialog.dart';
+import 'package:dr/ui/dashboard_edit_mode.dart';
 import 'package:dr/ui/school_countdown_overview.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_built_redux/flutter_built_redux.dart';
@@ -43,6 +44,34 @@ class DashboardCustomizeButton extends StatelessWidget {
       );
 }
 
+/// The customize dialog as a settings entry, for those who cannot use the long
+/// press on a card in the new design.
+class DashboardCustomizeTile extends StatelessWidget {
+  const DashboardCustomizeTile({super.key});
+
+  @override
+  Widget build(BuildContext context) => StoreConnection<AppState, AppActions,
+          (BuiltList<String>, BuiltMap<String, int>)>(
+        connect: (state) => (
+          state.settingsState.dashboardItems,
+          state.settingsState.dashboardItemSpans
+        ),
+        builder: (context, configuration, actions) => ListTile(
+          key: const Key('settings-dashboard-cards-tile'),
+          title: Text(context.t('dashboard.customize.title')),
+          subtitle: Text(context.t('dashboard.edit.settingsHint')),
+          trailing: const Icon(Icons.chevron_right),
+          onTap: () => showDialog<void>(
+            context: context,
+            builder: (context) => DashboardCustomizeDialog(
+                items: configuration.$1,
+                spans: configuration.$2.toMap(),
+                onSave: actions.settingsActions.setDashboardConfiguration.call),
+          ),
+        ),
+      );
+}
+
 /// Reads the same settings and absence data as the existing app screens.
 class DashboardOverview extends StatelessWidget {
   const DashboardOverview(
@@ -50,9 +79,13 @@ class DashboardOverview extends StatelessWidget {
       required this.timeline,
       this.onOpenCalendarAt,
       this.onEditGradeDeadline,
-      this.footer});
+      this.footer,
+      this.editable = false});
   final SchoolTimeline timeline;
   final Widget? footer;
+
+  /// Lets the cards be edited in place, as in the new design.
+  final bool editable;
   final Future<void> Function(DateTime)? onOpenCalendarAt;
   final Future<void> Function(GradeDeadline)? onEditGradeDeadline;
 
@@ -78,26 +111,41 @@ class DashboardOverview extends StatelessWidget {
         ),
         builder: (context, vm, actions) => Builder(builder: (context) {
           final items = resolveDashboardItems(vm.$1);
-          final overview = SchoolCountdownOverview(
-            timeline: timeline,
-            items: items,
-            spans: vm.$6.toMap(),
-            loading: vm.$4,
-            onOpenCalendarAt: onOpenCalendarAt,
-            onEditGradeDeadline: onEditGradeDeadline,
-            additionalCards: {
-              DashboardItem.gradeAverage: const DashboardGradeCard(),
-              DashboardItem.recentGrade: const DashboardGradeCard(recent: true),
-              DashboardItem.nextAssessment: const DashboardNextAssessmentCard(),
-              DashboardItem.studyPlan: const DashboardStudyPlanCard(),
-              DashboardItem.absences: DashboardAbsencesCard(
-                state: vm.$2,
-                noInternet: vm.$3,
-                load: vm.$5 ? actions.absencesActions.load.call : null,
-                open: actions.routingActions.showAbsences.call,
-              ),
-            },
-          );
+          SchoolCountdownOverview buildOverview(
+                  [DashboardCardDecorator? decorateCard]) =>
+              SchoolCountdownOverview(
+                timeline: timeline,
+                items: items,
+                spans: vm.$6.toMap(),
+                loading: vm.$4,
+                onOpenCalendarAt: onOpenCalendarAt,
+                onEditGradeDeadline: onEditGradeDeadline,
+                decorateCard: decorateCard,
+                additionalCards: {
+                  DashboardItem.gradeAverage: const DashboardGradeCard(),
+                  DashboardItem.recentGrade:
+                      const DashboardGradeCard(recent: true),
+                  DashboardItem.nextAssessment:
+                      const DashboardNextAssessmentCard(),
+                  DashboardItem.studyPlan: const DashboardStudyPlanCard(),
+                  DashboardItem.absences: DashboardAbsencesCard(
+                    state: vm.$2,
+                    noInternet: vm.$3,
+                    load: vm.$5 ? actions.absencesActions.load.call : null,
+                    open: actions.routingActions.showAbsences.call,
+                  ),
+                },
+              );
+          if (editable) {
+            return DashboardCardEditor(
+              items: items,
+              spans: vm.$6.toMap(),
+              onChanged: actions.settingsActions.setDashboardConfiguration.call,
+              overviewBuilder: buildOverview,
+              footer: footer,
+            );
+          }
+          final overview = buildOverview();
           final controls = footer;
           if (controls == null) return overview;
           return Column(

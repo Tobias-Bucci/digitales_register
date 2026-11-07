@@ -8,6 +8,7 @@ import 'package:dr/server_notifications/server_notification_service.dart';
 import 'package:dr/ui/server_notifications/server_notification_routes.dart';
 import 'package:dr/ui/server_notifications/server_notification_visuals.dart';
 import 'package:flutter/material.dart';
+import 'package:responsive_scaffold/responsive_scaffold.dart';
 
 /// From this width on, list and detail are shown side by side.
 const _twoPaneWidth = 840.0;
@@ -186,7 +187,12 @@ class _NotificationList extends StatelessWidget {
           child: ListView(
             key: const Key('server-notification-list'),
             physics: const AlwaysScrollableScrollPhysics(),
-            padding: const EdgeInsets.all(16),
+            padding: EdgeInsets.fromLTRB(
+              16,
+              16,
+              16,
+              16 + ResponsiveNavigationScope.bottomInsetOf(context),
+            ),
             children: [
               if (repository.lastSyncFailed) const _StaleNotice(),
               if (items.isEmpty)
@@ -532,7 +538,12 @@ class _ServerNotificationDetailViewState
           child: ConstrainedBox(
             constraints: const BoxConstraints(maxWidth: _readableWidth),
             child: ListView(
-              padding: const EdgeInsets.fromLTRB(24, 24, 24, 32),
+              padding: EdgeInsets.fromLTRB(
+                24,
+                24,
+                24,
+                32 + ResponsiveNavigationScope.bottomInsetOf(context),
+              ),
               children: [
                 Row(
                   children: [

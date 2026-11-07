@@ -22,6 +22,7 @@ import 'package:dr/i18n/app_localizations.dart';
 import 'package:dr/main.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:responsive_scaffold/responsive_scaffold.dart';
 
 class NetworkProtocol extends StatelessWidget {
   final List<NetworkProtocolItem> items;
@@ -326,6 +327,7 @@ void _showProtocolDetails(BuildContext context, NetworkProtocolItem item) {
   final addressInfo = _splitAddress(item.address);
   showModalBottomSheet<void>(
     context: context,
+    useRootNavigator: ResponsiveNavigationScope.isActive(context),
     isScrollControlled: true,
     useSafeArea: true,
     showDragHandle: true,

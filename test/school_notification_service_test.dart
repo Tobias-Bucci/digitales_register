@@ -1169,6 +1169,33 @@ void main() {
     expect(shown, isEmpty);
   });
 
+  test('a reminder reaches its handler after a cold launch and a warm tap',
+      () async {
+    service.dispose();
+    NotificationResponse tapped(String payload) => NotificationResponse(
+        notificationResponseType: NotificationResponseType.selectedNotification,
+        payload: payload);
+    when(() => native.getNotificationAppLaunchDetails()).thenAnswer((_) async =>
+        NotificationAppLaunchDetails(true,
+            notificationResponse: tapped('dr-reminder:mensa')));
+    service = SchoolNotificationService(
+        platformSupported: true,
+        native: native,
+        storage: storage,
+        permission: () async => false,
+        historyDirectory: () async => directory);
+    final payloads = <String?>[];
+    service.onReminderTap = (payload) async => payloads.add(payload);
+
+    await service.initialize();
+    expect(payloads, ['dr-reminder:mensa']);
+    expect(service.pendingDestination, isNull);
+
+    tapHandler!(tapped('dr-reminder:mensa'));
+    await Future<void>.delayed(Duration.zero);
+    expect(payloads, ['dr-reminder:mensa', 'dr-reminder:mensa']);
+  });
+
   test('cold launch queues destination and warm tap invokes routing handler',
       () async {
     service.dispose();

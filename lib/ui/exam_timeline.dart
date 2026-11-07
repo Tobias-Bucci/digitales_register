@@ -6,6 +6,7 @@ import 'package:dr/i18n/app_localizations.dart';
 import 'package:dr/theme/app_palette.dart';
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
+import 'package:responsive_scaffold/responsive_scaffold.dart';
 
 /// Seven equally spaced calendar days keep distances meaningful at any range.
 class ExamTimeline extends StatefulWidget {
@@ -65,7 +66,12 @@ class _ExamTimelineState extends State<ExamTimeline> {
 
     return ListView(
       key: const Key('exam-timeline'),
-      padding: const EdgeInsets.fromLTRB(12, 16, 12, 32),
+      padding: EdgeInsets.fromLTRB(
+        12,
+        16,
+        12,
+        32 + ResponsiveNavigationScope.bottomInsetOf(context),
+      ),
       children: [
         Text(l10n.text('exam.timelineView'), style: theme.textTheme.titleLarge),
         const SizedBox(height: 12),

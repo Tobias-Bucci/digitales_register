@@ -18,6 +18,7 @@
 import 'package:dr/i18n/app_localizations.dart';
 import 'package:dr/utc_date_time.dart';
 import 'package:flutter/material.dart';
+import 'package:responsive_scaffold/responsive_scaffold.dart';
 
 class LastFetchedOverlay extends StatelessWidget {
   final bool noInternet;
@@ -66,6 +67,11 @@ class RawLastFetchedOverlay extends StatelessWidget {
         Align(
           alignment: Alignment.bottomRight,
           child: Container(
+            margin: EdgeInsets.only(
+              bottom: ResponsiveNavigationScope.bottomInsetOf(context) > 0
+                  ? MediaQuery.paddingOf(context).bottom
+                  : 0,
+            ),
             padding: const EdgeInsets.symmetric(
               vertical: 3,
               horizontal: 8,
