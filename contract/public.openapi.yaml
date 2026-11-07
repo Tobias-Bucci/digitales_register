@@ -29,8 +29,8 @@ info:
     for breaking changes. Map unknown `type.icon` values to a safe fallback and
     treat an unknown internal `link.target` as no link.
   license:
-    name: Proprietary
-    identifier: LicenseRef-Proprietary
+    name: GNU General Public License v3.0 or later
+    identifier: GPL-3.0-or-later
 servers:
   - url: https://api.digitalesregister.com
     description: Production. Clients must take the base URL from configuration.
