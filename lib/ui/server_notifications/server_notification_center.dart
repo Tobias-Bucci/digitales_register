@@ -84,6 +84,7 @@ class ServerNotificationCenterPage extends StatefulWidget {
     this.initialId,
     this.initialSchoolId,
     this.school,
+    this.filterStore = const NotificationFilterStore(),
   });
 
   final ServerNotificationRepository? repository;
@@ -94,6 +95,9 @@ class ServerNotificationCenterPage extends StatefulWidget {
 
   /// Preselects an entry of [school], by its id.
   final int? initialSchoolId;
+
+  /// Keeps the filter, which only exists with [school].
+  final NotificationFilterStore filterStore;
 
   @override
   State<ServerNotificationCenterPage> createState() =>
@@ -117,6 +121,24 @@ class _ServerNotificationCenterPageState
   }
 
   bool _openedInitial = false;
+  NotificationFilter _filter = const NotificationFilter();
+  bool _filterTouched = false;
+
+  @override
+  void initState() {
+    super.initState();
+    if (widget.school == null) return;
+    unawaited(widget.filterStore.load().then((filter) {
+      // A choice made while loading wins over the remembered one.
+      if (mounted && !_filterTouched) setState(() => _filter = filter);
+    }));
+  }
+
+  void _setFilter(NotificationFilter filter) {
+    _filterTouched = true;
+    setState(() => _filter = filter);
+    unawaited(widget.filterStore.save(filter));
+  }
 
   void _refresh() => (widget.onRefresh ?? serverNotifications.refresh)();
 
@@ -229,6 +251,8 @@ class _ServerNotificationCenterPageState
               onOpen: (entry) => _openEntry(entry, twoPanes: twoPanes),
               onRefresh: _refresh,
               onMarkAllRead: _markAllRead,
+              filter: _filter,
+              onFilterChanged: _setFilter,
             );
             final feed = school == null
                 ? list
@@ -281,10 +305,14 @@ class _NotificationList extends StatelessWidget {
     required this.onOpen,
     required this.onRefresh,
     required this.onMarkAllRead,
+    required this.filter,
+    required this.onFilterChanged,
   });
 
   final ServerNotificationRepository repository;
   final SchoolNotificationFeed? school;
+  final NotificationFilter filter;
+  final ValueChanged<NotificationFilter> onFilterChanged;
   final String? selectedKey;
   final ValueChanged<NotificationFeedEntry> onOpen;
   final VoidCallback onRefresh;
@@ -296,10 +324,23 @@ class _NotificationList extends StatelessWidget {
   Widget build(BuildContext context) {
     final l10n = context.l10n;
     final school = this.school;
-    final entries = combinedNotificationFeed(
+    final all = combinedNotificationFeed(
       school: school?.notifications ?? const [],
       app: repository.notifications,
     );
+    // Types by key, in the order they first appear. Only with both sources.
+    final types = <String, String>{
+      if (school != null)
+        for (final item in repository.notifications)
+          item.type.key: item.type.label,
+    };
+    final entries = school == null
+        ? all
+        : all
+            .where((entry) => filter.matches(entry,
+                isUnread: repository.isUnread,
+                availableTypes: types.keys.toSet()))
+            .toList();
     return RefreshIndicator(
       onRefresh: () async => onRefresh(),
       child: Align(
@@ -317,6 +358,12 @@ class _NotificationList extends StatelessWidget {
             ),
             children: [
               if (repository.lastSyncFailed) const _StaleNotice(),
+              if (school != null)
+                _FilterBar(
+                  filter: filter,
+                  types: types,
+                  onChanged: onFilterChanged,
+                ),
               if (school != null &&
                   (school.notifications.isNotEmpty ||
                       repository.unreadCount > 0))
@@ -328,7 +375,18 @@ class _NotificationList extends StatelessWidget {
                     label: Text(l10n.text('notifications.markAllRead')),
                   ),
                 ),
-              if (entries.isEmpty)
+              if (entries.isEmpty && all.isNotEmpty)
+                _Placeholder(
+                  icon: Icons.filter_alt_off_outlined,
+                  title: l10n.text('notifications.filter.emptyTitle'),
+                  body: l10n.text('notifications.filter.emptyBody'),
+                  action: OutlinedButton(
+                    onPressed: () =>
+                        onFilterChanged(const NotificationFilter()),
+                    child: Text(l10n.text('notifications.filter.reset')),
+                  ),
+                )
+              else if (entries.isEmpty)
                 _Placeholder(
                   icon: Icons.notifications_none_rounded,
                   title: l10n.text(school != null
@@ -370,6 +428,113 @@ class _NotificationList extends StatelessWidget {
   }
 }
 
+/// Source, type and read state, at a glance above the list.
+class _FilterBar extends StatelessWidget {
+  const _FilterBar({
+    required this.filter,
+    required this.types,
+    required this.onChanged,
+  });
+
+  final NotificationFilter filter;
+
+  /// The announcement types of the current list, by key.
+  final Map<String, String> types;
+  final ValueChanged<NotificationFilter> onChanged;
+
+  @override
+  Widget build(BuildContext context) {
+    final l10n = context.l10n;
+    final type = types.containsKey(filter.appType) ? filter.appType : null;
+    return Semantics(
+      container: true,
+      label: l10n.text('notifications.filter.label'),
+      child: Padding(
+        padding: const EdgeInsets.only(bottom: 4),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            LayoutBuilder(
+              builder: (context, constraints) {
+                // Icons only where the labels keep to one line beside them.
+                final icons = constraints.maxWidth >= 400;
+                Widget label(String key) => Text(
+                      l10n.text(key),
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                    );
+                return SegmentedButton<NotificationSourceFilter>(
+                  key: const Key('notification-filter-source'),
+                  showSelectedIcon: false,
+                  style: const ButtonStyle(
+                    tapTargetSize: MaterialTapTargetSize.padded,
+                    visualDensity: VisualDensity.standard,
+                  ),
+                  segments: [
+                    ButtonSegment(
+                      value: NotificationSourceFilter.all,
+                      label: label('notifications.filter.all'),
+                    ),
+                    ButtonSegment(
+                      value: NotificationSourceFilter.school,
+                      icon: icons ? const Icon(Icons.school_outlined) : null,
+                      label: label('notifications.sourceSchool'),
+                    ),
+                    ButtonSegment(
+                      value: NotificationSourceFilter.app,
+                      icon: icons ? const Icon(Icons.campaign_outlined) : null,
+                      label: label('notifications.sourceApp'),
+                    ),
+                  ],
+                  selected: {filter.source},
+                  onSelectionChanged: (selection) => onChanged(filter.copyWith(
+                    source: selection.single,
+                    // A type only means something for announcements.
+                    appType: selection.single == NotificationSourceFilter.app
+                        ? null
+                        : () => null,
+                  )),
+                );
+              },
+            ),
+            const SizedBox(height: 8),
+            Wrap(
+              spacing: 8,
+              runSpacing: 4,
+              crossAxisAlignment: WrapCrossAlignment.center,
+              children: [
+                FilterChip(
+                  key: const Key('notification-filter-unread'),
+                  label: Text(l10n.text('notifications.filter.unread')),
+                  selected: filter.unreadOnly,
+                  onSelected: (value) =>
+                      onChanged(filter.copyWith(unreadOnly: value)),
+                ),
+                if (filter.source == NotificationSourceFilter.app &&
+                    types.length > 1)
+                  for (final entry in types.entries)
+                    ChoiceChip(
+                      label: Text(entry.value),
+                      selected: type == entry.key,
+                      onSelected: (selected) => onChanged(filter.copyWith(
+                          appType: () => selected ? entry.key : null)),
+                    ),
+                if (filter.isActive)
+                  TextButton.icon(
+                    key: const Key('notification-filter-reset'),
+                    onPressed: () => onChanged(const NotificationFilter()),
+                    icon: const Icon(Icons.filter_alt_off_outlined),
+                    label: Text(l10n.text('notifications.filter.reset')),
+                  ),
+              ],
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
 class _StaleNotice extends StatelessWidget {
   const _StaleNotice();
 
@@ -402,11 +567,17 @@ class _StaleNotice extends StatelessWidget {
 }
 
 class _Placeholder extends StatelessWidget {
-  const _Placeholder({required this.icon, required this.title, this.body});
+  const _Placeholder({
+    required this.icon,
+    required this.title,
+    this.body,
+    this.action,
+  });
 
   final IconData icon;
   final String title;
   final String? body;
+  final Widget? action;
 
   @override
   Widget build(BuildContext context) {
@@ -431,6 +602,10 @@ class _Placeholder extends StatelessWidget {
                   textAlign: TextAlign.center,
                   style: theme.textTheme.bodyMedium
                       ?.copyWith(color: theme.colorScheme.onSurfaceVariant)),
+            ],
+            if (action != null) ...[
+              const SizedBox(height: 16),
+              action!,
             ],
           ],
         ),

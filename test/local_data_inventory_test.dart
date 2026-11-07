@@ -456,6 +456,9 @@ void main() {
         '_subjectTranslationEnabledPreferenceKey',
       },
       'lib/middleware/middleware.dart': {'_legacyStudyPromptedKey'},
+      // How the notification center is filtered on this device, like the
+      // theme. Holds no content and no account.
+      'lib/notification_feed.dart': {'notificationFilterPreferenceKey'},
       'lib/privacy_consent.dart': {'marker', 'privacyDecisionKey'},
       'lib/product_analytics.dart': {"'analyticsInstallationNamespaceV4'"},
       'lib/settings_persistence_service.dart': {'globalSettingsPreferenceKey'},
