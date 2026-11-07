@@ -1,0 +1,7 @@
+{
+  "error": {
+    "code": "invalid_parameter",
+    "message": "platform must be one of web, android, ios, windows, linux",
+    "field": "platform"
+  }
+}

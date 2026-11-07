@@ -1,0 +1,7 @@
+{
+  "error": {
+    "code": "invalid_cursor",
+    "message": "cursor is not valid",
+    "field": "cursor"
+  }
+}

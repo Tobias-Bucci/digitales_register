@@ -1,0 +1,7 @@
+{
+  "schema_version": 1,
+  "server_time": "2026-10-22T20:00:00Z",
+  "poll_after_seconds": 300,
+  "next_cursor": null,
+  "notifications": []
+}
