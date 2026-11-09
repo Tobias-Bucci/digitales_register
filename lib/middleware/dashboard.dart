@@ -213,6 +213,9 @@ Future<void> _toggleDone(
   Action<ToggleDonePayload> action,
 ) async {
   final session = _Session.capture();
+  // Show the change at once, so the row animates on tap instead of jumping
+  // when the server answers (#114). A failed save puts the old value back.
+  await next(action);
   _markRuntimeCacheStale(_dashboardCacheKey(api.state.dashboardState.future));
   final dynamic result = await session.send(
     "api/student/dashboard/toggle_reminder",
@@ -222,9 +225,13 @@ Future<void> _toggleDone(
       "value": action.payload.done,
     },
   );
-  if (result != null && result["success"] == true) {
-    await next(action);
-  } else {
+  if (result == null || result["success"] != true) {
+    if (session.isCurrent) {
+      await next(Action<ToggleDonePayload>(
+        action.name,
+        action.payload.rebuild((b) => b..done = !action.payload.done),
+      ));
+    }
     await _showSaveFailed(
       api,
       session,

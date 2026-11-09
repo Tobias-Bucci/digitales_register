@@ -390,7 +390,18 @@ class CompactEntryRow extends StatelessWidget {
         ),
       _ => BorderSide.none,
     };
-    final hover = foreground.withValues(alpha: 0.1);
+    final target = _RowPalette(
+      background: background,
+      foreground: foreground,
+      muted: muted,
+      letter: subjectColor ?? foreground,
+      accent: style == CompactRowStyle.test ? foreground : scheme.success,
+      badgeBackground:
+          style == CompactRowStyle.test ? scheme.onExam : scheme.primary,
+      badgeForeground:
+          style == CompactRowStyle.test ? scheme.exam : scheme.onPrimary,
+      border: border,
+    );
     final isNew = item.isNew || item.isChanged;
     final hasAttachments = item.gradeGroupSubmissions?.isNotEmpty == true;
     final canCheck = item.type != HomeworkType.grade && item.checkable;
@@ -405,180 +416,218 @@ class CompactEntryRow extends StatelessWidget {
         onDeleted: removeThis,
         showEntryAnimation:
             realNow.difference(item.firstSeen) < const Duration(seconds: 1),
-        builder: (context, delete) => Padding(
-          padding: const EdgeInsets.fromLTRB(
-            DesignTokens.gutter,
-            0,
-            DesignTokens.gutter,
-            _rowGap,
+        // Ticking an entry off fades the row between its looks instead of
+        // switching colours in one frame (#114).
+        builder: (context, delete) => TweenAnimationBuilder<_RowPalette>(
+          tween: _RowPaletteTween(end: target),
+          duration: MediaQuery.disableAnimationsOf(context)
+              ? Duration.zero
+              : compactRowStyleDuration,
+          curve: compactRowStyleCurve,
+          builder: (context, palette, _) => _buildRow(
+            context,
+            delete: delete,
+            palette: palette,
+            subject: subject,
+            type: type,
+            title: title,
+            isNew: isNew,
+            hasAttachments: hasAttachments,
+            canCheck: canCheck,
           ),
-          child: GlassFocusRing(
+        ),
+      ),
+    );
+  }
+
+  Widget _buildRow(
+    BuildContext context, {
+    required Future<void> Function() delete,
+    required _RowPalette palette,
+    required String? subject,
+    required String type,
+    required String title,
+    required bool isNew,
+    required bool hasAttachments,
+    required bool canCheck,
+  }) {
+    final l10n = context.l10n;
+    final theme = Theme.of(context);
+    final foreground = palette.foreground;
+    final muted = palette.muted;
+    final hover = foreground.withValues(alpha: 0.1);
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(
+        DesignTokens.gutter,
+        0,
+        DesignTokens.gutter,
+        _rowGap,
+      ),
+      child: GlassFocusRing(
+        shape: const StadiumBorder(),
+        activeTint: foreground.withValues(alpha: 0.06),
+        child: Material(
+          key: ValueKey('compact-row-${item.id}'),
+          color: palette.background,
+          shape: StadiumBorder(side: palette.border),
+          // The palette tween already animates the border.
+          animationDuration: Duration.zero,
+          clipBehavior: Clip.antiAlias,
+          // Text stands on solid colours here, so the row only gets the rim.
+          child: GlassEdge(
             shape: const StadiumBorder(),
-            activeTint: foreground.withValues(alpha: 0.06),
-            child: Material(
-              key: ValueKey('compact-row-${item.id}'),
-              color: background,
-              shape: StadiumBorder(side: border),
-              clipBehavior: Clip.antiAlias,
-              // Text stands on solid colours here, so the row only gets the rim.
-              child: GlassEdge(
-                shape: const StadiumBorder(),
-                sheen: false,
-                child: ConstrainedBox(
-                  constraints:
-                      const BoxConstraints(minHeight: compactRowHeight),
-                  child: Row(
-                    children: [
-                      Expanded(
-                        child: Semantics(
-                          button: true,
-                          onTap: () => _openDetails(context, delete),
-                          label: [
-                            if (subject != null) subject,
-                            type,
-                            if (title.isNotEmpty) title,
-                            if (isNew)
-                              l10n.text(item.isNew
-                                  ? 'dashboard.new'
-                                  : 'dashboard.changed'),
-                            if (item.grade != null) item.gradeFormatted!,
-                            if (canCheck)
-                              l10n.text(item.checked
-                                  ? 'dashboard.entryDone'
-                                  : 'dashboard.entryOpen'),
-                          ].join(', '),
-                          excludeSemantics: true,
-                          child: InkWell(
-                            key: ValueKey('compact-row-open-${item.id}'),
-                            hoverColor: Colors.transparent,
-                            focusColor: Colors.transparent,
-                            mouseCursor: NewDesignTheme.clickCursor,
-                            onTap: () => _openDetails(context, delete),
-                            child: ConstrainedBox(
-                              constraints: const BoxConstraints(
-                                  minHeight: compactRowHeight),
-                              child: Padding(
-                                padding: const EdgeInsets.only(left: 14),
-                                child: Row(
-                                  children: [
-                                    if (subject != null)
-                                      Container(
-                                        width: 22,
-                                        alignment: Alignment.center,
-                                        margin: const EdgeInsets.only(right: 8),
-                                        child: Text(
-                                          subjectLetter(subject),
-                                          key: ValueKey(
-                                              'compact-row-subject-${item.id}'),
-                                          style: theme.textTheme.titleSmall
-                                              ?.copyWith(
-                                            color: subjectColor ?? foreground,
-                                            fontWeight: FontWeight.w700,
-                                          ),
-                                        ),
-                                      ),
-                                    Expanded(
-                                      child: Text.rich(
-                                        TextSpan(
-                                          children: [
-                                            TextSpan(
-                                              text: type,
-                                              style: TextStyle(
-                                                fontWeight: FontWeight.w600,
-                                                color: foreground,
-                                              ),
-                                            ),
-                                            if (title.isNotEmpty)
-                                              TextSpan(
-                                                text: '  $title',
-                                                style: TextStyle(color: muted),
-                                              ),
-                                          ],
-                                        ),
-                                        key: ValueKey(
-                                            'compact-row-text-${item.id}'),
-                                        maxLines: 1,
-                                        overflow: TextOverflow.ellipsis,
-                                        style: theme.textTheme.bodyMedium,
+            sheen: false,
+            child: ConstrainedBox(
+              constraints: const BoxConstraints(minHeight: compactRowHeight),
+              child: Row(
+                children: [
+                  Expanded(
+                    child: Semantics(
+                      button: true,
+                      onTap: () => _openDetails(context, delete),
+                      label: [
+                        if (subject != null) subject,
+                        type,
+                        if (title.isNotEmpty) title,
+                        if (isNew)
+                          l10n.text(item.isNew
+                              ? 'dashboard.new'
+                              : 'dashboard.changed'),
+                        if (item.grade != null) item.gradeFormatted!,
+                        if (canCheck)
+                          l10n.text(item.checked
+                              ? 'dashboard.entryDone'
+                              : 'dashboard.entryOpen'),
+                      ].join(', '),
+                      excludeSemantics: true,
+                      child: InkWell(
+                        key: ValueKey('compact-row-open-${item.id}'),
+                        hoverColor: Colors.transparent,
+                        focusColor: Colors.transparent,
+                        mouseCursor: NewDesignTheme.clickCursor,
+                        onTap: () => _openDetails(context, delete),
+                        child: ConstrainedBox(
+                          constraints:
+                              const BoxConstraints(minHeight: compactRowHeight),
+                          child: Padding(
+                            padding: const EdgeInsets.only(left: 14),
+                            child: Row(
+                              children: [
+                                if (subject != null)
+                                  Container(
+                                    width: 22,
+                                    alignment: Alignment.center,
+                                    margin: const EdgeInsets.only(right: 8),
+                                    child: Text(
+                                      subjectLetter(subject),
+                                      key: ValueKey(
+                                          'compact-row-subject-${item.id}'),
+                                      style:
+                                          theme.textTheme.titleSmall?.copyWith(
+                                        color: palette.letter,
+                                        fontWeight: FontWeight.w700,
                                       ),
                                     ),
-                                    if (hasAttachments)
-                                      Padding(
-                                        padding: const EdgeInsets.only(left: 6),
-                                        child: Icon(
-                                          Icons.attach_file_rounded,
-                                          size: 16,
-                                          color: muted,
+                                  ),
+                                Expanded(
+                                  child: Text.rich(
+                                    TextSpan(
+                                      children: [
+                                        TextSpan(
+                                          text: type,
+                                          style: TextStyle(
+                                            fontWeight: FontWeight.w600,
+                                            color: foreground,
+                                          ),
                                         ),
-                                      ),
-                                    if (isNew)
-                                      Padding(
-                                        padding: const EdgeInsets.only(left: 6),
-                                        child: _NewBadge(
-                                          text: l10n.text(item.isNew
-                                              ? 'dashboard.new'
-                                              : 'dashboard.changed'),
-                                          onExam: style == CompactRowStyle.test,
-                                        ),
-                                      ),
-                                    if (!canCheck) const SizedBox(width: 10),
-                                  ],
+                                        if (title.isNotEmpty)
+                                          TextSpan(
+                                            text: '  $title',
+                                            style: TextStyle(color: muted),
+                                          ),
+                                      ],
+                                    ),
+                                    key:
+                                        ValueKey('compact-row-text-${item.id}'),
+                                    maxLines: 1,
+                                    overflow: TextOverflow.ellipsis,
+                                    style: theme.textTheme.bodyMedium,
+                                  ),
+                                ),
+                                if (hasAttachments)
+                                  Padding(
+                                    padding: const EdgeInsets.only(left: 6),
+                                    child: Icon(
+                                      Icons.attach_file_rounded,
+                                      size: 16,
+                                      color: muted,
+                                    ),
+                                  ),
+                                if (isNew)
+                                  Padding(
+                                    padding: const EdgeInsets.only(left: 6),
+                                    child: _NewBadge(
+                                      text: l10n.text(item.isNew
+                                          ? 'dashboard.new'
+                                          : 'dashboard.changed'),
+                                      background: palette.badgeBackground,
+                                      foreground: palette.badgeForeground,
+                                    ),
+                                  ),
+                                if (!canCheck) const SizedBox(width: 10),
+                              ],
+                            ),
+                          ),
+                        ),
+                      ),
+                    ),
+                  ),
+                  if (item.type == HomeworkType.grade)
+                    Padding(
+                      padding: const EdgeInsets.only(right: 8),
+                      child: GradeBadge(
+                        text: item.gradeFormatted!,
+                        hundredths: parseBackendGradeHundredths(item.grade),
+                        colorized: true,
+                        style: theme.textTheme.labelLarge,
+                      ),
+                    )
+                  else if (canCheck)
+                    Tooltip(
+                      message: l10n.text(item.checked
+                          ? 'dashboard.markOpen'
+                          : 'dashboard.markDone'),
+                      child: Semantics(
+                        checked: item.checked,
+                        enabled: !noInternet,
+                        onTap: noInternet ? null : toggleDone,
+                        label: l10n.text('dashboard.markDone'),
+                        excludeSemantics: true,
+                        child: InkWell(
+                          key: ValueKey('compact-row-check-${item.id}'),
+                          customBorder: const CircleBorder(),
+                          hoverColor: hover,
+                          focusColor: hover,
+                          mouseCursor: NewDesignTheme.clickCursor,
+                          onTap: noInternet ? null : toggleDone,
+                          child: SizedBox(
+                            width: 48,
+                            height: compactRowHeight,
+                            child: Center(
+                              child: Opacity(
+                                opacity: noInternet ? 0.5 : 1,
+                                child: NotepadMark(
+                                  checked: item.checked,
+                                  outline: foreground,
+                                  accent: palette.accent,
                                 ),
                               ),
                             ),
                           ),
                         ),
                       ),
-                      if (item.type == HomeworkType.grade)
-                        Padding(
-                          padding: const EdgeInsets.only(right: 8),
-                          child: GradeBadge(
-                            text: item.gradeFormatted!,
-                            hundredths: parseBackendGradeHundredths(item.grade),
-                            colorized: true,
-                            style: theme.textTheme.labelLarge,
-                          ),
-                        )
-                      else if (canCheck)
-                        Tooltip(
-                          message: l10n.text(item.checked
-                              ? 'dashboard.markOpen'
-                              : 'dashboard.markDone'),
-                          child: Semantics(
-                            checked: item.checked,
-                            enabled: !noInternet,
-                            onTap: noInternet ? null : toggleDone,
-                            label: l10n.text('dashboard.markDone'),
-                            excludeSemantics: true,
-                            child: InkWell(
-                              key: ValueKey('compact-row-check-${item.id}'),
-                              customBorder: const CircleBorder(),
-                              hoverColor: hover,
-                              focusColor: hover,
-                              mouseCursor: NewDesignTheme.clickCursor,
-                              onTap: noInternet ? null : toggleDone,
-                              child: SizedBox(
-                                width: 48,
-                                height: compactRowHeight,
-                                child: Center(
-                                  child: Opacity(
-                                    opacity: noInternet ? 0.5 : 1,
-                                    child: NotepadMark(
-                                      checked: item.checked,
-                                      outline: foreground,
-                                      accent: style == CompactRowStyle.test
-                                          ? foreground
-                                          : scheme.success,
-                                    ),
-                                  ),
-                                ),
-                              ),
-                            ),
-                          ),
-                        ),
-                    ],
-                  ),
-                ),
+                    ),
+                ],
               ),
             ),
           ),
@@ -588,18 +637,87 @@ class CompactEntryRow extends StatelessWidget {
   }
 }
 
+/// How long a row takes to change between its looks, in both directions.
+const compactRowStyleDuration = Duration(milliseconds: 280);
+const compactRowStyleCurve = Curves.easeInOut;
+
+/// Every colour of a row that depends on its [CompactRowStyle], so that they
+/// all change together with one duration and curve.
+@immutable
+class _RowPalette {
+  const _RowPalette({
+    required this.background,
+    required this.foreground,
+    required this.muted,
+    required this.letter,
+    required this.accent,
+    required this.badgeBackground,
+    required this.badgeForeground,
+    required this.border,
+  });
+
+  final Color background,
+      foreground,
+      muted,
+      letter,
+      accent,
+      badgeBackground,
+      badgeForeground;
+  final BorderSide border;
+
+  (Color, Color, Color, Color, Color, Color, Color, BorderSide) get _fields => (
+        background,
+        foreground,
+        muted,
+        letter,
+        accent,
+        badgeBackground,
+        badgeForeground,
+        border,
+      );
+
+  @override
+  bool operator ==(Object other) =>
+      other is _RowPalette && other._fields == _fields;
+
+  @override
+  int get hashCode => _fields.hashCode;
+}
+
+class _RowPaletteTween extends Tween<_RowPalette> {
+  _RowPaletteTween({super.end});
+
+  @override
+  _RowPalette lerp(double t) {
+    final a = begin!, b = end!;
+    return _RowPalette(
+      background: Color.lerp(a.background, b.background, t)!,
+      foreground: Color.lerp(a.foreground, b.foreground, t)!,
+      muted: Color.lerp(a.muted, b.muted, t)!,
+      letter: Color.lerp(a.letter, b.letter, t)!,
+      accent: Color.lerp(a.accent, b.accent, t)!,
+      badgeBackground: Color.lerp(a.badgeBackground, b.badgeBackground, t)!,
+      badgeForeground: Color.lerp(a.badgeForeground, b.badgeForeground, t)!,
+      border: BorderSide.lerp(a.border, b.border, t),
+    );
+  }
+}
+
 class _NewBadge extends StatelessWidget {
-  const _NewBadge({required this.text, required this.onExam});
+  const _NewBadge({
+    required this.text,
+    required this.background,
+    required this.foreground,
+  });
 
   final String text;
-  final bool onExam;
+  final Color background, foreground;
 
   @override
   Widget build(BuildContext context) {
-    final scheme = Theme.of(context).colorScheme;
     return DecoratedBox(
       decoration: ShapeDecoration(
-        color: onExam ? scheme.onExam : scheme.primary,
+        color: background,
         shape: const StadiumBorder(),
       ),
       child: Padding(
@@ -607,7 +725,7 @@ class _NewBadge extends StatelessWidget {
         child: Text(
           text,
           style: Theme.of(context).textTheme.labelSmall?.copyWith(
-                color: onExam ? scheme.exam : scheme.onPrimary,
+                color: foreground,
               ),
         ),
       ),
