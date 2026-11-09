@@ -515,6 +515,37 @@ void main() {
           ));
     });
 
+    testWidgets('a tick shows at once and goes back if it is not saved',
+        (tester) async {
+      await pumpMessenger(tester);
+      final (store, _) = await setUpDashboard(offline: false);
+      final answer = Completer<dynamic>();
+      when(() => session.send(any(), args: any(named: 'args')))
+          .thenAnswer((_) => answer.future);
+      bool checked() =>
+          store.state.dashboardState.allDays![0].homework[0].checked;
+
+      late Future<void> toggle;
+      await tester.runAsync(() async {
+        toggle = store.actions.dashboardActions.toggleDone(
+          ToggleDonePayload((b) => b
+            ..homeworkId = 7
+            ..type = 'homework'
+            ..done = true),
+        );
+        await Future<void>.delayed(Duration.zero);
+      });
+      expect(checked(), isTrue, reason: 'before the server answered');
+
+      await tester.runAsync(() async {
+        answer.complete(null);
+        await toggle;
+      });
+      await tester.pump();
+      expect(checked(), isFalse);
+      expect(find.byType(SnackBar), findsOneWidget);
+    });
+
     testWidgets('the button sends a failed change again', (tester) async {
       await pumpMessenger(tester);
       final (store, _) = await setUpDashboard(offline: false);

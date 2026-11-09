@@ -304,6 +304,56 @@ void main() {
       expect(find.text('2/2 erledigt'), findsOneWidget);
     });
 
+    for (final themeMode in [ThemeMode.light, ThemeMode.dark]) {
+      testWidgets('ticking a test off fades its row both ways ($themeMode)',
+          (tester) async {
+        tester.view.physicalSize = const Size(400, 800);
+        tester.view.devicePixelRatio = 1;
+        addTearDown(tester.view.reset);
+        await pumpApp(
+          tester,
+          store: createStore(
+            initialState:
+                _dashboardState().rebuild((b) => b.noInternet = false),
+            newDesign: true,
+          ),
+          home: DaysContainer(),
+          themeMode: themeMode,
+        );
+        await settleFor(tester);
+        final scheme =
+            Theme.of(tester.element(find.byType(CompactDayWidget))).colorScheme;
+        Color rowColor() => tester
+            .widget<Material>(find.byKey(const ValueKey('compact-row-1')))
+            .color!;
+        Color textColor() => (tester
+                .widget<Text>(find.byKey(const ValueKey('compact-row-text-1')))
+                .textSpan! as TextSpan)
+            .children!
+            .first
+            .style!
+            .color!;
+
+        Future<void> expectFade(Color from, Color to, Color text) async {
+          await tester.tap(find.byKey(const ValueKey('compact-row-check-1')));
+          await tester.pump();
+          expect(rowColor(), from, reason: 'starts from the old look');
+          await tester.pump(compactRowStyleDuration ~/ 2);
+          expect(rowColor(), isNot(anyOf(from, to)),
+              reason: 'is between the two looks halfway');
+          await tester.pump(compactRowStyleDuration);
+          expect(rowColor(), to);
+          expect(textColor(), text);
+        }
+
+        expect(rowColor(), scheme.exam);
+        await expectFade(
+            scheme.exam, scheme.surfaceContainerHigh, scheme.onSurfaceVariant);
+        await expectFade(
+            scheme.surfaceContainerHigh, scheme.exam, scheme.onExam);
+      });
+    }
+
     testWidgets('offline, the notepad does nothing', (tester) async {
       await _pumpDashboard(tester, _dashboardState());
 
