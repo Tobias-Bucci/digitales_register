@@ -197,3 +197,8 @@ build-dir/
 repo/
 # Local Flutter export environment (contains local paths)
 packages/charts_repo/charts_flutter/example/ios/Flutter/flutter_export_environment.sh
+
+
+
+CLAUDE.md
+.claude
