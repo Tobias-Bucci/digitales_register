@@ -678,7 +678,7 @@
   "calendar.detailTitle": "Detailansicht",
   "calendar.noSchool": "Keine Schule",
   "calendar.selfCreatedAssessment": "Selbst erstellt",
-  "calendar.selfCreatedAssessmentBody": "Dieser Termin ist eine selbst erstellte {type}.",
+  "calendar.selfCreatedAssessmentBody": "Du hast diesen Termin selbst erstellt ({type}).",
   "calendarSync.permissionDenied": "Kalenderberechtigung wurde nicht erteilt.",
   "calendarSync.noWritableCalendar": "Kein beschreibbarer Standardkalender gefunden.",
   "calendarSync.unavailable": "Kalendersynchronisierung ist auf diesem Gerät nicht verfügbar.",
