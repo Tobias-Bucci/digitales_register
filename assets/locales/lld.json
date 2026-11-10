@@ -678,7 +678,7 @@
   "calendar.detailTitle": "Detais",
   "calendar.noSchool": "Degüna scola",
   "calendar.selfCreatedAssessment": "Crià da te",
-  "calendar.selfCreatedAssessmentBody": "Chësta uscita é n {type} crià da te.",
+  "calendar.selfCreatedAssessmentBody": "T'as crià te chësta uscita ({type}).",
   "calendarSync.permissionDenied": "Permëss por le calendere nia conzedü.",
   "calendarSync.noWritableCalendar": "Degün calendere standard scrivibl ciafè.",
   "calendarSync.unavailable": "La sincronisaziun dl calendere n'é nia disponibla sön chësc darsëi.",

@@ -678,7 +678,7 @@
   "calendar.detailTitle": "Detail view",
   "calendar.noSchool": "No school",
   "calendar.selfCreatedAssessment": "Self-created",
-  "calendar.selfCreatedAssessmentBody": "This entry is a self-created {type}.",
+  "calendar.selfCreatedAssessmentBody": "You created this entry yourself ({type}).",
   "calendarSync.permissionDenied": "Calendar permission was not granted.",
   "calendarSync.noWritableCalendar": "No writable default calendar was found.",
   "calendarSync.unavailable": "Calendar sync is not available on this device.",

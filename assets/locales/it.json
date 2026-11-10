@@ -678,7 +678,7 @@
   "calendar.detailTitle": "Dettagli",
   "calendar.noSchool": "Niente scuola",
   "calendar.selfCreatedAssessment": "Creato da te",
-  "calendar.selfCreatedAssessmentBody": "Questa voce è una {type} creata da te.",
+  "calendar.selfCreatedAssessmentBody": "Hai creato tu questa voce ({type}).",
   "calendarSync.permissionDenied": "Permesso per il calendario non concesso.",
   "calendarSync.noWritableCalendar": "Nessun calendario predefinito scrivibile trovato.",
   "calendarSync.unavailable": "La sincronizzazione del calendario non è disponibile su questo dispositivo.",
