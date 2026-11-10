@@ -48,6 +48,7 @@ void main() {
               title: 'Test',
               subtitle: 'Textanalyse',
               type: HomeworkType.gradeGroup,
+              warning: true,
             ),
           ]),
         ]);

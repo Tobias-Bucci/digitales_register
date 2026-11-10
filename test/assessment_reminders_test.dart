@@ -22,6 +22,7 @@ Homework _test(int id, {String subject = 'Deutsch', String title = 'Test'}) =>
       subtitle: 'Textanalyse',
       label: subject,
       type: HomeworkType.gradeGroup,
+      warning: true,
     );
 
 Day _day(UtcDateTime date, List<Homework> homework) =>
@@ -143,6 +144,21 @@ void main() {
         ])),
         isEmpty,
       );
+    });
+
+    test('ignores graded homework the server sends as a grade group', () {
+      final reminders = plan(_state([
+        _day(examDate, [
+          _test(1),
+          _test(2).rebuild((b) => b
+            ..title = 'Hausaufgabe'
+            ..subtitle = 'Finish reading Chapters 5+6'
+            ..warning = false),
+        ]),
+      ]));
+
+      expect(reminders, hasLength(3));
+      expect(reminders.map((r) => r.title), everyElement(contains('Test')));
     });
 
     test('includes assessments the user noted with /test', () {
@@ -272,7 +288,12 @@ void main() {
       final reminder = plan(_state(
         [
           _day(examDate, [
-            buildHomework(id: 1, title: ' ', type: HomeworkType.gradeGroup),
+            buildHomework(
+              id: 1,
+              title: ' ',
+              type: HomeworkType.gradeGroup,
+              warning: true,
+            ),
           ]),
         ],
         reminderDays: [1],

@@ -90,7 +90,12 @@ List<ExamAssessment> examAssessments(AppState state) {
       );
       // Grade groups are the server's native model for tests and classwork.
       // Local /test, /cw and /exam reminders are projected as grade groups.
-      if (local == null && homework.type != HomeworkType.gradeGroup) continue;
+      // The server also sends graded homework as a grade group; only entries
+      // flagged with `warning` (server `homework == 0`) are real assessments.
+      if (local == null &&
+          (homework.type != HomeworkType.gradeGroup || !homework.warning)) {
+        continue;
+      }
       final title = local?.displaySubtitle ??
           (homework.subtitle.trim().isNotEmpty
               ? homework.subtitle.trim()

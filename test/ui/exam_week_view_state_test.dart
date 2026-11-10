@@ -27,6 +27,7 @@ void main() {
             buildHomework(
               id: 7,
               type: HomeworkType.gradeGroup,
+              warning: true,
               title: 'Synthetic test',
               label: 'Synthetic math',
             ),

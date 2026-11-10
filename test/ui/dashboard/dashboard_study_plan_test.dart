@@ -36,6 +36,7 @@ void main() {
               subtitle: 'Prüfung $day',
               label: 'Mathematik',
               type: HomeworkType.gradeGroup,
+              warning: true,
             ),
           ]),
       ]);
