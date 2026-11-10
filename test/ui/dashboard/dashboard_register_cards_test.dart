@@ -124,7 +124,8 @@ void main() {
                 title: 'Test',
                 subtitle: 'Dezimalzahlen: 1431, 1432, 1454 ($day)',
                 label: 'Mathematik',
-                type: HomeworkType.gradeGroup),
+                type: HomeworkType.gradeGroup,
+                warning: true),
           ]),
       ]);
     }));

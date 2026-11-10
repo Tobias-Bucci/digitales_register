@@ -33,6 +33,37 @@ void main() {
     expect(assessment.id, 'assessment-7');
   });
 
+  test('graded homework sent as a grade group is no assessment', () {
+    final state = AppState((b) {
+      b.dashboardState.allDays = ListBuilder<Day>([
+        buildDay(
+          date: UtcDateTime(2026, 4, 20),
+          homework: [
+            buildHomework(
+              id: 1,
+              title: 'Hausaufgabe',
+              subtitle: 'Finish reading Chapters 5+6',
+              label: 'Englisch',
+              type: HomeworkType.gradeGroup,
+            ),
+            buildHomework(
+              id: 2,
+              title: 'Test',
+              subtitle: 'Grammatik',
+              label: 'Englisch',
+              type: HomeworkType.gradeGroup,
+              warning: true,
+            ),
+          ],
+        ),
+      ]);
+    });
+
+    final assessments = examAssessments(state);
+
+    expect(assessments.map((a) => a.id), ['assessment-2']);
+  });
+
   test('finds only distinct future calendar assessments for the subject', () {
     final state = AppState((b) {
       b.dashboardState.allDays = ListBuilder<Day>([
@@ -45,6 +76,7 @@ void main() {
               subtitle: 'Textanalyse',
               label: 'Deutsch',
               type: HomeworkType.gradeGroup,
+              warning: true,
             ),
             buildHomework(
               id: 2,
@@ -52,6 +84,7 @@ void main() {
               subtitle: 'Grammatik',
               label: 'Englisch',
               type: HomeworkType.gradeGroup,
+              warning: true,
             ),
           ],
         ),
@@ -64,6 +97,7 @@ void main() {
               subtitle: 'Textanalyse',
               label: 'Deutsch',
               type: HomeworkType.gradeGroup,
+              warning: true,
             ),
           ],
         ),
@@ -76,6 +110,7 @@ void main() {
               subtitle: 'Vergangen',
               label: 'Deutsch',
               type: HomeworkType.gradeGroup,
+              warning: true,
             ),
           ],
         ),

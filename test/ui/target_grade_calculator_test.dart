@@ -97,6 +97,7 @@ void main() {
                 subtitle: 'Thema $i',
                 label: 'Mathematik',
                 type: HomeworkType.gradeGroup,
+                warning: true,
               ),
             ],
           ),
