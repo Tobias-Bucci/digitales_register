@@ -230,7 +230,7 @@ class CompactDayWidget extends StatelessWidget {
             noInternet: vm.noInternet,
             askWhenDelete: vm.askWhenDelete,
             onOpenAttachment: onOpenAttachment,
-            toggleDone: () => toggleDoneCallback(homework, !homework.checked),
+            setDone: (done) => toggleDoneCallback(homework, done),
             removeThis: () => removeReminderCallback(homework, day),
             setDoNotAskWhenDelete: setDoNotAskWhenDeleteCallback,
             editReminder: () async {
@@ -306,7 +306,7 @@ class CompactEntryRow extends StatelessWidget {
     required this.noInternet,
     required this.askWhenDelete,
     required this.onOpenAttachment,
-    required this.toggleDone,
+    required this.setDone,
     required this.removeThis,
     required this.setDoNotAskWhenDelete,
     required this.editReminder,
@@ -320,8 +320,14 @@ class CompactEntryRow extends StatelessWidget {
   final bool colorBorder, colorTestsInRed, noInternet, askWhenDelete;
   final BuiltMap<String, SubjectTheme> subjectThemes;
   final AttachmentCallback onOpenAttachment;
-  final VoidCallback toggleDone, removeThis, setDoNotAskWhenDelete;
+
+  /// Stores the given checked state. Takes the value instead of flipping
+  /// [item], so the details sheet can toggle from the entry it shows live.
+  final ValueChanged<bool> setDone;
+  final VoidCallback removeThis, setDoNotAskWhenDelete;
   final Future<void> Function() editReminder;
+
+  void _toggleDone() => setDone(!item.checked);
 
   Future<void> _delete(BuildContext context, Future<void> Function() delete) =>
       deleteReminderWithConfirmation(
@@ -344,7 +350,7 @@ class CompactEntryRow extends StatelessWidget {
         noInternet: noInternet,
         askWhenDelete: askWhenDelete,
         onOpenAttachment: onOpenAttachment,
-        toggleDone: toggleDone,
+        setDone: setDone,
         editReminder: editReminder,
         delete: () => _delete(context, delete),
       ),
@@ -600,7 +606,7 @@ class CompactEntryRow extends StatelessWidget {
                       child: Semantics(
                         checked: item.checked,
                         enabled: !noInternet,
-                        onTap: noInternet ? null : toggleDone,
+                        onTap: noInternet ? null : _toggleDone,
                         label: l10n.text('dashboard.markDone'),
                         excludeSemantics: true,
                         child: InkWell(
@@ -609,7 +615,7 @@ class CompactEntryRow extends StatelessWidget {
                           hoverColor: hover,
                           focusColor: hover,
                           mouseCursor: NewDesignTheme.clickCursor,
-                          onTap: noInternet ? null : toggleDone,
+                          onTap: noInternet ? null : _toggleDone,
                           child: SizedBox(
                             width: 48,
                             height: compactRowHeight,
@@ -747,7 +753,7 @@ class EntryDetailsSheet extends StatelessWidget {
     required this.noInternet,
     required this.askWhenDelete,
     required this.onOpenAttachment,
-    required this.toggleDone,
+    required this.setDone,
     required this.editReminder,
     required this.delete,
   });
@@ -758,7 +764,7 @@ class EntryDetailsSheet extends StatelessWidget {
   final bool colorBorder, colorTestsInRed, noInternet, askWhenDelete;
   final BuiltMap<String, SubjectTheme> subjectThemes;
   final AttachmentCallback onOpenAttachment;
-  final VoidCallback toggleDone;
+  final ValueChanged<bool> setDone;
   final Future<void> Function() editReminder, delete;
 
   @override
@@ -859,7 +865,9 @@ class EntryDetailsSheet extends StatelessWidget {
                 if (canCheck)
                   FilledButton.tonalIcon(
                     key: const Key('entry-details-toggle'),
-                    onPressed: noInternet ? null : toggleDone,
+                    // Flips the live entry, not the one the sheet opened
+                    // with, so pressing again undoes the press (#112).
+                    onPressed: noInternet ? null : () => setDone(!item.checked),
                     icon: NotepadMark(
                       checked: item.checked,
                       size: 20,

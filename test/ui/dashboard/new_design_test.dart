@@ -374,6 +374,47 @@ void main() {
       expect(find.byKey(const Key('entry-details-toggle')), findsOneWidget);
     });
 
+    testWidgets('the details toggle the live entry, back and forth (#112)',
+        (tester) async {
+      final store = await _pumpDashboard(
+        tester,
+        _dashboardState().rebuild((b) => b.noInternet = false),
+      );
+      final checked = <bool>[];
+      store.nextState.listen((state) {
+        checked.add(state.dashboardState.allDays!.single.homework
+            .firstWhere((homework) => homework.id == 2)
+            .checked);
+      });
+      final toggle = find.byKey(const Key('entry-details-toggle'));
+      String label() => tester
+          .widget<Text>(
+              find.descendant(of: toggle, matching: find.byType(Text)))
+          .data!;
+      bool mark() => tester
+          .widget<NotepadMark>(
+              find.descendant(of: toggle, matching: find.byType(NotepadMark)))
+          .checked;
+
+      await tester.tap(find.byKey(const ValueKey('compact-row-open-2')));
+      await settleFor(tester);
+      expect(label(), 'Als offen markieren');
+      expect(mark(), isTrue);
+
+      await tester.tap(toggle);
+      await settleFor(tester);
+      expect(checked.last, isFalse);
+      expect(label(), 'Als erledigt markieren');
+      expect(mark(), isFalse);
+
+      await tester.tap(toggle);
+      await settleFor(tester);
+      expect(checked.last, isTrue);
+      expect(checked, [false, true]);
+      expect(label(), 'Als offen markieren');
+      expect(mark(), isTrue);
+    });
+
     testWidgets('own reminders can be edited and deleted from their details',
         (tester) async {
       await _pumpDashboard(
