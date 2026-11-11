@@ -10,6 +10,8 @@ import 'package:dr/server_notifications/server_notification_repository.dart';
 import 'package:dr/server_notifications/server_notification_service.dart';
 import 'package:dr/ui/glass_surface.dart';
 import 'package:dr/ui/server_notifications/server_notification_center.dart';
+import 'package:dr/ui/server_notifications/server_notification_routes.dart'
+    show showNotificationCenterInShell;
 import 'package:dr/ui/server_notifications/server_notification_visuals.dart';
 import 'package:flutter/gestures.dart' show PointerDeviceKind;
 import 'package:flutter/material.dart';
@@ -97,10 +99,16 @@ class ServerNotificationHost extends StatefulWidget {
     this.blockedChanges,
     this.onLanguage,
     this.newDesign = false,
+    this.openInShell = showNotificationCenterInShell,
   });
 
   /// Glass, in the look of the new dashboard.
   final bool newDesign;
+
+  /// Opens the center inside the shell of the new design, focused on the
+  /// given notification, as the bell does. False where there is no shell;
+  /// [navigator] then gets the center, as in Legacy and while signed out.
+  final bool Function({String? initialId}) openInShell;
 
   final Widget child;
   final ServerNotificationRepository? repository;
@@ -228,12 +236,14 @@ class _ServerNotificationHostState extends State<ServerNotificationHost> {
   void _open() {
     final navigator = _navigator;
     final shown = _shown;
+    final initialId = shown.length == 1 ? shown.single.id : null;
     _close();
+    if (widget.newDesign && widget.openInShell(initialId: initialId)) return;
     if (navigator == null) return;
     showServerNotificationCenter(
       navigator,
       repository: _repository,
-      initialId: shown.length == 1 ? shown.single.id : null,
+      initialId: initialId,
     );
   }
 
