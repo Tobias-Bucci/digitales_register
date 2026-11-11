@@ -114,9 +114,8 @@ class _ExamCalendarPageState extends State<ExamCalendarPage> {
     return Scaffold(
       appBar: ResponsiveNavigationScope.isActive(context)
           ? ResponsiveAppBar(
-              title: title,
+              title: const CalendarViewSwitcher(exams: true),
               actions: actions,
-              bottom: const CalendarViewSwitcher(exams: true),
             )
           : AppBar(title: title, actions: actions),
       body: _timeline
