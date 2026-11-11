@@ -915,6 +915,106 @@ void main() {
         expect(find.textContaining('2026'), findsOneWidget);
       });
     }
+
+    // The server labels its types in one language (#120).
+    final germanTypes = [
+      item(
+          title: 'Wartungsarbeiten',
+          typeKey: 'maintenance',
+          typeLabel: 'Wartung',
+          publishedAt: '2026-10-22T19:03:00Z'),
+      item(
+          id: b,
+          title: 'Ausfall',
+          typeKey: 'critical',
+          typeLabel: 'Kritisch',
+          critical: true,
+          publishedAt: '2026-10-22T19:02:00Z'),
+      item(
+          id: c,
+          title: 'Termin',
+          typeKey: 'event',
+          typeLabel: 'Veranstaltung',
+          publishedAt: '2026-10-22T19:01:00Z'),
+    ];
+
+    testWidgets('known types follow the app language in list and speech',
+        (tester) async {
+      final semantics = tester.ensureSemantics();
+      final repository = await filled(tester, germanTypes);
+      await tester.pumpWidget(app(
+        locale: const Locale('it'),
+        home: ServerNotificationCenterPage(
+            repository: repository, onRefresh: () {}),
+      ));
+      await tester.pumpAndSettle();
+      expect(find.text('Manutenzione'), findsOneWidget);
+      expect(find.text('Critico'), findsOneWidget);
+      expect(find.text('Wartung'), findsNothing);
+      expect(find.text('Kritisch'), findsNothing);
+      // A key the app does not know keeps the server's label.
+      expect(find.text('Veranstaltung'), findsOneWidget);
+      expect(
+          find.bySemanticsLabel(RegExp(', Manutenzione, Wartungsarbeiten, ')),
+          findsOneWidget);
+      expect(find.bySemanticsLabel(RegExp(', Critico, Ausfall, ')),
+          findsOneWidget);
+      semantics.dispose();
+    });
+
+    for (final (locale, expected) in [
+      (const Locale('it'), 'Manutenzione'),
+      (const Locale('en'), 'Maintenance'),
+      (
+        const Locale.fromSubtags(languageCode: 'de', countryCode: 'LLD'),
+        'Manutenziun'
+      ),
+      (const Locale('de'), 'Wartung'),
+    ]) {
+      testWidgets('the detail names the type in $locale', (tester) async {
+        final repository = await filled(tester, germanTypes);
+        await tester.pumpWidget(app(
+          locale: locale,
+          home: ServerNotificationDetailPage(
+            id: a,
+            repository: repository,
+            openLink: (_) async => ServerNotificationLinkResult.opened,
+          ),
+        ));
+        await settle(tester);
+        expect(find.text(expected), findsOneWidget);
+        await tester.pumpWidget(const SizedBox());
+        repository.dispose();
+      });
+    }
+
+    testWidgets('the popup host reports the app language, also after a change',
+        (tester) async {
+      final repository = await filled(tester, []);
+      final reported = <String>[];
+      Widget host(Locale locale) => app(
+            locale: locale,
+            home: const Text('App'),
+            builder: (context, child) => ServerNotificationHost(
+              repository: repository,
+              navigator: () => null,
+              isBlocked: () => false,
+              blockedChanges: ChangeNotifier(),
+              onLanguage: reported.add,
+              child: child!,
+            ),
+          );
+      await tester.pumpWidget(host(const Locale('it')));
+      await tester.pumpAndSettle();
+      expect(reported, ['it']);
+      await tester.pumpWidget(host(
+          const Locale.fromSubtags(languageCode: 'de', countryCode: 'LLD')));
+      await tester.pumpAndSettle();
+      expect(reported.last, 'lld');
+      await tester.pumpWidget(host(const Locale('en')));
+      await tester.pumpAndSettle();
+      expect(reported.last, 'en');
+    });
   });
 
   group('fresh installation (#103)', () {

@@ -56,6 +56,18 @@ from the local reminders, which is why the app calls them "App-Mitteilungen".
 - **No events.** The routes of this feature have no name on purpose: the navigator
   observer turns route names into screen events.
 - **Offline limits.** A client cannot learn about a revocation while it is offline.
+- **Language (#120).** `lang` is the app's language from the settings, never the
+  device's: `de`, `it` or `en`. Ladin (`lld`, locale `de-LLD`) sends `de`, as
+  the register profile does, instead of a tag the server does not know
+  (`serverNotificationLanguage`). The popup host reports the language whenever
+  the app's locale changes; a different `lang` refetches in full, because the
+  cache key and the validator include it. Until it reports, the service reads
+  `appLanguageController`. Title and body are written on the server, which
+  answers in German where a text has no translation; the client never
+  translates them. Type labels are the exception: for the well-known keys
+  `info`, `update`, `maintenance` and `critical` the app shows its own
+  `appNotifications.type.*` text (`serverNotificationTypeLabel`), and any other
+  key keeps the server's `label`.
 
 ## Timing
 

@@ -332,7 +332,7 @@ class _NotificationList extends StatelessWidget {
     final types = <String, String>{
       if (school != null)
         for (final item in repository.notifications)
-          item.type.key: item.type.label,
+          item.type.key: serverNotificationTypeLabel(l10n, item.type),
     };
     final entries = school == null
         ? all
@@ -769,11 +769,11 @@ class _NotificationTile extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final l10n = context.l10n;
+    final type = serverNotificationTypeLabel(l10n, item.type);
     return _FeedTile(
       leading: ServerNotificationTypeIcon(type: item.type),
-      label: showSource
-          ? '${l10n.text('notifications.sourceApp')} · ${item.type.label}'
-          : item.type.label,
+      label:
+          showSource ? '${l10n.text('notifications.sourceApp')} · $type' : type,
       title: item.title,
       body: item.body,
       time: formatServerNotificationTime(context, item.publishedAt),
@@ -970,7 +970,8 @@ class _ServerNotificationDetailViewState
                     ServerNotificationTypeIcon(type: item.type, size: 36),
                     const SizedBox(width: 12),
                     Expanded(
-                      child: Text(item.type.label,
+                      child: Text(
+                          serverNotificationTypeLabel(context.l10n, item.type),
                           style: theme.textTheme.labelLarge),
                     ),
                   ],

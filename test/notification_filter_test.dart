@@ -20,7 +20,11 @@ Notification _school(int id) => Notification((b) => b
 
 ServerNotificationType _type(String key) => ServerNotificationType(
       key: key,
-      label: key == 'update' ? 'Update' : 'Info',
+      label: switch (key) {
+        'update' => 'Update',
+        'event' => 'Veranstaltung',
+        _ => 'Info',
+      },
       colorValue: null,
       icon: 'info',
       critical: false,
@@ -185,18 +189,22 @@ void main() {
       NotificationFilter stored = const NotificationFilter(),
       Set<String> read = const {},
       List<Notification>? school,
+      List<ServerNotification>? apps,
+      String language = 'de',
     }) async {
       final store = _MemoryFilterStore()..stored = stored;
       final schoolItems = school ?? [_school(1)];
       await pumpApp(
         tester,
         store: createStore(
-          initialState: AppState((b) => b.notificationState.notifications =
-              ListBuilder<Notification>(schoolItems)),
+          initialState: AppState((b) => b
+            ..notificationState.notifications =
+                ListBuilder<Notification>(schoolItems)
+            ..settingsState.languageCode = language),
         ),
         home: ServerNotificationCenterPage(
           repository: _FakeRepository(
-            [_app('a', 'info'), _app('b', 'update')],
+            apps ?? [_app('a', 'info'), _app('b', 'update')],
             read: read,
           ),
           onRefresh: () {},
@@ -239,6 +247,33 @@ void main() {
       expect(find.text('app a'), findsOneWidget);
 
       await tester.tap(find.widgetWithText(ChoiceChip, 'Update'));
+      await settleFor(tester);
+      expect(find.text('app a'), findsNothing);
+      expect(find.text('app b'), findsOneWidget);
+    });
+
+    testWidgets('names well-known types in the app language (#120)',
+        (tester) async {
+      await pump(
+        tester,
+        language: 'it',
+        apps: [_app('a', 'info'), _app('b', 'update'), _app('c', 'event')],
+        // Type chips appear with the app source only.
+        stored: const NotificationFilter(source: NotificationSourceFilter.app),
+      );
+      // Filter chips: the app's names for known keys, the server's otherwise.
+      for (final label in ['Informazione', 'Aggiornamento', 'Veranstaltung']) {
+        expect(find.widgetWithText(ChoiceChip, label), findsOneWidget,
+            reason: label);
+      }
+      expect(find.widgetWithText(ChoiceChip, 'Info'), findsNothing);
+      expect(find.widgetWithText(ChoiceChip, 'Update'), findsNothing);
+      // The rows say the same.
+      expect(find.text('App · Informazione'), findsOneWidget);
+      expect(find.text('App · Aggiornamento'), findsOneWidget);
+      expect(find.text('App · Veranstaltung'), findsOneWidget);
+
+      await tester.tap(find.widgetWithText(ChoiceChip, 'Aggiornamento'));
       await settleFor(tester);
       expect(find.text('app a'), findsNothing);
       expect(find.text('app b'), findsOneWidget);
