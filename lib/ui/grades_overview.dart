@@ -23,6 +23,7 @@ import 'package:dr/container/grades_chart_container.dart';
 import 'package:dr/grade_forecast.dart';
 import 'package:dr/i18n/app_localizations.dart';
 import 'package:dr/theme/app_palette.dart';
+import 'package:dr/ui/glass_page.dart';
 import 'package:dr/ui/glass_surface.dart';
 import 'package:dr/ui/grade_colors.dart';
 import 'package:dr/ui/grades_format.dart';
@@ -423,79 +424,4 @@ class _ChartLegend extends StatelessWidget {
 }
 
 /// A door to something that has its own panel or page.
-class GradesInsightTile extends StatelessWidget {
-  const GradesInsightTile({
-    super.key,
-    required this.icon,
-    required this.title,
-    required this.subtitle,
-    required this.onTap,
-  });
-
-  static const _shape = RoundedRectangleBorder(
-    borderRadius: DesignTokens.cardBorderRadius,
-  );
-
-  final IconData icon;
-  final String title, subtitle;
-  final VoidCallback onTap;
-
-  @override
-  Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    final scheme = theme.colorScheme;
-    return GlassFocusRing(
-      shape: _shape,
-      activeTint: scheme.onSurface.withValues(alpha: 0.05),
-      child: Semantics(
-        button: true,
-        label: '$title, $subtitle',
-        onTap: onTap,
-        excludeSemantics: true,
-        child: Material(
-          type: MaterialType.transparency,
-          child: InkWell(
-            customBorder: _shape,
-            hoverColor: Colors.transparent,
-            focusColor: Colors.transparent,
-            mouseCursor: NewDesignTheme.clickCursor,
-            onTap: onTap,
-            child: GlassCard(
-              padding: const EdgeInsets.fromLTRB(10, 8, 8, 8),
-              child: Row(
-                children: [
-                  Icon(icon, size: 20, color: scheme.primary),
-                  const SizedBox(width: 8),
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: [
-                        Text(
-                          title,
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
-                          style: theme.textTheme.labelLarge?.copyWith(
-                            fontWeight: FontWeight.w600,
-                          ),
-                        ),
-                        Text(
-                          subtitle,
-                          maxLines: 2,
-                          overflow: TextOverflow.ellipsis,
-                          style: theme.textTheme.labelSmall?.copyWith(
-                            color: scheme.onSurfaceVariant,
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                ],
-              ),
-            ),
-          ),
-        ),
-      ),
-    );
-  }
-}
+typedef GradesInsightTile = GlassTile;

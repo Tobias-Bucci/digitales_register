@@ -26,6 +26,7 @@ import 'package:dr/ui/compact_day_list.dart' show compactRowHeight;
 import 'package:dr/ui/dashboard_app_header.dart';
 import 'package:dr/ui/dashboard_event_banner.dart' show subjectLetter;
 import 'package:dr/ui/favorite_subject_filter.dart';
+import 'package:dr/ui/glass_page.dart';
 import 'package:dr/ui/glass_surface.dart';
 import 'package:dr/ui/grade_colors.dart';
 import 'package:dr/ui/grades_format.dart';
@@ -196,40 +197,15 @@ class _GradesSubjectListState extends State<GradesSubjectList> {
       crossAxisAlignment: CrossAxisAlignment.stretch,
       mainAxisSize: MainAxisSize.min,
       children: [
-        Padding(
-          padding: const EdgeInsets.only(left: 4),
-          child: Row(
-            children: [
-              Expanded(
-                child: Semantics(
-                  header: true,
-                  child: Text.rich(
-                    TextSpan(
-                      text: l10n.text('grades.subjects'),
-                      children: [
-                        TextSpan(
-                          text: '  ${subjects.length}',
-                          style: TextStyle(
-                            color: scheme.onSurfaceVariant,
-                            fontWeight: FontWeight.w400,
-                          ),
-                        ),
-                      ],
-                    ),
-                    key: const Key('grades-subjects-title'),
-                    style: theme.textTheme.titleSmall?.copyWith(
-                      fontWeight: FontWeight.w600,
-                    ),
-                  ),
-                ),
-              ),
-              HeaderDiscButton(
-                key: const Key('grades-display-options'),
-                tooltip: l10n.text('grades.view'),
-                icon: Icons.tune_rounded,
-                onPressed: widget.onOpenDisplayOptions,
-              ),
-            ],
+        GlassSectionHeading(
+          titleKey: const Key('grades-subjects-title'),
+          title: l10n.text('grades.subjects'),
+          count: subjects.length,
+          trailing: HeaderDiscButton(
+            key: const Key('grades-display-options'),
+            tooltip: l10n.text('grades.view'),
+            icon: Icons.tune_rounded,
+            onPressed: widget.onOpenDisplayOptions,
           ),
         ),
         if (favorites.isNotEmpty)
