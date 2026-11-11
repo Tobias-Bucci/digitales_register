@@ -244,10 +244,16 @@ class _CalendarState extends State<Calendar> with TickerProviderStateMixin {
     }
   }
 
+  void _showCurrentWeek() {
+    _controller.animateToPage(pageOf(toMonday(now)),
+        curve: _animatePageCurve, duration: _animatePageDuration);
+  }
+
   @override
   Widget build(BuildContext context) {
     return LayoutBuilder(builder: (context, constraints) {
       tabletMode = constraints.maxWidth >= tabletLayoutBreakPoint;
+      final newDesign = ResponsiveNavigationScope.isActive(context);
       final availableFavoriteSubjects = _availableFavoriteSubjects();
       final selectedFavoriteSubject =
           _resolvedFavoriteSubject(availableFavoriteSubjects);
@@ -271,20 +277,25 @@ class _CalendarState extends State<Calendar> with TickerProviderStateMixin {
               children: [
                 Scaffold(
                   appBar: ResponsiveAppBar(
-                    title: Text(context.t('calendar.title')),
+                    title: newDesign
+                        ? const CalendarViewSwitcher(exams: false)
+                        : Text(context.t('calendar.title')),
                     actions: <Widget>[
-                      if (toMonday(now) != widget.vm.currentMonday)
+                      if (toMonday(now) != widget.vm.currentMonday && newDesign)
+                        // An icon leaves the title row to the view switcher.
+                        IconButton(
+                          key: const Key('calendar-current-week'),
+                          tooltip: context.t('calendar.currentWeek'),
+                          icon: const Icon(Icons.today_outlined),
+                          onPressed: _showCurrentWeek,
+                        )
+                      else if (toMonday(now) != widget.vm.currentMonday)
                         TextButton(
                           style: TextButton.styleFrom(
                             foregroundColor: Colors.white,
                             padding: const EdgeInsets.symmetric(horizontal: 16),
                           ),
-                          onPressed: () {
-                            final date = toMonday(now);
-                            _controller.animateToPage(pageOf(date),
-                                curve: _animatePageCurve,
-                                duration: _animatePageDuration);
-                          },
+                          onPressed: _showCurrentWeek,
                           child: Text(context.t('calendar.currentWeek')),
                         ),
                     ],
@@ -293,9 +304,7 @@ class _CalendarState extends State<Calendar> with TickerProviderStateMixin {
                       ResponsiveNavigationScope.spacerOf(context),
                   body: Column(
                     children: <Widget>[
-                      if (ResponsiveNavigationScope.isActive(context))
-                        const CalendarViewSwitcher(exams: false)
-                      else
+                      if (!newDesign)
                         Align(
                           alignment: Alignment.centerRight,
                           child: TextButton.icon(

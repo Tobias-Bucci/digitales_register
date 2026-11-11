@@ -2023,7 +2023,7 @@ void main() {
       expect(switcher, findsOneWidget);
       await tester.tap(find.descendant(
         of: switcher,
-        matching: find.byIcon(Icons.school_outlined),
+        matching: find.byKey(const ValueKey('glass-segment-true')),
       ));
       await settleFor(tester, duration: const Duration(seconds: 1));
 
