@@ -79,7 +79,20 @@ PlannedReminder _daily({int hour = 7, int minute = 30}) => PlannedReminder(
       at: DateTime(2000, 1, 1, hour, minute),
       title: 'Daily',
       body: 'Body',
-      repeatsDaily: true,
+      repeats: true,
+    );
+
+/// Like the Mensa reminder: one per weekday, each with its own id.
+PlannedReminder _weekly(int weekday, {int hour = 7, int minute = 30}) =>
+    PlannedReminder(
+      id: 2000 + weekday,
+      channel: ReminderChannel.daily,
+      channelName: 'Channel',
+      at: DateTime(2000, 1, 1, hour, minute),
+      title: 'Weekly',
+      body: 'Body',
+      repeats: true,
+      weekday: weekday,
     );
 
 void main() {
@@ -263,6 +276,99 @@ void main() {
     });
   });
 
+  group('weekly reminder', () {
+    // The tests start on Tuesday, 10 March 2026, at noon.
+
+    test('repeats on its weekday by wall clock in the zone of the device',
+        () async {
+      await create(ReminderBackend.systemRepeating)
+          .sync([_weekly(DateTime.monday), _weekly(DateTime.wednesday)]);
+
+      final monday = native.scheduled[2001]!;
+      final wednesday = native.scheduled[2003]!;
+      expect(monday.repeat, DateTimeComponents.dayOfWeekAndTime);
+      expect(wednesday.repeat, DateTimeComponents.dayOfWeekAndTime);
+      expect((monday.date.weekday, monday.date.day, monday.date.hour),
+          (DateTime.monday, 16, 7));
+      expect((wednesday.date.weekday, wednesday.date.day),
+          (DateTime.wednesday, 11));
+      expect(monday.date.location.name, 'Europe/Rome');
+    });
+
+    test('the daily reminder of older versions is cancelled', () async {
+      await create(ReminderBackend.systemRepeating).sync([_daily()]);
+      expect(native.scheduled.keys, [1000]);
+
+      // The first sync after the update, in a new app process.
+      await create(ReminderBackend.systemRepeating).sync([
+        for (final day in [1, 2, 3, 4, 5]) _weekly(day),
+      ]);
+
+      expect(native.cancelled, [1000]);
+      expect(native.scheduled.keys.toSet(), {2001, 2002, 2003, 2004, 2005});
+    });
+
+    test('a removed weekday is cancelled, the others stay alone', () async {
+      final service = create(ReminderBackend.systemRepeating);
+      await service.sync([_weekly(1), _weekly(2)]);
+      final calls = native.scheduleCalls;
+      await service.sync([_weekly(1)]);
+
+      expect(native.cancelled, [2002]);
+      expect(native.scheduleCalls, calls);
+    });
+
+    test('a changed time replaces the notification of that weekday', () async {
+      final service = create(ReminderBackend.systemRepeating);
+      await service.sync([_weekly(1)]);
+      await service.sync([_weekly(1, hour: 9)]);
+
+      expect(native.scheduled[2001]!.date.hour, 9);
+      expect(native.scheduled.length, 1);
+    });
+
+    test('only its weekdays are planned where the system cannot repeat',
+        () async {
+      await create(ReminderBackend.systemOneTime)
+          .sync([_weekly(DateTime.monday), _weekly(DateTime.wednesday)]);
+
+      expect(native.scheduled.length, 4);
+      expect(native.scheduled.values.every((s) => s.repeat == null), isTrue);
+      expect(
+        native.scheduled.values.map((s) => s.date.toLocal().day).toSet(),
+        {11, 16, 18, 23},
+      );
+    });
+
+    test('is shown only on its weekdays while the app is running', () {
+      FakeAsync().run((async) {
+        final start = DateTime(2026, 3, 10, 12);
+        final clock = async.getClock(start);
+        final service = ReminderNotificationService(
+          native: native,
+          backend: ReminderBackend.whileRunning,
+          clock: clock.now,
+          initializer: () async {},
+          permission: () async => true,
+          permissionRequest: () async => true,
+        );
+        service.sync([_weekly(DateTime.thursday)]);
+        async.flushMicrotasks();
+
+        // Wednesday morning passes without a reminder.
+        async.elapse(const Duration(hours: 20));
+        expect(native.shown, isEmpty);
+        // Thursday 7:30.
+        async.elapse(const Duration(days: 1));
+        expect(native.shown, hasLength(1));
+        // Nothing else until the next Thursday.
+        async.elapse(const Duration(days: 5));
+        expect(native.shown, hasLength(1));
+        service.dispose();
+      });
+    });
+  });
+
   group('without system scheduling', () {
     test('shows a reminder while the app is running, once', () {
       FakeAsync().run((async) {
@@ -333,6 +439,32 @@ void main() {
         (29, 7, 30),
         (30, 7, 30),
         (31, 7, 30),
+      ]);
+    });
+
+    test('the next weekly occurrence is on the weekday, later today or ahead',
+        () {
+      final tuesday = DateTime(2026, 3, 10, 12);
+      expect(nextWeeklyOccurrence(tuesday, DateTime.tuesday, 13, 0),
+          DateTime(2026, 3, 10, 13));
+      expect(nextWeeklyOccurrence(tuesday, DateTime.tuesday, 7, 30),
+          DateTime(2026, 3, 17, 7, 30));
+      expect(nextWeeklyOccurrence(tuesday, DateTime.wednesday, 7, 30),
+          DateTime(2026, 3, 11, 7, 30));
+      expect(nextWeeklyOccurrence(tuesday, DateTime.monday, 7, 30),
+          DateTime(2026, 3, 16, 7, 30));
+      expect(nextWeeklyOccurrence(DateTime(2026, 12, 30, 20), DateTime.friday,
+              7, 30),
+          DateTime(2027, 1, 1, 7, 30));
+    });
+
+    test('weekly occurrences fall on the weekday only', () {
+      final occurrences =
+          _weekly(DateTime.sunday).occurrences(DateTime(2026, 3, 27, 12), 14);
+
+      expect(occurrences.map((o) => (o.at.day, o.at.weekday, o.at.hour)), [
+        (29, DateTime.sunday, 7),
+        (5, DateTime.sunday, 7),
       ]);
     });
 

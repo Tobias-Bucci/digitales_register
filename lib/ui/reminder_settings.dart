@@ -23,6 +23,7 @@ import 'package:dr/reminder_notifications.dart';
 import 'package:dr/reminder_schedule.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:intl/intl.dart';
 
 class ReminderSettings extends StatefulWidget {
   const ReminderSettings({
@@ -33,9 +34,17 @@ class ReminderSettings extends StatefulWidget {
     required this.onSetMensaEnabled,
     required this.onSetMensaMinuteOfDay,
     required this.onSetMensaUrl,
+    required this.mensaWeekdays,
+    required this.onSetMensaWeekdays,
     required this.assessmentsEnabled,
     required this.assessmentDays,
     required this.onSetAssessmentsEnabled,
+    required this.examsEnabled,
+    required this.onSetExamsEnabled,
+    required this.testsEnabled,
+    required this.onSetTestsEnabled,
+    required this.homeworkEnabled,
+    required this.onSetHomeworkEnabled,
     required this.onSetAssessmentDays,
     required this.assessmentMinuteOfDay,
     required this.onSetAssessmentMinuteOfDay,
@@ -48,9 +57,19 @@ class ReminderSettings extends StatefulWidget {
   final ValueChanged<bool> onSetMensaEnabled;
   final ValueChanged<int> onSetMensaMinuteOfDay;
   final ValueChanged<String> onSetMensaUrl;
+
+  /// ISO weekdays, 1 = Monday.
+  final List<int> mensaWeekdays;
+  final ValueChanged<List<int>> onSetMensaWeekdays;
   final bool assessmentsEnabled;
   final List<int> assessmentDays;
   final ValueChanged<bool> onSetAssessmentsEnabled;
+  final bool examsEnabled;
+  final ValueChanged<bool> onSetExamsEnabled;
+  final bool testsEnabled;
+  final ValueChanged<bool> onSetTestsEnabled;
+  final bool homeworkEnabled;
+  final ValueChanged<bool> onSetHomeworkEnabled;
   final ValueChanged<List<int>> onSetAssessmentDays;
   final int assessmentMinuteOfDay;
   final ValueChanged<int> onSetAssessmentMinuteOfDay;
@@ -168,6 +187,141 @@ class _ReminderSettingsState extends State<ReminderSettings>
         normalizeReminderDays(widget.assessmentDays.where((d) => d != day)),
       );
 
+  /// The weekdays of the Mensa reminder, Monday first, in the app's language.
+  /// The last selected day cannot be deselected; to stop, use the switch.
+  Widget _mensaWeekdays(BuildContext context) {
+    final l10n = context.l10n;
+    final theme = Theme.of(context);
+    final localeTag = l10n.locale.toLanguageTag();
+    final selected = normalizeReminderWeekdays(widget.mensaWeekdays);
+    final lastOne = selected.length == 1;
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(16, 4, 16, 12),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            l10n.text('reminders.mensa.weekdays'),
+            style: theme.textTheme.labelLarge,
+          ),
+          const SizedBox(height: 8),
+          Wrap(
+            spacing: 6,
+            runSpacing: 6,
+            children: [
+              for (var weekday = DateTime.monday;
+                  weekday <= DateTime.sunday;
+                  weekday++)
+                _weekdayChip(
+                  weekday: weekday,
+                  // 1 January 2024 was a Monday.
+                  date: DateTime(2024, 1, weekday),
+                  localeTag: localeTag,
+                  selected: selected.contains(weekday),
+                  locked: lastOne && selected.contains(weekday),
+                  onChanged: (on) => widget.onSetMensaWeekdays(
+                    normalizeReminderWeekdays(on
+                        ? [...selected, weekday]
+                        : selected.where((day) => day != weekday)),
+                  ),
+                ),
+            ],
+          ),
+          if (lastOne) ...[
+            const SizedBox(height: 6),
+            Text(
+              l10n.text('reminders.mensa.weekdaysLastOne'),
+              key: const Key('mensa-reminder-weekdays-last'),
+              style: theme.textTheme.bodySmall,
+            ),
+          ],
+        ],
+      ),
+    );
+  }
+
+  Widget _weekdayChip({
+    required int weekday,
+    required DateTime date,
+    required String localeTag,
+    required bool selected,
+    required bool locked,
+    required ValueChanged<bool> onChanged,
+  }) {
+    final l10n = context.l10n;
+    final name = l10n.capitalize(DateFormat('EEEE', localeTag).format(date));
+    return FilterChip(
+      key: Key('mensa-reminder-weekday-$weekday'),
+      label: Text(
+        l10n.capitalize(DateFormat('E', localeTag).format(date)),
+        semanticsLabel: name,
+      ),
+      tooltip: name,
+      showCheckmark: false,
+      selected: selected,
+      onSelected: locked ? null : onChanged,
+    );
+  }
+
+  /// What the assessment reminders cover. Nothing chosen is allowed, but said.
+  List<Widget> _assessmentKinds(BuildContext context) {
+    final l10n = context.l10n;
+    final theme = Theme.of(context);
+    const padding = EdgeInsetsDirectional.only(start: 32, end: 16);
+    final nothing =
+        !widget.examsEnabled && !widget.testsEnabled && !widget.homeworkEnabled;
+    return [
+      SwitchListTile.adaptive(
+        key: const Key('exam-reminder-toggle'),
+        contentPadding: padding,
+        secondary: const Icon(Icons.school_outlined),
+        title: Text(l10n.text('reminders.exam.setting')),
+        value: widget.examsEnabled,
+        onChanged: widget.onSetExamsEnabled,
+      ),
+      SwitchListTile.adaptive(
+        key: const Key('test-reminder-toggle'),
+        contentPadding: padding,
+        secondary: const Icon(Icons.quiz_outlined),
+        title: Text(l10n.text('reminders.test.setting')),
+        value: widget.testsEnabled,
+        onChanged: widget.onSetTestsEnabled,
+      ),
+      SwitchListTile.adaptive(
+        key: const Key('homework-reminder-toggle'),
+        contentPadding: padding,
+        secondary: const Icon(Icons.menu_book_outlined),
+        title: Text(l10n.text('reminders.homework.setting')),
+        subtitle: Text(l10n.text('reminders.homework.settingHint')),
+        value: widget.homeworkEnabled,
+        onChanged: widget.onSetHomeworkEnabled,
+      ),
+      if (nothing)
+        Padding(
+          key: const Key('assessment-reminder-nothing'),
+          padding: const EdgeInsets.fromLTRB(16, 4, 16, 12),
+          child: Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Icon(
+                Icons.notifications_off_outlined,
+                size: 20,
+                color: theme.colorScheme.error,
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Text(
+                  l10n.text('reminders.assessment.nothingChosen'),
+                  style: theme.textTheme.bodyMedium
+                      ?.copyWith(color: theme.colorScheme.error),
+                ),
+              ),
+            ],
+          ),
+        ),
+    ];
+  }
+
   Widget _assessmentDays(BuildContext context) {
     final l10n = context.l10n;
     final days = normalizeReminderDays(widget.assessmentDays);
@@ -177,6 +331,13 @@ class _ReminderSettingsState extends State<ReminderSettings>
         spacing: 8,
         runSpacing: 8,
         children: [
+          SizedBox(
+            width: double.infinity,
+            child: Text(
+              l10n.text('reminders.assessment.daysCaption'),
+              style: Theme.of(context).textTheme.labelLarge,
+            ),
+          ),
           for (final day in days)
             InputChip(
               key: Key('assessment-reminder-day-$day'),
@@ -274,6 +435,7 @@ class _ReminderSettingsState extends State<ReminderSettings>
               minuteOfDay: widget.mensaMinuteOfDay,
               onPicked: widget.onSetMensaMinuteOfDay,
             ),
+            _mensaWeekdays(context),
             _ReminderLinkField(
               key: const Key('mensa-reminder-url'),
               value: widget.mensaUrl,
@@ -295,12 +457,17 @@ class _ReminderSettingsState extends State<ReminderSettings>
             },
           ),
           if (widget.assessmentsEnabled) ...[
-            _timeTile(
-              key: const Key('assessment-reminder-time'),
-              minuteOfDay: widget.assessmentMinuteOfDay,
-              onPicked: widget.onSetAssessmentMinuteOfDay,
-            ),
-            _assessmentDays(context),
+            ..._assessmentKinds(context),
+            if (widget.examsEnabled ||
+                widget.testsEnabled ||
+                widget.homeworkEnabled)
+              _timeTile(
+                key: const Key('assessment-reminder-time'),
+                minuteOfDay: widget.assessmentMinuteOfDay,
+                onPicked: widget.onSetAssessmentMinuteOfDay,
+              ),
+            if (widget.examsEnabled || widget.testsEnabled)
+              _assessmentDays(context),
           ],
           if (_service.onlyWhileRunning)
             Padding(

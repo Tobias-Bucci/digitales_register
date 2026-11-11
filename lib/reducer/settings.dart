@@ -22,6 +22,7 @@ import 'package:dr/actions/routing_actions.dart';
 import 'package:dr/actions/settings_actions.dart';
 import 'package:dr/app_state.dart';
 import 'package:dr/dashboard_items.dart';
+import 'package:dr/reminder_schedule.dart';
 import 'package:dr/theme/app_palette.dart';
 
 final settingsReducerBuilder = NestedReducerBuilder<AppState, AppStateBuilder,
@@ -76,12 +77,17 @@ final settingsReducerBuilder = NestedReducerBuilder<AppState, AppStateBuilder,
   ..add(SettingsActionsNames.mensaReminderEnabled, _mensaReminderEnabled)
   ..add(SettingsActionsNames.assessmentRemindersEnabled,
       _assessmentRemindersEnabled)
+  ..add(SettingsActionsNames.examRemindersEnabled, _examRemindersEnabled)
+  ..add(SettingsActionsNames.testRemindersEnabled, _testRemindersEnabled)
+  ..add(
+      SettingsActionsNames.homeworkRemindersEnabled, _homeworkRemindersEnabled)
   ..add(SettingsActionsNames.assessmentReminderDays, _assessmentReminderDays)
   ..add(SettingsActionsNames.assessmentReminderMinuteOfDay,
       _assessmentReminderMinuteOfDay)
   ..add(SettingsActionsNames.mensaReminderMinuteOfDay,
       _mensaReminderMinuteOfDay)
   ..add(SettingsActionsNames.mensaReminderUrl, _mensaReminderUrl)
+  ..add(SettingsActionsNames.mensaReminderWeekdays, _mensaReminderWeekdays)
   ..add(SettingsActionsNames.calendarSyncCalendarId, _calendarSyncCalendarId)
   ..add(SettingsActionsNames.amoledMode, _amoledMode)
   ..add(SettingsActionsNames.legacyDesign, _legacyDesign)
@@ -268,6 +274,21 @@ void _assessmentRemindersEnabled(
   builder.assessmentRemindersEnabled = action.payload;
 }
 
+void _examRemindersEnabled(
+    SettingsState state, Action<bool> action, SettingsStateBuilder builder) {
+  builder.examRemindersEnabled = action.payload;
+}
+
+void _testRemindersEnabled(
+    SettingsState state, Action<bool> action, SettingsStateBuilder builder) {
+  builder.testRemindersEnabled = action.payload;
+}
+
+void _homeworkRemindersEnabled(
+    SettingsState state, Action<bool> action, SettingsStateBuilder builder) {
+  builder.homeworkRemindersEnabled = action.payload;
+}
+
 void _assessmentReminderDays(SettingsState state, Action<BuiltList<int>> action,
     SettingsStateBuilder builder) {
   builder.assessmentReminderDays.replace(action.payload);
@@ -286,6 +307,14 @@ void _mensaReminderEnabled(
 void _mensaReminderMinuteOfDay(
     SettingsState state, Action<int> action, SettingsStateBuilder builder) {
   builder.mensaReminderMinuteOfDay = action.payload;
+}
+
+/// At least one weekday stays: an empty selection keeps the current one.
+void _mensaReminderWeekdays(SettingsState state, Action<BuiltList<int>> action,
+    SettingsStateBuilder builder) {
+  if (action.payload.isEmpty) return;
+  builder.mensaReminderWeekdays
+      .replace(normalizeReminderWeekdays(action.payload));
 }
 
 void _mensaReminderUrl(

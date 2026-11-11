@@ -84,7 +84,11 @@ class SettingsPageWidget extends StatefulWidget {
   final OnSettingChanged<bool> onSetMensaReminderEnabled;
   final OnSettingChanged<int> onSetMensaReminderMinuteOfDay;
   final OnSettingChanged<String> onSetMensaReminderUrl;
+  final OnSettingChanged<List<int>> onSetMensaReminderWeekdays;
   final OnSettingChanged<bool> onSetAssessmentRemindersEnabled;
+  final OnSettingChanged<bool> onSetExamRemindersEnabled;
+  final OnSettingChanged<bool> onSetTestRemindersEnabled;
+  final OnSettingChanged<bool> onSetHomeworkRemindersEnabled;
   final OnSettingChanged<List<int>> onSetAssessmentReminderDays;
   final OnSettingChanged<int> onSetAssessmentReminderMinuteOfDay;
   final OnSettingChanged<bool> onSetAmoledMode;
@@ -139,7 +143,11 @@ class SettingsPageWidget extends StatefulWidget {
     required this.onSetMensaReminderEnabled,
     required this.onSetMensaReminderMinuteOfDay,
     required this.onSetMensaReminderUrl,
+    required this.onSetMensaReminderWeekdays,
     required this.onSetAssessmentRemindersEnabled,
+    required this.onSetExamRemindersEnabled,
+    required this.onSetTestRemindersEnabled,
+    required this.onSetHomeworkRemindersEnabled,
     required this.onSetAssessmentReminderDays,
     required this.onSetAssessmentReminderMinuteOfDay,
     required this.onSetAmoledMode,
@@ -1261,9 +1269,17 @@ class _SettingsPageWidgetState extends State<SettingsPageWidget> {
             onSetMensaEnabled: widget.onSetMensaReminderEnabled,
             onSetMensaMinuteOfDay: widget.onSetMensaReminderMinuteOfDay,
             onSetMensaUrl: widget.onSetMensaReminderUrl,
+            mensaWeekdays: widget.vm.mensaReminderWeekdays,
+            onSetMensaWeekdays: widget.onSetMensaReminderWeekdays,
             assessmentsEnabled: widget.vm.assessmentRemindersEnabled,
             assessmentDays: widget.vm.assessmentReminderDays,
             onSetAssessmentsEnabled: widget.onSetAssessmentRemindersEnabled,
+            examsEnabled: widget.vm.examRemindersEnabled,
+            onSetExamsEnabled: widget.onSetExamRemindersEnabled,
+            testsEnabled: widget.vm.testRemindersEnabled,
+            onSetTestsEnabled: widget.onSetTestRemindersEnabled,
+            homeworkEnabled: widget.vm.homeworkRemindersEnabled,
+            onSetHomeworkEnabled: widget.onSetHomeworkRemindersEnabled,
             onSetAssessmentDays: widget.onSetAssessmentReminderDays,
             assessmentMinuteOfDay: widget.vm.assessmentReminderMinuteOfDay,
             onSetAssessmentMinuteOfDay:

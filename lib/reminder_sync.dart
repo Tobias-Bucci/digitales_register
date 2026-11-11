@@ -19,6 +19,7 @@ import 'dart:async';
 
 import 'package:dr/app_clock.dart';
 import 'package:dr/app_state.dart';
+import 'package:dr/data.dart';
 import 'package:dr/exam_study_plan.dart';
 import 'package:dr/i18n/app_language.dart';
 import 'package:dr/i18n/app_localizations.dart';
@@ -63,16 +64,23 @@ Future<void> openReminderTarget(
   linkFailed?.call();
 }
 
-/// Reminders of all upcoming tests and exams. Ids depend on the assessment and
-/// the day, so a moved assessment replaces its reminders and a deleted one
-/// loses them. Times that have passed are not planned.
+/// Reminders of the upcoming tests and exams the user wants to be reminded of.
+/// Ids depend on the assessment and the day, so a moved assessment replaces
+/// its reminders and a deleted one loses them. Times that have passed are not
+/// planned.
 List<PlannedReminder> planAssessmentReminders(
   AppState state,
   AppLocalizations l10n,
   DateTime now,
 ) {
+  final settings = state.settingsState;
   final reminders = <int, PlannedReminder>{};
   for (final assessment in examAssessments(state)) {
+    final wanted = switch (assessmentReminderKind(assessment.type)) {
+      AssessmentReminderKind.exam => settings.examRemindersEnabled,
+      AssessmentReminderKind.test => settings.testRemindersEnabled,
+    };
+    if (!wanted) continue;
     final type = assessment.type?.trim() ?? '';
     final name =
         type.isEmpty ? l10n.text('reminders.assessment.fallback') : type;
@@ -90,13 +98,69 @@ List<PlannedReminder> planAssessmentReminders(
       reminders[id] = PlannedReminder(
         id: id,
         channel: ReminderChannel.assessment,
-        channelName: l10n.text('reminders.assessment.setting'),
+        channelName: l10n.text('reminders.assessment.channel'),
         at: at,
         title: l10n.text(
           days == 1
               ? 'reminders.assessment.tomorrow'
               : 'reminders.assessment.inDays',
           args: {'type': name, 'days': '$days'},
+        ),
+        body: subject.isEmpty
+            ? l10n.text('reminders.assessment.noSubject')
+            : subject,
+      );
+    }
+  }
+  return reminders.values.toList();
+}
+
+/// Whether [homework] is homework still to be done: lesson homework, or graded
+/// homework that is no test (a grade group without `warning`). Self-created
+/// reminders, grades, observations, assessments and ticked-off or deleted
+/// entries are not.
+bool isOpenHomework(Homework homework) {
+  if (homework.deleted || homework.checked) return false;
+  return homework.type == HomeworkType.lessonHomework ||
+      (homework.type == HomeworkType.gradeGroup && !homework.warning);
+}
+
+/// One reminder the day before each open homework, at the reminder time of the
+/// assessments. The days chosen for assessments do not apply: a week's notice
+/// for homework would only be noise. Only the subject is shown, never the
+/// teacher's text.
+List<PlannedReminder> planHomeworkReminders(
+  AppState state,
+  AppLocalizations l10n,
+  DateTime now,
+) {
+  final reminders = <int, PlannedReminder>{};
+  // A local /test written as lesson homework is an assessment, not homework.
+  final assessments = {for (final a in examAssessments(state)) a.id};
+  for (final day in state.dashboardState.allDays ?? const <Day>[]) {
+    for (final homework in day.homework) {
+      if (!isOpenHomework(homework) ||
+          assessments.contains('assessment-${homework.id}')) {
+        continue;
+      }
+      final at = assessmentReminderTime(
+        day.date,
+        1,
+        state.settingsState.assessmentReminderMinuteOfDay,
+      );
+      if (!at.isAfter(now)) continue;
+      final id = reminderNotificationId(
+        [state.url, state.loginState.username, 'homework', homework.id],
+      );
+      final subject = homework.label?.trim() ?? '';
+      reminders[id] = PlannedReminder(
+        id: id,
+        channel: ReminderChannel.homework,
+        channelName: l10n.text('reminders.homework.channel'),
+        at: at,
+        title: l10n.text(
+          'reminders.assessment.tomorrow',
+          args: {'type': l10n.text('dashboard.homework'), 'days': '1'},
         ),
         body: subject.isEmpty
             ? l10n.text('reminders.assessment.noSubject')
@@ -114,27 +178,35 @@ List<PlannedReminder> planReminders(
   DateTime? now,
 }) {
   final settings = state.settingsState;
+  // The dates of the demo guest are made up.
+  final school = settings.assessmentRemindersEnabled && !appClock.isDemoMode;
   return [
-    // The dates of the demo guest are made up.
-    if (settings.assessmentRemindersEnabled && !appClock.isDemoMode)
-      ...planAssessmentReminders(state, l10n, now ?? DateTime.now()),
+    if (school) ...planAssessmentReminders(state, l10n, now ?? DateTime.now()),
+    if (school && settings.homeworkRemindersEnabled)
+      ...planHomeworkReminders(state, l10n, now ?? DateTime.now()),
+    // One weekly reminder per chosen weekday. The single daily reminder of
+    // older versions had the id of `'mensa'` alone and is cancelled because
+    // it is no longer planned.
     if (settings.mensaReminderEnabled)
-      PlannedReminder(
-        id: reminderNotificationId('mensa'),
-        channel: ReminderChannel.daily,
-        channelName: l10n.text('reminders.mensa.setting'),
-        at: DateTime(
-          2000,
-          1,
-          1,
-          settings.mensaReminderMinuteOfDay ~/ 60,
-          settings.mensaReminderMinuteOfDay % 60,
+      for (final weekday
+          in normalizeReminderWeekdays(settings.mensaReminderWeekdays))
+        PlannedReminder(
+          id: reminderNotificationId(['mensa', weekday]),
+          channel: ReminderChannel.daily,
+          channelName: l10n.text('reminders.mensa.setting'),
+          at: DateTime(
+            2000,
+            1,
+            1,
+            settings.mensaReminderMinuteOfDay ~/ 60,
+            settings.mensaReminderMinuteOfDay % 60,
+          ),
+          title: l10n.text('reminders.mensa.title'),
+          body: l10n.text('reminders.mensa.body'),
+          repeats: true,
+          weekday: weekday,
+          payload: mensaReminderPayload,
         ),
-        title: l10n.text('reminders.mensa.title'),
-        body: l10n.text('reminders.mensa.body'),
-        repeatsDaily: true,
-        payload: mensaReminderPayload,
-      ),
   ];
 }
 
@@ -192,7 +264,11 @@ class ReminderSync {
       settings.languageCode,
       settings.mensaReminderEnabled,
       settings.mensaReminderMinuteOfDay,
+      settings.mensaReminderWeekdays,
       settings.assessmentRemindersEnabled,
+      settings.examRemindersEnabled,
+      settings.testRemindersEnabled,
+      settings.homeworkRemindersEnabled,
       settings.assessmentReminderDays,
       settings.assessmentReminderMinuteOfDay,
     );
