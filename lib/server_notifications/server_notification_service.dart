@@ -1,6 +1,7 @@
 import 'dart:async';
 
 import 'package:dr/app_language_controller.dart';
+import 'package:dr/i18n/app_language.dart';
 import 'package:dr/server_notifications/server_notification_api.dart';
 import 'package:dr/server_notifications/server_notification_config.dart';
 import 'package:dr/server_notifications/server_notification_poller.dart';
@@ -74,20 +75,24 @@ class ServerNotificationService with WidgetsBindingObserver {
     }
   }
 
+  /// The `lang` of the next request: the app's language, never the device's.
+  String get _serverLanguage => serverNotificationLanguage(
+      _language ?? appLanguageController.language.code);
+
   ServerNotificationSelection get _selection => ServerNotificationSelection(
         platform: _platform!,
         appVersion: _version!,
-        language: _language ?? appLanguageController.language.code,
+        language: _serverLanguage,
       );
 
   Future<int?> _sync() => repository.sync(_selection);
 
-  /// Asks for the texts in [language] from now on.
+  /// Asks for the texts in [language], an [AppLanguage.code], from now on.
+  /// Fetches again only when that changes what the server is asked for.
   void setLanguage(String language) {
-    if (language == _language) return;
-    final first = _language == null;
+    final before = _serverLanguage;
     _language = language;
-    if (!first) poller.selectionChanged();
+    if (_serverLanguage != before) poller.selectionChanged();
   }
 
   /// Updates on request of the user, within the limits of the poller.
@@ -117,6 +122,16 @@ class ServerNotificationService with WidgetsBindingObserver {
     repository.dispose();
   }
 }
+
+/// The `lang` sent for the app language [code].
+///
+/// The server reads only the primary subtag and answers anything it has no
+/// texts for in German. Ladin (`lld`, locale `de-LLD` in the app) asks for
+/// German outright: that is the language the app's Ladin builds on and the one
+/// the register profile gets for Ladin too, and it does not depend on how a
+/// server treats a tag it does not know.
+String serverNotificationLanguage(String code) =>
+    code == AppLanguage.lld.code ? AppLanguage.de.code : code;
 
 /// The one instance of this process.
 final ServerNotificationService serverNotifications =

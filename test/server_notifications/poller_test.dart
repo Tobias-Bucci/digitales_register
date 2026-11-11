@@ -1,6 +1,8 @@
 import 'dart:async';
 import 'dart:math' as math;
 
+import 'package:dr/app_language_controller.dart';
+import 'package:dr/i18n/app_language.dart';
 import 'package:dr/server_notifications/server_notification_api.dart';
 import 'package:dr/server_notifications/server_notification_config.dart';
 import 'package:dr/server_notifications/server_notification_poller.dart';
@@ -10,6 +12,7 @@ import 'package:fake_async/fake_async.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/widgets.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 import 'support.dart';
 
@@ -508,6 +511,80 @@ void main() {
       expect(server.requests, hasLength(2));
       expect(server.requests.last.url.queryParameters['lang'], 'it');
       subject.poller.stop();
+    });
+
+    group('language (#120)', () {
+      setUp(() async {
+        SharedPreferences.setMockInitialValues({});
+        await appLanguageController.setLanguage(AppLanguage.it);
+      });
+      tearDown(() => appLanguageController.setLanguage(AppLanguage.de));
+
+      test('without the popup host, the app language is sent', () async {
+        final server = FakeServer()..replyList([]);
+        final subject = service(server);
+        await subject.start();
+        await pumpEventQueue();
+        expect(server.requests.single.url.queryParameters['lang'], 'it');
+        subject.poller.stop();
+      });
+
+      test('a host that reports late still gets its language fetched',
+          () async {
+        final server = FakeServer()
+          ..replyList([])
+          ..replyList([]);
+        final subject = service(server);
+        await subject.start();
+        await pumpEventQueue();
+        // The first report differs from what was fetched: fetch again.
+        subject.setLanguage('en');
+        await pumpEventQueue();
+        expect(server.requests, hasLength(2));
+        expect(server.requests.last.url.queryParameters['lang'], 'en');
+        subject.poller.stop();
+      });
+
+      test('a report of the language already fetched fetches nothing',
+          () async {
+        final server = FakeServer()..replyList([]);
+        final subject = service(server);
+        await subject.start();
+        await pumpEventQueue();
+        subject.setLanguage('it');
+        await pumpEventQueue();
+        expect(server.requests, hasLength(1));
+        subject.poller.stop();
+      });
+
+      test(
+          'Ladin asks for German, and switching between them refetches '
+          'nothing', () async {
+        final server = FakeServer()
+          ..replyList([])
+          ..replyList([]);
+        final subject = service(server)..setLanguage('lld');
+        await subject.start();
+        await pumpEventQueue();
+        expect(server.requests.single.url.queryParameters['lang'], 'de');
+        subject.setLanguage('de');
+        await pumpEventQueue();
+        expect(server.requests, hasLength(1));
+        subject.setLanguage('it');
+        await pumpEventQueue();
+        expect(server.requests.last.url.queryParameters['lang'], 'it');
+        subject.poller.stop();
+      });
+
+      test('the mapping of every app language', () {
+        expect(
+          {
+            for (final language in AppLanguage.values)
+              language.code: serverNotificationLanguage(language.code),
+          },
+          {'de': 'de', 'it': 'it', 'lld': 'de', 'en': 'en'},
+        );
+      });
     });
   });
 }

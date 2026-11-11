@@ -575,13 +575,28 @@ void main() {
       expect(repo.notifications, isNotEmpty);
     });
 
-    test('the Ladin app language is a valid tag for the server', () async {
-      final repo = repository();
-      const ladin = ServerNotificationSelection(
-          platform: 'android', appVersion: '1.17.4', language: 'lld');
-      server.replyList([]);
-      await repo.sync(ladin);
-      expect(server.requests.single.url.queryParameters['lang'], 'lld');
+    test('another language fetches in full and replaces the cached texts',
+        () async {
+      final german = repository();
+      server.replyList([item(title: 'Wartung', body: 'Heute Abend')],
+          etag: 'W/"de"');
+      await german.sync(selection);
+      expect(german.notifications.single.title, 'Wartung');
+
+      // A restart finds the German cache; the language is now Italian.
+      final italian = await restarted();
+      expect(italian.notifications.single.title, 'Wartung');
+      const it = ServerNotificationSelection(
+          platform: 'android', appVersion: '1.17.4', language: 'it');
+      server.replyList([item(title: 'Manutenzione', body: 'Stasera')],
+          etag: 'W/"it"');
+      await italian.sync(it);
+      final request = server.requests.last;
+      expect(request.url.queryParameters['lang'], 'it');
+      expect(request.headers['if-none-match'], isNull,
+          reason: 'the German validator must not answer for Italian');
+      expect(italian.notifications.single.title, 'Manutenzione');
+      expect(italian.notifications.single.body, 'Stasera');
     });
   });
 

@@ -25,6 +25,25 @@ const serverNotificationIcons = <String, IconData>{
 IconData serverNotificationIcon(String name) =>
     serverNotificationIcons[name] ?? serverNotificationFallbackIcon;
 
+/// The type keys of the contract that the app names in its own language.
+const serverNotificationTranslatedTypeKeys = {
+  'info',
+  'update',
+  'maintenance',
+  'critical',
+};
+
+/// The name of [type] to show and to speak. The server writes its label in
+/// one language only, so the well-known keys get the app's translation; any
+/// other key keeps the server's label.
+String serverNotificationTypeLabel(
+  AppLocalizations l10n,
+  ServerNotificationType type,
+) =>
+    serverNotificationTranslatedTypeKeys.contains(type.key)
+        ? l10n.text('appNotifications.type.${type.key}')
+        : type.label;
+
 double _contrast(Color a, Color b) {
   final first = a.computeLuminance();
   final second = b.computeLuminance();
