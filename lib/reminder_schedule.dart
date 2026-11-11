@@ -32,6 +32,42 @@ const defaultAssessmentReminderDays = [3, 2, 1];
 const maxAssessmentReminderDay = 30;
 const maxAssessmentReminderDayCount = 10;
 
+/// The weekdays of the Mensa reminder unless the user picks others: the days
+/// with school lunch, Monday to Friday ([DateTime.monday] = 1).
+const defaultMensaReminderWeekdays = [1, 2, 3, 4, 5];
+
+/// The valid ISO weekdays of [weekdays] without duplicates, Monday first. An
+/// empty result falls back to [defaultMensaReminderWeekdays], because the
+/// reminder always has at least one day.
+List<int> normalizeReminderWeekdays(Iterable<int> weekdays) {
+  final valid = weekdays
+      .where((day) => day >= DateTime.monday && day <= DateTime.sunday)
+      .toSet()
+      .toList()
+    ..sort();
+  return valid.isEmpty ? List.of(defaultMensaReminderWeekdays) : valid;
+}
+
+/// Which switch decides about the reminders of an assessment.
+enum AssessmentReminderKind { exam, test }
+
+/// Whether the assessment type [typeName] (the server's type name or the type
+/// of a local `/test`, `/cw` or `/exam` reminder) is a test. A name that says
+/// "test" in one of the app's languages (Test, Testarbeit, Praktischer Test,
+/// Verifica, Tesć) is a test; everything else, including unknown and missing
+/// names, is an exam, the more important group.
+AssessmentReminderKind assessmentReminderKind(String? typeName) {
+  final words =
+      (typeName ?? '').toLowerCase().split(RegExp(r'[^\p{L}]+', unicode: true));
+  final isTest = words.any(
+    (word) =>
+        word.startsWith('test') ||
+        word.startsWith('tesć') ||
+        word.startsWith('verific'),
+  );
+  return isTest ? AssessmentReminderKind.test : AssessmentReminderKind.exam;
+}
+
 enum ReminderDayError { invalid, tooLarge, duplicate }
 
 /// Why [input] cannot be added to the [existing] reminder days, if at all.
@@ -70,7 +106,8 @@ DateTime assessmentReminderTime(
 
 enum ReminderChannel {
   daily('reminder_daily'),
-  assessment('reminder_assessment');
+  assessment('reminder_assessment'),
+  homework('reminder_homework');
 
   const ReminderChannel(this.id);
   final String id;
@@ -91,6 +128,24 @@ DateTime nextDailyOccurrence(DateTime now, int hour, int minute) {
       : DateTime(now.year, now.month, now.day + 1, hour, minute);
 }
 
+/// The first time [hour]:[minute] on the ISO [weekday] happens after [now], in
+/// local time.
+DateTime nextWeeklyOccurrence(
+  DateTime now,
+  int weekday,
+  int hour,
+  int minute,
+) {
+  final next = nextDailyOccurrence(now, hour, minute);
+  return DateTime(
+    next.year,
+    next.month,
+    next.day + (weekday - next.weekday) % 7,
+    hour,
+    minute,
+  );
+}
+
 /// One notification the app wants the system to show.
 class PlannedReminder {
   const PlannedReminder({
@@ -100,7 +155,8 @@ class PlannedReminder {
     required this.at,
     required this.title,
     required this.body,
-    this.repeatsDaily = false,
+    this.repeats = false,
+    this.weekday,
     this.payload,
   });
 
@@ -108,33 +164,57 @@ class PlannedReminder {
   final ReminderChannel channel;
   final String channelName;
 
-  /// Local time. For a daily reminder only the time of day is relevant.
+  /// Local time. For a repeating reminder only the time of day is relevant.
   final DateTime at;
   final String title;
   final String body;
-  final bool repeatsDaily;
+
+  /// Whether the reminder repeats: every day, or weekly on [weekday].
+  final bool repeats;
+
+  /// For a repeating reminder, the ISO weekday it repeats on; null for every
+  /// day.
+  final int? weekday;
   final String? payload;
 
+  /// The next time this reminder is due after [now].
+  DateTime nextAt(DateTime now) {
+    if (!repeats) return at;
+    final weekday = this.weekday;
+    return weekday == null
+        ? nextDailyOccurrence(now, at.hour, at.minute)
+        : nextWeeklyOccurrence(now, weekday, at.hour, at.minute);
+  }
+
   /// Changes exactly when the system has to be told about this reminder again.
-  /// [timeZone] matters for a daily reminder, which follows the wall clock.
+  /// [timeZone] matters for a repeating reminder, which follows the wall clock.
   String fingerprint([String? timeZone]) => notificationDigest([
-        if (repeatsDaily) ...[at.hour, at.minute, timeZone] else at.toUtc().toIso8601String(),
+        if (repeats) ...[
+          at.hour,
+          at.minute,
+          if (weekday != null) 'weekday:$weekday',
+          timeZone,
+        ] else
+          at.toUtc().toIso8601String(),
         title,
         body,
         channelName,
         payload,
       ]);
 
-  /// This daily reminder as separate one-time reminders, for platforms that
-  /// cannot repeat a notification. Ids depend on the date, so an occurrence
-  /// keeps its id while the planned window moves forward.
-  List<PlannedReminder> occurrences(DateTime now, int count) {
+  /// The occurrences of this repeating reminder within the next [days] days as
+  /// separate one-time reminders, for platforms that cannot repeat a
+  /// notification. Ids depend on the date, so an occurrence keeps its id while
+  /// the planned window moves forward.
+  List<PlannedReminder> occurrences(DateTime now, int days) {
     final first = nextDailyOccurrence(now, at.hour, at.minute);
     return [
-      for (var day = 0; day < count; day++)
-        _occurrence(
-          DateTime(first.year, first.month, first.day + day, at.hour, at.minute),
-        ),
+      for (var day = 0; day < days; day++)
+        if (DateTime(first.year, first.month, first.day + day) case final date
+            when weekday == null || date.weekday == weekday)
+          _occurrence(
+            DateTime(date.year, date.month, date.day, at.hour, at.minute),
+          ),
     ];
   }
 

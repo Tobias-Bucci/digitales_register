@@ -39,11 +39,11 @@ const _fallbackTimeZone = 'Europe/Rome';
 /// What a platform's notification system can do for a planned reminder.
 enum ReminderBackend {
   /// The system shows reminders even if the app is closed and repeats them
-  /// daily by itself (Android, iOS, macOS).
+  /// daily or weekly by itself (Android, iOS, macOS).
   systemRepeating,
 
   /// The system shows reminders even if the app is closed, but cannot repeat
-  /// them (Windows). Daily reminders are planned some days ahead.
+  /// them (Windows). Repeating reminders are planned some days ahead.
   systemOneTime,
 
   /// The system has no scheduling at all (Linux), so the reminders are only
@@ -149,8 +149,8 @@ class ReminderNotificationService {
   }
 
   /// Replaces all scheduled reminders with [reminders]. Reminders that did not
-  /// change are left alone, so that a daily reminder is not disturbed by every
-  /// reload of the dashboard.
+  /// change are left alone, so that a repeating reminder is not disturbed by
+  /// every reload of the dashboard.
   Future<void> sync(List<PlannedReminder> reminders) =>
       _mutex.protect(() async {
         // Nothing to do for everyone who does not use reminders: the plugin
@@ -177,29 +177,25 @@ class ReminderNotificationService {
   List<PlannedReminder> _expand(List<PlannedReminder> reminders, DateTime now) {
     final repeating = backend == ReminderBackend.systemRepeating;
     final expanded = reminders
-        .expand((reminder) => reminder.repeatsDaily && !repeating
+        .expand((reminder) => reminder.repeats && !repeating
             ? reminder.occurrences(now, dailyReminderOccurrences)
             : [reminder])
-        .where((reminder) => reminder.repeatsDaily || reminder.at.isAfter(now))
+        .where((reminder) => reminder.repeats || reminder.at.isAfter(now))
         .toList();
-    DateTime soonest(PlannedReminder reminder) => reminder.repeatsDaily
-        ? nextDailyOccurrence(now, reminder.at.hour, reminder.at.minute)
-        : reminder.at;
-    expanded.sort((a, b) => soonest(a).compareTo(soonest(b)));
+    expanded.sort((a, b) => a.nextAt(now).compareTo(b.nextAt(now)));
     return expanded.take(maxPendingReminders).toList();
   }
 
   Future<void> _syncSystem(List<PlannedReminder> wanted, DateTime now) async {
     final prefs = await SharedPreferences.getInstance();
     final stored = _readStored(prefs);
-    final location = wanted.any((reminder) => reminder.repeatsDaily)
-        ? await _location()
-        : null;
+    final location =
+        wanted.any((reminder) => reminder.repeats) ? await _location() : null;
     final next = <int, _StoredReminder>{
       for (final reminder in wanted)
         reminder.id: _StoredReminder(
           reminder.fingerprint(location?.name),
-          reminder.repeatsDaily ? null : reminder.at,
+          reminder.repeats ? null : reminder.at,
         ),
     };
     final pending = {
@@ -236,11 +232,8 @@ class ReminderNotificationService {
   ) {
     // A one-time reminder is one moment in time, so UTC is exact and needs no
     // knowledge of the device's zone. Only a repeating one follows the clock.
-    final date = reminder.repeatsDaily
-        ? tz.TZDateTime.from(
-            nextDailyOccurrence(now, reminder.at.hour, reminder.at.minute),
-            location!,
-          )
+    final date = reminder.repeats
+        ? tz.TZDateTime.from(reminder.nextAt(now), location!)
         : tz.TZDateTime.from(reminder.at, tz.UTC);
     return _native.zonedSchedule(
       id: reminder.id,
@@ -251,8 +244,11 @@ class ReminderNotificationService {
       // Inexact alarms need no exact-alarm permission. A reminder may be a few
       // minutes late, which does not matter here.
       androidScheduleMode: AndroidScheduleMode.inexactAllowWhileIdle,
-      matchDateTimeComponents:
-          reminder.repeatsDaily ? DateTimeComponents.time : null,
+      matchDateTimeComponents: !reminder.repeats
+          ? null
+          : reminder.weekday == null
+              ? DateTimeComponents.time
+              : DateTimeComponents.dayOfWeekAndTime,
       payload: reminder.payload,
     );
   }

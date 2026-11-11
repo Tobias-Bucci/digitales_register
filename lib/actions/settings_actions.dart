@@ -71,8 +71,12 @@ abstract class SettingsActions extends ReduxActions {
   abstract final ActionDispatcher<bool> biometricAppLockEnabled;
   abstract final ActionDispatcher<bool> mensaReminderEnabled;
   abstract final ActionDispatcher<int> mensaReminderMinuteOfDay;
+  abstract final ActionDispatcher<BuiltList<int>> mensaReminderWeekdays;
   abstract final ActionDispatcher<String> mensaReminderUrl;
   abstract final ActionDispatcher<bool> assessmentRemindersEnabled;
+  abstract final ActionDispatcher<bool> examRemindersEnabled;
+  abstract final ActionDispatcher<bool> testRemindersEnabled;
+  abstract final ActionDispatcher<bool> homeworkRemindersEnabled;
   abstract final ActionDispatcher<BuiltList<int>> assessmentReminderDays;
   abstract final ActionDispatcher<int> assessmentReminderMinuteOfDay;
   abstract final ActionDispatcher<MapEntry<String, String>>

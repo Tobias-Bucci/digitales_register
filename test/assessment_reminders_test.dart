@@ -35,6 +35,9 @@ AppState _state(
   int minute = 18 * 60,
   String user = 'student',
   String url = 'https://school.example',
+  bool exams = true,
+  bool tests = true,
+  bool homework = false,
 }) =>
     AppState((b) => b
       ..url = url
@@ -43,7 +46,18 @@ AppState _state(
       ..dashboardState.allDays = ListBuilder<Day>(days)
       ..settingsState.assessmentRemindersEnabled = enabled
       ..settingsState.assessmentReminderDays = ListBuilder<int>(reminderDays)
-      ..settingsState.assessmentReminderMinuteOfDay = minute);
+      ..settingsState.assessmentReminderMinuteOfDay = minute
+      ..settingsState.examRemindersEnabled = exams
+      ..settingsState.testRemindersEnabled = tests
+      ..settingsState.homeworkRemindersEnabled = homework);
+
+Homework _lessonHomework(int id, {String subject = 'Mathe'}) => buildHomework(
+      id: id,
+      title: 'Hausaufgabe',
+      subtitle: 'Seite 12, Nummer 3 bis 7',
+      label: subject,
+      checkable: true,
+    );
 
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
@@ -117,6 +131,242 @@ void main() {
       final at = assessmentReminderTime(UtcDateTime(2026, 3, 30), 3, 18 * 60);
 
       expect((at.day, at.hour), (27, 18));
+    });
+  });
+
+  group('kind of an assessment', () {
+    test('a name that says test is a test, in every language', () {
+      for (final name in [
+        'Test',
+        'test',
+        'Tests',
+        'Testarbeit',
+        'Praktischer Test',
+        'Test pratich',
+        'Verifica',
+        'verifica scritta',
+        'Verifiche',
+        'Tesć',
+      ]) {
+        expect(assessmentReminderKind(name), AssessmentReminderKind.test,
+            reason: name);
+      }
+    });
+
+    test('everything else is an exam, also unknown or missing names', () {
+      for (final name in [
+        'Schularbeit',
+        'Prüfung',
+        'Compito in classe',
+        'Interrogazione',
+        'Exam',
+        'Ejam',
+        'Compit de classa',
+        'Referat',
+        'Kontest',
+        'Attestat',
+        '',
+        '  ',
+        null,
+      ]) {
+        expect(assessmentReminderKind(name), AssessmentReminderKind.exam,
+            reason: name);
+      }
+    });
+
+    test('the local /test, /cw and /exam kinds land in their group', () {
+      expect(assessmentReminderKind('Test'), AssessmentReminderKind.test);
+      expect(
+          assessmentReminderKind('Schularbeit'), AssessmentReminderKind.exam);
+      expect(assessmentReminderKind('Prüfung'), AssessmentReminderKind.exam);
+    });
+  });
+
+  group('what to be reminded of', () {
+    List<Day> mixed() => [
+          _day(examDate, [
+            _test(1),
+            _test(2, title: 'Schularbeit'),
+            _lessonHomework(3),
+          ]),
+        ];
+
+    Set<String> titles(AppState state) =>
+        plan(state).map((r) => r.title).toSet();
+
+    test('by default exams and tests, no homework', () {
+      final settings = SettingsState();
+
+      expect(settings.examRemindersEnabled, isTrue);
+      expect(settings.testRemindersEnabled, isTrue);
+      expect(settings.homeworkRemindersEnabled, isFalse);
+      expect(titles(_state(mixed(), reminderDays: [1])),
+          {'Morgen: Test', 'Morgen: Schularbeit'});
+    });
+
+    test('only exams', () {
+      expect(
+        titles(_state(mixed(), reminderDays: [1], tests: false)),
+        {'Morgen: Schularbeit'},
+      );
+    });
+
+    test('only tests', () {
+      expect(
+        titles(_state(mixed(), reminderDays: [1], exams: false)),
+        {'Morgen: Test'},
+      );
+    });
+
+    test('only homework', () {
+      final reminders = plan(_state(
+        mixed(),
+        exams: false,
+        tests: false,
+        homework: true,
+      ));
+
+      expect(reminders.single.title, 'Morgen: Hausaufgabe');
+      expect(reminders.single.channel, ReminderChannel.homework);
+    });
+
+    test('nothing chosen plans nothing', () {
+      expect(
+        plan(_state(mixed(), exams: false, tests: false)),
+        isEmpty,
+      );
+    });
+
+    test('the main switch still turns everything off', () {
+      expect(plan(_state(mixed(), enabled: false, homework: true)), isEmpty);
+    });
+
+    test('an assessment without a type counts as an exam', () {
+      final untyped = [
+        _day(examDate, [
+          buildHomework(
+            title: ' ',
+            type: HomeworkType.gradeGroup,
+            warning: true,
+          ),
+        ]),
+      ];
+
+      expect(plan(_state(untyped, tests: false)), hasLength(3));
+      expect(plan(_state(untyped, exams: false)), isEmpty);
+    });
+
+    test('a local /exam reminder follows the exam switch', () {
+      final local = [
+        _day(examDate, [
+          buildHomework(title: 'Erinnerung', subtitle: '/exam Mathe'),
+        ]),
+      ];
+
+      expect(plan(_state(local, exams: false)), isEmpty);
+      expect(plan(_state(local, tests: false)), hasLength(3));
+      // Written as lesson homework, it still is no homework.
+      expect(
+        plan(_state(local, exams: false, tests: false, homework: true)),
+        isEmpty,
+      );
+    });
+  });
+
+  group('homework reminders', () {
+    final due = UtcDateTime(2026, 4, 16);
+
+    List<PlannedReminder> homework(List<Homework> entries,
+            {DateTime? now, List<int> reminderDays = const [3, 2, 1]}) =>
+        plan(
+          _state(
+            [_day(due, entries)],
+            exams: false,
+            tests: false,
+            homework: true,
+            reminderDays: reminderDays,
+          ),
+          now: now,
+        );
+
+    test('only the day before at the reminder time, whatever the days', () {
+      final reminder =
+          homework([_lessonHomework(1)], reminderDays: [7, 3]).single;
+
+      expect(reminder.at, DateTime(2026, 4, 15, 18));
+    });
+
+    test('names the subject, never the teacher text', () {
+      final reminder = homework([_lessonHomework(1)]).single;
+
+      expect(reminder.title, 'Morgen: Hausaufgabe');
+      expect(reminder.body, 'Mathe');
+      expect(reminder.body, isNot(contains('Seite')));
+      expect(reminder.title, isNot(contains('Seite')));
+    });
+
+    test('graded homework without warning is homework', () {
+      final graded = _test(1).rebuild((b) => b
+        ..title = 'Hausaufgabe'
+        ..warning = false);
+
+      expect(homework([graded]), hasLength(1));
+    });
+
+    test('nothing for ticked-off homework', () {
+      expect(
+        homework([_lessonHomework(1).rebuild((b) => b.checked = true)]),
+        isEmpty,
+      );
+    });
+
+    test('nothing for reminders, grades, observations or assessments', () {
+      expect(
+        homework([
+          buildHomework(
+            title: 'Erinnerung',
+            subtitle: 'Turnsachen',
+            type: HomeworkType.homework,
+          ),
+          buildHomework(id: 2, title: 'Bewertung', type: HomeworkType.grade),
+          buildHomework(
+              id: 3, title: 'Beobachtung', type: HomeworkType.observation),
+          _test(4),
+        ]),
+        isEmpty,
+      );
+    });
+
+    test('nothing once the evening before has passed', () {
+      expect(homework([_lessonHomework(1)], now: DateTime(2026, 4, 15, 19)),
+          isEmpty);
+      expect(homework([_lessonHomework(1)], now: DateTime(2026, 4, 15, 17)),
+          hasLength(1));
+    });
+
+    test('one reminder per entry, with ids apart from the assessments', () {
+      final reminders = homework([
+        _lessonHomework(1),
+        _lessonHomework(2, subject: 'Englisch'),
+        _lessonHomework(1),
+      ]);
+
+      expect(reminders, hasLength(2));
+      final both = plan(_state(
+        [
+          _day(due, [_lessonHomework(1), _test(5)]),
+        ],
+        homework: true,
+        reminderDays: [1],
+      ));
+      expect(both.map((r) => r.id).toSet(), hasLength(2));
+    });
+
+    test('the demo guest gets none', () {
+      appClock.setDemoMode(true);
+      addTearDown(() => appClock.setDemoMode(false));
+
+      expect(homework([_lessonHomework(1)]), isEmpty);
     });
   });
 
@@ -387,6 +637,21 @@ void main() {
 
       expect(syncs.single, isEmpty);
     });
+
+    for (final (name, change) in <(String, AppState Function(List<Day>))>[
+      ('exams', (days) => _state(days, exams: false)),
+      ('tests', (days) => _state(days, tests: false)),
+      ('homework', (days) => _state(days, homework: true)),
+    ]) {
+      test('switching $name plans again', () async {
+        final days = [_day(future, [_test(1)])];
+        sync.attach(states.stream, _state(days));
+        states.add(change(days));
+        await settle();
+
+        expect(syncs, hasLength(1));
+      });
+    }
 
     test('changed days plan again', () async {
       final days = [_day(future, [_test(1)])];

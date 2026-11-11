@@ -379,17 +379,32 @@ abstract class SettingsState
   bool get legacyDesign;
   bool get biometricAppLockEnabled;
 
-  /// Whether a notification reminds the user daily to sign up for the Mensa.
+  /// Whether a notification reminds the user to sign up for the Mensa.
   bool get mensaReminderEnabled;
 
   /// The local time of that reminder, in minutes after midnight.
   int get mensaReminderMinuteOfDay;
 
+  /// The ISO weekdays (1 = Monday) of that reminder; never empty.
+  BuiltList<int> get mensaReminderWeekdays;
+
   /// What tapping that reminder opens; empty means the dashboard.
   String get mensaReminderUrl;
 
-  /// Whether notifications remind of every upcoming test and exam.
+  /// Whether notifications remind of upcoming tests, exams and homework, as
+  /// far as [examRemindersEnabled], [testRemindersEnabled] and
+  /// [homeworkRemindersEnabled] allow.
   bool get assessmentRemindersEnabled;
+
+  /// Whether to remind of exams, school work and other assessments that are
+  /// not tests.
+  bool get examRemindersEnabled;
+
+  /// Whether to remind of tests.
+  bool get testRemindersEnabled;
+
+  /// Whether to remind of homework that is not ticked off, the day before.
+  bool get homeworkRemindersEnabled;
 
   /// How many days before an assessment to remind of it.
   BuiltList<int> get assessmentReminderDays;
@@ -476,8 +491,12 @@ abstract class SettingsState
       ..biometricAppLockEnabled = false
       ..mensaReminderEnabled = false
       ..mensaReminderMinuteOfDay = 7 * 60 + 30
+      ..mensaReminderWeekdays = ListBuilder<int>(defaultMensaReminderWeekdays)
       ..mensaReminderUrl = ''
       ..assessmentRemindersEnabled = false
+      ..examRemindersEnabled = true
+      ..testRemindersEnabled = true
+      ..homeworkRemindersEnabled = false
       ..assessmentReminderDays = ListBuilder<int>(defaultAssessmentReminderDays)
       ..assessmentReminderMinuteOfDay = defaultAssessmentReminderMinuteOfDay
       ..assessmentStudyProgress = MapBuilder<String, String>()

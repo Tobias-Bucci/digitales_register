@@ -131,8 +131,16 @@ class SettingsPageContainer extends StatelessWidget {
                 actions.settingsActions.mensaReminderMinuteOfDay.call,
             onSetMensaReminderUrl:
                 actions.settingsActions.mensaReminderUrl.call,
+            onSetMensaReminderWeekdays: (weekdays) => actions.settingsActions
+                .mensaReminderWeekdays(BuiltList<int>.from(weekdays)),
             onSetAssessmentRemindersEnabled:
                 actions.settingsActions.assessmentRemindersEnabled.call,
+            onSetExamRemindersEnabled:
+                actions.settingsActions.examRemindersEnabled.call,
+            onSetTestRemindersEnabled:
+                actions.settingsActions.testRemindersEnabled.call,
+            onSetHomeworkRemindersEnabled:
+                actions.settingsActions.homeworkRemindersEnabled.call,
             onSetAssessmentReminderDays: (days) => actions.settingsActions
                 .assessmentReminderDays(BuiltList<int>.from(days)),
             onSetAssessmentReminderMinuteOfDay:
@@ -214,7 +222,11 @@ class SettingsViewModel {
   final bool mensaReminderEnabled;
   final int mensaReminderMinuteOfDay;
   final String mensaReminderUrl;
+  final List<int> mensaReminderWeekdays;
   final bool assessmentRemindersEnabled;
+  final bool examRemindersEnabled;
+  final bool testRemindersEnabled;
+  final bool homeworkRemindersEnabled;
   final List<int> assessmentReminderDays;
   final int assessmentReminderMinuteOfDay;
   final int? calendarSyncCalendarId;
@@ -257,8 +269,13 @@ class SettingsViewModel {
         mensaReminderMinuteOfDay =
             state.settingsState.mensaReminderMinuteOfDay,
         mensaReminderUrl = state.settingsState.mensaReminderUrl,
+        mensaReminderWeekdays =
+            state.settingsState.mensaReminderWeekdays.toList(),
         assessmentRemindersEnabled =
             state.settingsState.assessmentRemindersEnabled,
+        examRemindersEnabled = state.settingsState.examRemindersEnabled,
+        testRemindersEnabled = state.settingsState.testRemindersEnabled,
+        homeworkRemindersEnabled = state.settingsState.homeworkRemindersEnabled,
         assessmentReminderDays =
             state.settingsState.assessmentReminderDays.toList(),
         assessmentReminderMinuteOfDay =
@@ -318,7 +335,14 @@ class SettingsViewModel {
             other.mensaReminderEnabled == mensaReminderEnabled &&
             other.mensaReminderMinuteOfDay == mensaReminderMinuteOfDay &&
             other.mensaReminderUrl == mensaReminderUrl &&
+            _settingsViewModelEquality.equals(
+              other.mensaReminderWeekdays,
+              mensaReminderWeekdays,
+            ) &&
             other.assessmentRemindersEnabled == assessmentRemindersEnabled &&
+            other.examRemindersEnabled == examRemindersEnabled &&
+            other.testRemindersEnabled == testRemindersEnabled &&
+            other.homeworkRemindersEnabled == homeworkRemindersEnabled &&
             other.assessmentReminderMinuteOfDay ==
                 assessmentReminderMinuteOfDay &&
             _settingsViewModelEquality.equals(
@@ -375,7 +399,11 @@ class SettingsViewModel {
         mensaReminderEnabled,
         mensaReminderMinuteOfDay,
         mensaReminderUrl,
+        _settingsViewModelEquality.hash(mensaReminderWeekdays),
         assessmentRemindersEnabled,
+        examRemindersEnabled,
+        testRemindersEnabled,
+        homeworkRemindersEnabled,
         _settingsViewModelEquality.hash(assessmentReminderDays),
         assessmentReminderMinuteOfDay,
         calendarSyncCalendarId,
