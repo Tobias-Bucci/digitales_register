@@ -332,9 +332,14 @@ class ResponsiveScaffoldState<T> extends State<ResponsiveScaffold<T>>
     // The keyboard covers the bar, so nothing has to stay clear of it then.
     final showBar = !tabletMode && media.viewInsets.bottom == 0;
     final inset = showBar ? navigation.barExtent : 0.0;
+    // The rail stands at the start but is painted after the body. Glass that
+    // shares a BackdropGroup reuses the backdrop of the first filter painted,
+    // and taken at the rail it would miss the page below the header (#118).
     return Row(
+      textDirection: Directionality.of(context) == TextDirection.ltr
+          ? TextDirection.rtl
+          : TextDirection.ltr,
       children: [
-        if (tabletMode) navigation.railBuilder(context, currentSelected),
         Expanded(
           child: Stack(
             children: [
@@ -362,6 +367,7 @@ class ResponsiveScaffoldState<T> extends State<ResponsiveScaffold<T>>
             ],
           ),
         ),
+        if (tabletMode) navigation.railBuilder(context, currentSelected),
       ],
     );
   }
