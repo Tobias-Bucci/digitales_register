@@ -19,6 +19,8 @@ import 'package:dr/container/notification_icon_container.dart';
 import 'package:dr/i18n/app_localizations.dart';
 import 'package:dr/ui/glass_surface.dart';
 import 'package:dr/ui/notepad_mark.dart';
+import 'package:dr/ui/server_notifications/server_notification_popup.dart'
+    show ServerNotificationPopupClearance;
 import 'package:flutter/foundation.dart' show ValueListenable;
 import 'package:flutter/material.dart';
 
@@ -203,6 +205,8 @@ class GlassHeaderShell extends StatelessWidget {
   Widget build(BuildContext context) {
     final scheme = Theme.of(context).colorScheme;
     final maxWidth = floatingMaxWidth;
+    // Keeps the popup for new app announcements below the header (#111).
+    final content = ServerNotificationPopupClearance(child: child);
     // Two lines have to fit the fixed height, whatever the text size.
     return MediaQuery.withClampedTextScaling(
       maxScaleFactor: 1.5,
@@ -216,7 +220,7 @@ class GlassHeaderShell extends StatelessWidget {
                   color: scheme.outlineVariant.withValues(alpha: 0.5),
                 ),
               ),
-              child: SafeArea(bottom: false, child: child),
+              child: SafeArea(bottom: false, child: content),
             )
           : SafeArea(
               bottom: false,
@@ -235,7 +239,7 @@ class GlassHeaderShell extends StatelessWidget {
                       surfaceKey: surfaceKey,
                       tint: scheme.surface,
                       opacity: DesignTokens.headerOpacity,
-                      child: child,
+                      child: content,
                     ),
                   ),
                 ),

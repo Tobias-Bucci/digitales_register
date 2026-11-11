@@ -4,8 +4,7 @@ import 'package:dr/i18n/app_localizations.dart';
 import 'package:dr/server_notifications/server_notification_links.dart';
 import 'package:dr/server_notifications/server_notification_repository.dart';
 import 'package:dr/theme/app_palette.dart';
-import 'package:dr/ui/app_navigation.dart' show appNavigationBarExtent;
-import 'package:dr/ui/dashboard_app_header.dart' show DashboardAppHeader;
+import 'package:dr/ui/dashboard_app_header.dart' show GlassHeaderShell;
 import 'package:dr/ui/glass_surface.dart';
 import 'package:dr/ui/server_notifications/server_notification_bell.dart';
 import 'package:dr/ui/server_notifications/server_notification_center.dart';
@@ -26,12 +25,6 @@ const c = '2c9a7e44-1d6b-4c3f-8a55-73e1b9d0c2f4';
 
 final popup = find.byKey(const Key('server-notification-popup'));
 
-/// The bar of narrow windows, and the tallest header of the dashboard: the
-/// floating one of wide windows, with the strip for new entries.
-const navigationClearance = appNavigationBarExtent;
-const headerExtent = DesignTokens.gutter +
-    DashboardAppHeader.height +
-    DashboardAppHeader.newEntriesHeight;
 final popupClose = find.byKey(const Key('server-notification-popup-close'));
 final popupOpen = find.byKey(const Key('server-notification-popup-open'));
 
@@ -485,7 +478,6 @@ void main() {
         home: const Scaffold(body: Text('App')),
         builder: (context, child) => ServerNotificationHost(
           newDesign: newDesign,
-          navigationClearance: newDesign ? navigationClearance : 0,
           repository: repository,
           navigator: () => navigator.currentState,
           isBlocked: isBlocked ?? () => false,
@@ -743,37 +735,301 @@ void main() {
       });
     }
 
-    group('in the new design', () {
-      for (final (name, size) in [
-        ('small phone', const Size(320, 568)),
-        ('phone', const Size(390, 844)),
-        ('tablet', const Size(1024, 768)),
-      ]) {
-        testWidgets('keeps clear of header and navigation on a $name',
-            (tester) async {
-          tester.view.physicalSize = size;
-          tester.view.devicePixelRatio = 1;
-          addTearDown(tester.view.reset);
-          final repository = await filled(tester, [
-            item(title: 'Neue Version', body: 'Lang ' * 60, critical: true),
-          ]);
-          await pumpHost(tester, repository, newDesign: true);
+    group('placement (#111)', () {
+      const statusBar = 24.0;
 
-          final rect = tester.getRect(
-              find.descendant(of: popup, matching: find.byType(GlassSurface)));
-          // Below the header of the dashboard and its bell.
-          expect(rect.top, greaterThan(headerExtent));
-          final wide = size.width >= 600;
-          expect(
-              rect.bottom,
-              lessThanOrEqualTo(
-                  size.height - (wide ? 0 : navigationClearance)));
-          if (wide) expect(rect.right, size.width - 12);
+      /// A window of [size] with a status bar, showing [home].
+      Future<void> pumpPage(
+        WidgetTester tester,
+        ServerNotificationRepository repository, {
+        required Size size,
+        required Widget home,
+        bool newDesign = true,
+        double keyboard = 0,
+      }) async {
+        tester.view.physicalSize = size;
+        tester.view.devicePixelRatio = 1;
+        tester.view.padding = const FakeViewPadding(top: statusBar);
+        tester.view.viewInsets = FakeViewPadding(bottom: keyboard);
+        addTearDown(tester.view.reset);
+        navigator = GlobalKey<NavigatorState>();
+        await tester.pumpWidget(app(
+          navigator: navigator,
+          home: home,
+          builder: (context, child) => ServerNotificationHost(
+            newDesign: newDesign,
+            repository: repository,
+            navigator: () => navigator.currentState,
+            isBlocked: () => false,
+            blockedChanges: ChangeNotifier(),
+            onLanguage: (_) {},
+            child: child!,
+          ),
+        ));
+        await tester.pump();
+        await tester.pump();
+        await tester.pump(const Duration(milliseconds: 300));
+      }
+
+      Rect card(WidgetTester tester) => tester.getRect(
+          find.descendant(of: popup, matching: find.byType(Semantics)).first);
+
+      final header = find.byKey(const Key('test-header'));
+      final bell = find.byKey(const Key('test-bell'));
+      final school = find.text('Schule am Berg');
+
+      for (final newDesign in [true, false]) {
+        final design = newDesign ? 'new' : 'legacy';
+        testWidgets(
+            'a phone shows it across the width below the header '
+            '($design design)', (tester) async {
+          final repository = await filled(tester, [item(critical: true)]);
+          await pumpPage(
+            tester,
+            repository,
+            size: const Size(360, 640),
+            newDesign: newDesign,
+            home: newDesign
+                ? const Scaffold(appBar: TestHeader(), body: Text('App'))
+                : Scaffold(
+                    appBar: AppBar(
+                      title: const Text('Schule am Berg'),
+                      actions: [
+                        IconButton(
+                          key: const Key('test-bell'),
+                          onPressed: () {},
+                          icon: const Icon(Icons.notifications_outlined),
+                        ),
+                      ],
+                    ),
+                    body: const Text('App'),
+                  ),
+          );
+          final rect = card(tester);
+          final headerBottom = newDesign
+              ? tester.getRect(header).bottom
+              : tester.getRect(find.byType(AppBar)).bottom;
+          expect(headerBottom, statusBar + kToolbarHeight);
+          expect(rect.top, greaterThanOrEqualTo(headerBottom));
+          expect(rect.top, lessThanOrEqualTo(headerBottom + 12),
+              reason: 'directly below it');
+          for (final covered in [bell, school]) {
+            expect(rect.overlaps(tester.getRect(covered)), isFalse);
+          }
+          expect(rect.left, 12);
+          expect(rect.right, 360 - 12);
+          expect(rect.height, lessThanOrEqualTo(640 * 0.4));
           await tester.tap(popupClose);
           await tester.pumpAndSettle();
         });
       }
 
+      testWidgets('a wide window shows it in the top end corner',
+          (tester) async {
+        final repository = await filled(tester, [item(critical: true)]);
+        await pumpPage(
+          tester,
+          repository,
+          size: const Size(1280, 800),
+          home: const Scaffold(
+            appBar: TestHeader(floatingMaxWidth: 1000),
+            body: Text('App'),
+          ),
+        );
+        final rect = card(tester);
+        final headerRect = tester.getRect(header);
+        expect(headerRect.bottom,
+            statusBar + DesignTokens.gutter + kToolbarHeight);
+        expect(rect.top, greaterThanOrEqualTo(headerRect.bottom));
+        expect(rect.overlaps(headerRect), isFalse);
+        expect(rect.overlaps(tester.getRect(bell)), isFalse);
+        expect(rect.right, 1280 - 12);
+        expect(rect.width, lessThanOrEqualTo(420));
+        await tester.tap(popupClose);
+        await tester.pumpAndSettle();
+      });
+
+      testWidgets('follows a header that grows', (tester) async {
+        final strip = ValueNotifier(false);
+        final repository = await filled(tester, [item(critical: true)]);
+        await pumpPage(
+          tester,
+          repository,
+          size: const Size(360, 640),
+          home: ValueListenableBuilder(
+            valueListenable: strip,
+            builder: (context, strip, _) => Scaffold(
+              appBar: TestHeader(strip: strip),
+              body: const Text('App'),
+            ),
+          ),
+        );
+        expect(card(tester).top, greaterThanOrEqualTo(statusBar + 56));
+        strip.value = true;
+        await tester.pump();
+        await tester.pump();
+        expect(tester.getRect(header).bottom, statusBar + 56 + 48);
+        expect(card(tester).top, greaterThanOrEqualTo(statusBar + 56 + 48));
+        await tester.tap(popupClose);
+        await tester.pumpAndSettle();
+      });
+
+      testWidgets('without a header it keeps clear of the status bar',
+          (tester) async {
+        final repository = await filled(tester, [item(critical: true)]);
+        await pumpPage(
+          tester,
+          repository,
+          size: const Size(360, 640),
+          home: const Scaffold(body: Text('App')),
+        );
+        final rect = card(tester);
+        expect(rect.top, greaterThan(statusBar));
+        // Room for the toolbars of older pages and the bell of the sign-in.
+        expect(rect.top, greaterThanOrEqualTo(statusBar + kToolbarHeight));
+        await tester.tap(popupClose);
+        await tester.pumpAndSettle();
+      });
+
+      testWidgets('the header of a covered page does not count',
+          (tester) async {
+        final repository = await filled(tester, [item(critical: true)]);
+        await pumpPage(
+          tester,
+          repository,
+          size: const Size(360, 640),
+          home: const Scaffold(
+            appBar: TestHeader(strip: true),
+            body: Text('App'),
+          ),
+        );
+        expect(card(tester).top, greaterThanOrEqualTo(statusBar + 56 + 48));
+        navigator.currentState!.push(MaterialPageRoute<void>(
+          builder: (_) => const Scaffold(body: Text('Andere Seite')),
+        ));
+        await tester.pumpAndSettle();
+        expect(card(tester).top, lessThan(statusBar + 56 + 48));
+        await tester.tap(popupClose);
+        await tester.pumpAndSettle();
+      });
+
+      for (final newDesign in [true, false]) {
+        testWidgets(
+            'large text and long texts fit the height '
+            '(${newDesign ? 'new' : 'legacy'} design)', (tester) async {
+          tester.platformDispatcher.textScaleFactorTestValue = 2;
+          addTearDown(tester.platformDispatcher.clearTextScaleFactorTestValue);
+          final repository = await filled(tester, [
+            item(title: 'Lang ' * 30, body: 'Text ' * 200, critical: true),
+          ]);
+          await pumpPage(
+            tester,
+            repository,
+            size: const Size(360, 640),
+            newDesign: newDesign,
+            home: const Scaffold(appBar: TestHeader(), body: Text('App')),
+          );
+          expect(tester.takeException(), isNull);
+          final rect = card(tester);
+          expect(rect.height, lessThanOrEqualTo(640 * 0.4 + 0.01));
+          expect(rect.bottom, lessThanOrEqualTo(640));
+          // The way to the full text stays reachable.
+          await tester.ensureVisible(popupOpen);
+          await tester.pumpAndSettle();
+          await tester.tap(popupOpen);
+          await settle(tester);
+          expect(find.byType(ServerNotificationDetailPage), findsOneWidget);
+        });
+      }
+
+      testWidgets('a short window with the keyboard open does not overflow',
+          (tester) async {
+        final repository = await filled(tester, [
+          item(title: 'Lang ' * 30, body: 'Text ' * 200, critical: true),
+        ]);
+        await pumpPage(
+          tester,
+          repository,
+          size: const Size(640, 360),
+          keyboard: 200,
+          home: const Scaffold(appBar: TestHeader(), body: Text('App')),
+        );
+        expect(tester.takeException(), isNull);
+        final rect = card(tester);
+        expect(rect.top, greaterThanOrEqualTo(statusBar + 56));
+        // Above the keyboard: the body scrolls in what is left.
+        expect(rect.bottom, lessThanOrEqualTo(360 - 200 + 0.01));
+        expect(popupClose.hitTestable(), findsOneWidget);
+        await tester.tap(popupClose);
+        await tester.pumpAndSettle();
+      });
+
+      testWidgets('slides in from above', (tester) async {
+        final repository = await filled(tester, [item(critical: true)]);
+        tester.view.physicalSize = const Size(360, 640);
+        tester.view.devicePixelRatio = 1;
+        addTearDown(tester.view.reset);
+        navigator = GlobalKey<NavigatorState>();
+        await tester.pumpWidget(app(
+          navigator: navigator,
+          home: const Scaffold(body: Text('App')),
+          builder: (context, child) => ServerNotificationHost(
+            newDesign: true,
+            repository: repository,
+            navigator: () => navigator.currentState,
+            isBlocked: () => false,
+            blockedChanges: ChangeNotifier(),
+            onLanguage: (_) {},
+            child: child!,
+          ),
+        ));
+        await tester.pump();
+        await tester.pump(const Duration(milliseconds: 40));
+        final during = card(tester).top;
+        await tester.pumpAndSettle();
+        expect(during, lessThan(card(tester).top));
+        await tester.tap(popupClose);
+        await tester.pumpAndSettle();
+      });
+
+      testWidgets('swiping it up closes it, without reading it',
+          (tester) async {
+        final repository = await filled(tester, [item(critical: true)]);
+        await pumpPage(
+          tester,
+          repository,
+          size: const Size(360, 640),
+          home: const Scaffold(appBar: TestHeader(), body: Text('App')),
+        );
+        await tester.drag(popup, const Offset(0, -80));
+        await tester.pumpAndSettle();
+        expect(popup, findsNothing);
+        expect(repository.unreadCount, 1);
+      });
+
+      testWidgets('a short drag lets it snap back', (tester) async {
+        final repository = await filled(tester, [item(critical: true)]);
+        await pumpPage(
+          tester,
+          repository,
+          size: const Size(360, 640),
+          home: const Scaffold(appBar: TestHeader(), body: Text('App')),
+        );
+        final before = card(tester);
+        final gesture = await tester.startGesture(tester.getCenter(popup));
+        await gesture.moveBy(const Offset(0, -20));
+        await gesture.moveBy(const Offset(0, -5));
+        await tester.pump(const Duration(seconds: 1));
+        await gesture.up();
+        await tester.pumpAndSettle();
+        expect(popup, findsOneWidget);
+        expect(card(tester), before);
+        await tester.tap(popupClose);
+        await tester.pumpAndSettle();
+      });
+    });
+
+    group('in the new design', () {
       testWidgets('fits with large text', (tester) async {
         tester.view.physicalSize = const Size(320, 568);
         tester.view.devicePixelRatio = 1;
@@ -845,6 +1101,11 @@ void main() {
       await tester.pump();
       await tester.pump();
       expect(popup, findsOneWidget);
+      // At its place at once, without sliding in.
+      final first = tester.getRect(popup);
+      await tester.pumpAndSettle();
+      expect(tester.getRect(popup), first);
+      expect(first.top, kToolbarHeight + 8);
     });
   });
 
@@ -1061,8 +1322,6 @@ void main() {
           body: const Text('App'),
         ),
         builder: (context, child) => ServerNotificationHost(
-          newDesign: false,
-          navigationClearance: 0,
           repository: repository,
           navigator: () => navigator.currentState,
           isBlocked: () => false,
@@ -1113,4 +1372,45 @@ void main() {
       expect(find.text('1'), findsOneWidget, reason: 'the badge');
     });
   });
+}
+
+/// A header of the new design, as the dashboard has it: a school name and a
+/// bell, and on request the strip for new entries.
+class TestHeader extends StatelessWidget implements PreferredSizeWidget {
+  const TestHeader({super.key, this.floatingMaxWidth, this.strip = false});
+
+  final double? floatingMaxWidth;
+  final bool strip;
+
+  double get _height => kToolbarHeight + (strip ? 48 : 0);
+
+  @override
+  Size get preferredSize => Size.fromHeight(
+      _height + (floatingMaxWidth == null ? 0 : DesignTokens.gutter));
+
+  @override
+  Widget build(BuildContext context) => GlassHeaderShell(
+        surfaceKey: const Key('test-header'),
+        floatingMaxWidth: floatingMaxWidth,
+        child: SizedBox(
+          height: _height,
+          child: Align(
+            alignment: Alignment.topCenter,
+            child: SizedBox(
+              height: kToolbarHeight,
+              child: Row(
+                children: [
+                  const SizedBox(width: 12),
+                  const Expanded(child: Text('Schule am Berg')),
+                  IconButton(
+                    key: const Key('test-bell'),
+                    onPressed: () {},
+                    icon: const Icon(Icons.notifications_outlined),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ),
+      );
 }

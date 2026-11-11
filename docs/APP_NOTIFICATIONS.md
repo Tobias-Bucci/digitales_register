@@ -52,6 +52,20 @@ from the local reminders, which is why the app calls them "App-Mitteilungen".
   school's feed needs none of this: its unread state is the school's own,
   shared with the website and other devices, and its system notifications have
   their own quiet first baseline per account.
+- **Popup (#111).** `ServerNotificationHost` sits above the navigator and shows
+  one popup at the top, right below the page header, in both designs: across
+  the width on phones, in the top end corner of wide windows (at most 420 px
+  wide), never over the header, the school name or the bell. Headers built on
+  `GlassHeaderShell` report where they end through
+  `ServerNotificationPopupClearance`, and only those of pages on screen count.
+  Without a reported header it leaves a toolbar's height (`kToolbarHeight`)
+  below the status bar, which fits the `AppBar`s of the other pages and the
+  corner bell of the sign-in. It slides down from above, without motion when
+  animations are off. It is at most 40 % of the window high, and its content
+  scrolls when large text or a keyboard in a short window leaves less room.
+  Several due notifications make one summary. It closes with its button,
+  Escape, a swipe up on touch screens, or after 6 s unless critical; hover and
+  focus hold it.
 - **Dismissal is final.** Tombstones are checked first and never cleaned up.
 - **No events.** The routes of this feature have no name on purpose: the navigator
   observer turns route names into screen events.
