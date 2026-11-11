@@ -679,6 +679,8 @@
   "calendar.substitute": "Supplenza",
   "calendar.detailTitle": "Dettagli",
   "calendar.noSchool": "Niente scuola",
+  "calendar.previousDay": "Giorno precedente",
+  "calendar.nextDay": "Giorno successivo",
   "calendar.selfCreatedAssessment": "Creato da te",
   "calendar.selfCreatedAssessmentBody": "Hai creato tu questa voce ({type}).",
   "calendarSync.permissionDenied": "Permesso per il calendario non concesso.",

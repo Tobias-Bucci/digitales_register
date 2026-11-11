@@ -679,6 +679,8 @@
   "calendar.substitute": "Substitute",
   "calendar.detailTitle": "Detail view",
   "calendar.noSchool": "No school",
+  "calendar.previousDay": "Previous day",
+  "calendar.nextDay": "Next day",
   "calendar.selfCreatedAssessment": "Self-created",
   "calendar.selfCreatedAssessmentBody": "You created this entry yourself ({type}).",
   "calendarSync.permissionDenied": "Calendar permission was not granted.",

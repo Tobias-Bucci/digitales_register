@@ -8,6 +8,7 @@ import 'package:dr/main.dart' show scaffoldKey;
 import 'package:dr/middleware/middleware.dart' show Pages;
 import 'package:dr/ui/calendar.dart';
 import 'package:dr/ui/exam_calendar_page.dart';
+import 'package:dr/ui/glass_page.dart';
 import 'package:dr/utc_date_time.dart';
 import 'package:dr/util.dart';
 import 'package:flutter/material.dart';
@@ -72,6 +73,17 @@ AppBar _appBarOf(WidgetTester tester, Type page) => tester.widget<AppBar>(
       find.descendant(of: find.byType(page), matching: find.byType(AppBar)),
     );
 
+/// The glass header of the calendar, with the switcher as its title.
+GlassPageHeader _calendarHeader(WidgetTester tester) =>
+    tester.widget<GlassPageHeader>(
+      find.descendant(
+        of: find.byType(Calendar),
+        matching: find.byType(GlassPageHeader),
+      ),
+    );
+
+final _calendarHeaderSurface = find.byKey(const Key('calendar-app-header'));
+
 void main() {
   setUp(() async {
     await bootstrapTestEnvironment();
@@ -86,11 +98,10 @@ void main() {
     await _settle(tester);
 
     expect(_current(), Pages.calendar);
-    var appBar = _appBarOf(tester, Calendar);
-    expect(appBar.bottom, isNull);
-    expect(appBar.title, isA<CalendarViewSwitcher>());
+    expect(_calendarHeader(tester).bottom, isNull);
+    expect(_calendarHeader(tester).titleWidget, isA<CalendarViewSwitcher>());
     expect(
-      find.descendant(of: find.byType(AppBar), matching: _switcher),
+      find.descendant(of: _calendarHeaderSurface, matching: _switcher),
       findsOneWidget,
     );
     expect(find.text('Kalender'), findsOneWidget);
@@ -117,7 +128,7 @@ void main() {
     await _settle(tester);
 
     expect(_current(), Pages.examCalendar);
-    appBar = _appBarOf(tester, ExamCalendarPage);
+    final appBar = _appBarOf(tester, ExamCalendarPage);
     expect(appBar.bottom, isNull);
     expect(appBar.title, isA<CalendarViewSwitcher>());
     expect(find.byKey(const Key('exam-timeline-view')), findsOneWidget);
@@ -132,7 +143,7 @@ void main() {
     await _settle(tester);
 
     expect(_current(), Pages.calendar);
-    expect(_appBarOf(tester, Calendar).bottom, isNull);
+    expect(_calendarHeader(tester).bottom, isNull);
     expect(tester.takeException(), isNull);
     await _finish(tester);
   });
@@ -144,7 +155,7 @@ void main() {
     await _settle(tester);
     expect(tester.takeException(), isNull);
     final calendarRect = tester.getRect(_switcher);
-    final calendarBar = tester.getRect(find.byType(AppBar));
+    final calendarBar = tester.getRect(_calendarHeaderSurface);
     expect(calendarRect.left, greaterThanOrEqualTo(calendarBar.left));
     expect(calendarRect.right, lessThanOrEqualTo(calendarBar.right));
 
@@ -154,7 +165,10 @@ void main() {
     expect(_current(), Pages.examCalendar);
     expect(tester.takeException(), isNull);
     final examRect = tester.getRect(_switcher);
-    expect(examRect, calendarRect);
+    // The glass header of the calendar limits large text to 150 %, the plain
+    // app bar of the exam calendar does not yet, so only the width is the same.
+    expect(examRect.left, calendarRect.left);
+    expect(examRect.right, calendarRect.right);
     // The actions keep their room next to the switcher.
     final timelineButton =
         tester.getRect(find.byKey(const Key('exam-timeline-view')));
