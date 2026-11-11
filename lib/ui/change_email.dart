@@ -16,8 +16,12 @@
 // You should have received a copy of the GNU General Public License
 // along with digitales_register.  If not, see <http://www.gnu.org/licenses/>.
 
+import 'dart:async';
+
 import 'package:dr/i18n/app_localizations.dart';
+import 'package:dr/ui/profile_new.dart';
 import 'package:flutter/material.dart';
+import 'package:responsive_scaffold/responsive_scaffold.dart';
 
 class ChangeEmail extends StatefulWidget {
   final ChangeEmailCallback changeEmail;
@@ -27,11 +31,18 @@ class ChangeEmail extends StatefulWidget {
   _ChangeEmailState createState() => _ChangeEmailState();
 }
 
-typedef ChangeEmailCallback = void Function(String pass, String email);
+/// Completes once the request has been answered; on success the page has
+/// been closed by then.
+typedef ChangeEmailCallback = FutureOr<void> Function(
+    String pass, String email);
 
 class _ChangeEmailState extends State<ChangeEmail> {
   final _passController = TextEditingController(),
       _emailController = TextEditingController();
+  final _formKey = GlobalKey<FormState>();
+  bool _busy = false;
+  bool _obscurePassword = true;
+
   @override
   void dispose() {
     _passController.dispose();
@@ -39,8 +50,36 @@ class _ChangeEmailState extends State<ChangeEmail> {
     super.dispose();
   }
 
+  /// The new design checks the fields first and shows that it is waiting.
+  Future<void> _submit() async {
+    if (_busy || !(_formKey.currentState?.validate() ?? false)) return;
+    FocusScope.of(context).unfocus();
+    setState(() => _busy = true);
+    try {
+      await widget.changeEmail(
+        _passController.text,
+        _emailController.text.trim(),
+      );
+    } finally {
+      if (mounted) setState(() => _busy = false);
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
+    // Below the navigation of the new design.
+    if (ResponsiveNavigationScope.isActive(context)) {
+      return ChangeEmailNewView(
+        formKey: _formKey,
+        passController: _passController,
+        emailController: _emailController,
+        busy: _busy,
+        obscurePassword: _obscurePassword,
+        onToggleObscure: () =>
+            setState(() => _obscurePassword = !_obscurePassword),
+        onSubmit: _submit,
+      );
+    }
     final l10n = context.l10n;
     return Scaffold(
       appBar: AppBar(

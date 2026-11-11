@@ -25,7 +25,7 @@ import 'package:dr/container/settings_page.dart';
 import 'package:dr/i18n/app_localizations.dart';
 import 'package:dr/profile_picture.dart';
 import 'package:dr/ui/no_internet.dart';
-import 'package:dr/ui/readable_content.dart';
+import 'package:dr/ui/profile_new.dart';
 import 'package:dr/ui/user_profile.dart';
 import 'package:flutter/material.dart';
 import 'package:responsive_scaffold/responsive_scaffold.dart';
@@ -215,6 +215,31 @@ class _ProfileState extends State<Profile> {
 
   @override
   Widget build(BuildContext context) {
+    // Below the navigation of the new design.
+    if (ResponsiveNavigationScope.isActive(context)) {
+      return ProfileNewView(
+        profileState: widget.profileState,
+        baseUrl: widget.baseUrl,
+        noInternet: widget.noInternet,
+        uploadInProgress: _uploadInProgress,
+        onUploadPicture: _handleProfilePictureUpload,
+        changeEmail: widget.changeEmail,
+        changePass: widget.changePass,
+        setSendNotificationEmails: widget.setSendNotificationEmails,
+        biometricAppLockEnabled: widget.biometricAppLockEnabled,
+        biometricSubtitle: _biometricSubtitle,
+        onBiometricChanged:
+            _canToggleBiometricLock ? _handleBiometricAppLockChanged : null,
+        codiceFiscaleController: _codiceFiscaleController,
+        hasCodiceFiscale: _hasCodiceFiscale,
+        codiceFiscaleSaving: _codiceFiscaleSaveInProgress,
+        onCodiceFiscaleChanged: (_) {
+          if (!_hasCodiceFiscale) setState(() {});
+        },
+        onSaveCodiceFiscale:
+            _normalizedCodiceFiscale.isEmpty ? null : _handleCodiceFiscaleSave,
+      );
+    }
     final profileState = widget.profileState;
     final name = profileState.name;
     final imageUrl = buildProfilePictureUrl(
@@ -226,123 +251,120 @@ class _ProfileState extends State<Profile> {
       appBar: AppBar(
         title: Text(context.t('profile.title')),
       ),
-      body: NewDesignReadable(
-          child: name == null
-              ? Center(
-                  child: widget.noInternet
-                      ? const NoInternet()
-                      : const CircularProgressIndicator(),
-                )
-              : ListView(
-                  // Clear of the floating bar of the new design.
-                  padding: EdgeInsets.only(
-                    bottom:
-                        24 + ResponsiveNavigationScope.bottomInsetOf(context),
+      body: name == null
+          ? Center(
+              child: widget.noInternet
+                  ? const NoInternet()
+                  : const CircularProgressIndicator(),
+            )
+          : ListView(
+              // Clear of the floating bar of the new design.
+              padding: EdgeInsets.only(
+                bottom: 24 + ResponsiveNavigationScope.bottomInsetOf(context),
+              ),
+              children: <Widget>[
+                Padding(
+                  padding: const EdgeInsets.symmetric(vertical: 16),
+                  child: UserProfile(
+                    name: name,
+                    username: profileState.username ?? '',
+                    role: context.l10n.translateProfileRole(
+                      profileState.roleName ?? '',
+                    ),
+                    imageUrl: imageUrl,
+                    onUploadProfilePicture: _handleProfilePictureUpload,
+                    uploadInProgress: _uploadInProgress,
+                    uploadEnabled: !widget.noInternet,
                   ),
-                  children: <Widget>[
-                    Padding(
-                      padding: const EdgeInsets.symmetric(vertical: 16),
-                      child: UserProfile(
-                        name: name,
-                        username: profileState.username ?? '',
-                        role: context.l10n.translateProfileRole(
-                          profileState.roleName ?? '',
-                        ),
-                        imageUrl: imageUrl,
-                        onUploadProfilePicture: _handleProfilePictureUpload,
-                        uploadInProgress: _uploadInProgress,
-                        uploadEnabled: !widget.noInternet,
-                      ),
-                    ),
-                    Padding(
-                      padding: const EdgeInsets.symmetric(
-                          horizontal: 16, vertical: 8),
-                      child: Card(
-                        child: Padding(
-                          padding: const EdgeInsets.all(16),
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: <Widget>[
-                              Text(
-                                context.t('profile.taxIdTitle'),
-                                style: Theme.of(context).textTheme.titleMedium,
-                              ),
-                              const SizedBox(height: 12),
-                              TextField(
-                                controller: _codiceFiscaleController,
-                                readOnly: _hasCodiceFiscale,
-                                enabled: !widget.noInternet,
-                                textCapitalization:
-                                    TextCapitalization.characters,
-                                decoration: InputDecoration(
-                                  border: const OutlineInputBorder(),
-                                  hintText: context.t('profile.taxIdHint'),
-                                ),
-                                onChanged: (_) {
-                                  if (!_hasCodiceFiscale) {
-                                    setState(() {});
-                                  }
-                                },
-                              ),
-                              if (_hasCodiceFiscale) ...<Widget>[
-                                const SizedBox(height: 12),
-                                Text(
-                                  context.t('profile.taxIdLocked'),
-                                ),
-                              ] else ...<Widget>[
-                                const SizedBox(height: 12),
-                                FilledButton(
-                                  onPressed: widget.noInternet ||
-                                          _codiceFiscaleSaveInProgress ||
-                                          _normalizedCodiceFiscale.isEmpty
-                                      ? null
-                                      : _handleCodiceFiscaleSave,
-                                  child: _codiceFiscaleSaveInProgress
-                                      ? const SizedBox(
-                                          width: 18,
-                                          height: 18,
-                                          child: CircularProgressIndicator(
-                                              strokeWidth: 2),
-                                        )
-                                      : Text(context.t('profile.saveTaxId')),
-                                ),
-                              ],
-                            ],
+                ),
+                Padding(
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                  child: Card(
+                    child: Padding(
+                      padding: const EdgeInsets.all(16),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: <Widget>[
+                          Text(
+                            context.t('profile.taxIdTitle'),
+                            style: Theme.of(context).textTheme.titleMedium,
                           ),
-                        ),
+                          const SizedBox(height: 12),
+                          TextField(
+                            controller: _codiceFiscaleController,
+                            readOnly: _hasCodiceFiscale,
+                            enabled: !widget.noInternet,
+                            textCapitalization: TextCapitalization.characters,
+                            decoration: InputDecoration(
+                              border: const OutlineInputBorder(),
+                              hintText: context.t('profile.taxIdHint'),
+                            ),
+                            onChanged: (_) {
+                              if (!_hasCodiceFiscale) {
+                                setState(() {});
+                              }
+                            },
+                          ),
+                          if (_hasCodiceFiscale) ...<Widget>[
+                            const SizedBox(height: 12),
+                            Text(
+                              context.t('profile.taxIdLocked'),
+                            ),
+                          ] else ...<Widget>[
+                            const SizedBox(height: 12),
+                            FilledButton(
+                              onPressed: widget.noInternet ||
+                                      _codiceFiscaleSaveInProgress ||
+                                      _normalizedCodiceFiscale.isEmpty
+                                  ? null
+                                  : _handleCodiceFiscaleSave,
+                              child: _codiceFiscaleSaveInProgress
+                                  ? const SizedBox(
+                                      width: 18,
+                                      height: 18,
+                                      child: CircularProgressIndicator(
+                                          strokeWidth: 2),
+                                    )
+                                  : Text(context.t('profile.saveTaxId')),
+                            ),
+                          ],
+                        ],
                       ),
                     ),
-                    SwitchListTile.adaptive(
-                      title: Text(context.t('profile.notificationEmails')),
-                      value: profileState.sendNotificationEmails ?? false,
-                      onChanged: widget.noInternet
-                          ? null
-                          : widget.setSendNotificationEmails,
-                    ),
-                    ListTile(
-                      title: Text(context.t('profile.changeEmail')),
-                      subtitle: Text(profileState.email ?? ''),
-                      trailing: const Icon(Icons.chevron_right),
-                      onTap: widget.changeEmail,
-                      enabled: !widget.noInternet,
-                    ),
-                    ListTile(
-                      title: Text(context.t('profile.changePassword')),
-                      trailing: const Icon(Icons.chevron_right),
-                      onTap: widget.changePass,
-                      enabled: !widget.noInternet,
-                    ),
-                    const Divider(),
-                    SwitchListTile.adaptive(
-                      title: Text(context.t('profile.biometricLock')),
-                      subtitle: Text(_biometricSubtitle),
-                      value: widget.biometricAppLockEnabled,
-                      onChanged: _canToggleBiometricLock
-                          ? _handleBiometricAppLockChanged
-                          : null,
-                    ),
-                  ],
-                )),
+                  ),
+                ),
+                SwitchListTile.adaptive(
+                  title: Text(context.t('profile.notificationEmails')),
+                  value: profileState.sendNotificationEmails ?? false,
+                  onChanged: widget.noInternet
+                      ? null
+                      : widget.setSendNotificationEmails,
+                ),
+                ListTile(
+                  title: Text(context.t('profile.changeEmail')),
+                  subtitle: Text(profileState.email ?? ''),
+                  trailing: const Icon(Icons.chevron_right),
+                  onTap: widget.changeEmail,
+                  enabled: !widget.noInternet,
+                ),
+                ListTile(
+                  title: Text(context.t('profile.changePassword')),
+                  trailing: const Icon(Icons.chevron_right),
+                  onTap: widget.changePass,
+                  enabled: !widget.noInternet,
+                ),
+                const Divider(),
+                SwitchListTile.adaptive(
+                  title: Text(context.t('profile.biometricLock')),
+                  subtitle: Text(_biometricSubtitle),
+                  value: widget.biometricAppLockEnabled,
+                  onChanged: _canToggleBiometricLock
+                      ? _handleBiometricAppLockChanged
+                      : null,
+                ),
+              ],
+            ),
     );
   }
 }

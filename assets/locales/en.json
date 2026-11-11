@@ -621,6 +621,7 @@
   "login.userTypeUnsupported.website": "Go to the website",
   "changeEmail.currentPassword": "Current password",
   "changeEmail.newEmail": "New email address",
+  "changeEmail.invalidEmail": "Please enter a valid email address",
   "dialog.close": "Close dialog",
   "network.copiedToClipboard": "Copied to clipboard",
   "grades.average": "Grade average",

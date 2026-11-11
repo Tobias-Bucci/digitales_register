@@ -621,6 +621,7 @@
   "login.userTypeUnsupported.website": "Chiló vas’ al sit web",
   "changeEmail.currentPassword": "Password atüala",
   "changeEmail.newEmail": "Nü indriz email",
+  "changeEmail.invalidEmail": "Por plajëir, scrie ite n indriz email valid",
   "dialog.close": "Stlüte le dialog",
   "network.copiedToClipboard": "Copì ti apunć",
   "grades.average": "Media di proi",
