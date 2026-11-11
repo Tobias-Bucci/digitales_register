@@ -455,7 +455,7 @@ class RegisterApp extends StatelessWidget {
                   case "settings":
                     return MaterialPageRoute<void>(
                       settings: settings,
-                      builder: (_) => SettingsPageContainer(),
+                      builder: (_) => const SettingsPageContainer(),
                       fullscreenDialog: true,
                     );
                   default:

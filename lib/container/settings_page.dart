@@ -37,7 +37,15 @@ import 'package:flutter_built_redux/flutter_built_redux.dart';
 const DeepCollectionEquality _settingsViewModelEquality =
     DeepCollectionEquality();
 
+/// A page of the settings that other pages open directly.
+enum SettingsShortcut { grades, subjectNicks, substituteTeachers }
+
 class SettingsPageContainer extends StatelessWidget {
+  const SettingsPageContainer({super.key, this.shortcut});
+
+  /// Shows only this page of the settings instead of all of them.
+  final SettingsShortcut? shortcut;
+
   @override
   Widget build(BuildContext context) {
     return StoreConnection<AppState, AppActions, SettingsViewModel>(
@@ -45,6 +53,7 @@ class SettingsPageContainer extends StatelessWidget {
         return AnimatedBuilder(
           animation: Listenable.merge([themeController, appClock]),
           builder: (context, _) => SettingsPageWidget(
+            shortcut: shortcut,
             vm: vm,
             currentThemePreference: themeController.themePreference,
             onSetThemePreference: themeController.setThemePreference,

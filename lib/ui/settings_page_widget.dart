@@ -110,8 +110,12 @@ class SettingsPageWidget extends StatefulWidget {
   /// A line about older learning notes that belong to no account, if any.
   final Widget? legacyStudyData;
 
+  /// Shows only this page of the settings, opened directly by another page.
+  final SettingsShortcut? shortcut;
+
   const SettingsPageWidget({
     super.key,
+    this.shortcut,
     required this.onSetNoPassSaving,
     required this.onSetNoDataSaving,
     required this.onSetAskWhenDelete,
@@ -228,6 +232,8 @@ class _SettingsPageWidgetState extends State<SettingsPageWidget> {
   }
 
   void _handleScrollIntents() {
+    // The page asked for is already shown, see [SettingsPageWidget.shortcut].
+    if (widget.shortcut != null) return;
     if (widget.vm.showSubjectNicks && !_handledSubjectNicksIntent) {
       _handledSubjectNicksIntent = true;
       WidgetsBinding.instance.addPostFrameCallback((_) async {
@@ -446,55 +452,62 @@ class _SettingsPageWidgetState extends State<SettingsPageWidget> {
     );
   }
 
+  Widget _gradesSettingsPage() => _GradesSettingsPage(
+        showGradesDiagram: widget.vm.showGradesDiagram,
+        showAllSubjectsAverage: widget.vm.showAllSubjectsAverage,
+        allSubjects: widget.vm.allSubjects,
+        ignoreForGradesAverage: widget.vm.ignoreForGradesAverage,
+        onSetShowGradesDiagram: widget.onSetShowGradesDiagram,
+        onSetShowAllSubjectsAverage: widget.onSetShowAllSubjectsAverage,
+        onSetIgnoreForGradesAverage: widget.onSetIgnoreForGradesAverage,
+      );
+
   Future<void> _openGradesSettingsPage() {
     return Navigator.of(context).push(
       MaterialPageRoute<void>(
-        builder: (context) => _GradesSettingsPage(
-          showGradesDiagram: widget.vm.showGradesDiagram,
-          showAllSubjectsAverage: widget.vm.showAllSubjectsAverage,
-          allSubjects: widget.vm.allSubjects,
-          ignoreForGradesAverage: widget.vm.ignoreForGradesAverage,
-          onSetShowGradesDiagram: widget.onSetShowGradesDiagram,
-          onSetShowAllSubjectsAverage: widget.onSetShowAllSubjectsAverage,
-          onSetIgnoreForGradesAverage: widget.onSetIgnoreForGradesAverage,
-        ),
+        builder: (context) => _gradesSettingsPage(),
       ),
     );
   }
+
+  Widget _subjectNicksPage({bool showAddDialogOnStart = false}) =>
+      _SubjectNicksSettingsPage(
+        subjectNicks: widget.vm.subjectNicks,
+        allSubjects: widget.vm.allSubjects,
+        showCalendarEditNicksBar: widget.vm.showCalendarEditNicksBar,
+        onSetSubjectNicks: widget.onSetSubjectNicks,
+        onSetShowCalendarEditNicksBar: widget.onSetShowCalendarEditNicksBar,
+        showAddDialogOnStart: showAddDialogOnStart,
+      );
 
   Future<void> _openSubjectNicksPage({
     bool showAddDialogOnStart = false,
   }) {
     return Navigator.of(context).push(
       MaterialPageRoute<void>(
-        builder: (context) => _SubjectNicksSettingsPage(
-          subjectNicks: widget.vm.subjectNicks,
-          allSubjects: widget.vm.allSubjects,
-          showCalendarEditNicksBar: widget.vm.showCalendarEditNicksBar,
-          onSetSubjectNicks: widget.onSetSubjectNicks,
-          onSetShowCalendarEditNicksBar: widget.onSetShowCalendarEditNicksBar,
-          showAddDialogOnStart: showAddDialogOnStart,
-        ),
+        builder: (context) =>
+            _subjectNicksPage(showAddDialogOnStart: showAddDialogOnStart),
       ),
     );
   }
 
+  Widget _substituteSettingsPage() => _SubstituteSettingsPage(
+        substituteDetectionEnabled: widget.vm.substituteDetectionEnabled,
+        substitutePrimaryTeachers: widget.vm.substitutePrimaryTeachers,
+        lockedSubjects: widget.vm.substitutePrimaryTeachersLockedSubjects,
+        allSubjects: widget.vm.allSubjects,
+        allTeachers: widget.vm.allTeachers,
+        onSetSubstituteDetectionEnabled: widget.onSetSubstituteDetectionEnabled,
+        onSetSubstitutePrimaryTeachers: widget.onSetSubstitutePrimaryTeachers,
+        onSetSubstituteKnownTeachers: widget.onSetSubstituteKnownTeachers,
+        onSetSubstitutePrimaryTeachersLockedSubjects:
+            widget.onSetSubstitutePrimaryTeachersLockedSubjects,
+      );
+
   Future<void> _openSubstituteSettingsPage() {
     return Navigator.of(context).push(
       MaterialPageRoute<void>(
-        builder: (context) => _SubstituteSettingsPage(
-          substituteDetectionEnabled: widget.vm.substituteDetectionEnabled,
-          substitutePrimaryTeachers: widget.vm.substitutePrimaryTeachers,
-          lockedSubjects: widget.vm.substitutePrimaryTeachersLockedSubjects,
-          allSubjects: widget.vm.allSubjects,
-          allTeachers: widget.vm.allTeachers,
-          onSetSubstituteDetectionEnabled:
-              widget.onSetSubstituteDetectionEnabled,
-          onSetSubstitutePrimaryTeachers: widget.onSetSubstitutePrimaryTeachers,
-          onSetSubstituteKnownTeachers: widget.onSetSubstituteKnownTeachers,
-          onSetSubstitutePrimaryTeachersLockedSubjects:
-              widget.onSetSubstitutePrimaryTeachersLockedSubjects,
-        ),
+        builder: (context) => _substituteSettingsPage(),
       ),
     );
   }
@@ -1224,6 +1237,16 @@ class _SettingsPageWidgetState extends State<SettingsPageWidget> {
 
   @override
   Widget build(BuildContext context) {
+    switch (widget.shortcut) {
+      case SettingsShortcut.grades:
+        return _gradesSettingsPage();
+      case SettingsShortcut.subjectNicks:
+        return _subjectNicksPage(showAddDialogOnStart: true);
+      case SettingsShortcut.substituteTeachers:
+        return _substituteSettingsPage();
+      case null:
+        break;
+    }
     final l10n = context.l10n;
     final currentTheme = switch (widget.currentThemePreference) {
       AppThemePreference.light => _Theme.light,

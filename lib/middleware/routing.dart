@@ -106,11 +106,108 @@ Future<void> _showPassReset(
   await next(action);
 }
 
+const _profileRoute = "/profile";
+const _changeEmailRoute = "/change_email";
+const _settingsRoute = "/settings";
+
+/// The navigator of the new design's shell, below its navigation. Null while
+/// the legacy design is chosen or there is no shell (signed out, on the login
+/// page, during startup); pages then open on the root navigator as before.
+NavigatorState? _shellNavigator(AppState state) =>
+    state.settingsState.legacyDesign || !state.loginState.loggedIn
+        ? null
+        : nestedNavKey.currentState;
+
+Route<dynamic>? _topRoute(NavigatorState navigator) {
+  Route<dynamic>? top;
+  // popUntil is the only way to read the current route; returning true pops
+  // nothing.
+  navigator.popUntil((route) {
+    top = route;
+    return true;
+  });
+  return top;
+}
+
+/// How many pages of the Profile destination (profile, change email) are open
+/// in the shell. The navigation highlights "Profil" while there are any.
+final ValueNotifier<int> openProfileShellPages = ValueNotifier(0);
+
+/// A page of the Profile destination in the shell. It is pushed on top of the
+/// current page like the notification center, so that going back returns
+/// there and choosing a destination closes it.
+class _ProfileShellRoute extends MaterialPageRoute<void> {
+  _ProfileShellRoute({required String name, required super.builder})
+      : super(settings: RouteSettings(name: name));
+
+  bool _counted = false;
+
+  @override
+  void install() {
+    super.install();
+    if (!_counted) {
+      _counted = true;
+      openProfileShellPages.value++;
+    }
+  }
+
+  @override
+  bool didPop(void result) {
+    final popped = super.didPop(result);
+    // At once, as the navigation follows a pop at once as well.
+    if (popped) _release();
+    return popped;
+  }
+
+  @override
+  void dispose() {
+    // Removed without a pop, for example with the whole navigator.
+    _release();
+    super.dispose();
+  }
+
+  void _release() {
+    if (!_counted) return;
+    _counted = false;
+    openProfileShellPages.value--;
+  }
+}
+
+void _pushProfileShellPage(
+  NavigatorState shell,
+  String name,
+  WidgetBuilder builder,
+) {
+  // Chosen again from the profile menu while it is open.
+  if (_topRoute(shell)?.settings.name == name) return;
+  unawaited(shell.push(_ProfileShellRoute(name: name, builder: builder)));
+}
+
+/// Closes the change-email page after the address was changed.
+void _closeChangeEmail() {
+  final shell = nestedNavKey.currentState;
+  final root = navigatorKey?.currentState;
+  if (root != null && _topRoute(root)?.settings.name == _changeEmailRoute) {
+    root.pop();
+  } else if (shell != null &&
+      _topRoute(shell)?.settings.name == _changeEmailRoute) {
+    shell.pop();
+  } else {
+    root?.pop();
+  }
+}
+
 Future<void> _showChangeEmail(
     MiddlewareApi<AppState, AppStateBuilder, AppActions> api,
     ActionHandler next,
     Action<void> action) async {
-  unawaited(navigatorKey!.currentState!.pushNamed("/change_email"));
+  final shell = _shellNavigator(api.state);
+  if (shell != null) {
+    _pushProfileShellPage(
+        shell, _changeEmailRoute, (_) => ChangeEmailContainer());
+  } else {
+    unawaited(navigatorKey!.currentState!.pushNamed(_changeEmailRoute));
+  }
   await next(action);
 }
 
@@ -118,7 +215,12 @@ Future<void> _showProfile(
     MiddlewareApi<AppState, AppStateBuilder, AppActions> api,
     ActionHandler next,
     Action<void> action) async {
-  unawaited(navigatorKey!.currentState!.pushNamed("/profile"));
+  final shell = _shellNavigator(api.state);
+  if (shell != null) {
+    _pushProfileShellPage(shell, _profileRoute, (_) => ProfileContainer());
+  } else {
+    unawaited(navigatorKey!.currentState!.pushNamed(_profileRoute));
+  }
   await api.actions.profileActions.load();
   await next(action);
 }
@@ -146,7 +248,7 @@ Future<void> _showSettings(
     ActionHandler next,
     Action<void> action) async {
   scaffoldKey!.currentState!
-      .selectContentWidget(SettingsPageContainer(), Pages.settings);
+      .selectContentWidget(const SettingsPageContainer(), Pages.settings);
   await next(action);
 }
 
@@ -159,19 +261,39 @@ Future<void> _showDebug(
   await next(action);
 }
 
+/// Opens one page of the settings straight from the page that offers it, on
+/// top of that page in the shell, so that going back returns there. Legacy
+/// opens the whole settings on the root navigator, which then opens the page.
+void _pushSettingsShortcut(NavigatorState shell, SettingsShortcut shortcut) {
+  unawaited(shell.push(MaterialPageRoute<void>(
+    settings: const RouteSettings(name: _settingsRoute),
+    builder: (_) => SettingsPageContainer(shortcut: shortcut),
+  )));
+}
+
 Future<void> _showEditCalendarSubjectNicks(
     MiddlewareApi<AppState, AppStateBuilder, AppActions> api,
     ActionHandler next,
     Action<void> action) async {
   await next(action);
-  unawaited(navigatorKey!.currentState!.pushNamed("/settings"));
+  final shell = _shellNavigator(api.state);
+  if (shell != null) {
+    _pushSettingsShortcut(shell, SettingsShortcut.subjectNicks);
+  } else {
+    unawaited(navigatorKey!.currentState!.pushNamed(_settingsRoute));
+  }
 }
 
 Future<void> _showEditGradesAverageSettings(
     MiddlewareApi<AppState, AppStateBuilder, AppActions> api,
     ActionHandler next,
     Action<void> action) async {
-  unawaited(navigatorKey!.currentState!.pushNamed("/settings"));
+  final shell = _shellNavigator(api.state);
+  if (shell != null) {
+    _pushSettingsShortcut(shell, SettingsShortcut.grades);
+  } else {
+    unawaited(navigatorKey!.currentState!.pushNamed(_settingsRoute));
+  }
   await next(action);
 }
 
@@ -180,7 +302,12 @@ Future<void> _showEditCalendarSubstituteSettings(
     ActionHandler next,
     Action<void> action) async {
   await next(action);
-  unawaited(navigatorKey!.currentState!.pushNamed("/settings"));
+  final shell = _shellNavigator(api.state);
+  if (shell != null) {
+    _pushSettingsShortcut(shell, SettingsShortcut.substituteTeachers);
+  } else {
+    unawaited(navigatorKey!.currentState!.pushNamed(_settingsRoute));
+  }
 }
 
 Future<void> _showCalendar(

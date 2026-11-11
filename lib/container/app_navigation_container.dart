@@ -56,6 +56,21 @@ class AppNavigationContainer extends StatelessWidget {
     AppActions actions,
     AppDestination destination,
   ) {
+    final returnsToCurrent = switch (destination) {
+      AppDestination.grades => current == Pages.grades,
+      AppDestination.calendar => current == Pages.calendar,
+      AppDestination.messages => current == Pages.messages,
+      AppDestination.extras => current == Pages.extras,
+      AppDestination.dashboard || AppDestination.profile => false,
+    };
+    if (returnsToCurrent) {
+      // Closes what is open on top of the page, such as Profile or a page of
+      // the settings opened from it.
+      nestedNavKey.currentState?.popUntil(
+        (route) => route.isFirst || route.settings.arguments == current,
+      );
+      return;
+    }
     switch (destination) {
       case AppDestination.dashboard:
         scaffoldKey?.currentState?.goHome();
@@ -75,6 +90,14 @@ class AppNavigationContainer extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     diagnostics.screen(current.name);
+    return ValueListenableBuilder<int>(
+      valueListenable: openProfileShellPages,
+      builder: (context, profilePages, _) =>
+          _build(context, profileOpen: profilePages > 0),
+    );
+  }
+
+  Widget _build(BuildContext context, {required bool profileOpen}) {
     return StoreConnection<AppState, AppActions,
         (int, String?, ProfileIdentity)>(
       connect: (state) => (
@@ -89,7 +112,9 @@ class AppNavigationContainer extends StatelessWidget {
         ),
       ),
       builder: (context, vm, actions) {
-        final selected = destinationOf(current);
+        // Profile and its pages open on top of the current page.
+        final selected =
+            profileOpen ? AppDestination.profile : destinationOf(current);
         void onSelected(AppDestination destination) =>
             _open(context, actions, destination);
         return rail

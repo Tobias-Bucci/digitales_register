@@ -177,7 +177,7 @@ Future<void> _changeEmail(
   }
   if (result["error"] == null) {
     showSnackBar(tr('profile.updated'));
-    navigatorKey?.currentState?.pop();
+    _closeChangeEmail();
   } else {
     showSnackBar(tr('profile.saveFailed'));
   }

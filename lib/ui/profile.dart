@@ -28,6 +28,7 @@ import 'package:dr/ui/no_internet.dart';
 import 'package:dr/ui/readable_content.dart';
 import 'package:dr/ui/user_profile.dart';
 import 'package:flutter/material.dart';
+import 'package:responsive_scaffold/responsive_scaffold.dart';
 
 typedef AsyncVoidCallback = Future<void> Function();
 typedef UpdateCodiceFiscale = Future<void> Function(String codiceFiscale);
@@ -233,7 +234,11 @@ class _ProfileState extends State<Profile> {
                       : const CircularProgressIndicator(),
                 )
               : ListView(
-                  padding: const EdgeInsets.only(bottom: 24),
+                  // Clear of the floating bar of the new design.
+                  padding: EdgeInsets.only(
+                    bottom:
+                        24 + ResponsiveNavigationScope.bottomInsetOf(context),
+                  ),
                   children: <Widget>[
                     Padding(
                       padding: const EdgeInsets.symmetric(vertical: 16),
