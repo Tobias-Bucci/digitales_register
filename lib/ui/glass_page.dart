@@ -460,6 +460,8 @@ class GlassStateCard extends StatelessWidget {
   });
 
   final IconData icon;
+
+  /// [body] may be empty, for a message that needs no explanation.
   final String title, body;
   final String? actionLabel;
   final VoidCallback? onAction;
@@ -507,14 +509,17 @@ class GlassStateCard extends StatelessWidget {
                     ),
                   ),
                 ),
-                const SizedBox(height: 6),
-                Text(
-                  body,
-                  textAlign: TextAlign.center,
-                  style: theme.textTheme.bodyMedium?.copyWith(
-                    color: scheme.onSurfaceVariant,
+                // An empty [body] leaves the title alone.
+                if (body.isNotEmpty) ...[
+                  const SizedBox(height: 6),
+                  Text(
+                    body,
+                    textAlign: TextAlign.center,
+                    style: theme.textTheme.bodyMedium?.copyWith(
+                      color: scheme.onSurfaceVariant,
+                    ),
                   ),
-                ),
+                ],
                 if (actionLabel != null) ...[
                   const SizedBox(height: 16),
                   FilledButton.icon(
