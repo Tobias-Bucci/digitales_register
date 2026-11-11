@@ -16,6 +16,7 @@
 // along with digitales_register.  If not, see <http://www.gnu.org/licenses/>.
 
 final _whitespace = RegExp(r'\s');
+final _leadingScheme = RegExp('^[a-zA-Z][a-zA-Z0-9+.-]*://');
 final _otherScheme = RegExp(r'^[a-zA-Z][a-zA-Z0-9+.-]*:(?!\d+(?:[/?#]|$))');
 
 /// The link a reminder should open, from what the user typed.
@@ -29,7 +30,9 @@ String? normalizeReminderLink(String input) {
   final text = input.trim();
   if (text.isEmpty) return '';
   if (text.contains(_whitespace)) return null;
-  final hasScheme = text.contains('://');
+  // Only a scheme at the start counts: a link may carry another address in
+  // its query, such as a return address after the sign-in.
+  final hasScheme = _leadingScheme.hasMatch(text);
   if (!hasScheme && _otherScheme.hasMatch(text)) return null;
   final uri = Uri.tryParse(hasScheme ? text : 'https://$text');
   if (uri == null) return null;

@@ -35,26 +35,32 @@ Future<bool> _openExternally(Uri uri) =>
     launchUrl(uri, mode: LaunchMode.externalApplication);
 
 /// Reacts to a tapped reminder, whether the app was running or the tap started
-/// it. The mensa reminder opens [mensaUrl], the user's own link. Without a link,
-/// or if it cannot be opened, the dashboard is shown instead. A value that is
-/// not a valid link is never opened.
+/// it. The mensa reminder opens [mensaUrl], the user's own link. Without a link
+/// the dashboard is shown, as the settings promise. A link that is not valid or
+/// cannot be opened is never silently dropped: [linkFailed] tells the user, and
+/// the dashboard is shown as well.
 Future<void> openReminderTarget(
   String? payload, {
   required String mensaUrl,
   required VoidCallback openDashboard,
+  VoidCallback? linkFailed,
   Future<bool> Function(Uri uri) launch = _openExternally,
 }) async {
   if (payload != mensaReminderPayload) return;
   final link = normalizeReminderLink(mensaUrl);
-  if (link == null || link.isEmpty) return openDashboard();
+  if (link != null && link.isEmpty) return openDashboard();
   var opened = false;
-  try {
-    opened = await launch(Uri.parse(link));
-  } catch (error) {
-    runtimeTrace('Reminders', 'open-link-failed',
-        detail: 'type=${error.runtimeType}');
+  if (link != null) {
+    try {
+      opened = await launch(Uri.parse(link));
+    } catch (error) {
+      runtimeTrace('Reminders', 'open-link-failed',
+          detail: 'type=${error.runtimeType}');
+    }
   }
-  if (!opened) openDashboard();
+  if (opened) return;
+  openDashboard();
+  linkFailed?.call();
 }
 
 /// Reminders of all upcoming tests and exams. Ids depend on the assessment and

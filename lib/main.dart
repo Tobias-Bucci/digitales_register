@@ -259,6 +259,7 @@ Future<void> _initializeAfterFirstFrame({
           // and the login page must stay.
           if (store.state.loginState.loggedIn) showDashboardHome();
         },
+        linkFailed: () => showSnackBar(tr('navigation.linkOpenFailed')),
       );
   reminderNotifications.prepare();
   // Notification storage/OS scheduling is optional and can be busy in another
