@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:math' as math;
 
 import 'package:dr/data.dart';
 import 'package:dr/i18n/app_localizations.dart';
@@ -7,12 +8,22 @@ import 'package:dr/server_notifications/server_notification_links.dart';
 import 'package:dr/server_notifications/server_notification_models.dart';
 import 'package:dr/server_notifications/server_notification_repository.dart';
 import 'package:dr/server_notifications/server_notification_service.dart';
+import 'package:dr/ui/dashboard_app_header.dart' show HeaderDiscButton;
+import 'package:dr/ui/dashboard_columns.dart';
+import 'package:dr/ui/glass_page.dart';
+import 'package:dr/ui/glass_segmented_control.dart';
+import 'package:dr/ui/glass_surface.dart';
 import 'package:dr/ui/last_fetched_overlay.dart';
 import 'package:dr/ui/linkified_text.dart';
+import 'package:dr/ui/readable_content.dart';
 import 'package:dr/ui/server_notifications/server_notification_routes.dart';
 import 'package:dr/ui/server_notifications/server_notification_visuals.dart';
 import 'package:flutter/material.dart' hide Notification;
 import 'package:responsive_scaffold/responsive_scaffold.dart';
+
+// The rendering of the new design. The legacy one below stays as it was: it
+// is what the center shows outside the shell, such as while signed out.
+part 'server_notification_center_new.dart';
 
 /// From this width on, list and detail are shown side by side.
 const _twoPaneWidth = 840.0;
@@ -50,6 +61,11 @@ Future<bool> confirmServerNotificationDismissal(
   ServerNotificationRepository repository,
   String id,
 ) async {
+  if (ResponsiveNavigationScope.isActive(context)) {
+    if (await _confirmDismissalInSheet(context) != true) return false;
+    await repository.dismiss(id);
+    return true;
+  }
   final l10n = context.l10n;
   final confirmed = await showDialog<bool>(
     context: context,
@@ -200,8 +216,31 @@ class _ServerNotificationCenterPageState
     };
   }
 
+  void _clearSelection() => setState(() => _selectedId = null);
+
+  /// Opens the preselected entry on its own page, once, where there is no
+  /// pane beside the list to show it in.
+  void _openInitialPage({required bool twoPanes}) {
+    final initialSchool = _initialSchool;
+    if (twoPanes ||
+        _openedInitial ||
+        (widget.initialId == null && initialSchool == null)) {
+      return;
+    }
+    _openedInitial = true;
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return;
+      if (initialSchool != null) {
+        _openSchool(initialSchool, twoPanes: false);
+      } else {
+        _open(widget.initialId!, twoPanes: false);
+      }
+    });
+  }
+
   @override
   Widget build(BuildContext context) {
+    if (ResponsiveNavigationScope.isActive(context)) return _buildNew(context);
     final l10n = context.l10n;
     return Scaffold(
       appBar: AppBar(
@@ -221,20 +260,7 @@ class _ServerNotificationCenterPageState
         builder: (context, _) => LayoutBuilder(
           builder: (context, constraints) {
             final twoPanes = constraints.maxWidth >= _twoPaneWidth;
-            final initialSchool = _initialSchool;
-            if (!twoPanes &&
-                !_openedInitial &&
-                (widget.initialId != null || initialSchool != null)) {
-              _openedInitial = true;
-              WidgetsBinding.instance.addPostFrameCallback((_) {
-                if (!mounted) return;
-                if (initialSchool != null) {
-                  _openSchool(initialSchool, twoPanes: false);
-                } else {
-                  _open(widget.initialId!, twoPanes: false);
-                }
-              });
-            }
+            _openInitialPage(twoPanes: twoPanes);
             final selectedSchool = _selectedSchool;
             final selectedId = _selectedId;
             final school = widget.school;
@@ -284,8 +310,7 @@ class _ServerNotificationCenterPageState
                               id: selectedId,
                               repository: _repository,
                               openLink: widget.openLink,
-                              onDismissed: () =>
-                                  setState(() => _selectedId = null),
+                              onDismissed: _clearSelection,
                             ),
                 ),
               ],
@@ -854,16 +879,24 @@ class ServerNotificationDetailPage extends StatelessWidget {
   final ServerNotificationLinkOpener openLink;
 
   @override
-  Widget build(BuildContext context) => Scaffold(
-        appBar:
-            AppBar(title: Text(context.l10n.text('appNotifications.title'))),
-        body: ServerNotificationDetailView(
-          id: id,
-          repository: repository,
-          openLink: openLink,
-          onDismissed: () => Navigator.of(context).maybePop(),
-        ),
+  Widget build(BuildContext context) {
+    final view = ServerNotificationDetailView(
+      id: id,
+      repository: repository,
+      openLink: openLink,
+      onDismissed: () => Navigator.of(context).maybePop(),
+    );
+    if (ResponsiveNavigationScope.isActive(context)) {
+      return _NewDetailPage(
+        title: context.l10n.text('appNotifications.title'),
+        child: view,
       );
+    }
+    return Scaffold(
+      appBar: AppBar(title: Text(context.l10n.text('appNotifications.title'))),
+      body: view,
+    );
+  }
 }
 
 /// The full text of one notification. Showing it is what marks it read.
@@ -938,6 +971,7 @@ class _ServerNotificationDetailViewState
 
   @override
   Widget build(BuildContext context) {
+    if (ResponsiveNavigationScope.isActive(context)) return _buildNew(context);
     return AnimatedBuilder(
       animation: widget.repository,
       builder: (context, _) {
@@ -1035,13 +1069,22 @@ class SchoolNotificationDetailPage extends StatelessWidget {
   final ValueChanged<Notification>? onShown;
 
   @override
-  Widget build(BuildContext context) => Scaffold(
-        appBar: AppBar(title: Text(context.l10n.text('notifications.title'))),
-        body: SchoolNotificationDetailView(
-          notification: notification,
-          onShown: onShown,
-        ),
+  Widget build(BuildContext context) {
+    final view = SchoolNotificationDetailView(
+      notification: notification,
+      onShown: onShown,
+    );
+    if (ResponsiveNavigationScope.isActive(context)) {
+      return _NewDetailPage(
+        title: context.l10n.text('notifications.title'),
+        child: view,
       );
+    }
+    return Scaffold(
+      appBar: AppBar(title: Text(context.l10n.text('notifications.title'))),
+      body: view,
+    );
+  }
 }
 
 /// Holds on to [notification] itself, as reading it removes it from the feed.
@@ -1075,6 +1118,9 @@ class _SchoolNotificationDetailViewState
 
   @override
   Widget build(BuildContext context) {
+    if (ResponsiveNavigationScope.isActive(context)) {
+      return _NewSchoolDetail(notification: widget.notification);
+    }
     final theme = Theme.of(context);
     final l10n = context.l10n;
     final item = widget.notification;
