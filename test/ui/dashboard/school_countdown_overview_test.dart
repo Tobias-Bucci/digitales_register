@@ -118,9 +118,10 @@ void main() {
     expect(tester.takeException(), isNull);
   });
 
-  testWidgets('long card texts are limited and keep the cards the same size',
+  testWidgets('long card texts are limited and keep a row the same size',
       (tester) async {
-    tester.view.physicalSize = const Size(360, 1200);
+    // Wide enough for two columns at this text scale, so both share a row.
+    tester.view.physicalSize = const Size(720, 1200);
     tester.view.devicePixelRatio = 1;
     addTearDown(tester.view.resetPhysicalSize);
     addTearDown(tester.view.resetDevicePixelRatio);
@@ -161,6 +162,8 @@ void main() {
 
     expect(tester.takeException(), isNull);
     final cards = find.byType(DashboardSummaryCard);
+    expect(
+        tester.getTopLeft(cards.at(1)).dy, tester.getTopLeft(cards.at(0)).dy);
     expect(
         tester.getSize(cards.at(0)).height, tester.getSize(cards.at(1)).height);
     // 2 title + 2 primary + 4 secondary lines at most, regardless of length.

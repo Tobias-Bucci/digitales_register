@@ -2,10 +2,11 @@ import 'package:dr/dashboard_items.dart';
 import 'package:flutter/rendering.dart';
 import 'package:flutter/widgets.dart';
 
-/// Measures the cards at a shared compact width, then gives every card the
-/// tallest content's height, independent of its width setting. Supports
-/// LayoutBuilder/loading cards without
-/// intrinsic sizing or a fixed height that could clip translated/large text.
+/// Lays the cards out in rows. Every card is measured at the width it gets in
+/// its row, and all cards of a row get the height of the tallest one there, so
+/// a row is only as tall as its content needs. Supports LayoutBuilder/loading
+/// cards without intrinsic sizing or a fixed height that could clip
+/// translated/large text.
 class DashboardCardLayout extends MultiChildRenderObjectWidget {
   const DashboardCardLayout(
       {super.key,
@@ -102,21 +103,18 @@ class _DashboardCardLayout extends RenderBox
     finishRow();
 
     final boxes = getChildrenAsList();
-    // Use the narrowest supported column as the reference, even when cards
-    // currently select full width. Changing only width must not change height.
-    final preferredWidth =
-        (available - (preferredColumns - 1) * gap) / preferredColumns;
-    final compactWidth =
-        canUseHalf && half < preferredWidth ? half : preferredWidth;
-    var height = 0.0;
-    for (var index = 0; index < boxes.length; index++) {
-      final child = boxes[index];
-      child.layout(BoxConstraints.tightFor(width: compactWidth),
-          parentUsesSize: true);
-      if (child.size.height > height) height = child.size.height;
-    }
     var y = 0.0;
     for (final indices in rows) {
+      // A row is as tall as its tallest card, measured at the widths the cards
+      // actually get. A shared height for the whole grid would stretch short
+      // rows and leave empty space in their cards.
+      var height = 0.0;
+      for (final index in indices) {
+        final child = boxes[index];
+        child.layout(BoxConstraints.tightFor(width: cardWidths[index]),
+            parentUsesSize: true);
+        if (child.size.height > height) height = child.size.height;
+      }
       var x = 0.0;
       for (final index in indices) {
         final child = boxes[index];

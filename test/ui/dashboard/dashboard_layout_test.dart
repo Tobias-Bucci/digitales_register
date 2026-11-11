@@ -1,4 +1,5 @@
 import 'package:built_collection/built_collection.dart';
+import 'package:dr/app_clock.dart';
 import 'package:dr/app_state.dart';
 import 'package:dr/container/dashboard_overview.dart';
 import 'package:dr/container/days_container.dart';
@@ -29,6 +30,7 @@ void main() {
     double width = 800,
     double scale = 1,
     String language = 'de',
+    SchoolTimeline timeline = _timeline,
   }) async {
     tester.view.physicalSize = Size(width, 1000);
     tester.view.devicePixelRatio = 1;
@@ -45,7 +47,7 @@ void main() {
           data: MediaQueryData(textScaler: TextScaler.linear(scale)),
           child: Scaffold(
               body: SingleChildScrollView(
-                  child: DashboardOverview(timeline: _timeline))),
+                  child: DashboardOverview(timeline: timeline))),
         ));
     await settleFor(tester);
   }
@@ -156,8 +158,7 @@ void main() {
     expect(second.top, first.bottom + 10);
   });
 
-  testWidgets(
-      'third automatic card fills its row and shares the half cards height',
+  testWidgets('third automatic card fills its row below the two half cards',
       (tester) async {
     await pumpLayout(tester,
         items: [...defaultDashboardItems, 'absences'],
@@ -169,14 +170,11 @@ void main() {
     expect(deadline.height, holiday.height);
     expect(absences.top, holiday.bottom + 10);
     expect(absences.width, 800);
-    expect(absences.height, holiday.height);
     expect(tester.takeException(), isNull);
   });
 
-  testWidgets(
-      'card heights remain unchanged across automatic, half and full width',
+  testWidgets('cards of a row share a height in automatic, half and full width',
       (tester) async {
-    double? previousHeight;
     final ids = DashboardItem.values.map((item) => item.id).toList();
     final store = createStore(
         initialState:
@@ -191,25 +189,71 @@ void main() {
           DashboardConfiguration(
               items: ids, spans: {for (final id in ids) id: mode.span}));
       await settleFor(tester);
-      final sizes = ids.map((id) => tester.getSize(_card(id))).toList();
+      final rects = ids.map((id) => tester.getRect(_card(id))).toList();
       final expectedWidth = switch (mode) {
         DashboardItemWidth.full => 800.0,
         DashboardItemWidth.half => 395.0,
         DashboardItemWidth.automatic => 260.0,
       };
-      for (var index = 0; index < sizes.length; index++) {
-        final size = sizes[index];
+      final rowHeights = <double, double>{};
+      for (var index = 0; index < rects.length; index++) {
+        final rect = rects[index];
         // The final automatic card fills the remaining row.
         expect(
-            size.width,
+            rect.width,
             mode == DashboardItemWidth.automatic && index == ids.length - 1
                 ? 800.0
                 : expectedWidth);
-        previousHeight ??= size.height;
-        expect(size.height, previousHeight);
+        expect(rect.height, rowHeights.putIfAbsent(rect.top, () => rect.height),
+            reason: 'cards in the same row share a height');
       }
       expect(tester.takeException(), isNull);
     }
+  });
+
+  testWidgets('a short row is not stretched to the height of a taller row',
+      (tester) async {
+    appClock.setDemoMode(true);
+    await appClock.setSimulatedDate(DateTime(2026, 4, 20));
+    // The holiday countdown carries a progress bar, which makes its row taller.
+    await pumpLayout(tester,
+        timeline: SchoolTimeline(
+          schoolYearStart: DateTime(2025, 9, 10),
+          holidays: [
+            SchoolHoliday(
+                name: 'Ferien',
+                start: DateTime(2026, 5, 7),
+                end: DateTime(2026, 5, 12)),
+          ],
+          gradeDeadlines: const [],
+        ),
+        items: [
+          'holidays',
+          'absences',
+          'gradeAverage',
+          'recentGrade'
+        ],
+        spans: {
+          'holidays': 1,
+          'absences': 1,
+          'gradeAverage': 1,
+          'recentGrade': 1
+        });
+    final holiday = tester.getRect(_card('holidays'));
+    final absences = tester.getRect(_card('absences'));
+    final average = tester.getRect(_card('gradeAverage'));
+    final recent = tester.getRect(_card('recentGrade'));
+    expect(absences.top, holiday.top);
+    expect(absences.height, holiday.height);
+    expect(recent.top, average.top);
+    expect(recent.height, average.height);
+    expect(average.top, holiday.bottom + 10);
+    // The grade cards without grades need less height than the first row;
+    // they keep their own height instead of the grid's tallest.
+    expect(
+        find.byKey(const ValueKey('holiday-countdown-card')), findsOneWidget);
+    expect(average.height, lessThan(holiday.height));
+    expect(tester.takeException(), isNull);
   });
 
   testWidgets('full card followed by two half cards forms two rows',
