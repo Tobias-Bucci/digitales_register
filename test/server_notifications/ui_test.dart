@@ -470,6 +470,7 @@ void main() {
       Listenable? blockedChanges,
       ThemeMode mode = ThemeMode.light,
       bool newDesign = false,
+      bool Function({String? initialId})? openInShell,
     }) async {
       navigator = GlobalKey<NavigatorState>();
       await tester.pumpWidget(app(
@@ -478,6 +479,7 @@ void main() {
         home: const Scaffold(body: Text('App')),
         builder: (context, child) => ServerNotificationHost(
           newDesign: newDesign,
+          openInShell: openInShell ?? ({String? initialId}) => false,
           repository: repository,
           navigator: () => navigator.currentState,
           isBlocked: isBlocked ?? () => false,
@@ -633,6 +635,69 @@ void main() {
       await settle(tester);
       expect(find.byType(ServerNotificationDetailPage), findsOneWidget);
       expect(repository.unreadCount, 0);
+    });
+
+    group('open in the new design', () {
+      testWidgets('goes to the shell, with the one notification',
+          (tester) async {
+        final opened = <String?>[];
+        final repository = await filled(tester, [item(body: 'Der ganze Text')]);
+        await pumpHost(tester, repository, newDesign: true,
+            openInShell: ({String? initialId}) {
+          opened.add(initialId);
+          return true;
+        });
+        await tester.tap(popupOpen);
+        await settle(tester);
+        expect(opened, [a]);
+        expect(find.byType(ServerNotificationCenterPage), findsNothing);
+        expect(find.byType(ServerNotificationDetailPage), findsNothing);
+      });
+
+      testWidgets('a summary goes to the shell without a focus',
+          (tester) async {
+        final opened = <String?>[];
+        final repository =
+            await filled(tester, [item(title: 'Eins'), item(id: b)]);
+        await pumpHost(tester, repository, newDesign: true,
+            openInShell: ({String? initialId}) {
+          opened.add(initialId);
+          return true;
+        });
+        await tester.tap(popupOpen);
+        await settle(tester);
+        expect(opened, [null]);
+        expect(find.byType(ServerNotificationCenterPage), findsNothing);
+      });
+
+      testWidgets('without a shell, as signed out, it opens as before',
+          (tester) async {
+        final repository = await filled(tester, [item(body: 'Der ganze Text')]);
+        tester.view.physicalSize = const Size(400, 800);
+        tester.view.devicePixelRatio = 1;
+        addTearDown(tester.view.reset);
+        await pumpHost(tester, repository,
+            newDesign: true, openInShell: ({String? initialId}) => false);
+        await tester.tap(popupOpen);
+        await settle(tester);
+        expect(find.byType(ServerNotificationDetailPage), findsOneWidget);
+      });
+
+      testWidgets('Legacy never asks the shell', (tester) async {
+        final opened = <String?>[];
+        final repository = await filled(tester, [item(body: 'Der ganze Text')]);
+        tester.view.physicalSize = const Size(400, 800);
+        tester.view.devicePixelRatio = 1;
+        addTearDown(tester.view.reset);
+        await pumpHost(tester, repository, openInShell: ({String? initialId}) {
+          opened.add(initialId);
+          return true;
+        });
+        await tester.tap(popupOpen);
+        await settle(tester);
+        expect(opened, isEmpty);
+        expect(find.byType(ServerNotificationDetailPage), findsOneWidget);
+      });
     });
 
     testWidgets('dismissing elsewhere removes it from the popup',

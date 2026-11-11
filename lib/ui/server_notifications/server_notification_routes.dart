@@ -1,4 +1,7 @@
+import 'dart:async';
+
 import 'package:dr/container/exam_calendar_container.dart';
+import 'package:dr/container/notifications_page_container.dart';
 import 'package:dr/main.dart';
 import 'package:dr/middleware/middleware.dart';
 import 'package:dr/server_notifications/server_notification_links.dart';
@@ -6,6 +9,8 @@ import 'package:dr/server_notifications/server_notification_service.dart';
 import 'package:dr/ui/class_register_page.dart';
 import 'package:dr/ui/course_materials_page.dart';
 import 'package:dr/ui/homework_summary_page.dart';
+import 'package:dr/ui/server_notifications/server_notification_center.dart'
+    show ServerNotificationCenterPage;
 import 'package:flutter/material.dart';
 import 'package:url_launcher/url_launcher.dart';
 
@@ -65,4 +70,59 @@ Future<ServerNotificationLinkResult> openServerNotificationLink(
       destination();
       return ServerNotificationLinkResult.opened;
   }
+}
+
+/// The name the bell and the dashboard give the center in the shell
+/// (`_showNotifications` in `lib/middleware/routing.dart`). Opening a message
+/// from the center closes it by this name.
+const _shellCenterRouteName = '/notifications';
+
+/// The route of the center that is open in [navigator], covered or not.
+Route<dynamic>? _openCenter(NavigatorState navigator) {
+  Route<dynamic>? found;
+  void visit(Element element) {
+    if (found != null) return;
+    if (element.widget is ServerNotificationCenterPage) {
+      found = ModalRoute.of(element);
+      return;
+    }
+    element.visitChildren(visit);
+  }
+
+  navigator.context.visitChildElements(visit);
+  return found;
+}
+
+/// Opens the center of a signed-in session inside the shell, with both
+/// sources and the navigation in reach, the way the bell and the dashboard
+/// open it. [initialId] opens that announcement: as a page on phones, in the
+/// pane beside the list on wide windows.
+///
+/// An open center is not stacked a second time: without [initialId] it comes
+/// to the front, with one it is replaced by a center that shows it.
+///
+/// Returns false where there is no shell, as while signed out; the caller
+/// then opens the center the way it did before.
+bool showNotificationCenterInShell({String? initialId}) {
+  final nested = nestedNavKey.currentState;
+  if (nested == null ||
+      scaffoldKey?.currentState == null ||
+      !serverNotifications.isLoggedIn()) {
+    return false;
+  }
+  // Pages on the root navigator would cover the shell.
+  navigatorKey?.currentState?.popUntil((route) => route.isFirst);
+  final route = MaterialPageRoute<void>(
+    settings: const RouteSettings(name: _shellCenterRouteName),
+    builder: (_) => NotificationPageContainer(focusAppId: initialId),
+  );
+  final open = _openCenter(nested);
+  if (open == null) {
+    unawaited(nested.push(route));
+    return true;
+  }
+  // What lies above it, such as an open detail, goes.
+  nested.popUntil((candidate) => candidate == open);
+  if (initialId != null) nested.replace(oldRoute: open, newRoute: route);
+  return true;
 }

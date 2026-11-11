@@ -3,12 +3,15 @@ import 'dart:async';
 import 'package:built_collection/built_collection.dart';
 import 'package:dr/app_state.dart';
 import 'package:dr/container/days_container.dart';
+import 'package:dr/container/notifications_page_container.dart';
 import 'package:dr/data.dart';
 import 'package:dr/i18n/app_localizations.dart';
 import 'package:dr/main.dart' show nestedNavKey;
 import 'package:dr/notification_feed.dart';
 import 'package:dr/server_notifications/server_notification_repository.dart';
+import 'package:dr/server_notifications/server_notification_service.dart';
 import 'package:dr/theme/app_palette.dart';
+import 'package:dr/ui/app_navigation.dart';
 import 'package:dr/ui/glass_page.dart';
 import 'package:dr/ui/glass_segmented_control.dart';
 import 'package:dr/ui/glass_surface.dart';
@@ -182,6 +185,10 @@ void main() {
   tearDown(() async {
     await resetTestState();
   });
+
+  // First: the app's own repository loads its storage once per process, and
+  // that has to happen inside a test that waits for it.
+  _shellTests();
 
   group('design switch', () {
     testWidgets('the shell of the new design shows the glass page',
@@ -684,6 +691,129 @@ void main() {
         expect(tester.takeException(), isNull);
       });
     }
+  });
+}
+
+/// The app as signed in, with the shell of [newDesign] and the school's feed,
+/// and the announcements of [_appItems] in the app's own repository, the one the
+/// popup, the bell and the center share.
+var _singletonSynced = false;
+
+Future<void> _pumpShell(
+  WidgetTester tester, {
+  Size size = _phone,
+  bool newDesign = true,
+}) async {
+  tester.view.physicalSize = size;
+  tester.view.devicePixelRatio = 1;
+  addTearDown(tester.view.reset);
+  // Synced once: its storage belongs to the test that loaded it first.
+  if (!_singletonSynced) {
+    final server = FakeServer()..replyList(_appItems);
+    serverNotifications.repository.api = server.api;
+    await _drive(tester, serverNotifications.repository.sync(selection));
+    _singletonSynced = true;
+  }
+  serverNotifications.isLoggedIn = () => true;
+  addTearDown(() => serverNotifications.isLoggedIn = () => false);
+  final store = createStore(
+    initialState: _state().rebuild((b) => b.notificationState
+      ..notifications = ListBuilder<Notification>(_schoolItems)
+      ..lastFetched = UtcDateTime(2026, 10, 22, 7)),
+    newDesign: newDesign,
+  );
+  await pumpApp(tester, store: store, home: DaysContainer());
+  await settleFor(tester);
+}
+
+Finder get _centers =>
+    find.byType(ServerNotificationCenterPage, skipOffstage: false);
+
+void _shellTests() {
+  group('opened like the popup does', () {
+    testWidgets('on phones, in the shell, on the detail of the notification',
+        (tester) async {
+      await _pumpShell(tester);
+
+      expect(showNotificationCenterInShell(initialId: _b), isTrue);
+      await _settle(tester);
+      expect(find.byType(ServerNotificationDetailPage), findsOneWidget);
+      expect(_detailHeader, findsOneWidget);
+      expect(find.byType(FloatingNavigationBar), findsOneWidget);
+      expect(find.text('Die neue Version bringt das Design der Startseite.'),
+          findsOneWidget);
+
+      // Below it, the center with both sources, as the bell opens it.
+      await tester.tap(find.descendant(
+          of: _detailHeader, matching: find.byType(BackButton)));
+      await _settle(tester);
+      expect(_header, findsOneWidget);
+      expect(_schoolEntry(1), findsOneWidget);
+      expect(_app(_a), findsOneWidget);
+    });
+
+    testWidgets('on wide windows, with the notification selected',
+        (tester) async {
+      await _pumpShell(tester, size: _wide);
+
+      expect(showNotificationCenterInShell(initialId: _a), isTrue);
+      await _settle(tester);
+      expect(find.byType(AppNavigationRail), findsOneWidget);
+      expect(find.byType(ServerNotificationDetailPage), findsNothing);
+      expect(
+        find.descendant(
+            of: _pane, matching: find.byKey(const Key('notification-detail'))),
+        findsOneWidget,
+      );
+      expect(find.text('Wartung am Samstag'), findsNWidgets(2));
+    });
+
+    testWidgets('an open center is not stacked a second time', (tester) async {
+      await _pumpShell(tester);
+
+      expect(showNotificationCenterInShell(), isTrue);
+      await _settle(tester);
+      expect(_centers, findsOneWidget);
+      // Again, with the detail of a notification open.
+      await tester.tap(find.text('Wartung am Samstag'));
+      await _settle(tester);
+      expect(showNotificationCenterInShell(), isTrue);
+      await _settle(tester);
+      expect(_centers, findsOneWidget);
+      expect(find.byType(ServerNotificationDetailPage), findsNothing);
+
+      // With a focus, the open one makes way for one that shows it.
+      expect(showNotificationCenterInShell(initialId: _b), isTrue);
+      await _settle(tester);
+      expect(_centers, findsOneWidget);
+      expect(find.byType(ServerNotificationDetailPage), findsOneWidget);
+      expect(find.text('Neue Version'), findsWidgets);
+    });
+
+    testWidgets('a center the bell opened is not stacked either',
+        (tester) async {
+      await _pumpShell(tester);
+
+      // As `_showNotifications` of the routing does it for the bell and the
+      // dashboard.
+      unawaited(nestedNavKey.currentState!.push(MaterialPageRoute<void>(
+        settings: const RouteSettings(name: '/notifications'),
+        builder: (_) => const NotificationPageContainer(),
+      )));
+      await _settle(tester);
+      expect(_centers, findsOneWidget);
+      expect(showNotificationCenterInShell(initialId: _a), isTrue);
+      await _settle(tester);
+      expect(_centers, findsOneWidget);
+      expect(find.byType(ServerNotificationDetailPage), findsOneWidget);
+    });
+
+    testWidgets('signed out there is no shell to open it in', (tester) async {
+      serverNotifications.isLoggedIn = () => false;
+      expect(showNotificationCenterInShell(initialId: _a), isFalse);
+      await tester.pumpWidget(const SizedBox());
+      expect(showNotificationCenterInShell(initialId: _a), isFalse);
+    });
   });
 }
 
