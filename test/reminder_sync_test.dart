@@ -4,6 +4,7 @@ import 'dart:ui';
 
 import 'package:dr/app_state.dart';
 import 'package:dr/i18n/app_localizations.dart';
+import 'package:dr/reminder_link.dart';
 import 'package:dr/reminder_schedule.dart';
 import 'package:dr/reminder_sync.dart';
 import 'package:dr/serializers.dart';
@@ -50,12 +51,12 @@ void main() {
       expect(planReminders(_state(minute: 60), l10n).single.id,
           planReminders(_state(minute: 120), l10n).single.id);
     });
-
   });
 
   group('tapping the mensa reminder', () {
     late List<Uri> opened;
     late int dashboards;
+    late int failures;
 
     Future<void> tap(
       String url, {
@@ -66,6 +67,7 @@ void main() {
           payload,
           mensaUrl: url,
           openDashboard: () => dashboards++,
+          linkFailed: () => failures++,
           launch: launch ??
               (uri) async {
                 opened.add(uri);
@@ -76,6 +78,7 @@ void main() {
     setUp(() {
       opened = [];
       dashboards = 0;
+      failures = 0;
     });
 
     test('without a link it opens the dashboard', () async {
@@ -83,6 +86,7 @@ void main() {
 
       expect(opened, isEmpty);
       expect(dashboards, 1);
+      expect(failures, 0);
     });
 
     test('opens the link of the user and nothing else', () async {
@@ -90,22 +94,43 @@ void main() {
 
       expect(opened, [Uri.parse('https://example.org/menu')]);
       expect(dashboards, 0);
+      expect(failures, 0);
     });
 
-    test('never opens an invalid value', () async {
+    test('opens every link the settings page saves', () async {
+      for (final typed in [
+        'mensa.example.org',
+        '  HTTPS://Mensa.Example.org/Anmeldung/  ',
+        'http://mensa.example.org',
+        'mensa.example.org/login?next=https://mensa.example.org/menu',
+      ]) {
+        // The settings page stores what this returns.
+        final saved = normalizeReminderLink(typed)!;
+        await tap(saved);
+        expect(opened.last, Uri.parse(saved));
+      }
+
+      expect(opened, hasLength(4));
+      expect(failures, 0);
+    });
+
+    test('never opens an invalid value and says so', () async {
       for (final url in ['javascript:alert(1)', 'not a link', 'ftp://a.org']) {
         await tap(url);
       }
 
       expect(opened, isEmpty);
       expect(dashboards, 3);
+      expect(failures, 3);
     });
 
-    test('falls back to the dashboard if the link cannot be opened', () async {
+    test('falls back to the dashboard and says so if the link cannot be opened',
+        () async {
       await tap('https://example.org', launch: (_) async => false);
       await tap('https://example.org', launch: (_) => throw StateError('no'));
 
       expect(dashboards, 2);
+      expect(failures, 2);
     });
 
     test('other reminders are left alone', () async {

@@ -39,6 +39,28 @@ void main() {
           'https://example.org:8080/menu');
     });
 
+    test('an address in the query does not count as the scheme', () {
+      expect(
+        normalizeReminderLink('mensa.example.org/login?next=https://a.org/b'),
+        'https://mensa.example.org/login?next=https://a.org/b',
+      );
+    });
+
+    test('a saved link stays the same when it is read again', () {
+      for (final typed in [
+        'example.org',
+        'HTTPS://Example.ORG/Menu/',
+        'http://example.org',
+        'example.org:8080/a?b=c#d',
+        'example.org/login?next=https://a.org',
+        'https://example.org/ä',
+      ]) {
+        final saved = normalizeReminderLink(typed);
+        expect(saved, isNotNull, reason: typed);
+        expect(normalizeReminderLink(saved!), saved, reason: typed);
+      }
+    });
+
     test('rejects other schemes', () {
       for (final link in [
         'javascript:alert(1)',

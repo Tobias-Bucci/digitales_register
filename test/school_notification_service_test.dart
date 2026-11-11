@@ -1196,6 +1196,35 @@ void main() {
     expect(payloads, ['dr-reminder:mensa', 'dr-reminder:mensa']);
   });
 
+  test(
+      'a failed cleanup neither loses nor repeats the tap that started the app',
+      () async {
+    service.dispose();
+    when(() => native.getNotificationAppLaunchDetails()).thenAnswer((_) async =>
+        const NotificationAppLaunchDetails(true,
+            notificationResponse: NotificationResponse(
+                notificationResponseType:
+                    NotificationResponseType.selectedNotification,
+                payload: 'dr-reminder:mensa')));
+    when(() => native.getActiveNotifications())
+        .thenThrow(PlatformException(code: 'busy'));
+    service = SchoolNotificationService(
+        platformSupported: true,
+        native: native,
+        storage: storage,
+        permission: () async => false,
+        historyDirectory: () async => directory);
+    final payloads = <String?>[];
+    service.onReminderTap = (payload) async => payloads.add(payload);
+
+    await expectLater(service.initialize(), throwsA(isA<PlatformException>()));
+    expect(payloads, ['dr-reminder:mensa']);
+
+    when(() => native.getActiveNotifications()).thenAnswer((_) async => []);
+    await service.initialize();
+    expect(payloads, ['dr-reminder:mensa']);
+  });
+
   test('cold launch queues destination and warm tap invokes routing handler',
       () async {
     service.dispose();

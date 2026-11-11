@@ -138,6 +138,7 @@ class SchoolNotificationService extends ChangeNotifier
   Future<Database>? _database;
   LazyBox<String>? _history;
   bool _initialized = false;
+  bool _launchTapHandled = false;
   bool _foreground = false;
   Future<void>? _initializing;
   Future<void>? _activation;
@@ -306,19 +307,22 @@ class SchoolNotificationService extends ChangeNotifier
       );
       _initialized = true;
       if (!background) {
+        // The tap that started the app comes first: a failure of the cleanup
+        // below must not lose it, and a later retry must not repeat it.
+        if (!_launchTapHandled && !Platform.isLinux) {
+          final launch = await _native.getNotificationAppLaunchDetails();
+          _launchTapHandled = true;
+          if (launch?.didNotificationLaunchApp ?? false) {
+            final payload = launch?.notificationResponse?.payload;
+            pendingDestination = SchoolNotificationDestination.decode(payload);
+            if (pendingDestination == null) {
+              unawaited(onReminderTap?.call(payload));
+            }
+          }
+        }
         await _clearSchoolAlerts();
         WidgetsBinding.instance.addObserver(this);
         _startForegroundChecks();
-        final launch = Platform.isLinux
-            ? null
-            : await _native.getNotificationAppLaunchDetails();
-        if (launch?.didNotificationLaunchApp ?? false) {
-          final payload = launch?.notificationResponse?.payload;
-          pendingDestination = SchoolNotificationDestination.decode(payload);
-          if (pendingDestination == null) {
-            unawaited(onReminderTap?.call(payload));
-          }
-        }
         try {
           if (mobileBackgroundSupported) {
             await _scheduler.initialize(schoolNotificationDispatcher);
