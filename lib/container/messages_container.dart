@@ -37,6 +37,7 @@ class MessagesPageContainer extends StatelessWidget {
           onArchive: (m) => actions.messagesActions.archiveMessage(m.id),
           onReply: (id, response) => actions.messagesActions.replyMessage(
               ReplyMessagePayload(messageId: id, response: response)),
+          onRetry: actions.messagesActions.load.call,
         );
       },
       connect: (state) {

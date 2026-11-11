@@ -28,6 +28,7 @@ import 'package:dr/i18n/app_localizations.dart';
 import 'package:dr/theme/app_palette.dart';
 import 'package:dr/ui/animated_linear_progress_indicator.dart';
 import 'package:dr/ui/last_fetched_overlay.dart';
+import 'package:dr/ui/messages_new.dart';
 import 'package:dr/ui/no_internet.dart';
 import 'package:dr/ui/readable_content.dart';
 import 'package:dr/util.dart';
@@ -81,6 +82,9 @@ class MessagesPage extends StatefulWidget {
   final void Function(Message message) onArchive;
   final void Function(int messageId, String response) onReply;
 
+  /// Loads the messages again; the new design offers it when offline.
+  final VoidCallback? onRetry;
+
   const MessagesPage({
     super.key,
     required this.state,
@@ -89,6 +93,7 @@ class MessagesPage extends StatefulWidget {
     required this.onMarkAsRead,
     required this.onArchive,
     required this.onReply,
+    this.onRetry,
   });
   @override
   State<MessagesPage> createState() => _MessagesPageState();
@@ -159,6 +164,11 @@ class _MessagesPageState extends State<MessagesPage>
   @override
   Widget build(BuildContext context) {
     final visibleMessages = _visibleMessages(widget.state);
+    // Below the navigation of the new design. This state keeps the folder
+    // and the open message for both designs, so a switch keeps them.
+    if (ResponsiveNavigationScope.isActive(context)) {
+      return _buildNew(context, visibleMessages);
+    }
     return Scaffold(
       appBar: ResponsiveAppBar(
         title: Text(context.t('messages.title')),
@@ -246,6 +256,34 @@ class _MessagesPageState extends State<MessagesPage>
               ],
             ),
           );
+  }
+
+  Widget _buildNew(BuildContext context, List<Message> visibleMessages) {
+    final state = widget.state;
+    return MessagesPageNew(
+      state: state,
+      messages: visibleMessages,
+      noInternet: widget.noInternet,
+      loading: state != null &&
+          state.showMessage != null &&
+          !state.messages.any((m) => m.id == state.showMessage),
+      folder: _tabs.index,
+      onFolderChanged: (folder) => _tabs.index = folder,
+      expandedMessageId: _expandedMessageId,
+      focusMessageId: state?.showMessage,
+      onExpansionChanged: (message, expanded) => setState(() {
+        if (expanded) {
+          _expandedMessageId = message.id;
+        } else if (_expandedMessageId == message.id) {
+          _expandedMessageId = null;
+        }
+      }),
+      onOpenFile: widget.onOpenFile,
+      onMarkAsRead: widget.onMarkAsRead,
+      onArchive: widget.onArchive,
+      onReply: widget.onReply,
+      onRetry: widget.onRetry,
+    );
   }
 
   List<Message> _visibleMessages(MessagesState? state) {
