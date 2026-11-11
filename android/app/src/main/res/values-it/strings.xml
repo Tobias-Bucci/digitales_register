@@ -1,10 +1,42 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
+<string name="widget_dashboard_title">Dashboard</string>
+<string name="widget_dashboard_subtitle">Prossimi impegni</string>
+<string name="widget_dashboard_description">Mostra i prossimi compiti, le verifiche e gli impegni del registro.</string>
+<string name="widget_today_title">Oggi</string>
+<string name="widget_today_subtitle">Orario</string>
+<string name="widget_today_description">Mostra l’orario di oggi con ore e aule.</string>
+<string name="widget_grades_title">Voti</string>
+<string name="widget_grades_subtitle">Quadrimestre attuale</string>
+<string name="widget_grades_description">Mostra la media complessiva e la media dei voti per materia.</string>
+<string name="widget_average_label">Media</string>
 <string name="widget_school_bag_title">Zaino</string>
+<string name="widget_school_bag_description">Mostra cosa mettere nello zaino per il prossimo giorno di scuola e cosa si può togliere.</string>
 <string name="widget_preparation_title">Compiti</string>
+<string name="widget_preparation_description">Mostra i compiti e le verifiche ancora aperti per il prossimo giorno di scuola.</string>
 <string name="widget_state_outdated">Dati non aggiornati – apri l’app per aggiornare</string>
 <string name="widget_state_open_app">Apri l’app per caricare i dati</string>
 <string name="widget_state_logged_out">Accedi nell’app</string>
 <string name="widget_state_data_disabled">Salvataggio dati disattivato</string>
 <string name="widget_state_locked">Contenuto protetto dal blocco app</string>
+<string name="widget_preview_next_school_day">Prossimo giorno di scuola</string>
+<string name="widget_preview_subject_math">Matematica</string>
+<string name="widget_preview_subject_german">Tedesco</string>
+<string name="widget_preview_subject_english">Inglese</string>
+<string name="widget_preview_subject_history">Storia</string>
+<string name="widget_preview_subject_pe">Educazione fisica</string>
+<string name="widget_preview_tomorrow">Domani</string>
+<string name="widget_preview_friday">Venerdì</string>
+<string name="widget_preview_room_12">Aula 12</string>
+<string name="widget_preview_room_gym">Palestra</string>
+<string name="widget_preview_entry_test">Verifica: equazioni</string>
+<string name="widget_preview_entry_essay">Consegnare il tema</string>
+<string name="widget_preview_entry_vocabulary">Studiare i vocaboli dell’unità 4</string>
+<string name="widget_preview_entry_exercises">Esercizi p. 42, n. 1–5</string>
+<string name="widget_preview_type_homework">Compito</string>
+<string name="widget_preview_type_test">Verifica</string>
+<string name="widget_preview_pack">Da mettere nello zaino</string>
+<string name="widget_preview_pack_meta">Libri e materiali per questa materia</string>
+<string name="widget_preview_remove">Da togliere</string>
+<string name="widget_preview_remove_meta">Secondo l’orario</string>
 </resources>

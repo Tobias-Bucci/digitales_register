@@ -1,10 +1,42 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
+<string name="widget_dashboard_title">Dashboard</string>
+<string name="widget_dashboard_subtitle">Upcoming entries</string>
+<string name="widget_dashboard_description">Shows upcoming homework, tests and other entries from the register.</string>
+<string name="widget_today_title">Today</string>
+<string name="widget_today_subtitle">Timetable</string>
+<string name="widget_today_description">Shows today’s timetable with times and rooms.</string>
+<string name="widget_grades_title">Grades</string>
+<string name="widget_grades_subtitle">Current semester</string>
+<string name="widget_grades_description">Shows the overall average and the average grade for each subject.</string>
+<string name="widget_average_label">Average</string>
 <string name="widget_school_bag_title">School bag</string>
+<string name="widget_school_bag_description">Shows what to pack for the next school day and what can stay at home.</string>
 <string name="widget_preparation_title">Homework</string>
+<string name="widget_preparation_description">Shows open homework and tests for the next school day.</string>
 <string name="widget_state_outdated">Data outdated – open the app to refresh</string>
 <string name="widget_state_open_app">Open the app to load data</string>
 <string name="widget_state_logged_out">Please sign in using the app</string>
 <string name="widget_state_data_disabled">Data saving is disabled</string>
 <string name="widget_state_locked">Content is protected by app lock</string>
+<string name="widget_preview_next_school_day">Next school day</string>
+<string name="widget_preview_subject_math">Maths</string>
+<string name="widget_preview_subject_german">German</string>
+<string name="widget_preview_subject_english">English</string>
+<string name="widget_preview_subject_history">History</string>
+<string name="widget_preview_subject_pe">PE</string>
+<string name="widget_preview_tomorrow">Tomorrow</string>
+<string name="widget_preview_friday">Friday</string>
+<string name="widget_preview_room_12">Room 12</string>
+<string name="widget_preview_room_gym">Gym</string>
+<string name="widget_preview_entry_test">Test: equations</string>
+<string name="widget_preview_entry_essay">Hand in essay</string>
+<string name="widget_preview_entry_vocabulary">Learn unit 4 vocabulary</string>
+<string name="widget_preview_entry_exercises">Exercises p. 42, no. 1–5</string>
+<string name="widget_preview_type_homework">Homework</string>
+<string name="widget_preview_type_test">Test</string>
+<string name="widget_preview_pack">Pack</string>
+<string name="widget_preview_pack_meta">Books and materials for this subject</string>
+<string name="widget_preview_remove">Can remove</string>
+<string name="widget_preview_remove_meta">Based on timetable</string>
 </resources>
