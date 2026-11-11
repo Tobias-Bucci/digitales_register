@@ -17,6 +17,7 @@
 
 import 'package:dr/i18n/app_localizations.dart';
 import 'package:dr/theme/app_palette.dart';
+import 'package:dr/ui/glass_surface.dart' show showGlassSheet;
 import 'package:flutter/material.dart';
 import 'package:responsive_scaffold/responsive_scaffold.dart';
 
@@ -26,6 +27,19 @@ Future<Color?> showSubjectSwatchPicker(
   required String subject,
   required Color current,
 }) {
+  if (ResponsiveNavigationScope.isActive(context)) {
+    return showGlassSheet<Color>(
+      context: context,
+      builder: (context) => SafeArea(
+        top: false,
+        child: SubjectSwatchPicker(
+          subject: subject,
+          current: current,
+          onSelected: (color) => Navigator.pop(context, color),
+        ),
+      ),
+    );
+  }
   return showModalBottomSheet<Color>(
     context: context,
     useRootNavigator: ResponsiveNavigationScope.isActive(context),

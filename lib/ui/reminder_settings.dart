@@ -21,9 +21,13 @@ import 'package:dr/i18n/app_localizations.dart';
 import 'package:dr/reminder_link.dart';
 import 'package:dr/reminder_notifications.dart';
 import 'package:dr/reminder_schedule.dart';
+import 'package:dr/ui/glass_page.dart' show GlassPanel;
+import 'package:dr/ui/glass_surface.dart' show showGlassSheet;
+import 'package:dr/ui/settings_page_new.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:intl/intl.dart';
+import 'package:responsive_scaffold/responsive_scaffold.dart';
 
 class ReminderSettings extends StatefulWidget {
   const ReminderSettings({
@@ -172,10 +176,18 @@ class _ReminderSettingsState extends State<ReminderSettings>
       );
 
   Future<void> _addAssessmentDay() async {
-    final day = await showDialog<int>(
-      context: context,
-      builder: (_) => _ReminderDayDialog(existing: widget.assessmentDays),
-    );
+    final day = ResponsiveNavigationScope.isActive(context)
+        ? await showGlassSheet<int>(
+            context: context,
+            builder: (_) => _ReminderDayDialog(
+              existing: widget.assessmentDays,
+              sheet: true,
+            ),
+          )
+        : await showDialog<int>(
+            context: context,
+            builder: (_) => _ReminderDayDialog(existing: widget.assessmentDays),
+          );
     if (day != null) {
       widget.onSetAssessmentDays(
         normalizeReminderDays([...widget.assessmentDays, day]),
@@ -377,6 +389,97 @@ class _ReminderSettingsState extends State<ReminderSettings>
   Widget build(BuildContext context) {
     final l10n = context.l10n;
     final theme = Theme.of(context);
+    final rows = [
+      if (_permissionMissing && _anyEnabled)
+        Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(l10n.text('reminders.settings.permission')),
+              if (_service.canOpenSystemSettings) ...[
+                const SizedBox(height: 8),
+                FilledButton.tonalIcon(
+                  onPressed: () => unawaited(_service.openSystemSettings()),
+                  icon: const Icon(Icons.settings_outlined),
+                  label: Text(
+                    l10n.text('schoolNotifications.settings.system'),
+                  ),
+                ),
+              ],
+            ],
+          ),
+        ),
+      SwitchListTile.adaptive(
+        key: const Key('mensa-reminder-toggle'),
+        secondary: const Icon(Icons.restaurant_outlined),
+        title: Text(l10n.text('reminders.mensa.setting')),
+        subtitle: Text(l10n.text('reminders.mensa.settingHint')),
+        value: widget.mensaEnabled,
+        onChanged: (enabled) {
+          if (enabled) {
+            unawaited(_enable(() => widget.onSetMensaEnabled(true)));
+          } else {
+            widget.onSetMensaEnabled(false);
+          }
+        },
+      ),
+      if (widget.mensaEnabled) ...[
+        _timeTile(
+          key: const Key('mensa-reminder-time'),
+          minuteOfDay: widget.mensaMinuteOfDay,
+          onPicked: widget.onSetMensaMinuteOfDay,
+        ),
+        _mensaWeekdays(context),
+        _ReminderLinkField(
+          key: const Key('mensa-reminder-url'),
+          value: widget.mensaUrl,
+          onSaved: widget.onSetMensaUrl,
+        ),
+      ],
+      SwitchListTile.adaptive(
+        key: const Key('assessment-reminder-toggle'),
+        secondary: const Icon(Icons.event_note_outlined),
+        title: Text(l10n.text('reminders.assessment.setting')),
+        subtitle: Text(l10n.text('reminders.assessment.settingHint')),
+        value: widget.assessmentsEnabled,
+        onChanged: (enabled) {
+          if (enabled) {
+            unawaited(_enable(() => widget.onSetAssessmentsEnabled(true)));
+          } else {
+            widget.onSetAssessmentsEnabled(false);
+          }
+        },
+      ),
+      if (widget.assessmentsEnabled) ...[
+        ..._assessmentKinds(context),
+        if (widget.examsEnabled ||
+            widget.testsEnabled ||
+            widget.homeworkEnabled)
+          _timeTile(
+            key: const Key('assessment-reminder-time'),
+            minuteOfDay: widget.assessmentMinuteOfDay,
+            onPicked: widget.onSetAssessmentMinuteOfDay,
+          ),
+        if (widget.examsEnabled || widget.testsEnabled)
+          _assessmentDays(context),
+      ],
+      if (_service.onlyWhileRunning)
+        Padding(
+          padding: const EdgeInsets.fromLTRB(16, 8, 16, 16),
+          child: Text(
+            l10n.text('reminders.settings.whileRunning'),
+            style: theme.textTheme.bodySmall,
+          ),
+        ),
+    ];
+    if (ResponsiveNavigationScope.isActive(context)) {
+      return SettingsSectionNew(
+        title: l10n.text('reminders.settings.title'),
+        description: l10n.text('reminders.settings.subtitle'),
+        children: rows,
+      );
+    }
     return Card(
       margin: EdgeInsets.zero,
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
@@ -395,88 +498,7 @@ class _ReminderSettingsState extends State<ReminderSettings>
             ),
             subtitle: Text(l10n.text('reminders.settings.subtitle')),
           ),
-          if (_permissionMissing && _anyEnabled)
-            Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(l10n.text('reminders.settings.permission')),
-                  if (_service.canOpenSystemSettings) ...[
-                    const SizedBox(height: 8),
-                    FilledButton.tonalIcon(
-                      onPressed: () => unawaited(_service.openSystemSettings()),
-                      icon: const Icon(Icons.settings_outlined),
-                      label: Text(
-                        l10n.text('schoolNotifications.settings.system'),
-                      ),
-                    ),
-                  ],
-                ],
-              ),
-            ),
-          SwitchListTile.adaptive(
-            key: const Key('mensa-reminder-toggle'),
-            secondary: const Icon(Icons.restaurant_outlined),
-            title: Text(l10n.text('reminders.mensa.setting')),
-            subtitle: Text(l10n.text('reminders.mensa.settingHint')),
-            value: widget.mensaEnabled,
-            onChanged: (enabled) {
-              if (enabled) {
-                unawaited(_enable(() => widget.onSetMensaEnabled(true)));
-              } else {
-                widget.onSetMensaEnabled(false);
-              }
-            },
-          ),
-          if (widget.mensaEnabled) ...[
-            _timeTile(
-              key: const Key('mensa-reminder-time'),
-              minuteOfDay: widget.mensaMinuteOfDay,
-              onPicked: widget.onSetMensaMinuteOfDay,
-            ),
-            _mensaWeekdays(context),
-            _ReminderLinkField(
-              key: const Key('mensa-reminder-url'),
-              value: widget.mensaUrl,
-              onSaved: widget.onSetMensaUrl,
-            ),
-          ],
-          SwitchListTile.adaptive(
-            key: const Key('assessment-reminder-toggle'),
-            secondary: const Icon(Icons.event_note_outlined),
-            title: Text(l10n.text('reminders.assessment.setting')),
-            subtitle: Text(l10n.text('reminders.assessment.settingHint')),
-            value: widget.assessmentsEnabled,
-            onChanged: (enabled) {
-              if (enabled) {
-                unawaited(_enable(() => widget.onSetAssessmentsEnabled(true)));
-              } else {
-                widget.onSetAssessmentsEnabled(false);
-              }
-            },
-          ),
-          if (widget.assessmentsEnabled) ...[
-            ..._assessmentKinds(context),
-            if (widget.examsEnabled ||
-                widget.testsEnabled ||
-                widget.homeworkEnabled)
-              _timeTile(
-                key: const Key('assessment-reminder-time'),
-                minuteOfDay: widget.assessmentMinuteOfDay,
-                onPicked: widget.onSetAssessmentMinuteOfDay,
-              ),
-            if (widget.examsEnabled || widget.testsEnabled)
-              _assessmentDays(context),
-          ],
-          if (_service.onlyWhileRunning)
-            Padding(
-              padding: const EdgeInsets.fromLTRB(16, 8, 16, 16),
-              child: Text(
-                l10n.text('reminders.settings.whileRunning'),
-                style: theme.textTheme.bodySmall,
-              ),
-            ),
+          ...rows,
         ],
       ),
     );
@@ -484,9 +506,12 @@ class _ReminderSettingsState extends State<ReminderSettings>
 }
 
 class _ReminderDayDialog extends StatefulWidget {
-  const _ReminderDayDialog({required this.existing});
+  const _ReminderDayDialog({required this.existing, this.sheet = false});
 
   final List<int> existing;
+
+  /// In a glass sheet of the new design rather than a dialog.
+  final bool sheet;
 
   @override
   State<_ReminderDayDialog> createState() => _ReminderDayDialogState();
@@ -526,34 +551,51 @@ class _ReminderDayDialogState extends State<_ReminderDayDialog> {
   @override
   Widget build(BuildContext context) {
     final l10n = context.l10n;
+    final field = TextField(
+      key: const Key('assessment-reminder-day-input'),
+      controller: _controller,
+      autofocus: true,
+      keyboardType: TextInputType.number,
+      inputFormatters: [FilteringTextInputFormatter.digitsOnly],
+      decoration: InputDecoration(
+        labelText: l10n.text('reminders.assessment.dayLabel'),
+        errorText: _errorText(context),
+      ),
+      onChanged: (_) {
+        if (_error != null) setState(() => _error = null);
+      },
+      onSubmitted: (_) => _submit(),
+    );
+    final actions = [
+      TextButton(
+        onPressed: () => Navigator.of(context).pop(),
+        child: Text(l10n.text('common.cancel')),
+      ),
+      FilledButton(
+        key: const Key('assessment-reminder-day-confirm'),
+        onPressed: _submit,
+        child: Text(l10n.text('reminders.assessment.addDayConfirm')),
+      ),
+    ];
+    if (widget.sheet) {
+      return SettingsSheetKeyboardInset(
+        child: GlassPanel(
+          title: l10n.text('reminders.assessment.addDay'),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              field,
+              const SizedBox(height: 16),
+              SettingsSheetActions(children: actions),
+            ],
+          ),
+        ),
+      );
+    }
     return AlertDialog(
       title: Text(l10n.text('reminders.assessment.addDay')),
-      content: TextField(
-        key: const Key('assessment-reminder-day-input'),
-        controller: _controller,
-        autofocus: true,
-        keyboardType: TextInputType.number,
-        inputFormatters: [FilteringTextInputFormatter.digitsOnly],
-        decoration: InputDecoration(
-          labelText: l10n.text('reminders.assessment.dayLabel'),
-          errorText: _errorText(context),
-        ),
-        onChanged: (_) {
-          if (_error != null) setState(() => _error = null);
-        },
-        onSubmitted: (_) => _submit(),
-      ),
-      actions: [
-        TextButton(
-          onPressed: () => Navigator.of(context).pop(),
-          child: Text(l10n.text('common.cancel')),
-        ),
-        FilledButton(
-          key: const Key('assessment-reminder-day-confirm'),
-          onPressed: _submit,
-          child: Text(l10n.text('reminders.assessment.addDayConfirm')),
-        ),
-      ],
+      content: field,
+      actions: actions,
     );
   }
 }

@@ -118,6 +118,7 @@
   "settings.storeData.subtitle": "Vedi quando è stato inserito un elemento",
   "settings.deleteDataOnLogout.title": "Elimina dati al logout",
   "settings.theme.followDevice": "Segui tema del dispositivo",
+  "settings.theme.system": "Sistema",
   "settings.theme.light": "Chiaro",
   "settings.theme.dark": "Scuro",
   "settings.theme.amoled": "Amoled",
