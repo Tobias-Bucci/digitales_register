@@ -23,6 +23,7 @@ import 'package:dr/grade_history.dart';
 import 'package:dr/grade_statistics.dart';
 import 'package:dr/i18n/app_localizations.dart';
 import 'package:dr/theme/app_palette.dart';
+import 'package:dr/ui/glass_page.dart';
 import 'package:dr/ui/glass_surface.dart';
 import 'package:dr/ui/grade_colors.dart';
 import 'package:dr/ui/grades_format.dart';
@@ -32,37 +33,7 @@ import 'package:flutter_built_redux/flutter_built_redux.dart';
 
 /// The frame of everything the grades page opens: a sheet on phones, a centred
 /// panel in wide windows, with a title and what scrolls below it.
-class GradesPanel extends StatelessWidget {
-  const GradesPanel({super.key, required this.title, required this.child});
-
-  final String title;
-  final Widget child;
-
-  @override
-  Widget build(BuildContext context) => SafeArea(
-        top: false,
-        child: SingleChildScrollView(
-          padding: const EdgeInsets.fromLTRB(20, 0, 20, 20),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Semantics(
-                header: true,
-                child: Text(
-                  title,
-                  style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                        fontWeight: FontWeight.w600,
-                      ),
-                ),
-              ),
-              const SizedBox(height: 12),
-              child,
-            ],
-          ),
-        ),
-      );
-}
+typedef GradesPanel = GlassPanel;
 
 /// Text that explains a value, for the sheets of the page.
 class _PanelText extends StatelessWidget {

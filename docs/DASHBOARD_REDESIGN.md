@@ -295,6 +295,51 @@ nicht hat. Der Build ist niedriger als in Legacy. Die Liste ist in Neu kürzer, 
 Wege beim Scrollen sind also nicht gleich lang. Geräte mit schwacher GPU fängt
 `GlassPerformance` ab; auf einem Handy gemessen wurde das nicht.
 
+## Gemeinsame Seitenbausteine
+
+Alle weiteren Seiten des neuen Designs (Issue #110) bauen auf denselben Teilen
+auf, damit sie gleich aussehen und keine den Rahmen einer anderen kopiert. Sie
+stehen in `lib/ui/glass_page.dart` und stammen aus der Notenseite, die sie selbst
+verwendet; ihr Aussehen hat sich dadurch nicht geändert.
+
+| Baustein | Wofür |
+| --- | --- |
+| `GlassPage` | Rahmen: Glas-Kopfzeile, Akzentschleier, Text bis 200 %, Ladebalken unter der Kopfzeile. `scrolls: false` für einen Inhalt, der nicht als Ganzes scrollt. |
+| `GlassPageHeader` | Kopfzeile auf `GlassHeaderShell`: Titel (Überschrift, wird kleiner statt abgeschnitten), `titleWidget`, `control`, `actions`, zweite Zeile `bottom`. |
+| `glassHeaderFloatingWidth` | Breite der schwebenden Kopfzeile: unter 720 px keine, sonst 840 px, mit `twoColumns` ab 1080 px 1220 px. |
+| `GlassListBody` | Liste in Lesebreite (840 px) unter der Kopfzeile und über der Leiste; `.builder` für lange Listen. |
+| `GlassColumnsBody` | Seitenspalte neben der Liste ab 1080 px, darunter beide untereinander. |
+| `GlassStateCard` | Meldung statt Inhalt (leer, offline, Fehler), mit optionaler Aktion. |
+| `GlassOfflineHint` | Schmale Karte „Stand von …“ mit Neu-Laden statt der schwarzen Pille. |
+| `GlassTile` | Karte, die irgendwohin führt: ein Knopf für den Screenreader, Hand, Fokusring. |
+| `GlassSectionHeading` | Abschnittsüberschrift mit Anzahl und Aktion rechts. |
+| `GlassPanel` | Rahmen für alles, was eine Seite mit `showGlassSheet` öffnet. |
+
+Den Zurück-Knopf setzt die Kopfzeile selbst: Er fehlt auf den Zielen der
+Navigation (`isTopLevelPage`) und auf Seiten, unter denen nichts liegt, sonst ist
+es Flutters `BackButton` als Scheibe. Die alten Namen der Notenseite
+(`GradesStateCard`, `GradesPanel`, `GradesInsightTile`) sind Aliase.
+
+```dart
+@override
+Widget build(BuildContext context) => GlassPage(
+      loading: vm.loading,
+      header: GlassPageHeader(
+        surfaceKey: const Key('absences-app-header'),
+        title: context.t('sidebar.absences'),
+        floatingMaxWidth:
+            glassHeaderFloatingWidth(MediaQuery.sizeOf(context).width),
+        actions: [HeaderDiscButton(/* … */)],
+      ),
+      body: vm.hasData
+          ? GlassListBody(listKey: const Key('absences-list'), children: [
+              GlassSectionHeading(title: context.t('absences.title'), count: n),
+              for (final entry in entries) GlassTile(/* … */),
+            ])
+          : GlassStateCard(icon: Icons.wifi_off_rounded, /* … */),
+    );
+```
+
 ## Beta-Rollout
 
 Die Veröffentlichung erfolgt manuell und zuerst im Beta-Kanal.
