@@ -415,28 +415,61 @@ class GlassColumnsBody extends StatelessWidget {
     this.listKey,
     required this.side,
     required this.main,
-  });
+  })  : itemCount = null,
+        itemBuilder = null;
+
+  /// The main list built lazily, item by item, for long lists such as the
+  /// absences. Below 1080 px [side] is its first item. Space the items
+  /// yourself.
+  const GlassColumnsBody.builder({
+    super.key,
+    this.listKey,
+    required this.side,
+    required int this.itemCount,
+    required IndexedWidgetBuilder this.itemBuilder,
+  }) : main = const SizedBox.shrink();
 
   /// The key of the list that holds [main].
   final Key? listKey;
   final Widget side, main;
 
+  /// Set by [GlassColumnsBody.builder], in place of [main].
+  final int? itemCount;
+  final IndexedWidgetBuilder? itemBuilder;
+
   @override
   Widget build(BuildContext context) {
     final columns =
         DashboardColumns.forWindow(MediaQuery.sizeOf(context).width);
+    final itemBuilder = this.itemBuilder;
     if (columns == null) {
-      return GlassListBody(listKey: listKey, children: [side, main]);
+      if (itemBuilder == null) {
+        return GlassListBody(listKey: listKey, children: [side, main]);
+      }
+      return GlassListBody.builder(
+        listKey: listKey,
+        itemCount: itemCount! + 1,
+        itemBuilder: (context, index) =>
+            index == 0 ? side : itemBuilder(context, index - 1),
+      );
     }
     return DashboardColumnsView(
       columns: columns,
       side: Padding(padding: _gutter, child: side),
       main: Builder(
-        builder: (context) => ListView(
-          key: listKey,
-          padding: columns.listPadding(MediaQuery.paddingOf(context)),
-          children: [Padding(padding: _gutter, child: main)],
-        ),
+        builder: (context) => itemBuilder == null
+            ? ListView(
+                key: listKey,
+                padding: columns.listPadding(MediaQuery.paddingOf(context)),
+                children: [Padding(padding: _gutter, child: main)],
+              )
+            : ListView.builder(
+                key: listKey,
+                padding: columns.listPadding(MediaQuery.paddingOf(context)) +
+                    _gutter,
+                itemCount: itemCount,
+                itemBuilder: itemBuilder,
+              ),
       ),
     );
   }
@@ -546,10 +579,15 @@ class GlassOfflineHint extends StatelessWidget {
     super.key,
     required this.message,
     required this.onRetry,
+    this.icon = Icons.wifi_off_rounded,
   });
 
   final String message;
   final VoidCallback onRetry;
+
+  /// What went wrong; offline by default. A page whose refresh failed for
+  /// another reason shows that instead, such as `Icons.sync_problem_rounded`.
+  final IconData icon;
 
   @override
   Widget build(BuildContext context) {
@@ -560,7 +598,7 @@ class GlassOfflineHint extends StatelessWidget {
       child: Row(
         children: [
           Icon(
-            Icons.wifi_off_rounded,
+            icon,
             size: 18,
             color: scheme.onSurfaceVariant,
           ),
@@ -638,6 +676,7 @@ class GlassTile extends StatelessWidget {
     this.subtitle,
     this.trailing,
     required this.onTap,
+    this.enabled = true,
   });
 
   static const _shape = RoundedRectangleBorder(
@@ -649,6 +688,10 @@ class GlassTile extends StatelessWidget {
   final String? subtitle;
   final Widget? trailing;
   final VoidCallback onTap;
+
+  /// False shows the card faded, and it does not react: for an action that is
+  /// not possible right now, such as one that needs the internet.
+  final bool enabled;
 
   @override
   Widget build(BuildContext context) {
@@ -662,7 +705,8 @@ class GlassTile extends StatelessWidget {
       child: Semantics(
         button: true,
         label: subtitle == null ? title : '$title, $subtitle',
-        onTap: onTap,
+        enabled: enabled,
+        onTap: enabled ? onTap : null,
         excludeSemantics: true,
         child: Material(
           type: MaterialType.transparency,
@@ -671,60 +715,73 @@ class GlassTile extends StatelessWidget {
             hoverColor: Colors.transparent,
             focusColor: Colors.transparent,
             mouseCursor: NewDesignTheme.clickCursor,
-            onTap: onTap,
+            onTap: enabled ? onTap : null,
             child: GlassCard(
               padding: const EdgeInsets.fromLTRB(10, 8, 8, 8),
-              child: ConstrainedBox(
-                // Room for a full touch target, whatever the text.
-                constraints: const BoxConstraints(minHeight: 32),
-                child: Row(
-                  children: [
-                    Icon(icon, size: 20, color: scheme.primary),
-                    const SizedBox(width: 8),
-                    Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        children: [
-                          Text(
-                            title,
-                            maxLines: 1,
-                            overflow: TextOverflow.ellipsis,
-                            style: theme.textTheme.labelLarge?.copyWith(
-                              fontWeight: FontWeight.w600,
-                            ),
-                          ),
-                          if (subtitle != null)
-                            Text(
-                              subtitle,
-                              maxLines: 2,
-                              overflow: TextOverflow.ellipsis,
-                              style: theme.textTheme.labelSmall?.copyWith(
-                                color: scheme.onSurfaceVariant,
-                              ),
-                            ),
-                        ],
-                      ),
+              child: enabled
+                  ? _content(theme, scheme, subtitle, trailing)
+                  : Opacity(
+                      opacity: 0.5,
+                      child: _content(theme, scheme, subtitle, trailing),
                     ),
-                    if (trailing != null) ...[
-                      const SizedBox(width: 4),
-                      IconTheme.merge(
-                        data: IconThemeData(
-                          size: 20,
-                          color: scheme.onSurfaceVariant,
-                        ),
-                        child: trailing,
-                      ),
-                    ],
-                  ],
-                ),
-              ),
             ),
           ),
         ),
       ),
     );
   }
+
+  Widget _content(
+    ThemeData theme,
+    ColorScheme scheme,
+    String? subtitle,
+    Widget? trailing,
+  ) =>
+      ConstrainedBox(
+        // Room for a full touch target, whatever the text.
+        constraints: const BoxConstraints(minHeight: 32),
+        child: Row(
+          children: [
+            Icon(icon, size: 20, color: scheme.primary),
+            const SizedBox(width: 8),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  Text(
+                    title,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: theme.textTheme.labelLarge?.copyWith(
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                  if (subtitle != null)
+                    Text(
+                      subtitle,
+                      maxLines: 2,
+                      overflow: TextOverflow.ellipsis,
+                      style: theme.textTheme.labelSmall?.copyWith(
+                        color: scheme.onSurfaceVariant,
+                      ),
+                    ),
+                ],
+              ),
+            ),
+            if (trailing != null) ...[
+              const SizedBox(width: 4),
+              IconTheme.merge(
+                data: IconThemeData(
+                  size: 20,
+                  color: scheme.onSurfaceVariant,
+                ),
+                child: trailing,
+              ),
+            ],
+          ],
+        ),
+      );
 }
 
 /// The heading of a section of a list: its [title], an optional [count] after
@@ -788,6 +845,95 @@ class GlassSectionHeading extends StatelessWidget {
             if (trailing != null) trailing,
           ],
         ),
+      ),
+    );
+  }
+}
+
+/// The way through the weeks of a page with a week, such as the calendars:
+/// arrows as discs on both sides and the [range] of the week in between, as a
+/// glass control that opens [onPickWeek], usually a date picker.
+///
+/// [chevronOpacity] and [rangeOpacity] let a page fade the parts while the
+/// week is dragged.
+class GlassWeekBar extends StatelessWidget {
+  const GlassWeekBar({
+    super.key,
+    required this.range,
+    required this.onPrevious,
+    required this.onNext,
+    required this.onPickWeek,
+    this.previousKey,
+    this.nextKey,
+    this.rangeKey,
+    this.chevronOpacity = kAlwaysCompleteAnimation,
+    this.rangeOpacity = kAlwaysCompleteAnimation,
+  });
+
+  final String range;
+  final VoidCallback? onPrevious, onNext;
+  final VoidCallback onPickWeek;
+  final Key? previousKey, nextKey, rangeKey;
+  final Animation<double> chevronOpacity, rangeOpacity;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final scheme = theme.colorScheme;
+    final discStyle = HeaderDiscButton.styleOf(scheme);
+    return SizedBox(
+      height: 48,
+      child: Row(
+        children: <Widget>[
+          FadeTransition(
+            opacity: chevronOpacity,
+            child: IconButton(
+              key: previousKey,
+              tooltip: context.t('exam.previousWeek'),
+              style: discStyle,
+              iconSize: HeaderDiscButton.iconSize,
+              onPressed: onPrevious,
+              icon: const Icon(Icons.chevron_left),
+            ),
+          ),
+          const SizedBox(width: 4),
+          Expanded(
+            child: FadeTransition(
+              opacity: rangeOpacity,
+              child: Center(
+                child: FilledButton.icon(
+                  key: rangeKey,
+                  style: glassControlStyle(scheme),
+                  onPressed: onPickWeek,
+                  icon: const Icon(Icons.calendar_month_rounded, size: 18),
+                  label: FittedBox(
+                    fit: BoxFit.scaleDown,
+                    child: Text(
+                      range,
+                      maxLines: 1,
+                      style: theme.textTheme.titleSmall?.copyWith(
+                        fontWeight: FontWeight.w600,
+                        color: scheme.onSecondaryContainer,
+                      ),
+                    ),
+                  ),
+                ),
+              ),
+            ),
+          ),
+          const SizedBox(width: 4),
+          FadeTransition(
+            opacity: chevronOpacity,
+            child: IconButton(
+              key: nextKey,
+              tooltip: context.t('exam.nextWeek'),
+              style: discStyle,
+              iconSize: HeaderDiscButton.iconSize,
+              onPressed: onNext,
+              icon: const Icon(Icons.chevron_right),
+            ),
+          ),
+        ],
       ),
     );
   }
