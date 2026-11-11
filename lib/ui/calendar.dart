@@ -27,7 +27,10 @@ import 'package:dr/container/calendar_week_container.dart';
 import 'package:dr/container/exam_calendar_container.dart';
 import 'package:dr/data.dart';
 import 'package:dr/i18n/app_localizations.dart';
+import 'package:dr/ui/dashboard_app_header.dart' show HeaderDiscButton;
 import 'package:dr/ui/favorite_subject_filter.dart';
+import 'package:dr/ui/glass_page.dart';
+import 'package:dr/ui/glass_surface.dart';
 import 'package:dr/utc_date_time.dart';
 import 'package:dr/util.dart';
 import 'package:flutter/material.dart';
@@ -270,6 +273,15 @@ class _CalendarState extends State<Calendar> with TickerProviderStateMixin {
         controller: _controller,
         onPageChanged: _handlePageChanged,
       );
+      if (newDesign) {
+        return _buildNew(
+          context,
+          width: constraints.maxWidth,
+          pageView: pageView,
+          availableFavoriteSubjects: availableFavoriteSubjects,
+          selectedFavoriteSubject: selectedFavoriteSubject,
+        );
+      }
       return Row(
         children: [
           Expanded(
@@ -475,6 +487,223 @@ class _CalendarState extends State<Calendar> with TickerProviderStateMixin {
       );
     });
   }
+
+  bool _reduceMotion(BuildContext context) =>
+      MediaQuery.disableAnimationsOf(context);
+
+  /// Turns to [page] of the weeks, at once when motion is reduced.
+  void _goToPage(BuildContext context, int page) {
+    if (_reduceMotion(context)) {
+      _controller.jumpToPage(page);
+    } else {
+      unawaited(
+        _controller.animateToPage(
+          page,
+          curve: _animatePageCurve,
+          duration: _animatePageDuration,
+        ),
+      );
+    }
+  }
+
+  Future<void> _pickWeek(BuildContext context) async {
+    final result = await showDatePicker(
+      context: context,
+      firstDate: UtcDateTime(2018),
+      lastDate: UtcDateTime(2050),
+      initialDate: widget.vm.currentMonday,
+      selectableDayPredicate: (day) {
+        return day.weekday != DateTime.sunday &&
+            day.weekday != DateTime.saturday;
+      },
+    );
+    if (result == null || !context.mounted) return;
+    final date = toMonday(result.makeUtc());
+    if (date != widget.vm.currentMonday) {
+      _goToPage(context, pageOf(date));
+    }
+  }
+
+  /// The calendar in the new design: the glass header with the switch to the
+  /// exam calendar, the week navigation as glass controls, the week and, on
+  /// wide windows, the day beside it.
+  Widget _buildNew(
+    BuildContext context, {
+    required double width,
+    required Widget pageView,
+    required List<String> availableFavoriteSubjects,
+    required String? selectedFavoriteSubject,
+  }) {
+    final theme = Theme.of(context);
+    final scheme = theme.colorScheme;
+    final l10n = context.l10n;
+    final reduceMotion = _reduceMotion(context);
+    final floatingMaxWidth = glassHeaderFloatingWidth(width, twoColumns: true);
+    final chevronOpacity =
+        reduceMotion ? kAlwaysCompleteAnimation : _chevronOpacityAnimation;
+    final rangeOpacity =
+        reduceMotion ? kAlwaysCompleteAnimation : _dateRangeOpacityAnimation;
+    final vm = widget.vm;
+    final first = vm.first ?? vm.currentMonday;
+    final last = vm.last ?? vm.currentMonday.add(const Duration(days: 5));
+    final range = '${_dateFormat.format(first)} – ${_dateFormat.format(last)}';
+    final discStyle = HeaderDiscButton.styleOf(scheme);
+    final week = Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: <Widget>[
+        const SizedBox(height: 8),
+        SizedBox(
+          height: 48,
+          child: Row(
+            children: <Widget>[
+              FadeTransition(
+                opacity: chevronOpacity,
+                child: IconButton(
+                  key: const Key('calendar-previous-week'),
+                  tooltip: l10n.text('exam.previousWeek'),
+                  style: discStyle,
+                  iconSize: HeaderDiscButton.iconSize,
+                  onPressed: () => _goToPage(
+                    context,
+                    pageOf(vm.currentMonday) - 1,
+                  ),
+                  icon: const Icon(Icons.chevron_left),
+                ),
+              ),
+              const SizedBox(width: 4),
+              Expanded(
+                child: FadeTransition(
+                  opacity: rangeOpacity,
+                  child: Center(
+                    child: FilledButton.icon(
+                      key: const Key('calendar-week-range'),
+                      style: glassControlStyle(scheme),
+                      onPressed: () => unawaited(_pickWeek(context)),
+                      icon: const Icon(Icons.calendar_month_rounded, size: 18),
+                      label: FittedBox(
+                        fit: BoxFit.scaleDown,
+                        child: Text(
+                          range,
+                          maxLines: 1,
+                          style: theme.textTheme.titleSmall?.copyWith(
+                            fontWeight: FontWeight.w600,
+                            color: scheme.onSecondaryContainer,
+                          ),
+                        ),
+                      ),
+                    ),
+                  ),
+                ),
+              ),
+              const SizedBox(width: 4),
+              FadeTransition(
+                opacity: chevronOpacity,
+                child: IconButton(
+                  key: const Key('calendar-next-week'),
+                  tooltip: l10n.text('exam.nextWeek'),
+                  style: discStyle,
+                  iconSize: HeaderDiscButton.iconSize,
+                  onPressed: () => _goToPage(
+                    context,
+                    pageOf(vm.currentMonday) + 1,
+                  ),
+                  icon: const Icon(Icons.chevron_right),
+                ),
+              ),
+            ],
+          ),
+        ),
+        if (availableFavoriteSubjects.isNotEmpty)
+          FavoriteSubjectFilter(
+            subjects: availableFavoriteSubjects,
+            selectedSubject: selectedFavoriteSubject,
+            onSelected: (favoriteSubject) {
+              setState(() {
+                _favoriteSubject = favoriteSubject;
+              });
+              _ensureSelectionVisible(favoriteSubject);
+            },
+            subjectThemes: vm.subjectThemes,
+            padding: const EdgeInsets.only(top: 8),
+          ),
+        const SizedBox(height: 8),
+        Expanded(
+          child: NotificationListener<ScrollStartNotification>(
+            onNotification: (n) {
+              _chevronOpacityController.forward();
+              _dateRangeOpacityController.forward();
+              return false;
+            },
+            child: NotificationListener<ScrollEndNotification>(
+              onNotification: (_) {
+                _chevronOpacityController.reverse();
+                _dateRangeOpacityController.reverse();
+                return false;
+              },
+              child: pageView,
+            ),
+          ),
+        ),
+        EditNickBar(
+          show: vm.showEditNicksBar,
+          onShowEditNicks: widget.showEditSubjectNicks,
+          onClose: widget.closeEditNicksBar,
+        ),
+        CalendarSubstituteBar(
+          show: vm.showSubstituteBar,
+          onOpenSettings: widget.showEditSubstituteSettings,
+          enabled: vm.substituteDetectionEnabled,
+        ),
+      ],
+    );
+    return GlassPage(
+      scrolls: false,
+      loading: _loadingWeeks.contains(vm.currentMonday) && vm.first != null,
+      header: GlassPageHeader(
+        surfaceKey: const Key('calendar-app-header'),
+        title: l10n.text('calendar.title'),
+        titleWidget: const CalendarViewSwitcher(exams: false),
+        floatingMaxWidth: floatingMaxWidth,
+        actions: [
+          if (toMonday(now) != vm.currentMonday)
+            HeaderDiscButton(
+              key: const Key('calendar-current-week'),
+              tooltip: l10n.text('calendar.currentWeek'),
+              icon: Icons.today_outlined,
+              onPressed: () => _goToPage(context, pageOf(toMonday(now))),
+            ),
+        ],
+      ),
+      body: Align(
+        alignment: Alignment.topCenter,
+        child: ConstrainedBox(
+          constraints: BoxConstraints(
+            maxWidth: floatingMaxWidth ?? double.infinity,
+          ),
+          child: Padding(
+            // Lines up with the floating header; on phones the days get the
+            // room.
+            padding: EdgeInsets.fromLTRB(
+              floatingMaxWidth == null ? 6 : DesignTokens.gutter,
+              0,
+              floatingMaxWidth == null ? 6 : DesignTokens.gutter,
+              DesignTokens.gutter,
+            ),
+            child: Row(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                Expanded(child: week),
+                CalendarDetailContainer(
+                  isSidebar: true,
+                  show: tabletMode,
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
 }
 
 int pageOf(UtcDateTime monday) =>
@@ -494,6 +723,30 @@ class EditNickBar extends StatelessWidget {
       required this.onClose});
   @override
   Widget build(BuildContext context) {
+    if (ResponsiveNavigationScope.isActive(context)) {
+      return _GlassHelperBar(
+        show: show,
+        child: Row(
+          children: [
+            Expanded(
+              child: GlassTile(
+                icon: Icons.edit_note_rounded,
+                title: context.t('calendar.editNicknames'),
+                trailing: const Icon(Icons.chevron_right_rounded),
+                onTap: onShowEditNicks,
+              ),
+            ),
+            const SizedBox(width: 4),
+            HeaderDiscButton(
+              key: const Key('calendar-close-nicks-bar'),
+              tooltip: context.t('common.close'),
+              icon: Icons.close_rounded,
+              onPressed: onClose,
+            ),
+          ],
+        ),
+      );
+    }
     return AnimatedCrossFade(
       duration: const Duration(milliseconds: 250),
       firstChild: Column(
@@ -568,6 +821,23 @@ class CalendarSubstituteBar extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    if (ResponsiveNavigationScope.isActive(context)) {
+      // A tile cuts a long text off cleanly instead of overflowing the row.
+      return _GlassHelperBar(
+        show: show,
+        child: GlassTile(
+          key: const Key('calendar-substitute-bar'),
+          icon: Icons.swap_horiz_rounded,
+          title: context.t(
+            enabled
+                ? 'calendar.reportSubstituteError'
+                : 'calendar.configureSubstitute',
+          ),
+          trailing: const Icon(Icons.chevron_right_rounded),
+          onTap: onOpenSettings,
+        ),
+      );
+    }
     return AnimatedCrossFade(
       duration: const Duration(milliseconds: 250),
       firstChild: Column(
@@ -613,6 +883,31 @@ class CalendarSubstituteBar extends StatelessWidget {
         ],
       ),
       secondChild: Container(height: 8),
+      crossFadeState:
+          show ? CrossFadeState.showFirst : CrossFadeState.showSecond,
+    );
+  }
+}
+
+/// A helper bar of the new design below the week: [child] slides in while
+/// [show] is true, at once when motion is reduced.
+class _GlassHelperBar extends StatelessWidget {
+  const _GlassHelperBar({required this.show, required this.child});
+
+  final bool show;
+  final Widget child;
+
+  @override
+  Widget build(BuildContext context) {
+    return AnimatedCrossFade(
+      duration: MediaQuery.disableAnimationsOf(context)
+          ? Duration.zero
+          : const Duration(milliseconds: 250),
+      firstChild: Padding(
+        padding: const EdgeInsets.only(top: 8),
+        child: child,
+      ),
+      secondChild: const SizedBox(width: double.infinity),
       crossFadeState:
           show ? CrossFadeState.showFirst : CrossFadeState.showSecond,
     );

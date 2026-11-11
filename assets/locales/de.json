@@ -679,6 +679,8 @@
   "calendar.substitute": "Supplenz",
   "calendar.detailTitle": "Detailansicht",
   "calendar.noSchool": "Keine Schule",
+  "calendar.previousDay": "Vorheriger Tag",
+  "calendar.nextDay": "Nächster Tag",
   "calendar.selfCreatedAssessment": "Selbst erstellt",
   "calendar.selfCreatedAssessmentBody": "Du hast diesen Termin selbst erstellt ({type}).",
   "calendarSync.permissionDenied": "Kalenderberechtigung wurde nicht erteilt.",

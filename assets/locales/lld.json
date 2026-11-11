@@ -679,6 +679,8 @@
   "calendar.substitute": "Sostituziun",
   "calendar.detailTitle": "Detais",
   "calendar.noSchool": "Degüna scola",
+  "calendar.previousDay": "Dé de inant",
+  "calendar.nextDay": "Prossim dé",
   "calendar.selfCreatedAssessment": "Crià da te",
   "calendar.selfCreatedAssessmentBody": "T'as crià te chësta uscita ({type}).",
   "calendarSync.permissionDenied": "Permëss por le calendere nia conzedü.",
