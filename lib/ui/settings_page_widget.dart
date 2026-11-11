@@ -38,11 +38,15 @@ import 'package:dr/ui/autocomplete_options.dart';
 import 'package:dr/ui/committed_deleteable.dart';
 import 'package:dr/ui/credits_page.dart';
 import 'package:dr/ui/dialog.dart';
+import 'package:dr/ui/glass_page.dart' show GlassPanel;
+import 'package:dr/ui/glass_segmented_control.dart';
+import 'package:dr/ui/glass_surface.dart' show showGlassSheet;
 import 'package:dr/ui/network_protocol_page.dart';
 import 'package:dr/ui/privacy_data_details_page.dart';
 import 'package:dr/ui/readable_content.dart';
 import 'package:dr/ui/reminder_settings.dart';
 import 'package:dr/ui/school_notification_settings.dart';
+import 'package:dr/ui/settings_page_new.dart';
 import 'package:dr/ui/subject_swatch_picker.dart';
 import 'package:dr/util.dart';
 import 'package:flutter/material.dart';
@@ -302,6 +306,81 @@ class _SettingsPageWidgetState extends State<SettingsPageWidget> {
     // user has to choose the new target explicitly.
     int? selectedId = savedMissing ? null : savedId ?? defaultCalendar.id;
     final l10n = context.l10n;
+    Widget choices(BuildContext context, StateSetter setDialogState) => Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Text(
+              l10n.text('settings.calendarSync.select.subtitle'),
+            ),
+            if (savedMissing) ...[
+              const SizedBox(height: 12),
+              Text(
+                l10n.text('settings.calendarSync.select.missing'),
+                style: TextStyle(
+                  color: Theme.of(context).colorScheme.error,
+                ),
+              ),
+            ],
+            const SizedBox(height: 12),
+            RadioGroup<int>(
+              groupValue: selectedId,
+              onChanged: (value) {
+                if (value == null) {
+                  return;
+                }
+                setDialogState(() {
+                  selectedId = value;
+                });
+              },
+              child: Column(
+                children: [
+                  for (final calendar in calendars)
+                    RadioListTile<int>(
+                      value: calendar.id,
+                      contentPadding: EdgeInsets.zero,
+                      title: Text(calendar.displayName),
+                      subtitle: Text(calendar.accountLabel),
+                    ),
+                ],
+              ),
+            ),
+          ],
+        );
+    if (ResponsiveNavigationScope.isActive(context)) {
+      return showGlassSheet<CalendarSyncCalendar>(
+        context: context,
+        builder: (context) => StatefulBuilder(
+          builder: (context, setSheetState) => GlassPanel(
+            title: l10n.text('settings.calendarSync.select.title'),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                choices(context, setSheetState),
+                const SizedBox(height: 12),
+                SettingsSheetActions(
+                  children: [
+                    TextButton(
+                      onPressed: () => Navigator.of(context).pop(),
+                      child: Text(l10n.text('common.cancel')),
+                    ),
+                    FilledButton(
+                      onPressed: selectedId == null
+                          ? null
+                          : () => Navigator.of(context).pop(
+                                calendars.firstWhere(
+                                  (calendar) => calendar.id == selectedId,
+                                ),
+                              ),
+                      child: Text(l10n.text('common.select')),
+                    ),
+                  ],
+                ),
+              ],
+            ),
+          ),
+        ),
+      );
+    }
     return showDialog<CalendarSyncCalendar>(
       context: context,
       builder: (context) => StatefulBuilder(
@@ -310,46 +389,7 @@ class _SettingsPageWidgetState extends State<SettingsPageWidget> {
           content: SizedBox(
             width: 420,
             child: SingleChildScrollView(
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  Text(
-                    l10n.text('settings.calendarSync.select.subtitle'),
-                  ),
-                  if (savedMissing) ...[
-                    const SizedBox(height: 12),
-                    Text(
-                      l10n.text('settings.calendarSync.select.missing'),
-                      style: TextStyle(
-                        color: Theme.of(context).colorScheme.error,
-                      ),
-                    ),
-                  ],
-                  const SizedBox(height: 12),
-                  RadioGroup<int>(
-                    groupValue: selectedId,
-                    onChanged: (value) {
-                      if (value == null) {
-                        return;
-                      }
-                      setDialogState(() {
-                        selectedId = value;
-                      });
-                    },
-                    child: Column(
-                      children: [
-                        for (final calendar in calendars)
-                          RadioListTile<int>(
-                            value: calendar.id,
-                            contentPadding: EdgeInsets.zero,
-                            title: Text(calendar.displayName),
-                            subtitle: Text(calendar.accountLabel),
-                          ),
-                      ],
-                    ),
-                  ),
-                ],
-              ),
+              child: choices(context, setDialogState),
             ),
           ),
           actions: [
@@ -822,32 +862,34 @@ class _SettingsPageWidgetState extends State<SettingsPageWidget> {
     );
   }
 
-  Widget _buildAppearanceSection(AppLocalizations l10n, _Theme currentTheme) {
-    return _SettingsSectionCard(
-      title: l10n.text('settings.section.appearance'),
-      children: [
-        RadioGroup<_Theme>(
-          groupValue: currentTheme,
-          onChanged: _selectTheme,
-          child: Column(
-            children: [
-              RadioListTile(
+  /// The theme and the design as glass segments, in the new design.
+  List<Widget> _newAppearanceControls(
+    AppLocalizations l10n,
+    _Theme currentTheme,
+  ) =>
+      [
+        SettingsSegmentedRow(
+          child: GlassSegmentedControl<_Theme>(
+            key: const Key('settings-theme-switch'),
+            segments: [
+              GlassSegment(
                 value: _Theme.followDevice,
-                title: Text(l10n.text('settings.theme.followDevice')),
+                label: l10n.text('settings.theme.system'),
+                fullLabel: l10n.text('settings.theme.followDevice'),
               ),
-              RadioListTile(
-                value: _Theme.light,
-                title: Text(l10n.text('settings.theme.light')),
-              ),
-              RadioListTile(
-                value: _Theme.dark,
-                title: Text(l10n.text('settings.theme.dark')),
-              ),
-              RadioListTile(
-                value: _Theme.amoled,
-                title: Text(l10n.text('settings.theme.amoled')),
-              ),
+              for (final (theme, key) in [
+                (_Theme.light, 'settings.theme.light'),
+                (_Theme.dark, 'settings.theme.dark'),
+                (_Theme.amoled, 'settings.theme.amoled'),
+              ])
+                GlassSegment(
+                  value: theme,
+                  label: l10n.text(key),
+                  fullLabel: l10n.text(key),
+                ),
             ],
+            selected: currentTheme,
+            onChanged: _selectTheme,
           ),
         ),
         ListTile(
@@ -857,31 +899,90 @@ class _SettingsPageWidgetState extends State<SettingsPageWidget> {
               ? 'settings.design.legacyHint'
               : 'settings.design.newHint')),
         ),
-        Padding(
-          padding: const EdgeInsets.fromLTRB(16, 0, 16, 12),
-          child: SizedBox(
-            width: double.infinity,
-            child: SegmentedButton<bool>(
-              key: const Key('settings-design-switch'),
-              showSelectedIcon: false,
-              segments: [
-                ButtonSegment(
-                  value: false,
-                  icon: const Icon(Icons.auto_awesome_outlined),
-                  label: Text(l10n.text('settings.design.new')),
+        SettingsSegmentedRow(
+          child: GlassSegmentedControl<bool>(
+            key: const Key('settings-design-switch'),
+            segments: [
+              for (final (legacy, key) in [
+                (false, 'settings.design.new'),
+                (true, 'settings.design.legacy'),
+              ])
+                GlassSegment(
+                  value: legacy,
+                  label: l10n.text(key),
+                  fullLabel: l10n.text(key),
                 ),
-                ButtonSegment(
-                  value: true,
-                  icon: const Icon(Icons.history_rounded),
-                  label: Text(l10n.text('settings.design.legacy')),
-                ),
-              ],
-              selected: {widget.vm.legacyDesign},
-              onSelectionChanged: (selection) =>
-                  widget.onSetLegacyDesign(selection.first),
-            ),
+            ],
+            selected: widget.vm.legacyDesign,
+            onChanged: widget.onSetLegacyDesign,
           ),
         ),
+      ];
+
+  Widget _buildAppearanceSection(AppLocalizations l10n, _Theme currentTheme) {
+    final newDesign = ResponsiveNavigationScope.isActive(context);
+    return _SettingsSectionCard(
+      title: l10n.text('settings.section.appearance'),
+      children: [
+        if (newDesign) ..._newAppearanceControls(l10n, currentTheme),
+        if (!newDesign) ...[
+          RadioGroup<_Theme>(
+            groupValue: currentTheme,
+            onChanged: _selectTheme,
+            child: Column(
+              children: [
+                RadioListTile(
+                  value: _Theme.followDevice,
+                  title: Text(l10n.text('settings.theme.followDevice')),
+                ),
+                RadioListTile(
+                  value: _Theme.light,
+                  title: Text(l10n.text('settings.theme.light')),
+                ),
+                RadioListTile(
+                  value: _Theme.dark,
+                  title: Text(l10n.text('settings.theme.dark')),
+                ),
+                RadioListTile(
+                  value: _Theme.amoled,
+                  title: Text(l10n.text('settings.theme.amoled')),
+                ),
+              ],
+            ),
+          ),
+          ListTile(
+            key: const Key('settings-design-tile'),
+            title: Text(l10n.text('settings.design.title')),
+            subtitle: Text(l10n.text(widget.vm.legacyDesign
+                ? 'settings.design.legacyHint'
+                : 'settings.design.newHint')),
+          ),
+          Padding(
+            padding: const EdgeInsets.fromLTRB(16, 0, 16, 12),
+            child: SizedBox(
+              width: double.infinity,
+              child: SegmentedButton<bool>(
+                key: const Key('settings-design-switch'),
+                showSelectedIcon: false,
+                segments: [
+                  ButtonSegment(
+                    value: false,
+                    icon: const Icon(Icons.auto_awesome_outlined),
+                    label: Text(l10n.text('settings.design.new')),
+                  ),
+                  ButtonSegment(
+                    value: true,
+                    icon: const Icon(Icons.history_rounded),
+                    label: Text(l10n.text('settings.design.legacy')),
+                  ),
+                ],
+                selected: {widget.vm.legacyDesign},
+                onSelectionChanged: (selection) =>
+                    widget.onSetLegacyDesign(selection.first),
+              ),
+            ),
+          ),
+        ],
         ListTile(
           key: const Key('settings-language-tile'),
           title: Text(l10n.text('settings.language.label')),
@@ -1254,6 +1355,13 @@ class _SettingsPageWidgetState extends State<SettingsPageWidget> {
         widget.vm.amoledMode ? _Theme.amoled : _Theme.dark,
       AppThemePreference.system => _Theme.followDevice,
     };
+    final sections = _sections(l10n, currentTheme);
+    if (ResponsiveNavigationScope.isActive(context)) {
+      return SettingsPageNew(
+        sections: sections,
+        onShowDebug: widget.vm.username == 'debug' ? widget.onShowDebug : null,
+      );
+    }
     return Scaffold(
       appBar: ResponsiveAppBar(
         title: Text(l10n.text('settings.title')),
@@ -1267,81 +1375,10 @@ class _SettingsPageWidgetState extends State<SettingsPageWidget> {
           24 + ResponsiveNavigationScope.bottomInsetOf(context),
         ),
         children: <Widget>[
-          if (widget.vm.demoMode) ...[
-            _buildDemoSection(l10n),
-            const SizedBox(height: 16),
+          for (final (index, section) in sections.indexed) ...[
+            if (index > 0) const SizedBox(height: 16),
+            section,
           ],
-          _buildAccountSection(l10n),
-          const SizedBox(height: 16),
-          _buildAppearanceSection(l10n, currentTheme),
-          const SizedBox(height: 16),
-          _buildDashboardSection(l10n),
-          const SizedBox(height: 16),
-          _buildCalendarSection(l10n),
-          const SizedBox(height: 16),
-          _buildTutorialSection(l10n),
-          const SizedBox(height: 16),
-          _buildPrivacySection(l10n),
-          const SizedBox(height: 16),
-          const SchoolNotificationSettings(),
-          const SizedBox(height: 16),
-          ReminderSettings(
-            mensaEnabled: widget.vm.mensaReminderEnabled,
-            mensaMinuteOfDay: widget.vm.mensaReminderMinuteOfDay,
-            mensaUrl: widget.vm.mensaReminderUrl,
-            onSetMensaEnabled: widget.onSetMensaReminderEnabled,
-            onSetMensaMinuteOfDay: widget.onSetMensaReminderMinuteOfDay,
-            onSetMensaUrl: widget.onSetMensaReminderUrl,
-            mensaWeekdays: widget.vm.mensaReminderWeekdays,
-            onSetMensaWeekdays: widget.onSetMensaReminderWeekdays,
-            assessmentsEnabled: widget.vm.assessmentRemindersEnabled,
-            assessmentDays: widget.vm.assessmentReminderDays,
-            onSetAssessmentsEnabled: widget.onSetAssessmentRemindersEnabled,
-            examsEnabled: widget.vm.examRemindersEnabled,
-            onSetExamsEnabled: widget.onSetExamRemindersEnabled,
-            testsEnabled: widget.vm.testRemindersEnabled,
-            onSetTestsEnabled: widget.onSetTestRemindersEnabled,
-            homeworkEnabled: widget.vm.homeworkRemindersEnabled,
-            onSetHomeworkEnabled: widget.onSetHomeworkRemindersEnabled,
-            onSetAssessmentDays: widget.onSetAssessmentReminderDays,
-            assessmentMinuteOfDay: widget.vm.assessmentReminderMinuteOfDay,
-            onSetAssessmentMinuteOfDay:
-                widget.onSetAssessmentReminderMinuteOfDay,
-          ),
-          const SizedBox(height: 16),
-          _SettingsSectionCard(
-            title: l10n.text('export.title'),
-            children: [
-              ListTile(
-                leading: const Icon(Icons.file_download_outlined),
-                title: Text(l10n.text('export.title')),
-                subtitle: Text(l10n.text('export.settingsHint')),
-                trailing: const Icon(Icons.chevron_right),
-                onTap: () => openExportPage(context),
-              )
-            ],
-          ),
-          const SizedBox(height: 16),
-          _buildAdvancedSection(l10n),
-          const SizedBox(height: 16),
-          _SettingsSectionCard(
-            title: l10n.text('settings.section.credits'),
-            children: [
-              ListTile(
-                key: const Key('settings-credits-tile'),
-                leading: const Icon(Icons.favorite_outline_rounded),
-                title: Text(l10n.text('credits.title')),
-                subtitle: Text(l10n.text('credits.settings.subtitle')),
-                trailing: const Icon(Icons.chevron_right),
-                onTap: () => Navigator.of(context).push(
-                  MaterialPageRoute<void>(
-                    builder: (_) => const CreditsPage(),
-                    settings: const RouteSettings(name: '/credits'),
-                  ),
-                ),
-              ),
-            ],
-          ),
           if (widget.vm.username == 'debug')
             Padding(
               padding: const EdgeInsets.only(top: 16),
@@ -1355,6 +1392,71 @@ class _SettingsPageWidgetState extends State<SettingsPageWidget> {
     );
   }
 
+  /// The sections of the main page, the same in both designs.
+  List<Widget> _sections(AppLocalizations l10n, _Theme currentTheme) => [
+        if (widget.vm.demoMode) _buildDemoSection(l10n),
+        _buildAccountSection(l10n),
+        _buildAppearanceSection(l10n, currentTheme),
+        _buildDashboardSection(l10n),
+        _buildCalendarSection(l10n),
+        _buildTutorialSection(l10n),
+        _buildPrivacySection(l10n),
+        const SchoolNotificationSettings(),
+        ReminderSettings(
+          mensaEnabled: widget.vm.mensaReminderEnabled,
+          mensaMinuteOfDay: widget.vm.mensaReminderMinuteOfDay,
+          mensaUrl: widget.vm.mensaReminderUrl,
+          onSetMensaEnabled: widget.onSetMensaReminderEnabled,
+          onSetMensaMinuteOfDay: widget.onSetMensaReminderMinuteOfDay,
+          onSetMensaUrl: widget.onSetMensaReminderUrl,
+          mensaWeekdays: widget.vm.mensaReminderWeekdays,
+          onSetMensaWeekdays: widget.onSetMensaReminderWeekdays,
+          assessmentsEnabled: widget.vm.assessmentRemindersEnabled,
+          assessmentDays: widget.vm.assessmentReminderDays,
+          onSetAssessmentsEnabled: widget.onSetAssessmentRemindersEnabled,
+          examsEnabled: widget.vm.examRemindersEnabled,
+          onSetExamsEnabled: widget.onSetExamRemindersEnabled,
+          testsEnabled: widget.vm.testRemindersEnabled,
+          onSetTestsEnabled: widget.onSetTestRemindersEnabled,
+          homeworkEnabled: widget.vm.homeworkRemindersEnabled,
+          onSetHomeworkEnabled: widget.onSetHomeworkRemindersEnabled,
+          onSetAssessmentDays: widget.onSetAssessmentReminderDays,
+          assessmentMinuteOfDay: widget.vm.assessmentReminderMinuteOfDay,
+          onSetAssessmentMinuteOfDay: widget.onSetAssessmentReminderMinuteOfDay,
+        ),
+        _SettingsSectionCard(
+          title: l10n.text('export.title'),
+          children: [
+            ListTile(
+              leading: const Icon(Icons.file_download_outlined),
+              title: Text(l10n.text('export.title')),
+              subtitle: Text(l10n.text('export.settingsHint')),
+              trailing: const Icon(Icons.chevron_right),
+              onTap: () => openExportPage(context),
+            )
+          ],
+        ),
+        _buildAdvancedSection(l10n),
+        _SettingsSectionCard(
+          title: l10n.text('settings.section.credits'),
+          children: [
+            ListTile(
+              key: const Key('settings-credits-tile'),
+              leading: const Icon(Icons.favorite_outline_rounded),
+              title: Text(l10n.text('credits.title')),
+              subtitle: Text(l10n.text('credits.settings.subtitle')),
+              trailing: const Icon(Icons.chevron_right),
+              onTap: () => Navigator.of(context).push(
+                MaterialPageRoute<void>(
+                  builder: (_) => const CreditsPage(),
+                  settings: const RouteSettings(name: '/credits'),
+                ),
+              ),
+            ),
+          ],
+        ),
+      ];
+
   Future<void> _showAboutAppDialog(BuildContext context) => showDialog<void>(
         context: context,
         builder: (_) => AboutAppDialog(version: appVersion),
@@ -1363,6 +1465,26 @@ class _SettingsPageWidgetState extends State<SettingsPageWidget> {
     BuildContext context,
   ) {
     final l10n = context.l10n;
+    if (ResponsiveNavigationScope.isActive(context)) {
+      return showSettingsChoiceSheet<_CalendarSyncDisableAction>(
+        context: context,
+        title: l10n.text('settings.calendarSync.disable.title'),
+        body: l10n.text('settings.calendarSync.disable.body'),
+        choices: [
+          SettingsChoice(
+            key: const Key('calendar-sync-keep-events'),
+            value: _CalendarSyncDisableAction.keep,
+            label: l10n.text('settings.calendarSync.disable.keep'),
+          ),
+          SettingsChoice(
+            key: const Key('calendar-sync-remove-events'),
+            value: _CalendarSyncDisableAction.remove,
+            label: l10n.text('settings.calendarSync.disable.remove'),
+            primary: true,
+          ),
+        ],
+      );
+    }
     return showDialog<_CalendarSyncDisableAction>(
       context: context,
       builder: (context) => InfoDialog(
@@ -1416,6 +1538,9 @@ class _SettingsSectionCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    if (ResponsiveNavigationScope.isActive(context)) {
+      return SettingsSectionNew(title: title, children: children);
+    }
     final theme = Theme.of(context);
     return Card(
       margin: EdgeInsets.zero,
@@ -1452,6 +1577,9 @@ class _SettingsDetailPage extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    if (ResponsiveNavigationScope.isActive(context)) {
+      return SettingsDetailPageNew(title: title, children: children);
+    }
     return Scaffold(
       appBar: AppBar(
         title: Text(title),

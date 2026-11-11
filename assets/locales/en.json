@@ -118,6 +118,7 @@
   "settings.storeData.subtitle": "See when something was entered",
   "settings.deleteDataOnLogout.title": "Delete data on logout",
   "settings.theme.followDevice": "Follow device theme",
+  "settings.theme.system": "System",
   "settings.theme.light": "Light",
   "settings.theme.dark": "Dark",
   "settings.theme.amoled": "AMOLED",

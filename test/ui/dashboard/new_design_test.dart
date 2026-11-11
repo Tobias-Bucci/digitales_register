@@ -30,7 +30,6 @@ import 'package:dr/ui/glass_surface.dart';
 import 'package:dr/ui/grades_subject_list.dart';
 import 'package:dr/ui/notepad_mark.dart';
 import 'package:dr/ui/profile_menu.dart';
-import 'package:dr/ui/readable_content.dart';
 import 'package:dr/ui/school_countdown_overview.dart';
 import 'package:dr/ui/sidebar.dart';
 import 'package:dr/ui/sorted_grades_widget.dart';
@@ -1246,12 +1245,9 @@ void main() {
       await settleFor(tester);
 
       final switcher = find.byKey(const Key('settings-design-switch'));
-      await tester.scrollUntilVisible(
-        switcher,
-        200,
-        scrollable: find.byType(Scrollable).last,
-      );
-      await tester.pump();
+      // In the middle: the top of the list is below the glass header.
+      await Scrollable.ensureVisible(tester.element(switcher), alignment: 0.5);
+      await settleFor(tester);
       await tester
           .tap(find.descendant(of: switcher, matching: find.text('Legacy')));
       await settleFor(tester);
@@ -2749,10 +2745,7 @@ void main() {
         await settleFor(tester);
 
         expect(finder(), findsOneWidget);
-        final content = find.descendant(
-          of: find.byType(NewDesignReadable),
-          matching: find.byType(ListView),
-        );
+        final content = find.byKey(const Key('settings-list'));
         expect(
           tester.getSize(content.first).width,
           DesignTokens.contentMaxWidth,

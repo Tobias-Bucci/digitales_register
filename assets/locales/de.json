@@ -118,6 +118,7 @@
   "settings.storeData.subtitle": "Sehen, wann etwas eingetragen wurde",
   "settings.deleteDataOnLogout.title": "Daten beim Ausloggen löschen",
   "settings.theme.followDevice": "Geräte-Theme folgen",
+  "settings.theme.system": "System",
   "settings.theme.light": "Hell",
   "settings.theme.dark": "Dunkel",
   "settings.theme.amoled": "Amoled",
