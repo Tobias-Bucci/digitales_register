@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:math' as math;
 
 import 'package:dr/biometric_app_lock.dart';
 import 'package:dr/i18n/app_language.dart';
@@ -10,6 +11,7 @@ import 'package:dr/server_notifications/server_notification_service.dart';
 import 'package:dr/ui/glass_surface.dart';
 import 'package:dr/ui/server_notifications/server_notification_center.dart';
 import 'package:dr/ui/server_notifications/server_notification_visuals.dart';
+import 'package:flutter/gestures.dart' show PointerDeviceKind;
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
@@ -19,7 +21,66 @@ const serverNotificationPopupDuration = Duration(seconds: 6);
 const _wideLayoutWidth = 600.0;
 const _popupMaxWidth = 420.0;
 
+/// The share of the window the popup may take at most, whatever the text size.
+const _popupMaxHeightFactor = 0.4;
+
+/// The space between the header and the popup.
+const _headerGap = 8.0;
+
+/// Room for the close button even when the keyboard leaves almost nothing.
+const _minPopupHeight = kMinInteractiveDimension + 16;
+
+/// The space below the status bar for pages whose header does not report
+/// itself: a toolbar of the [AppBar]s of the older pages, and on the sign-in
+/// page the corner bell, which is as tall.
+const _unreportedHeaderHeight = kToolbarHeight;
+
+/// The page headers on screen now, see [ServerNotificationPopupClearance].
+final Set<_PopupClearanceState> _headers = {};
+
+/// Marks a page header, so that the popup for new app announcements appears
+/// right below it instead of covering it, the school name or the bell.
+///
+/// The host of the popup sits above the navigator and cannot see the pages, so
+/// the headers report themselves. Pages that another one covers do not count.
+/// Without any header on screen the popup leaves room for a toolbar.
+class ServerNotificationPopupClearance extends StatefulWidget {
+  const ServerNotificationPopupClearance({super.key, required this.child});
+
+  final Widget child;
+
+  @override
+  State<ServerNotificationPopupClearance> createState() =>
+      _PopupClearanceState();
+}
+
+class _PopupClearanceState extends State<ServerNotificationPopupClearance> {
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    // The navigator keeps covered pages offstage, with their tickers off.
+    if (TickerMode.valuesOf(context).enabled) {
+      _headers.add(this);
+    } else {
+      _headers.remove(this);
+    }
+  }
+
+  @override
+  void dispose() {
+    _headers.remove(this);
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) => widget.child;
+}
+
 /// Shows the popup for new notifications above the whole app, on any route.
+///
+/// It appears at the top, right below the header of the page, where system
+/// banners appear too and next to the bell that keeps the notification. Narrow
+/// windows show it across the width, wide ones in the top end corner.
 ///
 /// It sits next to the navigator, not on top of it: the app below stays fully
 /// usable. Closing it changes nothing about the notifications: they stay
@@ -36,16 +97,10 @@ class ServerNotificationHost extends StatefulWidget {
     this.blockedChanges,
     this.onLanguage,
     this.newDesign = false,
-    this.navigationClearance = 0,
   });
 
-  /// Glass at the bottom, in the look of the new dashboard. The top belongs to
-  /// its header and the bell in it there, so the popup keeps away from it.
+  /// Glass, in the look of the new dashboard.
   final bool newDesign;
-
-  /// The height of the floating navigation bar of narrow windows, which the
-  /// popup of the new design stays above. Wide windows have a rail instead.
-  final double navigationClearance;
 
   final Widget child;
   final ServerNotificationRepository? repository;
@@ -182,88 +237,187 @@ class _ServerNotificationHostState extends State<ServerNotificationHost> {
     );
   }
 
+  /// Where the lowest header on screen ends, in the host's coordinates, or null
+  /// without one. Reads the layout of the last frame.
+  double? _measureHeaders() {
+    final host = context.findRenderObject();
+    if (host is! RenderBox || !host.hasSize) return null;
+    double? bottom;
+    for (final header in _headers) {
+      if (!header.mounted) continue;
+      final box = header.context.findRenderObject();
+      if (box is! RenderBox || !box.attached || !box.hasSize) continue;
+      final rect = MatrixUtils.transformRect(
+          box.getTransformTo(host), Offset.zero & box.size);
+      if (bottom == null || rect.bottom > bottom) bottom = rect.bottom;
+    }
+    return bottom;
+  }
+
+  bool _following = false;
+
+  /// While the popup shows, follows the header after every frame: the strip
+  /// for new entries comes and goes, and pages change. Costs nothing while
+  /// nothing draws, as it schedules no frame of its own.
+  void _followHeaders(double? measured) {
+    if (_following) return;
+    _following = true;
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _following = false;
+      if (!mounted || _shown.isEmpty) return;
+      final now = _measureHeaders();
+      if (now != measured) {
+        setState(() {});
+      } else {
+        _followHeaders(measured);
+      }
+    });
+  }
+
   @override
   Widget build(BuildContext context) {
     final reducedMotion = MediaQuery.disableAnimationsOf(context);
     final wide = MediaQuery.sizeOf(context).width >= _wideLayoutWidth;
     final glass = widget.newDesign;
-    final alignment = glass
-        ? (wide ? AlignmentDirectional.bottomEnd : Alignment.bottomCenter)
-        : (wide ? AlignmentDirectional.topEnd : Alignment.topCenter);
-    // Above the keyboard too, which the safe area leaves out.
-    final bottom = glass
-        ? (wide ? 0.0 : widget.navigationClearance) +
-            MediaQuery.viewInsetsOf(context).bottom
-        : 0.0;
+    final statusBar = MediaQuery.paddingOf(context).top;
+    final measured = _shown.isEmpty ? null : _measureHeaders();
+    if (_shown.isNotEmpty) _followHeaders(measured);
+    final headerBottom = measured ?? statusBar + _unreportedHeaderHeight;
+    final top = math.max(headerBottom, statusBar) + _headerGap;
+    // The keyboard does not move it, but takes away room from a short window.
+    final keyboard = MediaQuery.viewInsetsOf(context).bottom;
+    final side = glass ? DesignTokens.gutter : 12.0;
     return Stack(
       fit: StackFit.expand,
       children: [
         widget.child,
-        Align(
-          alignment: alignment,
-          child: SafeArea(
-            child: AnimatedSwitcher(
-              duration: reducedMotion
-                  ? Duration.zero
-                  : const Duration(milliseconds: 180),
-              transitionBuilder: (child, animation) => glass
-                  ? FadeTransition(
-                      opacity: animation,
-                      child: SlideTransition(
-                        position: Tween(
-                          begin: const Offset(0, 0.2),
-                          end: Offset.zero,
-                        ).animate(CurvedAnimation(
-                          parent: animation,
-                          curve: Curves.easeOutCubic,
-                        )),
-                        child: child,
-                      ),
-                    )
-                  : FadeTransition(opacity: animation, child: child),
-              child: _shown.isEmpty
-                  ? const SizedBox.shrink()
-                  : Padding(
-                      key: const Key('server-notification-popup'),
-                      padding: EdgeInsets.fromLTRB(
-                        glass ? DesignTokens.gutter : 12,
-                        12,
-                        glass ? DesignTokens.gutter : 12,
-                        12 + bottom,
-                      ),
-                      child: ConstrainedBox(
-                        constraints:
-                            const BoxConstraints(maxWidth: _popupMaxWidth),
-                        child: MouseRegion(
-                          onEnter: (_) => _hold(true),
-                          onExit: (_) => _hold(false),
-                          child: Focus(
-                            canRequestFocus: false,
-                            skipTraversal: true,
-                            onFocusChange: _hold,
-                            child: glass
-                                ? _GlassPopup(
-                                    items: _shown,
-                                    primaryAction: _primaryAction,
-                                    onOpen: _open,
-                                    onClose: _close,
-                                  )
-                                : _Popup(
-                                    items: _shown,
-                                    primaryAction: _primaryAction,
-                                    onOpen: _open,
-                                    onClose: _close,
-                                  ),
-                          ),
-                        ),
-                      ),
-                    ),
-            ),
-          ),
+        LayoutBuilder(
+          builder: (context, constraints) {
+            final room = constraints.maxHeight - top - keyboard - _headerGap;
+            final cap =
+                MediaQuery.sizeOf(context).height * _popupMaxHeightFactor;
+            // Its content scrolls in what is left, but keeps a row of controls.
+            final maxHeight = math.max(_minPopupHeight, math.min(room, cap));
+            return Padding(
+              padding: EdgeInsets.fromLTRB(side, top, side, 0),
+              child: Align(
+                alignment:
+                    wide ? AlignmentDirectional.topEnd : Alignment.topCenter,
+                child: ConstrainedBox(
+                  constraints: BoxConstraints(
+                    maxWidth: _popupMaxWidth,
+                    maxHeight: maxHeight,
+                  ),
+                  child: _transition(reducedMotion, glass),
+                ),
+              ),
+            );
+          },
         ),
       ],
     );
   }
+
+  Widget _transition(bool reducedMotion, bool glass) => AnimatedSwitcher(
+        duration:
+            reducedMotion ? Duration.zero : const Duration(milliseconds: 180),
+        // Comes down from above, as banners of the system do.
+        transitionBuilder: (child, animation) => FadeTransition(
+          opacity: animation,
+          child: SlideTransition(
+            position: Tween(
+              begin: const Offset(0, -0.2),
+              end: Offset.zero,
+            ).animate(CurvedAnimation(
+              parent: animation,
+              curve: Curves.easeOutCubic,
+            )),
+            child: child,
+          ),
+        ),
+        layoutBuilder: (current, previous) => Stack(
+          alignment: Alignment.topCenter,
+          children: [...previous, if (current != null) current],
+        ),
+        child: _shown.isEmpty
+            ? const SizedBox.shrink()
+            : _SwipeUpToDismiss(
+                key: const Key('server-notification-popup'),
+                onDismiss: _close,
+                child: MouseRegion(
+                  onEnter: (_) => _hold(true),
+                  onExit: (_) => _hold(false),
+                  child: Focus(
+                    canRequestFocus: false,
+                    skipTraversal: true,
+                    onFocusChange: _hold,
+                    child: glass
+                        ? _GlassPopup(
+                            items: _shown,
+                            primaryAction: _primaryAction,
+                            onOpen: _open,
+                            onClose: _close,
+                          )
+                        : _Popup(
+                            items: _shown,
+                            primaryAction: _primaryAction,
+                            onOpen: _open,
+                            onClose: _close,
+                          ),
+                  ),
+                ),
+              ),
+      );
+}
+
+/// Swiping the popup up on a touch screen closes it, as the button does. A body
+/// that scrolls takes the drag first, so it never fights the scrolling.
+class _SwipeUpToDismiss extends StatefulWidget {
+  const _SwipeUpToDismiss({
+    super.key,
+    required this.onDismiss,
+    required this.child,
+  });
+
+  static const _distance = 32.0;
+  static const _velocity = 300.0;
+
+  final VoidCallback onDismiss;
+  final Widget child;
+
+  @override
+  State<_SwipeUpToDismiss> createState() => _SwipeUpToDismissState();
+}
+
+class _SwipeUpToDismissState extends State<_SwipeUpToDismiss> {
+  double _offset = 0;
+
+  @override
+  Widget build(BuildContext context) => GestureDetector(
+        supportedDevices: const {
+          PointerDeviceKind.touch,
+          PointerDeviceKind.stylus,
+        },
+        // The close button is the way for screen readers.
+        excludeFromSemantics: true,
+        onVerticalDragUpdate: (details) {
+          final offset = _offset + details.delta.dy;
+          setState(() => _offset = offset < 0 ? offset : 0);
+        },
+        onVerticalDragEnd: (details) {
+          if (_offset < -_SwipeUpToDismiss._distance ||
+              (details.primaryVelocity ?? 0) < -_SwipeUpToDismiss._velocity) {
+            widget.onDismiss();
+          } else {
+            setState(() => _offset = 0);
+          }
+        },
+        onVerticalDragCancel: () => setState(() => _offset = 0),
+        child: Transform.translate(
+          offset: Offset(0, _offset),
+          child: widget.child,
+        ),
+      );
 }
 
 String _heading(AppLocalizations l10n, List<ServerNotification> items) {
@@ -276,6 +430,11 @@ String _heading(AppLocalizations l10n, List<ServerNotification> items) {
       ? 'appNotifications.popupCritical'
       : 'appNotifications.popupNew');
 }
+
+/// What the live region announces. The body is part of it, as the text that
+/// scrolls in a short popup is a node of its own for screen readers.
+String _announcement(String heading, ServerNotification? single) =>
+    single == null ? heading : '$heading: ${single.title}\n${single.body}';
 
 /// The popup in the look of the new dashboard: a card of glass with the
 /// radius, rim and edge of the event banners, and controls of glass.
@@ -313,7 +472,7 @@ class _GlassPopup extends StatelessWidget {
     return Semantics(
       container: true,
       liveRegion: true,
-      label: single == null ? heading : '$heading: ${single.title}',
+      label: _announcement(heading, single),
       child: DecoratedBox(
         decoration: BoxDecoration(
           borderRadius: DesignTokens.cardBorderRadius,
@@ -336,7 +495,10 @@ class _GlassPopup extends StatelessWidget {
           ),
           child: Material(
             type: MaterialType.transparency,
-            child: Padding(
+            // Large text or a short window: the card keeps its maximum height
+            // and its content scrolls.
+            child: SingleChildScrollView(
+              primary: false,
               padding: const EdgeInsets.fromLTRB(14, 10, 6, 12),
               child: Column(
                 mainAxisSize: MainAxisSize.min,
@@ -400,12 +562,14 @@ class _GlassPopup extends StatelessWidget {
                                   ),
                                 ),
                                 const SizedBox(height: 2),
-                                Text(
-                                  single.body,
-                                  maxLines: 2,
-                                  overflow: TextOverflow.ellipsis,
-                                  style: theme.textTheme.bodyMedium?.copyWith(
-                                      color: scheme.onSurfaceVariant),
+                                ExcludeSemantics(
+                                  child: Text(
+                                    single.body,
+                                    maxLines: 2,
+                                    overflow: TextOverflow.ellipsis,
+                                    style: theme.textTheme.bodyMedium?.copyWith(
+                                        color: scheme.onSurfaceVariant),
+                                  ),
                                 ),
                               ],
                             ),
@@ -461,7 +625,7 @@ class _Popup extends StatelessWidget {
     return Semantics(
       container: true,
       liveRegion: true,
-      label: single == null ? heading : '$heading: ${single.title}',
+      label: _announcement(heading, single),
       child: Material(
         elevation: 6,
         color: scheme.surfaceContainerHigh,
@@ -471,7 +635,9 @@ class _Popup extends StatelessWidget {
               ? BorderSide(color: scheme.error, width: 1.5)
               : BorderSide(color: scheme.outlineVariant),
         ),
-        child: Padding(
+        // Large text or a short window: the content scrolls.
+        child: SingleChildScrollView(
+          primary: false,
           padding: const EdgeInsets.fromLTRB(16, 12, 4, 8),
           child: Row(
             crossAxisAlignment: CrossAxisAlignment.start,
@@ -515,12 +681,14 @@ class _Popup extends StatelessWidget {
                         ),
                       ),
                       const SizedBox(height: 2),
-                      Text(
-                        single.body,
-                        maxLines: 2,
-                        overflow: TextOverflow.ellipsis,
-                        style: theme.textTheme.bodyMedium
-                            ?.copyWith(color: scheme.onSurfaceVariant),
+                      ExcludeSemantics(
+                        child: Text(
+                          single.body,
+                          maxLines: 2,
+                          overflow: TextOverflow.ellipsis,
+                          style: theme.textTheme.bodyMedium
+                              ?.copyWith(color: scheme.onSurfaceVariant),
+                        ),
                       ),
                     ],
                     Align(

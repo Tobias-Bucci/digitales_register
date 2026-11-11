@@ -53,7 +53,6 @@ import 'package:dr/school_notification_service.dart';
 import 'package:dr/server_notifications/server_notification_service.dart';
 import 'package:dr/settings_persistence_service.dart';
 import 'package:dr/theme_controller.dart';
-import 'package:dr/ui/app_navigation.dart' show appNavigationBarExtent;
 import 'package:dr/ui/grade_calculator.dart';
 import 'package:dr/ui/grades_chart_page.dart';
 import 'package:dr/ui/launch/app_launch_animation.dart';
@@ -485,7 +484,6 @@ class RegisterApp extends StatelessWidget {
                       top: false,
                       child: ServerNotificationHost(
                         newDesign: !vm.legacyDesign,
-                        navigationClearance: appNavigationBarExtent,
                         child: child ?? const SizedBox.shrink(),
                       ),
                     ),
