@@ -6,22 +6,44 @@ Einführung ersetzt (`lib/tutorial/intro_tour.dart`).
 
 ## Inhalt
 
-Sechs Seiten mit je einer Illustration aus Paletten-Formen, einer Überschrift und
-höchstens zwei kurzen Sätzen:
+Sieben Seiten (#109), jede mit einer Überschrift, höchstens zwei kurzen Sätzen
+und einer Illustration. Die Illustrationen (`lib/tutorial/intro_illustrations.dart`)
+zeigen das neue Design im Kleinen und sind aus denselben Bausteinen gezeichnet
+wie die App: `GlassCard`, `GlassEdge`, `GlassLens`, `navigationBarTint`, die
+Ziele aus `AppDestination` und die Fächerpaletten aus `AppPalette`. Sie liegen
+auf einer festen Fläche (320 × 210), die auf den verfügbaren Platz skaliert
+wird, haben keinen Blur und keine Bilder und werden von Screenreadern
+übersprungen, weil der Text der Seite sagt, was sie zeigen.
 
-1. **Willkommen** – inklusive Sprachauswahl (Deutsch, Italiano, Ladin, English).
-2. **Dashboard** – Hausaufgaben, Tests und anpassbare Karten.
-3. **Noten** – Durchschnitte und Notenrechner.
-4. **Kalender & Absenzen** – Stundenplan, Prüfungen, Voraus-Absenzen.
-5. **Einstellungen** – Hell/Dunkel/AMOLED, Benachrichtigungen, Tutorial.
-6. **Design** – Auswahl zwischen neuem Design (empfohlen) und Legacy, mit
+1. **Willkommen!** – mit Sprachauswahl (Deutsch, Italiano, Ladin, English).
+2. **Alles auf einen Blick** – die kompakte Liste, farbige Hinweise, welche
+   Karten oben stehen, legt man in den Einstellungen fest.
+3. **Immer in Reichweite** – Leiste unten auf dem Handy, Leiste am Rand im
+   breiten Fenster; Absenzen, Klassenbuch und Materialien unter Extras, die
+   Einstellungen unter Profil.
+4. **Nichts verpassen** – die Glocke, die Filter Alle / Schule / App und
+   „Nur ungelesene“.
+5. **Fächerfarben** – Farben je Fach, gewählt aus vier Paletten unter
+   Einstellungen › Aussehen › Fächerfarben.
+6. **Ganz nach deinem Geschmack** – Sprache, Design, Hell/Dunkel und
+   Erinnerungen unter Profil › Einstellungen, dort auch diese Einführung.
+7. **Wähle dein Design** – neues Design (empfohlen) oder Legacy, mit
    gezeichneter Vorschau beider Designs statt einer Illustration (#108).
+
+Ab 720 px Breite steht die Illustration neben dem Text. Bei großer Schrift
+wird die Illustration kleiner, und jede Seite scrollt; „Überspringen“ wird
+eher verkleinert als getrennt.
 
 ## Bedienung
 
-- Fortschrittsanzeige („Schritt n von 6“) und animierte Seitenpunkte.
+- Fortschrittsanzeige („Schritt n von 7“), die Screenreader bei jedem
+  Seitenwechsel ansagen (Live-Region), und animierte Seitenpunkte.
+- Überschriften sind als Überschrift ausgezeichnet. Ausgeblendete Knöpfe
+  (Zurück auf der ersten, Überspringen auf der letzten Seite) sind auch für
+  Screenreader weg.
 - Überspringen oben rechts, Zurück/Weiter unten, Wischen zwischen Seiten.
-- Tastatur: ← / → blättern, Esc überspringt.
+- Tastatur: ← / → blättern, Enter geht weiter, solange kein Knopf den Fokus
+  hat, Esc überspringt.
 - Bei reduzierten Animationen wird ohne Übergänge geblättert.
 
 ## Anzeige

@@ -20,29 +20,37 @@ import 'dart:async';
 import 'package:dr/i18n/app_language.dart';
 import 'package:dr/i18n/app_localizations.dart';
 import 'package:dr/tutorial/design_choice.dart';
+import 'package:dr/tutorial/intro_illustrations.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
-/// One page of the intro: an icon illustration, a headline and a short text.
+/// One page of the intro: an illustration, a headline and a short text.
 class IntroTourPage {
   const IntroTourPage({required this.key, required this.icon});
 
   /// Suffix of `tutorial.page.<key>.title` and `.body`.
   final String key;
+
+  /// The picture of the welcome page; the other pages draw the app.
   final IconData icon;
 }
 
+/// The main areas of the new design, then the choice of the design (#109).
 const introTourPages = <IntroTourPage>[
   IntroTourPage(key: 'welcome', icon: Icons.waving_hand_rounded),
-  IntroTourPage(key: 'dashboard', icon: Icons.dashboard_customize_rounded),
-  IntroTourPage(key: 'grades', icon: Icons.insights_rounded),
-  IntroTourPage(key: 'calendar', icon: Icons.calendar_month_rounded),
+  IntroTourPage(key: 'dashboard', icon: Icons.dashboard_rounded),
+  IntroTourPage(key: 'navigation', icon: Icons.explore_rounded),
+  IntroTourPage(key: 'notifications', icon: Icons.notifications_rounded),
+  IntroTourPage(key: 'colors', icon: Icons.palette_rounded),
   IntroTourPage(key: 'settings', icon: Icons.tune_rounded),
   // Always last: the choice between the new and the legacy design (#108).
   IntroTourPage(key: 'design', icon: Icons.auto_awesome_rounded),
 ];
 
 const _designPage = 'design';
+
+/// From this width a page puts its picture beside the text.
+const _wideLayout = 720.0;
 
 /// A short, full-screen swipe intro. Pops with `true` when finished and
 /// `false` when skipped.
@@ -100,6 +108,7 @@ class IntroTour extends StatefulWidget {
 
 class _IntroTourState extends State<IntroTour> {
   final _controller = PageController();
+  final _focusNode = FocusNode(debugLabel: 'intro-tour');
   late AppLanguage _language = widget.language;
   late bool _legacyDesign = widget.legacyDesign;
   int _page = 0;
@@ -109,7 +118,21 @@ class _IntroTourState extends State<IntroTour> {
   @override
   void dispose() {
     _controller.dispose();
+    _focusNode.dispose();
     super.dispose();
+  }
+
+  /// Enter goes on while nothing inside the tour has the focus. On a button
+  /// or a chip it stays theirs.
+  KeyEventResult _onKey(FocusNode node, KeyEvent event) {
+    if (event is! KeyDownEvent ||
+        FocusManager.instance.primaryFocus != node ||
+        (event.logicalKey != LogicalKeyboardKey.enter &&
+            event.logicalKey != LogicalKeyboardKey.numpadEnter)) {
+      return KeyEventResult.ignored;
+    }
+    _next();
+    return KeyEventResult.handled;
   }
 
   void _goTo(int page) {
@@ -152,6 +175,10 @@ class _IntroTourState extends State<IntroTour> {
     final l10n = context.l10n;
     final theme = Theme.of(context);
     final scheme = theme.colorScheme;
+    final fade = MediaQuery.disableAnimationsOf(context)
+        ? Duration.zero
+        : const Duration(milliseconds: 200);
+    final wide = MediaQuery.sizeOf(context).width >= _wideLayout;
     return CallbackShortcuts(
       bindings: {
         const SingleActivator(LogicalKeyboardKey.arrowRight): _next,
@@ -160,36 +187,60 @@ class _IntroTourState extends State<IntroTour> {
         const SingleActivator(LogicalKeyboardKey.escape): _skip,
       },
       child: Focus(
+        focusNode: _focusNode,
         autofocus: true,
+        onKeyEvent: _onKey,
         child: Scaffold(
           backgroundColor: scheme.surface,
           body: SafeArea(
             child: Center(
               child: ConstrainedBox(
-                constraints: const BoxConstraints(maxWidth: 560),
+                constraints: BoxConstraints(maxWidth: wide ? 960 : 560),
                 child: Column(
                   children: [
                     Padding(
-                      padding: const EdgeInsets.fromLTRB(20, 8, 8, 0),
+                      padding: const EdgeInsets.fromLTRB(24, 8, 12, 0),
                       child: Row(
                         children: [
                           Expanded(
-                            child: Text(
-                              l10n.text('tutorial.progress', args: {
-                                'current': '${_page + 1}',
-                                'total': '${introTourPages.length}',
-                              }),
-                              style: theme.textTheme.labelLarge?.copyWith(
-                                color: scheme.onSurfaceVariant,
+                            // Read out again on every page: "Step 2 of 7".
+                            child: Semantics(
+                              liveRegion: true,
+                              child: Text(
+                                l10n.text('tutorial.progress', args: {
+                                  'current': '${_page + 1}',
+                                  'total': '${introTourPages.length}',
+                                }),
+                                style: theme.textTheme.labelLarge?.copyWith(
+                                  color: scheme.onSurfaceVariant,
+                                  fontWeight: FontWeight.w600,
+                                  letterSpacing: 0.2,
+                                ),
                               ),
                             ),
                           ),
-                          AnimatedOpacity(
-                            opacity: _isLast ? 0 : 1,
-                            duration: const Duration(milliseconds: 200),
-                            child: TextButton(
-                              onPressed: _isLast ? null : _skip,
-                              child: Text(l10n.text('tutorial.skip')),
+                          // Gives way to the progress with large text.
+                          Flexible(
+                            child: Align(
+                              alignment: AlignmentDirectional.centerEnd,
+                              child: ExcludeSemantics(
+                                excluding: _isLast,
+                                child: AnimatedOpacity(
+                                  opacity: _isLast ? 0 : 1,
+                                  duration: fade,
+                                  child: TextButton(
+                                    onPressed: _isLast ? null : _skip,
+                                    // Smaller rather than broken mid-word.
+                                    child: FittedBox(
+                                      fit: BoxFit.scaleDown,
+                                      child: Text(
+                                        l10n.text('tutorial.skip'),
+                                        maxLines: 1,
+                                      ),
+                                    ),
+                                  ),
+                                ),
+                              ),
                             ),
                           ),
                         ],
@@ -208,6 +259,7 @@ class _IntroTourState extends State<IntroTour> {
                               ? _LanguagePicker(
                                   selected: _language,
                                   onSelected: _selectLanguage,
+                                  alignStart: wide,
                                 )
                               : introTourPages[index].key == _designPage
                                   ? Column(
@@ -234,34 +286,44 @@ class _IntroTourState extends State<IntroTour> {
                           Expanded(
                             child: Align(
                               alignment: AlignmentDirectional.centerStart,
-                              child: AnimatedOpacity(
-                                opacity: _page == 0 ? 0 : 1,
-                                duration: const Duration(milliseconds: 200),
-                                child: TextButton(
-                                  onPressed: _page == 0
-                                      ? null
-                                      : () => _goTo(_page - 1),
-                                  child: Text(l10n.text('tutorial.back')),
+                              child: ExcludeSemantics(
+                                excluding: _page == 0,
+                                child: AnimatedOpacity(
+                                  opacity: _page == 0 ? 0 : 1,
+                                  duration: fade,
+                                  child: TextButton(
+                                    onPressed: _page == 0
+                                        ? null
+                                        : () => _goTo(_page - 1),
+                                    child: Text(l10n.text('tutorial.back')),
+                                  ),
                                 ),
                               ),
                             ),
                           ),
                           const SizedBox(width: 8),
-                          FilledButton.icon(
-                            key: const Key('intro-next'),
-                            style: FilledButton.styleFrom(
-                              minimumSize: const Size(112, 52),
-                              shape: RoundedRectangleBorder(
-                                borderRadius: BorderRadius.circular(16),
+                          Flexible(
+                            flex: 2,
+                            child: Align(
+                              alignment: AlignmentDirectional.centerEnd,
+                              child: FilledButton.icon(
+                                key: const Key('intro-next'),
+                                style: FilledButton.styleFrom(
+                                  minimumSize: const Size(112, 52),
+                                  shape: RoundedRectangleBorder(
+                                    borderRadius: BorderRadius.circular(16),
+                                  ),
+                                ),
+                                onPressed: _next,
+                                iconAlignment: IconAlignment.end,
+                                icon: Icon(_isLast
+                                    ? Icons.check_rounded
+                                    : Icons.arrow_forward_rounded),
+                                label: Text(l10n.text(_isLast
+                                    ? 'tutorial.finish'
+                                    : 'tutorial.next')),
                               ),
                             ),
-                            onPressed: _next,
-                            iconAlignment: IconAlignment.end,
-                            icon: Icon(_isLast
-                                ? Icons.check_rounded
-                                : Icons.arrow_forward_rounded),
-                            label: Text(l10n.text(
-                                _isLast ? 'tutorial.finish' : 'tutorial.next')),
                           ),
                         ],
                       ),
@@ -298,69 +360,112 @@ class _IntroPageView extends StatelessWidget {
     final reduceMotion = MediaQuery.disableAnimationsOf(context);
     final duration =
         reduceMotion ? Duration.zero : const Duration(milliseconds: 420);
+    final isDesign = page.key == _designPage;
+    // Large text needs the height for itself; the picture gives way.
+    final largeText = MediaQuery.textScalerOf(context).scale(16) > 16 * 1.3;
     return LayoutBuilder(
       builder: (context, constraints) {
-        final illustrationSize =
-            (constraints.maxHeight * 0.38).clamp(120.0, 240.0);
+        final wide = constraints.maxWidth >= _wideLayout && !isDesign;
+        final align = wide ? TextAlign.start : TextAlign.center;
+        final text = AnimatedSlide(
+          offset: active ? Offset.zero : const Offset(0, 0.15),
+          duration: duration,
+          curve: Curves.easeOutCubic,
+          child: AnimatedOpacity(
+            opacity: active ? 1 : 0,
+            duration: duration,
+            child: Column(
+              crossAxisAlignment:
+                  wide ? CrossAxisAlignment.start : CrossAxisAlignment.center,
+              children: [
+                Semantics(
+                  header: true,
+                  child: Text(
+                    l10n.text('tutorial.page.${page.key}.title'),
+                    textAlign: align,
+                    style: (wide
+                            ? theme.textTheme.headlineMedium
+                            : theme.textTheme.headlineSmall)
+                        ?.copyWith(
+                      fontWeight: FontWeight.w700,
+                      letterSpacing: -0.2,
+                      height: 1.2,
+                      color: scheme.onSurface,
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 12),
+                Text(
+                  l10n.text('tutorial.page.${page.key}.body'),
+                  textAlign: align,
+                  style: theme.textTheme.bodyLarge?.copyWith(
+                    color: scheme.onSurfaceVariant,
+                    height: 1.5,
+                  ),
+                ),
+                if (footer != null) ...[
+                  const SizedBox(height: 24),
+                  footer!,
+                ],
+              ],
+            ),
+          ),
+        );
+        // The previews of the designs are the picture of that page.
+        Widget? picture(double width, double height) => isDesign
+            ? null
+            : AnimatedScale(
+                scale: active ? 1 : 0.9,
+                duration: duration,
+                curve: Curves.easeOutCubic,
+                child: _illustration(width, height),
+              );
+
+        if (wide) {
+          final height = (constraints.maxHeight * 0.6).clamp(160.0, 360.0);
+          return SingleChildScrollView(
+            padding: const EdgeInsets.symmetric(horizontal: 40, vertical: 12),
+            child: ConstrainedBox(
+              constraints:
+                  BoxConstraints(minHeight: constraints.maxHeight - 24),
+              child: Row(
+                children: [
+                  Expanded(
+                    flex: 11,
+                    child: Center(
+                      child: LayoutBuilder(
+                        builder: (context, box) =>
+                            picture(box.maxWidth, height)!,
+                      ),
+                    ),
+                  ),
+                  const SizedBox(width: 48),
+                  Expanded(flex: 9, child: text),
+                ],
+              ),
+            ),
+          );
+        }
+
+        final height = (constraints.maxHeight * (largeText ? 0.24 : 0.36))
+            .clamp(96.0, 230.0);
+        final illustration = picture(constraints.maxWidth - 2 * 24, height);
         return SingleChildScrollView(
           // The two design cards need the width more than the margin.
           padding: EdgeInsets.symmetric(
-              horizontal: page.key == _designPage ? 16 : 28, vertical: 12),
+              horizontal: isDesign ? 16 : 24, vertical: 12),
           child: ConstrainedBox(
             constraints: BoxConstraints(minHeight: constraints.maxHeight - 24),
             child: Column(
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
-                // The previews of the designs are the picture of that page.
-                if (page.key != _designPage) ...[
-                  AnimatedScale(
-                    scale: active ? 1 : 0.85,
-                    duration: duration,
-                    curve: Curves.easeOutBack,
-                    child: _IntroIllustration(
-                      icon: page.icon,
-                      size: illustrationSize,
-                      accentIndex: accentIndex,
-                    ),
-                  ),
-                  SizedBox(height: illustrationSize * 0.18),
+                if (illustration != null) ...[
+                  illustration,
+                  SizedBox(height: largeText ? 16 : 28),
                 ],
-                AnimatedSlide(
-                  offset: active ? Offset.zero : const Offset(0, 0.15),
-                  duration: duration,
-                  curve: Curves.easeOutCubic,
-                  child: AnimatedOpacity(
-                    opacity: active ? 1 : 0,
-                    duration: duration,
-                    child: Column(
-                      children: [
-                        Semantics(
-                          header: true,
-                          child: Text(
-                            l10n.text('tutorial.page.${page.key}.title'),
-                            textAlign: TextAlign.center,
-                            style: theme.textTheme.headlineSmall?.copyWith(
-                              fontWeight: FontWeight.w700,
-                              color: scheme.onSurface,
-                            ),
-                          ),
-                        ),
-                        const SizedBox(height: 12),
-                        Text(
-                          l10n.text('tutorial.page.${page.key}.body'),
-                          textAlign: TextAlign.center,
-                          style: theme.textTheme.bodyLarge?.copyWith(
-                            color: scheme.onSurfaceVariant,
-                            height: 1.45,
-                          ),
-                        ),
-                        if (footer != null) ...[
-                          const SizedBox(height: 24),
-                          footer!,
-                        ],
-                      ],
-                    ),
-                  ),
+                ConstrainedBox(
+                  constraints: const BoxConstraints(maxWidth: 560),
+                  child: text,
                 ),
               ],
             ),
@@ -368,6 +473,25 @@ class _IntroPageView extends StatelessWidget {
         );
       },
     );
+  }
+
+  Widget _illustration(double width, double height) {
+    final drawing = switch (page.key) {
+      'dashboard' => const DashboardIllustration(),
+      'navigation' => const NavigationIllustration(),
+      'notifications' => const NotificationsIllustration(),
+      'colors' => const SubjectColorsIllustration(),
+      'settings' => const SettingsIllustration(),
+      _ => null,
+    };
+    if (drawing == null) {
+      return _IntroIllustration(
+        icon: page.icon,
+        size: height,
+        accentIndex: accentIndex,
+      );
+    }
+    return IntroStage(width: width, height: height, child: drawing);
   }
 }
 
@@ -511,10 +635,17 @@ class _PageDots extends StatelessWidget {
 }
 
 class _LanguagePicker extends StatelessWidget {
-  const _LanguagePicker({required this.selected, required this.onSelected});
+  const _LanguagePicker({
+    required this.selected,
+    required this.onSelected,
+    this.alignStart = false,
+  });
 
   final AppLanguage selected;
   final ValueChanged<AppLanguage> onSelected;
+
+  /// Under text that starts at the side, as in wide windows.
+  final bool alignStart;
 
   static String _name(AppLanguage language) => switch (language) {
         AppLanguage.de => 'Deutsch',
@@ -529,7 +660,7 @@ class _LanguagePicker extends StatelessWidget {
       container: true,
       label: context.l10n.text('tutorial.language.label'),
       child: Wrap(
-        alignment: WrapAlignment.center,
+        alignment: alignStart ? WrapAlignment.start : WrapAlignment.center,
         spacing: 8,
         runSpacing: 8,
         children: [

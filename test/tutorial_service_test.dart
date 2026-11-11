@@ -45,8 +45,15 @@ void main() {
   });
 
   test('the intro stays short and focused', () {
-    expect(introTourPages.map((p) => p.key),
-        ['welcome', 'dashboard', 'grades', 'calendar', 'settings', 'design']);
+    expect(introTourPages.map((p) => p.key), [
+      'welcome',
+      'dashboard',
+      'navigation',
+      'notifications',
+      'colors',
+      'settings',
+      'design',
+    ]);
   });
 
   for (final language in AppLanguage.values) {
@@ -112,13 +119,13 @@ void main() {
     expect(find.byType(IntroTour), findsOneWidget);
     expect(tour.active, isTrue);
     expect(find.text('Willkommen!'), findsOneWidget);
-    expect(find.text('Schritt 1 von 6'), findsOneWidget);
+    expect(find.text('Schritt 1 von 7'), findsOneWidget);
 
     await tester.tap(find.text('Überspringen'));
     await tester.pumpAndSettle();
     expect(find.byType(IntroTour), findsOneWidget,
         reason: 'the design has to be chosen once');
-    expect(find.text('Schritt 6 von 6'), findsOneWidget);
+    expect(find.text('Schritt 7 von 7'), findsOneWidget);
     expect(find.text('Wähle dein Design'), findsOneWidget);
     expect(
         tester
@@ -148,17 +155,17 @@ void main() {
     final next = find.byKey(const Key('intro-next'));
     await tester.tap(next);
     await tester.pumpAndSettle();
-    expect(find.text('Schritt 2 von 6'), findsOneWidget);
+    expect(find.text('Schritt 2 von 7'), findsOneWidget);
     expect(find.text('Alles auf einen Blick'), findsOneWidget);
     await tester.tap(find.text('Zurück'));
     await tester.pumpAndSettle();
-    expect(find.text('Schritt 1 von 6'), findsOneWidget);
+    expect(find.text('Schritt 1 von 7'), findsOneWidget);
 
-    for (var i = 0; i < 5; i++) {
+    for (var i = 0; i < introTourPages.length - 1; i++) {
       await tester.tap(next);
       await tester.pumpAndSettle();
     }
-    expect(find.text('Schritt 6 von 6'), findsOneWidget);
+    expect(find.text('Schritt 7 von 7'), findsOneWidget);
     expect(find.text("Los geht's"), findsOneWidget);
     await tester.tap(next);
     await tester.pumpAndSettle();
