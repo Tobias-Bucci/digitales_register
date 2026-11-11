@@ -1,0 +1,66 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Static widget picker preview; the real rows come from WidgetCollectionRemoteViewsService. -->
+<FrameLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:id="@android:id/background" android:layout_width="match_parent" android:layout_height="match_parent"
+    android:background="@drawable/widget_background" android:foreground="@drawable/widget_outline"
+    android:clipToOutline="true">
+    <LinearLayout android:layout_width="match_parent" android:layout_height="match_parent"
+        android:orientation="vertical" android:padding="16dp">
+        <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content"
+            android:orientation="horizontal" android:gravity="center_vertical">
+            <TextView android:layout_width="0dp" android:layout_height="wrap_content"
+                android:layout_weight="1" android:text="@string/widget_today_title" android:textSize="21sp"
+                android:textStyle="bold" android:maxLines="2" android:ellipsize="end"
+                android:textColor="@color/widget_text_primary" />
+            <ImageView android:layout_width="24dp" android:layout_height="24dp"
+                android:layout_marginStart="10dp" android:src="@drawable/ic_widget_today"
+                android:importantForAccessibility="no" />
+        </LinearLayout>
+        <TextView android:layout_width="match_parent" android:layout_height="wrap_content"
+            android:layout_marginTop="3dp" android:maxLines="2" android:ellipsize="end"
+            android:text="@string/widget_today_subtitle" android:textColor="@color/widget_text_secondary"
+            android:textSize="12sp" />
+        <LinearLayout android:layout_width="match_parent" android:layout_height="0dp"
+            android:layout_weight="1" android:layout_marginTop="12dp" android:orientation="vertical">
+            <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content"
+                android:background="@drawable/widget_item_background" android:orientation="vertical"
+                android:padding="10dp" android:minHeight="60dp">
+                <TextView android:layout_width="match_parent" android:layout_height="wrap_content"
+                    android:maxLines="1" android:ellipsize="end" android:text="@string/widget_preview_time_1"
+                    android:textColor="@color/widget_text_primary" android:textSize="12sp" android:textStyle="bold" />
+                <TextView android:layout_width="match_parent" android:layout_height="wrap_content"
+                    android:layout_marginTop="3dp" android:maxLines="2" android:ellipsize="end"
+                    android:text="@string/widget_preview_subject_math" android:textColor="@color/widget_text_primary" android:textSize="15sp" />
+                <TextView android:layout_width="match_parent" android:layout_height="wrap_content"
+                    android:layout_marginTop="4dp" android:maxLines="3" android:ellipsize="end"
+                    android:text="@string/widget_preview_room_12" android:textColor="@color/widget_text_secondary" android:textSize="12sp" />
+            </LinearLayout>
+            <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content" android:layout_marginTop="6dp"
+                android:background="@drawable/widget_item_background" android:orientation="vertical"
+                android:padding="10dp" android:minHeight="60dp">
+                <TextView android:layout_width="match_parent" android:layout_height="wrap_content"
+                    android:maxLines="1" android:ellipsize="end" android:text="@string/widget_preview_time_2"
+                    android:textColor="@color/widget_text_primary" android:textSize="12sp" android:textStyle="bold" />
+                <TextView android:layout_width="match_parent" android:layout_height="wrap_content"
+                    android:layout_marginTop="3dp" android:maxLines="2" android:ellipsize="end"
+                    android:text="@string/widget_preview_subject_german" android:textColor="@color/widget_text_primary" android:textSize="15sp" />
+                <TextView android:layout_width="match_parent" android:layout_height="wrap_content"
+                    android:layout_marginTop="4dp" android:maxLines="3" android:ellipsize="end"
+                    android:text="@string/widget_preview_room_12" android:textColor="@color/widget_text_secondary" android:textSize="12sp" />
+            </LinearLayout>
+            <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content" android:layout_marginTop="6dp"
+                android:background="@drawable/widget_item_background" android:orientation="vertical"
+                android:padding="10dp" android:minHeight="60dp">
+                <TextView android:layout_width="match_parent" android:layout_height="wrap_content"
+                    android:maxLines="1" android:ellipsize="end" android:text="@string/widget_preview_time_3"
+                    android:textColor="@color/widget_text_primary" android:textSize="12sp" android:textStyle="bold" />
+                <TextView android:layout_width="match_parent" android:layout_height="wrap_content"
+                    android:layout_marginTop="3dp" android:maxLines="2" android:ellipsize="end"
+                    android:text="@string/widget_preview_subject_pe" android:textColor="@color/widget_text_primary" android:textSize="15sp" />
+                <TextView android:layout_width="match_parent" android:layout_height="wrap_content"
+                    android:layout_marginTop="4dp" android:maxLines="3" android:ellipsize="end"
+                    android:text="@string/widget_preview_room_gym" android:textColor="@color/widget_text_secondary" android:textSize="12sp" />
+            </LinearLayout>
+        </LinearLayout>
+    </LinearLayout>
+</FrameLayout>

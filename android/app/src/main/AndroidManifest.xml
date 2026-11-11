@@ -95,7 +95,8 @@
 
         <receiver
             android:name=".DashboardWidgetProvider"
-            android:exported="true">
+            android:exported="true"
+            android:label="@string/widget_dashboard_title">
             <intent-filter>
                 <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
             </intent-filter>
@@ -106,7 +107,8 @@
 
         <receiver
             android:name=".TodayWidgetProvider"
-            android:exported="true">
+            android:exported="true"
+            android:label="@string/widget_today_title">
             <intent-filter>
                 <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
             </intent-filter>
@@ -117,7 +119,8 @@
 
         <receiver
             android:name=".GradesWidgetProvider"
-            android:exported="true">
+            android:exported="true"
+            android:label="@string/widget_grades_title">
             <intent-filter>
                 <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
             </intent-filter>

@@ -1,0 +1,54 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Widget picker preview for launchers below Android 12 (previewLayout needs API 31). -->
+<layer-list xmlns:android="http://schemas.android.com/apk/res/android">
+    <item>
+        <shape>
+            <size android:width="240dp" android:height="180dp" />
+            <solid android:color="@color/widget_background" />
+            <stroke android:width="1dp" android:color="@color/widget_divider" />
+            <corners android:radius="24dp" />
+        </shape>
+    </item>
+    <item android:top="20dp" android:left="16dp" android:width="96dp" android:height="14dp"
+        android:gravity="top|start">
+        <shape><solid android:color="@color/widget_text_primary" /><corners android:radius="7dp" /></shape>
+    </item>
+    <item android:top="15dp" android:right="16dp" android:width="24dp" android:height="24dp"
+        android:gravity="top|end" android:drawable="@drawable/ic_widget_school_bag" />
+    <item android:top="56dp" android:left="16dp" android:right="16dp" android:height="34dp"
+        android:gravity="top|fill_horizontal">
+        <shape><solid android:color="@color/widget_surface" /><corners android:radius="12dp" /></shape>
+    </item>
+    <item android:top="63dp" android:left="26dp" android:width="56dp" android:height="6dp"
+        android:gravity="top|start">
+        <shape><solid android:color="@color/widget_text_primary" /><corners android:radius="3dp" /></shape>
+    </item>
+    <item android:top="75dp" android:left="26dp" android:width="130dp" android:height="8dp"
+        android:gravity="top|start">
+        <shape><solid android:color="@color/widget_text_secondary" /><corners android:radius="4dp" /></shape>
+    </item>
+    <item android:top="96dp" android:left="16dp" android:right="16dp" android:height="34dp"
+        android:gravity="top|fill_horizontal">
+        <shape><solid android:color="@color/widget_surface" /><corners android:radius="12dp" /></shape>
+    </item>
+    <item android:top="103dp" android:left="26dp" android:width="74dp" android:height="6dp"
+        android:gravity="top|start">
+        <shape><solid android:color="@color/widget_text_primary" /><corners android:radius="3dp" /></shape>
+    </item>
+    <item android:top="115dp" android:left="26dp" android:width="114dp" android:height="8dp"
+        android:gravity="top|start">
+        <shape><solid android:color="@color/widget_text_secondary" /><corners android:radius="4dp" /></shape>
+    </item>
+    <item android:top="136dp" android:left="16dp" android:right="16dp" android:height="34dp"
+        android:gravity="top|fill_horizontal">
+        <shape><solid android:color="@color/widget_surface" /><corners android:radius="12dp" /></shape>
+    </item>
+    <item android:top="143dp" android:left="26dp" android:width="56dp" android:height="6dp"
+        android:gravity="top|start">
+        <shape><solid android:color="@color/widget_text_primary" /><corners android:radius="3dp" /></shape>
+    </item>
+    <item android:top="155dp" android:left="26dp" android:width="98dp" android:height="8dp"
+        android:gravity="top|start">
+        <shape><solid android:color="@color/widget_text_secondary" /><corners android:radius="4dp" /></shape>
+    </item>
+</layer-list>

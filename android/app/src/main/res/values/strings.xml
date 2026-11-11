@@ -1,18 +1,52 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
     <string name="widget_dashboard_title">Dashboard</string>
-    <string name="widget_dashboard_subtitle">Kommende Eintraege</string>
+    <string name="widget_dashboard_subtitle">Kommende Einträge</string>
+    <string name="widget_dashboard_description">Zeigt die kommenden Hausaufgaben, Tests und Termine aus dem Register.</string>
     <string name="widget_today_title">Heute</string>
     <string name="widget_today_subtitle">Stundenplan</string>
+    <string name="widget_today_description">Zeigt den heutigen Stundenplan mit Uhrzeiten und Räumen.</string>
     <string name="widget_grades_title">Noten</string>
     <string name="widget_grades_subtitle">Aktuelles Semester</string>
-    <string name="widget_state_open_app">App oeffnen, um Daten zu laden</string>
+    <string name="widget_grades_description">Zeigt den Gesamtdurchschnitt und den Notenschnitt pro Fach.</string>
+    <string name="widget_state_open_app">App öffnen, um Daten zu laden</string>
     <string name="widget_state_logged_out">Bitte in der App anmelden</string>
     <string name="widget_state_data_disabled">Datenspeicherung ist deaktiviert</string>
-    <string name="widget_state_locked">Inhalt ist durch App-Sperre geschuetzt</string>
+    <string name="widget_state_locked">Inhalt ist durch App-Sperre geschützt</string>
     <string name="widget_average_label">Schnitt</string>
-    <string name="widget_placeholder_dash">-</string>
+    <string name="widget_placeholder_dash" translatable="false">-</string>
     <string name="widget_school_bag_title">Schultasche</string>
+    <string name="widget_school_bag_description">Zeigt, was für den nächsten Schultag eingepackt werden muss und was heraus kann.</string>
     <string name="widget_preparation_title">Hausaufgaben</string>
+    <string name="widget_preparation_description">Zeigt offene Hausaufgaben und Prüfungen für den nächsten Schultag.</string>
     <string name="widget_state_outdated">Daten veraltet – App zum Aktualisieren öffnen</string>
+
+    <!-- Static sample content for the widget picker previews. -->
+    <string name="widget_preview_next_school_day">Nächster Schultag</string>
+    <string name="widget_preview_subject_math">Mathematik</string>
+    <string name="widget_preview_subject_german">Deutsch</string>
+    <string name="widget_preview_subject_english">Englisch</string>
+    <string name="widget_preview_subject_history">Geschichte</string>
+    <string name="widget_preview_subject_pe">Sport</string>
+    <string name="widget_preview_tomorrow">Morgen</string>
+    <string name="widget_preview_friday">Freitag</string>
+    <string name="widget_preview_room_12">Raum 12</string>
+    <string name="widget_preview_room_gym">Turnhalle</string>
+    <string name="widget_preview_entry_test">Test: Gleichungen</string>
+    <string name="widget_preview_entry_essay">Aufsatz abgeben</string>
+    <string name="widget_preview_entry_vocabulary">Vokabeln Unit 4 lernen</string>
+    <string name="widget_preview_entry_exercises">Übungen S. 42, Nr. 1–5</string>
+    <string name="widget_preview_type_homework">Hausaufgabe</string>
+    <string name="widget_preview_type_test">Test</string>
+    <string name="widget_preview_pack">Einpacken</string>
+    <string name="widget_preview_pack_meta">Bücher und Materialien für dieses Fach</string>
+    <string name="widget_preview_remove">Kann heraus</string>
+    <string name="widget_preview_remove_meta">Laut Stundenplan</string>
+    <string name="widget_preview_time_1" translatable="false">07:50–08:40</string>
+    <string name="widget_preview_time_2" translatable="false">08:40–09:30</string>
+    <string name="widget_preview_time_3" translatable="false">09:45–10:35</string>
+    <string name="widget_preview_grade_average" translatable="false">7,33</string>
+    <string name="widget_preview_grade_1" translatable="false">8,00</string>
+    <string name="widget_preview_grade_2" translatable="false">7,50</string>
+    <string name="widget_preview_grade_3" translatable="false">6,50</string>
 </resources>

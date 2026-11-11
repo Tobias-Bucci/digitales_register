@@ -1,0 +1,20 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Shown for a freshly added widget until its provider sends the first update. -->
+<FrameLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:id="@android:id/background" android:layout_width="match_parent" android:layout_height="match_parent"
+    android:background="@drawable/widget_background" android:foreground="@drawable/widget_outline"
+    android:clipToOutline="true">
+    <LinearLayout android:layout_width="match_parent" android:layout_height="match_parent"
+        android:orientation="vertical" android:padding="16dp">
+        <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content"
+            android:orientation="horizontal" android:gravity="center_vertical">
+            <TextView android:layout_width="0dp" android:layout_height="wrap_content"
+                android:layout_weight="1" android:text="@string/widget_preparation_title" android:textSize="21sp"
+                android:textStyle="bold" android:maxLines="2" android:ellipsize="end"
+                android:textColor="@color/widget_text_primary" />
+            <ImageView android:layout_width="24dp" android:layout_height="24dp"
+                android:layout_marginStart="10dp" android:src="@drawable/ic_widget_preparation"
+                android:importantForAccessibility="no" />
+        </LinearLayout>
+    </LinearLayout>
+</FrameLayout>
