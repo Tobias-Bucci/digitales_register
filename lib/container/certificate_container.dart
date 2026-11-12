@@ -18,13 +18,17 @@
 import 'package:dr/actions/app_actions.dart';
 import 'package:dr/app_state.dart';
 import 'package:dr/ui/certificate.dart';
+import 'package:dr/ui/certificate_new.dart';
 import 'package:dr/utc_date_time.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_built_redux/flutter_built_redux.dart';
+import 'package:responsive_scaffold/responsive_scaffold.dart';
 
 class CertificateContainer extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
+    // Below the navigation of the new design.
+    final newDesign = ResponsiveNavigationScope.isActive(context);
     return StoreConnection<AppState, AppActions, CertificateViewModel>(
       connect: (state) {
         return CertificateViewModel(
@@ -35,6 +39,18 @@ class CertificateContainer extends StatelessWidget {
         );
       },
       builder: (context, vm, actions) {
+        if (newDesign) {
+          return CertificateNew(
+            vm: vm,
+            onLoad: () async {
+              await actions.certificateActions.load();
+            },
+            onRetry: () async {
+              await actions.refreshNoInternet();
+              await actions.certificateActions.load();
+            },
+          );
+        }
         return Certificate(vm: vm);
       },
     );
