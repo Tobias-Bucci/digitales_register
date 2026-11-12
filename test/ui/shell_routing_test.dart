@@ -379,7 +379,7 @@ void main() {
       await store.actions.routingActions.showGradeCalculator();
       await _settle(tester);
 
-      await tester.tap(find.byKey(const Key('grade-calculator-target')));
+      await tester.tap(find.byKey(const Key('grade-calculator-open-target')));
       await _settle(tester);
       final target = find.byType(TargetGradeCalculator);
       expect(target, findsOneWidget);
@@ -401,7 +401,7 @@ void main() {
       await _openGrades(tester);
       await store.actions.routingActions.showGradeCalculator();
       await _settle(tester);
-      await tester.tap(find.byKey(const Key('grade-calculator-target')));
+      await tester.tap(find.byKey(const Key('grade-calculator-open-target')));
       await _settle(tester);
 
       // The page below is the destination itself.

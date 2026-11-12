@@ -297,7 +297,9 @@ void main() {
         find.byKey(const Key('grade-calculator-open-target')),
         findsOneWidget,
       );
-      expect(find.byKey(const Key('grade-calculator-target')), findsOneWidget);
+      // Only once, not in the header as well (#115).
+      expect(find.byKey(const Key('grade-calculator-target')), findsNothing);
+      expect(find.byIcon(Icons.track_changes), findsOneWidget);
     });
 
     testWidgets('a grade is added in a sheet and checked as in Legacy',
@@ -389,7 +391,7 @@ void main() {
     testWidgets('the target calculator opens in the same frame',
         (tester) async {
       await _pumpTool(tester, const GradeCalculator());
-      await tester.tap(find.byKey(const Key('grade-calculator-target')));
+      await tester.tap(find.byKey(const Key('grade-calculator-open-target')));
       await settleFor(tester, duration: const Duration(milliseconds: 600));
       expect(find.byKey(const Key('target-calculator-header')), findsOneWidget);
       expect(
