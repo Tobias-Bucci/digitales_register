@@ -267,9 +267,15 @@ Bewusste Abweichungen von Legacy:
 Über 130 % Textgröße rutschen Datum und Gewichtung unter den Titel der Zeile, sonst
 reicht ein Handy mit 320 px nicht. Die Seite begrenzt die Textgröße bei 200 %.
 
-Unverändert und für beide Designs gleich bleiben die Vollbildseite des Diagramms
-und die beiden Rechner. Sie liegen auf dem Root-Navigator, also außerhalb von
-`NewDesignTheme`.
+Die Vollbildseite des Diagramms und die beiden Rechner sollten zuerst für beide
+Designs gleich bleiben. Issue #110 ist neuer und verlangt jede übrige Seite, sie
+sind deshalb ebenfalls umgestellt: Im neuen Design öffnen sie sich innerhalb der
+Navigation über der Notenseite („Noten“ bleibt markiert, Zurück führt dorthin),
+mit Glas-Kopfzeile, Karten und Sheets (`grades_chart_page_new.dart`,
+`grade_calculator_new.dart`, `target_grade_calculator_new.dart`). Legacy und die
+App ohne Navigation behalten die Root-Routen und die alten Seiten. Das Diagramm
+selbst rechnet und zeichnet wie bisher; im neuen Design nehmen Achsen, Raster und
+Auswahl nur die Farben des Schemas.
 
 Die Texte `grades.*` in `lld.json` sind neu und noch ungeprüft, siehe Beta-Rollout.
 

@@ -4,6 +4,7 @@ import 'package:dr/actions/login_actions.dart';
 import 'package:dr/main.dart' show RegisterApp, navigatorKey, nestedNavKey;
 import 'package:dr/middleware/middleware.dart';
 import 'package:dr/ui/app_navigation.dart';
+import 'package:dr/ui/grade_calculator.dart';
 import 'package:dr/ui/profile.dart';
 import 'package:dr/ui/school_notification_opt_in.dart';
 import 'package:flutter/material.dart';
@@ -49,6 +50,10 @@ void main() {
     await logIn();
     expect(store.state.loginState.loggedIn, isTrue);
 
+    // The calculator of the grades opens in the shell as well.
+    await store.actions.routingActions.showGradeCalculator();
+    await settle();
+    expect(find.byType(GradeCalculator), findsOneWidget);
     await store.actions.routingActions.showProfile();
     await settle();
     expect(find.byType(Profile), findsOneWidget);
@@ -72,6 +77,7 @@ void main() {
     await logIn();
     expect(store.state.loginState.loggedIn, isTrue);
     expect(find.byType(Profile, skipOffstage: false), findsNothing);
+    expect(find.byType(GradeCalculator, skipOffstage: false), findsNothing);
     expect(nestedNavKey.currentState!.canPop(), isFalse);
     expect(navigatorKey!.currentState!.canPop(), isFalse);
     expect(openProfileShellPages.value, 0);
