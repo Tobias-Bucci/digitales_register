@@ -90,6 +90,17 @@ class StartupTimeline {
     }
   }
 
+  /// Runs the synchronous [body] as the step [name] and records it once.
+  T stepSync<T>(String name, T Function() body) {
+    if (kReleaseMode || !_active || _seen.contains(name)) return body();
+    final begin = _clock.elapsedMicroseconds;
+    try {
+      return developer.Timeline.timeSync('startup:$name', body);
+    } finally {
+      _record(name, begin, _clock.elapsedMicroseconds);
+    }
+  }
+
   /// Records that the start reached the point [name], once.
   void mark(String name) {
     if (kReleaseMode || !_active || _seen.contains(name)) return;

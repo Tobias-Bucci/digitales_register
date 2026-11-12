@@ -1418,8 +1418,10 @@ Future<void> _mountSavedState(
   _Session session,
   String state,
 ) async {
-  final serializedState = serializers.deserialize(
-    json.decode(state) as Object,
+  // Synchronous on the UI isolate, during the launch animation.
+  final serializedState = startupTimeline.stepSync(
+    'p3_saved_state_decode',
+    () => serializers.deserialize(json.decode(state) as Object),
   );
   if (serializedState is SettingsState) {
     final currentSettings = await _settingsForAccountLoad(
