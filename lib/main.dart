@@ -58,6 +58,7 @@ import 'package:dr/ui/grades_chart_page.dart';
 import 'package:dr/ui/launch/app_launch_animation.dart';
 import 'package:dr/ui/server_notifications/server_notification_bell.dart';
 import 'package:dr/ui/server_notifications/server_notification_popup.dart';
+import 'package:dr/ui/system_pages.dart';
 import 'package:dr/util.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_built_redux/flutter_built_redux.dart';
@@ -462,7 +463,7 @@ class RegisterApp extends StatelessWidget {
                     return MaterialPageRoute<void>(
                       settings: settings,
                       builder: (_) =>
-                          _UnknownRoutePage(routeName: settings.name ?? ''),
+                          UnknownRoutePage(routeName: settings.name ?? ''),
                     );
                 }
               },
@@ -612,49 +613,6 @@ void showSnackBar(
         ? null
         : SnackBarAction(label: actionLabel, onPressed: onAction),
   ));
-}
-
-class _UnknownRoutePage extends StatelessWidget {
-  const _UnknownRoutePage({required this.routeName});
-
-  final String routeName;
-
-  @override
-  Widget build(BuildContext context) {
-    final l10n = context.l10n;
-    return Scaffold(
-      appBar: AppBar(title: Text(l10n.text('navigation.unknownRoute.title'))),
-      body: Center(
-        child: Padding(
-          padding: const EdgeInsets.all(24),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Icon(
-                Icons.link_off_rounded,
-                size: 56,
-                color: Theme.of(context).colorScheme.primary,
-              ),
-              const SizedBox(height: 16),
-              Text(
-                l10n.text(
-                  'navigation.unknownRoute.body',
-                  args: {'route': routeName},
-                ),
-                textAlign: TextAlign.center,
-              ),
-              const SizedBox(height: 20),
-              FilledButton(
-                onPressed: () =>
-                    Navigator.of(context).pushReplacementNamed('/'),
-                child: Text(l10n.text('navigation.unknownRoute.action')),
-              ),
-            ],
-          ),
-        ),
-      ),
-    );
-  }
 }
 
 /*
