@@ -24,12 +24,22 @@ import 'package:dr/app_state.dart';
 import 'package:dr/data.dart';
 import 'package:dr/grade_average.dart';
 import 'package:dr/i18n/app_localizations.dart';
+import 'package:dr/ui/dashboard_app_header.dart';
 import 'package:dr/ui/dialog.dart';
+import 'package:dr/ui/glass_page.dart';
+import 'package:dr/ui/glass_segmented_control.dart';
+import 'package:dr/ui/glass_surface.dart';
+import 'package:dr/ui/grade_colors.dart';
+import 'package:dr/ui/grades_format.dart';
+import 'package:dr/ui/profile_new.dart' show glassFieldDecoration;
 import 'package:dr/ui/target_grade_calculator.dart';
 import 'package:dr/util.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_built_redux/flutter_built_redux.dart';
+import 'package:responsive_scaffold/responsive_scaffold.dart';
 import 'package:tuple/tuple.dart';
+
+part 'grade_calculator_new.dart';
 
 bool isGradeInRange(int grade) {
   return grade >= 0 && grade <= 1000;
@@ -159,7 +169,19 @@ class _GradeCalculatorState extends State<GradeCalculator> {
   }
 
   Future<void> addGrade() async {
-    final Tuple2<int, int>? grade = await showDialog(
+    final Tuple2<int, int>? grade = ResponsiveNavigationScope.isActive(context)
+        ? await _showNewGradeSheet(context)
+        : await _showNewGradeDialog();
+    if (grade != null && mounted) {
+      setState(() {
+        grades.add(_Grade(grade: grade.item1, weightPercentage: grade.item2));
+      });
+      await AnalyticsService.logCustomEvent('grade_calculator_added_grade');
+    }
+  }
+
+  Future<Tuple2<int, int>?> _showNewGradeDialog() {
+    return showDialog(
       context: context,
       builder: (context) {
         int? grade;
@@ -211,24 +233,24 @@ class _GradeCalculatorState extends State<GradeCalculator> {
         );
       },
     );
-    if (grade != null && mounted) {
-      setState(() {
-        grades.add(_Grade(grade: grade.item1, weightPercentage: grade.item2));
-      });
-      await AnalyticsService.logCustomEvent('grade_calculator_added_grade');
-    }
   }
 
   Future<void> importGrades() async {
-    final List<_Grade>? result = await Navigator.of(
-      context,
-      rootNavigator: true,
-    ).push(
-      MaterialPageRoute(
-        builder: (context) => _ImportGradesContainer(),
-        fullscreenDialog: true,
-      ),
-    );
+    final List<_Grade>? result = ResponsiveNavigationScope.isActive(context)
+        // A sheet of glass in the new design.
+        ? await showGlassSheet<List<_Grade>>(
+            context: context,
+            builder: (_) => const _ImportGradesContainer(newDesign: true),
+          )
+        : await Navigator.of(
+            context,
+            rootNavigator: true,
+          ).push(
+            MaterialPageRoute(
+              builder: (context) => const _ImportGradesContainer(),
+              fullscreenDialog: true,
+            ),
+          );
     if (result == null || !mounted) {
       return;
     }
@@ -257,6 +279,11 @@ class _GradeCalculatorState extends State<GradeCalculator> {
 
   @override
   Widget build(BuildContext context) {
+    // Inside the shell of the new design; Legacy and the root route keep the
+    // page as it was.
+    if (ResponsiveNavigationScope.isActive(context)) {
+      return _NewGradeCalculatorView(state: this);
+    }
     final showGreeting = grades.isEmpty;
     return Scaffold(
       appBar: AppBar(
@@ -499,18 +526,26 @@ class Greeting extends StatelessWidget {
 class _ImportGrades extends StatefulWidget {
   final List<Subject> subjects;
 
-  const _ImportGrades({required this.subjects});
+  /// Shown in a sheet of the new design.
+  final bool newDesign;
+
+  const _ImportGrades({required this.subjects, this.newDesign = false});
   @override
   _ImportGradesState createState() => _ImportGradesState();
 }
 
 class _ImportGradesContainer extends StatelessWidget {
+  const _ImportGradesContainer({this.newDesign = false});
+
+  final bool newDesign;
+
   @override
   Widget build(BuildContext context) {
     return StoreConnection<AppState, AppActions, BuiltList<Subject>>(
       connect: (state) => state.gradesState.subjects,
       builder: (context, state, actions) => _ImportGrades(
         subjects: state.toList(),
+        newDesign: newDesign,
       ),
     );
   }
@@ -545,6 +580,25 @@ class _ImportGradesState extends State<_ImportGrades> {
     setState(_computeGrades);
   }
 
+  /// For the sheet of the new design, as the dropdown of Legacy does it.
+  void _selectSubject(Subject? subject) {
+    setState(() {
+      selectedSubject = subject;
+    });
+    _recalculateGrades();
+  }
+
+  /// For the sheet of the new design, as the radio buttons of Legacy do it.
+  void _selectSemester(Semester? semester) {
+    setState(() {
+      selectedSemester = semester;
+    });
+    _recalculateGrades();
+  }
+
+  bool get _canImport =>
+      selectedSemester != null && selectedSubject != null && grades!.isNotEmpty;
+
   void _computeGrades() {
     final subject = selectedSubject;
     final semester = selectedSemester;
@@ -574,6 +628,7 @@ class _ImportGradesState extends State<_ImportGrades> {
 
   @override
   Widget build(BuildContext context) {
+    if (widget.newDesign) return _NewImportPanel(state: this);
     return Scaffold(
       appBar: AppBar(
         title: Text(context.t('gradeCalculator.importTitle')),
@@ -678,12 +733,17 @@ class _Input extends StatefulWidget {
   final bool showErrorForEmptyInput;
   final bool autofocus;
 
+  /// The field of the new design, on a card of glass.
+  final bool newDesign;
+
   const _Input({
+    super.key,
     required this.inputType,
     this.initial,
     required this.updateValue,
     this.showErrorForEmptyInput = true,
     this.autofocus = false,
+    this.newDesign = false,
   });
   @override
   _InputState createState() => _InputState();
@@ -729,23 +789,32 @@ class _InputState extends State<_Input> {
 
   @override
   Widget build(BuildContext context) {
+    final errorText = isValid() ||
+            (!widget.showErrorForEmptyInput && controller.text.isEmpty) ||
+            focusNode.hasFocus
+        ? null
+        : context.t('gradeCalculator.invalidValue');
+    final labelText = widget.inputType == _InputType.grade
+        ? context.t('gradeCalculator.grade')
+        : context.t('gradeCalculator.weight');
+    final suffixText = widget.inputType == _InputType.weight ? "%" : null;
     return TextField(
       autofocus: widget.autofocus,
       keyboardType:
           widget.inputType == _InputType.weight ? TextInputType.number : null,
       focusNode: focusNode,
       controller: controller,
-      decoration: InputDecoration(
-        errorText: isValid() ||
-                (!widget.showErrorForEmptyInput && controller.text.isEmpty) ||
-                focusNode.hasFocus
-            ? null
-            : context.t('gradeCalculator.invalidValue'),
-        labelText: widget.inputType == _InputType.grade
-            ? context.t('gradeCalculator.grade')
-            : context.t('gradeCalculator.weight'),
-        suffixText: widget.inputType == _InputType.weight ? "%" : null,
-      ),
+      decoration: widget.newDesign
+          ? glassFieldDecoration(
+              context,
+              labelText: labelText,
+              errorText: errorText,
+            ).copyWith(suffixText: suffixText)
+          : InputDecoration(
+              errorText: errorText,
+              labelText: labelText,
+              suffixText: suffixText,
+            ),
       onChanged: (_) {
         widget.updateValue(getValue());
         setState(() {
