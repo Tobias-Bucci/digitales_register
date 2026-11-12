@@ -69,10 +69,13 @@ Future<void> _loadGrades(
     final localOwner = jsonEncode([wrapper.url, api.state.loginState.username]);
     final epoch = product.sessionEpoch;
     final stopwatch = Stopwatch()..start();
-    final dynamic data = await session.send(
-      _subjects,
-      args: {"studentId": api.state.config!.userId},
-    );
+    final studentId = await _studentId(api, session);
+    final dynamic data = studentId == null
+        ? null
+        : await session.send(
+            _subjects,
+            args: {"studentId": studentId},
+          );
     if (data == null) {
       if (product.isSession(epoch)) {
         unawaited(product.event('refresh_result', {
@@ -135,10 +138,14 @@ Future<void> _loadGradesDetails(
   await next(action);
 
   await _doForSemester(session, staleSemesters, (s) async {
+    final studentId = await _studentId(api, session);
+    if (studentId == null) {
+      return;
+    }
     dynamic data = await session.send(
       _subjectsDetail,
       args: {
-        "studentId": api.state.config!.userId,
+        "studentId": studentId,
         "subjectId": action.payload.subject.id,
       },
     );
@@ -190,6 +197,21 @@ Future<void> _rememberViewedGradeDetails(
   if (items.isEmpty) return;
   await schoolNotificationOperation(
       () => schoolNotifications.markViewed(wrapper.url!, wrapper.user!, items));
+}
+
+/// The student id comes from the server config, which only the online
+/// sign-in loads: a saved login signs in offline first, so a grade load can
+/// start before it. Wait for a sign-in that is still running; null when
+/// there is none or it failed.
+Future<int?> _studentId(
+  MiddlewareApi<AppState, AppStateBuilder, AppActions> api,
+  _Session session,
+) async {
+  final config = api.state.config;
+  if (config != null) return config.userId;
+  await session.wrapper.loggedIn;
+  if (!session.isCurrent) return null;
+  return api.state.config?.userId;
 }
 
 List<Semester> _semestersFor(Semester semester) {
