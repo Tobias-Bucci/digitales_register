@@ -23,6 +23,7 @@ import 'package:dr/i18n/app_localizations.dart';
 import 'package:dr/middleware/middleware.dart';
 import 'package:dr/theme/app_palette.dart';
 import 'package:dr/ui/animated_linear_progress_indicator.dart';
+import 'package:dr/ui/class_register_page_new.dart';
 import 'package:dr/ui/linkified_text.dart';
 import 'package:dr/ui/no_internet.dart';
 import 'package:dr/ui/readable_content.dart';
@@ -204,6 +205,18 @@ class _ClassRegisterPageState extends State<ClassRegisterPage> {
 
   @override
   Widget build(BuildContext context) {
+    // Below the navigation of the new design, which follows a switch of the
+    // design at once. The loading above stays the same for both.
+    if (ResponsiveNavigationScope.isActive(context)) {
+      return ClassRegisterPageNew(
+        lessons: _lessons,
+        lastFetched: _lastFetched,
+        loadError: _loadError,
+        loading: _loading,
+        offline: isOffline(),
+        onRefresh: _refresh,
+      );
+    }
     final l10n = context.l10n;
     return Scaffold(
       appBar: ResponsiveAppBar(
