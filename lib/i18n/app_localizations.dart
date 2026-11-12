@@ -639,7 +639,6 @@ class AppLocalizations {
       'Testarbeit': text('dashboard.testwork'),
       'Schularbeit': text('dashboard.schoolwork'),
       'Compito in classe': text('dashboard.schoolwork'),
-      'Esame scritto': text('dashboard.schoolwork'),
       'Prüfung': text('dashboard.exam'),
       'Esame': text('dashboard.exam'),
       'Test': text('dashboard.test'),
