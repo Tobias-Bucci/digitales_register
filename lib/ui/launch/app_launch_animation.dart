@@ -56,7 +56,11 @@ enum LaunchAnimationMode {
 
 /// Opens once the start-up routing has decided between login and dashboard.
 class AppLaunchGate {
-  final Completer<void> _opened = Completer<void>();
+  Completer<void> _opened = Completer<void>();
+
+  /// Closes the gate again, for tests of the start-up routing.
+  @visibleForTesting
+  void resetForTest() => _opened = Completer<void>();
 
   Future<void> get opened => _opened.future;
   bool get isOpen => _opened.isCompleted;

@@ -1380,6 +1380,7 @@ Future<void> _loadAccounts(
 
   // Login or dashboard is decided; the launch animation may uncover it. It
   // covers the app, so it must open before the dialogs below wait for input.
+  // A saved login has opened it already, once its saved data was mounted.
   appLaunchGate.open();
 
   // The first-run dialogs must be pushed after the login or dashboard route is
