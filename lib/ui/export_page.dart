@@ -5,6 +5,7 @@ import 'package:dr/export/export_csv.dart';
 import 'package:dr/export/export_data.dart';
 import 'package:dr/export/export_service.dart';
 import 'package:dr/i18n/app_localizations.dart';
+import 'package:dr/ui/export_page_new.dart';
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import 'package:responsive_scaffold/responsive_scaffold.dart';
@@ -292,6 +293,53 @@ class _ExportPageState extends State<ExportPage> {
     }.toList()
       ..sort();
     final count = _selected.fold<int>(0, (sum, c) => sum + _matching(c).length);
+    if (ResponsiveNavigationScope.isActive(context)) {
+      final locale = l10n.locale.languageCode;
+      return PopScope(
+        canPop: !_busy,
+        child: ExportNewView(
+          available: {
+            for (final c in ExportCategory.values) c: _records[c]!.length
+          },
+          selected: {
+            for (final c in ExportCategory.values.where(_selected.contains))
+              c: _matching(c).length
+          },
+          count: count,
+          format: _format,
+          semester: _semester,
+          year: _year,
+          years: years,
+          subject: _subject,
+          subjects: subjects,
+          range: _range == null
+              ? null
+              : '${DateFormat.yMMMd(locale).format(_range!.start)} - ${DateFormat.yMMMd(locale).format(_range!.end)}',
+          dated: dated,
+          busy: _busy,
+          loading: widget.loading,
+          loadFailed: widget.loadFailed,
+          noInternet: widget.state.noInternet,
+          status: _status,
+          error: _error,
+          onToggle: (c, value) => _change(() {
+            value ? _selected.add(c) : _selected.remove(c);
+            _year = null;
+            _subject = null;
+            _range = null;
+          }),
+          onFormat: (value) => _change(() => _format = value),
+          onYear: (value) => _change(() => _year = value),
+          onSemester: (value) => _change(() => _semester = value),
+          onSubject: (value) => _change(() => _subject = value),
+          onChooseDates: _chooseDates,
+          onResetDates: () => _change(() => _range = null),
+          onChooseEntries: _chooseEntries,
+          onReload: widget.onReload,
+          onExport: _export,
+        ),
+      );
+    }
     return PopScope(
         canPop: !_busy,
         child: Scaffold(
