@@ -22,6 +22,7 @@ import 'package:dr/app_state.dart';
 import 'package:dr/ui/grades_chart.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_built_redux/flutter_built_redux.dart';
+import 'package:responsive_scaffold/responsive_scaffold.dart';
 
 class GradesChartContainer extends StatelessWidget {
   final bool isFullscreen;
@@ -41,6 +42,7 @@ class GradesChartContainer extends StatelessWidget {
           isFullscreen: isFullscreen,
           goFullscreen: actions.routingActions.showGradesChart.call,
           scheme: Theme.of(context).colorScheme,
+          newDesign: ResponsiveNavigationScope.isActive(context),
         );
       },
     );
