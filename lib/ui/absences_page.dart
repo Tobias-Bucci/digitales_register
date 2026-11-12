@@ -24,9 +24,9 @@ import 'package:dr/container/absence_group_container.dart';
 import 'package:dr/data.dart';
 import 'package:dr/i18n/app_localizations.dart';
 import 'package:dr/ui/absence.dart';
+import 'package:dr/ui/glass_surface.dart' show showGlassSheet;
 import 'package:dr/ui/last_fetched_overlay.dart';
 import 'package:dr/ui/no_internet.dart';
-import 'package:dr/ui/readable_content.dart';
 import 'package:dr/utc_date_time.dart';
 import 'package:dr/util.dart';
 import 'package:flutter/material.dart';
@@ -57,8 +57,7 @@ class AbsencesPage extends StatelessWidget {
       appBar: ResponsiveAppBar(
         title: Text(context.t('absences.title')),
       ),
-      body: NewDesignReadable(
-          child: LastFetchedOverlay(
+      body: LastFetchedOverlay(
         lastFetched: state.lastFetched,
         noInternet: noInternet,
         child: AbsencesBody(
@@ -68,7 +67,7 @@ class AbsencesPage extends StatelessWidget {
           onRemoveFutureAbsence: onRemoveFutureAbsence,
           onRetry: onRetry,
         ),
-      )),
+      ),
     );
   }
 }
@@ -259,8 +258,19 @@ class _AbsencesRefreshFailedBanner extends StatelessWidget {
   }
 }
 
+/// Opens the form to record a future absence in a glass sheet of the new
+/// design. It returns the payload for `addFutureAbsence`, or null when the
+/// sheet is closed or cancelled.
+Future<Map<String, dynamic>?> showFutureAbsenceSheet(BuildContext context) =>
+    showGlassSheet<Map<String, dynamic>>(
+      context: context,
+      builder: (_) => const _FutureAbsenceDialogContainer(sheet: true),
+    );
+
 class _FutureAbsenceDialogContainer extends StatelessWidget {
-  const _FutureAbsenceDialogContainer();
+  const _FutureAbsenceDialogContainer({this.sheet = false});
+
+  final bool sheet;
 
   @override
   Widget build(BuildContext context) {
@@ -274,6 +284,7 @@ class _FutureAbsenceDialogContainer extends StatelessWidget {
             Map<int, Map<int, String>>>>(
       builder: (context, vm, actions) {
         return _FutureAbsenceDialog(
+          sheet: sheet,
           lessonStartTimesByDate: vm.item1,
           lessonEndTimesByDate: vm.item2,
           lessonStartTimesByWeekday: vm.item3,
@@ -306,7 +317,11 @@ class _FutureAbsenceDialog extends StatefulWidget {
   final Map<int, Map<int, String>> lessonEndTimesByWeekday;
   final void Function(DateTime date) onLoadCalendarWeek;
 
+  /// In a glass sheet of the new design rather than a dialog.
+  final bool sheet;
+
   const _FutureAbsenceDialog({
+    this.sheet = false,
     required this.lessonStartTimesByDate,
     required this.lessonEndTimesByDate,
     required this.lessonStartTimesByWeekday,
@@ -456,242 +471,259 @@ class _FutureAbsenceDialogState extends State<_FutureAbsenceDialog> {
     final dateFormat = DateFormat('yyyy-MM-dd', localeTag);
     final fromLabel = l10n.text('absences.dialog.from');
     final toLabel = l10n.text('absences.dialog.to');
+    final fields = <Widget>[
+      TextField(
+        key: const Key('future-absence-reason'),
+        controller: _reasonController,
+        decoration: InputDecoration(
+          labelText: l10n.text('absences.dialog.reason'),
+        ),
+        onChanged: (_) => setState(() {}),
+      ),
+      const SizedBox(height: 8),
+      TextField(
+        key: const Key('future-absence-signature'),
+        controller: _signatureController,
+        decoration: InputDecoration(
+          labelText: l10n.text('absences.dialog.signature'),
+        ),
+        onChanged: (_) => setState(() {}),
+      ),
+      const SizedBox(height: 12),
+      ListTile(
+        contentPadding: EdgeInsets.zero,
+        title: Text(l10n.text('absences.dialog.startDate')),
+        subtitle: Text(DateFormat('dd.MM.yyyy', localeTag).format(_startDate)),
+        trailing: const Icon(Icons.calendar_today),
+        onTap: () async {
+          final picked = await showDatePicker(
+            context: context,
+            initialDate: _startDate,
+            firstDate: now.subtract(const Duration(days: 1)),
+            lastDate: now.add(const Duration(days: 365 * 2)),
+          );
+          if (picked != null) {
+            setState(() {
+              _startDate = DateTime(
+                picked.year,
+                picked.month,
+                picked.day,
+                _startDate.hour,
+                _startDate.minute,
+                _startDate.second,
+                _startDate.millisecond,
+                _startDate.microsecond,
+              );
+              if (_endDate.isBefore(_startDate)) {
+                _endDate = _startDate;
+              }
+              _ensureCalendarWeekLoaded();
+              _syncSelectedHoursToAvailableRange();
+            });
+          }
+        },
+      ),
+      ListTile(
+        contentPadding: EdgeInsets.zero,
+        title: Text(l10n.text('absences.dialog.endDate')),
+        subtitle: Text(DateFormat('dd.MM.yyyy', localeTag).format(_endDate)),
+        trailing: const Icon(Icons.calendar_today),
+        onTap: () async {
+          final picked = await showDatePicker(
+            context: context,
+            initialDate: _endDate,
+            firstDate: _startDate,
+            lastDate: now.add(const Duration(days: 365 * 2)),
+          );
+          if (picked != null) {
+            setState(() {
+              _endDate = DateTime(
+                picked.year,
+                picked.month,
+                picked.day,
+                _endDate.hour,
+                _endDate.minute,
+                _endDate.second,
+                _endDate.millisecond,
+                _endDate.microsecond,
+              );
+              _ensureCalendarWeekLoaded();
+              _syncSelectedHoursToAvailableRange();
+            });
+          }
+        },
+      ),
+      SwitchListTile.adaptive(
+        contentPadding: EdgeInsets.zero,
+        title: Text(l10n.text('absences.dialog.wholeDay')),
+        value: _wholeDay,
+        onChanged: (value) {
+          setState(() {
+            _wholeDay = value;
+          });
+        },
+      ),
+      if (_hasWeekendSelection)
+        Container(
+          width: double.infinity,
+          margin: const EdgeInsets.only(bottom: 12),
+          padding: const EdgeInsets.all(12),
+          decoration: BoxDecoration(
+            color: Theme.of(context).colorScheme.errorContainer,
+            borderRadius: BorderRadius.circular(12),
+          ),
+          child: Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Icon(
+                Icons.warning_amber_rounded,
+                color: Theme.of(context).colorScheme.onErrorContainer,
+              ),
+              const SizedBox(width: 10),
+              Expanded(
+                child: Text(
+                  l10n.text('absences.dialog.weekendWarning'),
+                  style: TextStyle(
+                    color: Theme.of(context).colorScheme.onErrorContainer,
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ),
+      Row(
+        children: [
+          Expanded(
+            child: DropdownButtonFormField<int>(
+              key: ValueKey<String>(
+                'start-hour-${_dateKey(_startDate)}-$_startTime-$_wholeDay',
+              ),
+              initialValue: _startTime,
+              isExpanded: true,
+              decoration: InputDecoration(
+                labelText: l10n.text('absences.dialog.startHour'),
+              ),
+              items: _availableStartLessonHours
+                  .map(
+                    (lessonHour) => DropdownMenuItem(
+                      value: lessonHour,
+                      child: Text(
+                          '$lessonHour ($fromLabel ${_effectiveLessonStartTimes[lessonHour]})'),
+                    ),
+                  )
+                  .toList(),
+              selectedItemBuilder: (context) => _availableStartLessonHours
+                  .map(
+                    (lessonHour) => Text(
+                      '$lessonHour (${_effectiveLessonStartTimes[lessonHour]})',
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                  )
+                  .toList(),
+              onChanged: _wholeDay
+                  ? null
+                  : (value) {
+                      if (value != null) {
+                        setState(() => _startTime = value);
+                      }
+                    },
+            ),
+          ),
+          const SizedBox(width: 12),
+          Expanded(
+            child: DropdownButtonFormField<int>(
+              key: ValueKey<String>(
+                'end-hour-${_dateKey(_endDate)}-$_endTime-$_wholeDay',
+              ),
+              initialValue: _endTime,
+              isExpanded: true,
+              decoration: InputDecoration(
+                labelText: l10n.text('absences.dialog.endHour'),
+              ),
+              items: _availableEndLessonHours
+                  .map(
+                    (lessonHour) => DropdownMenuItem(
+                      value: lessonHour,
+                      child: Text(
+                          '$lessonHour ($toLabel ${_effectiveLessonEndTimes[lessonHour]})'),
+                    ),
+                  )
+                  .toList(),
+              selectedItemBuilder: (context) => _availableEndLessonHours
+                  .map(
+                    (lessonHour) => Text(
+                      '$lessonHour (${_effectiveLessonEndTimes[lessonHour]})',
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                  )
+                  .toList(),
+              onChanged: _wholeDay
+                  ? null
+                  : (value) {
+                      if (value != null) {
+                        setState(() => _endTime = value);
+                      }
+                    },
+            ),
+          ),
+        ],
+      ),
+      if (!_validRange)
+        Padding(
+          padding: const EdgeInsets.only(top: 10),
+          child: Text(
+            l10n.text('absences.dialog.invalidRange'),
+            style: TextStyle(color: Theme.of(context).colorScheme.error),
+          ),
+        ),
+    ];
+    final VoidCallback? submit = _validInput && _validRange
+        ? () {
+            final payload = {
+              'futureAbsence': {
+                'startDateObject': _startDate.toUtc().toIso8601String(),
+                'startTime': _submittedStartTime,
+                'endDateObject': _endDate.toUtc().toIso8601String(),
+                'endTime': _submittedEndTime,
+                'reason': _reasonController.text.trim(),
+                'reason_signature': _signatureController.text.trim(),
+                'startDate': dateFormat.format(_startDate),
+                'endDate': dateFormat.format(_endDate),
+              },
+            };
+            Navigator.of(context).pop(payload);
+          }
+        : null;
+    final cancel = TextButton(
+      onPressed: () => Navigator.of(context).pop(),
+      child: Text(l10n.text('common.cancel')),
+    );
+    if (widget.sheet) {
+      return AbsenceFormPanel(
+        title: l10n.text('absences.dialog.title'),
+        actions: [
+          cancel,
+          FilledButton(
+            key: const Key('future-absence-save'),
+            onPressed: submit,
+            child: Text(l10n.text('button.save')),
+          ),
+        ],
+        children: fields,
+      );
+    }
     return AlertDialog(
       title: Text(l10n.text('absences.dialog.title')),
       content: SingleChildScrollView(
         child: Column(
           mainAxisSize: MainAxisSize.min,
-          children: [
-            TextField(
-              controller: _reasonController,
-              decoration: InputDecoration(
-                labelText: l10n.text('absences.dialog.reason'),
-              ),
-              onChanged: (_) => setState(() {}),
-            ),
-            const SizedBox(height: 8),
-            TextField(
-              controller: _signatureController,
-              decoration: InputDecoration(
-                labelText: l10n.text('absences.dialog.signature'),
-              ),
-              onChanged: (_) => setState(() {}),
-            ),
-            const SizedBox(height: 12),
-            ListTile(
-              contentPadding: EdgeInsets.zero,
-              title: Text(l10n.text('absences.dialog.startDate')),
-              subtitle:
-                  Text(DateFormat('dd.MM.yyyy', localeTag).format(_startDate)),
-              trailing: const Icon(Icons.calendar_today),
-              onTap: () async {
-                final picked = await showDatePicker(
-                  context: context,
-                  initialDate: _startDate,
-                  firstDate: now.subtract(const Duration(days: 1)),
-                  lastDate: now.add(const Duration(days: 365 * 2)),
-                );
-                if (picked != null) {
-                  setState(() {
-                    _startDate = DateTime(
-                      picked.year,
-                      picked.month,
-                      picked.day,
-                      _startDate.hour,
-                      _startDate.minute,
-                      _startDate.second,
-                      _startDate.millisecond,
-                      _startDate.microsecond,
-                    );
-                    if (_endDate.isBefore(_startDate)) {
-                      _endDate = _startDate;
-                    }
-                    _ensureCalendarWeekLoaded();
-                    _syncSelectedHoursToAvailableRange();
-                  });
-                }
-              },
-            ),
-            ListTile(
-              contentPadding: EdgeInsets.zero,
-              title: Text(l10n.text('absences.dialog.endDate')),
-              subtitle:
-                  Text(DateFormat('dd.MM.yyyy', localeTag).format(_endDate)),
-              trailing: const Icon(Icons.calendar_today),
-              onTap: () async {
-                final picked = await showDatePicker(
-                  context: context,
-                  initialDate: _endDate,
-                  firstDate: _startDate,
-                  lastDate: now.add(const Duration(days: 365 * 2)),
-                );
-                if (picked != null) {
-                  setState(() {
-                    _endDate = DateTime(
-                      picked.year,
-                      picked.month,
-                      picked.day,
-                      _endDate.hour,
-                      _endDate.minute,
-                      _endDate.second,
-                      _endDate.millisecond,
-                      _endDate.microsecond,
-                    );
-                    _ensureCalendarWeekLoaded();
-                    _syncSelectedHoursToAvailableRange();
-                  });
-                }
-              },
-            ),
-            SwitchListTile.adaptive(
-              contentPadding: EdgeInsets.zero,
-              title: Text(l10n.text('absences.dialog.wholeDay')),
-              value: _wholeDay,
-              onChanged: (value) {
-                setState(() {
-                  _wholeDay = value;
-                });
-              },
-            ),
-            if (_hasWeekendSelection)
-              Container(
-                width: double.infinity,
-                margin: const EdgeInsets.only(bottom: 12),
-                padding: const EdgeInsets.all(12),
-                decoration: BoxDecoration(
-                  color: Theme.of(context).colorScheme.errorContainer,
-                  borderRadius: BorderRadius.circular(12),
-                ),
-                child: Row(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Icon(
-                      Icons.warning_amber_rounded,
-                      color: Theme.of(context).colorScheme.onErrorContainer,
-                    ),
-                    const SizedBox(width: 10),
-                    Expanded(
-                      child: Text(
-                        l10n.text('absences.dialog.weekendWarning'),
-                        style: TextStyle(
-                          color: Theme.of(context).colorScheme.onErrorContainer,
-                        ),
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-            Row(
-              children: [
-                Expanded(
-                  child: DropdownButtonFormField<int>(
-                    key: ValueKey<String>(
-                      'start-hour-${_dateKey(_startDate)}-$_startTime-$_wholeDay',
-                    ),
-                    initialValue: _startTime,
-                    isExpanded: true,
-                    decoration: InputDecoration(
-                      labelText: l10n.text('absences.dialog.startHour'),
-                    ),
-                    items: _availableStartLessonHours
-                        .map(
-                          (lessonHour) => DropdownMenuItem(
-                            value: lessonHour,
-                            child: Text(
-                                '$lessonHour ($fromLabel ${_effectiveLessonStartTimes[lessonHour]})'),
-                          ),
-                        )
-                        .toList(),
-                    selectedItemBuilder: (context) => _availableStartLessonHours
-                        .map(
-                          (lessonHour) => Text(
-                            '$lessonHour (${_effectiveLessonStartTimes[lessonHour]})',
-                            overflow: TextOverflow.ellipsis,
-                          ),
-                        )
-                        .toList(),
-                    onChanged: _wholeDay
-                        ? null
-                        : (value) {
-                            if (value != null) {
-                              setState(() => _startTime = value);
-                            }
-                          },
-                  ),
-                ),
-                const SizedBox(width: 12),
-                Expanded(
-                  child: DropdownButtonFormField<int>(
-                    key: ValueKey<String>(
-                      'end-hour-${_dateKey(_endDate)}-$_endTime-$_wholeDay',
-                    ),
-                    initialValue: _endTime,
-                    isExpanded: true,
-                    decoration: InputDecoration(
-                      labelText: l10n.text('absences.dialog.endHour'),
-                    ),
-                    items: _availableEndLessonHours
-                        .map(
-                          (lessonHour) => DropdownMenuItem(
-                            value: lessonHour,
-                            child: Text(
-                                '$lessonHour ($toLabel ${_effectiveLessonEndTimes[lessonHour]})'),
-                          ),
-                        )
-                        .toList(),
-                    selectedItemBuilder: (context) => _availableEndLessonHours
-                        .map(
-                          (lessonHour) => Text(
-                            '$lessonHour (${_effectiveLessonEndTimes[lessonHour]})',
-                            overflow: TextOverflow.ellipsis,
-                          ),
-                        )
-                        .toList(),
-                    onChanged: _wholeDay
-                        ? null
-                        : (value) {
-                            if (value != null) {
-                              setState(() => _endTime = value);
-                            }
-                          },
-                  ),
-                ),
-              ],
-            ),
-            if (!_validRange)
-              Padding(
-                padding: const EdgeInsets.only(top: 10),
-                child: Text(
-                  l10n.text('absences.dialog.invalidRange'),
-                  style: TextStyle(color: Theme.of(context).colorScheme.error),
-                ),
-              ),
-          ],
+          children: fields,
         ),
       ),
       actions: [
-        TextButton(
-          onPressed: () => Navigator.of(context).pop(),
-          child: Text(l10n.text('common.cancel')),
-        ),
+        cancel,
         ElevatedButton(
-          onPressed: _validInput && _validRange
-              ? () {
-                  final payload = {
-                    'futureAbsence': {
-                      'startDateObject': _startDate.toUtc().toIso8601String(),
-                      'startTime': _submittedStartTime,
-                      'endDateObject': _endDate.toUtc().toIso8601String(),
-                      'endTime': _submittedEndTime,
-                      'reason': _reasonController.text.trim(),
-                      'reason_signature': _signatureController.text.trim(),
-                      'startDate': dateFormat.format(_startDate),
-                      'endDate': dateFormat.format(_endDate),
-                    },
-                  };
-                  Navigator.of(context).pop(payload);
-                }
-              : null,
+          onPressed: submit,
           child: Text(l10n.text('button.save')),
         ),
       ],

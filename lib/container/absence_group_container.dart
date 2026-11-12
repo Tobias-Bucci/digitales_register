@@ -28,7 +28,10 @@ import 'package:intl/intl.dart';
 class AbsenceGroupContainer extends StatelessWidget {
   final int group;
 
-  const AbsenceGroupContainer({super.key, required this.group});
+  /// Builds the row from its view model; [AbsenceGroupWidget] without it.
+  final Widget Function(BuildContext context, AbsencesViewModel vm)? builder;
+
+  const AbsenceGroupContainer({super.key, required this.group, this.builder});
   @override
   Widget build(BuildContext context) {
     return StoreConnection<AppState, AppActions, _AbsenceGroupViewModel?>(
@@ -91,48 +94,47 @@ class AbsenceGroupContainer extends StatelessWidget {
         }
 
         final justifiedString = switch (absenceGroup.justified) {
-          AbsenceJustified.justified =>
-            absenceGroup.reasonSignature != null &&
-                    absenceGroup.reasonTimestamp != null
-                ? l10n.text(
-                    'absences.justification.recordedBy',
-                    args: {
-                      'timestamp': DateFormat(
-                        "EEE d.M.yyyy HH:mm",
-                        localeTag,
-                      ).format(absenceGroup.reasonTimestamp!),
-                      'signature': absenceGroup.reasonSignature!,
-                    },
-                  )
-                : l10n.text('absences.status.justified'),
+          AbsenceJustified.justified => absenceGroup.reasonSignature != null &&
+                  absenceGroup.reasonTimestamp != null
+              ? l10n.text(
+                  'absences.justification.recordedBy',
+                  args: {
+                    'timestamp': DateFormat(
+                      "EEE d.M.yyyy HH:mm",
+                      localeTag,
+                    ).format(absenceGroup.reasonTimestamp!),
+                    'signature': absenceGroup.reasonSignature!,
+                  },
+                )
+              : l10n.text('absences.status.justified'),
           AbsenceJustified.forSchool => l10n.text(
-            'absences.justification.schoolJustified',
-          ),
+              'absences.justification.schoolJustified',
+            ),
           AbsenceJustified.notJustified => l10n.text(
-            'absences.status.notJustified',
-          ),
+              'absences.status.notJustified',
+            ),
           _ => l10n.text('absences.justification.notYet'),
         };
 
-        return AbsenceGroupWidget(
-          vm: AbsencesViewModel(
-            fromTo: fromTo,
-            duration: durationParts.join(', '),
-            justifiedString: justifiedString,
-            reason: absenceGroup.reason,
-            justified: absenceGroup.justified,
-            note: absenceGroup.note,
-            onJustify: vm.canJustify
-                ? (reason, signature) {
-                    actions.absencesActions.justifyAbsence(<String, dynamic>{
-                      'absenceGroup': absenceGroup,
-                      'reason': reason,
-                      'signature': signature,
-                    });
-                  }
-                : null,
-          ),
+        final absenceVm = AbsencesViewModel(
+          fromTo: fromTo,
+          duration: durationParts.join(', '),
+          justifiedString: justifiedString,
+          reason: absenceGroup.reason,
+          justified: absenceGroup.justified,
+          note: absenceGroup.note,
+          onJustify: vm.canJustify
+              ? (reason, signature) {
+                  actions.absencesActions.justifyAbsence(<String, dynamic>{
+                    'absenceGroup': absenceGroup,
+                    'reason': reason,
+                    'signature': signature,
+                  });
+                }
+              : null,
         );
+        return builder?.call(context, absenceVm) ??
+            AbsenceGroupWidget(vm: absenceVm);
       },
       connect: (state) {
         final absences = state.absencesState.absences;
@@ -140,8 +142,7 @@ class AbsenceGroupContainer extends StatelessWidget {
         // parent list is rebuilt without this row.
         if (group >= absences.length) return null;
         final absenceGroup = absences[group];
-        final canJustify =
-            state.absencesState.canEdit &&
+        final canJustify = state.absencesState.canEdit &&
             absenceGroup.justified == AbsenceJustified.notYetJustified &&
             absenceGroup.reason == null &&
             absenceGroup.reasonSignature == null &&
