@@ -159,7 +159,7 @@ still covered the app.
 
 | Measurement | Before | After |
 | --- | --- | --- |
-| Slow-server simulation, gate open at 500 ms / 3 s / 20 s per request | 1612 / 9111 / 60114 ms | see final table |
+| Slow-server simulation, gate open at 500 ms / 3 s / 20 s per request | 1612 / 9111 / 60114 ms | see [final table](#final-before--after) |
 | Emulator, demo login with a simulated 3 s sign-in, `p3_launch_overlay_removed` (median of 11, 2 alternating batches) | 4743 [4588–4917] | 2448 [2397–2487] |
 | same, `p5_first_data` (data refreshed) | 3850 | 3842 |
 | same, launch frames: slow build median / worst build | 1 / 17.5 ms | 0 / 15.9 ms |
@@ -195,8 +195,8 @@ path; it does not change the first frame measurably on its own.
 Moving `p1_launch_context` (package info, install source, version write for
 the diagnostics context) behind the first frame did not bring `runApp`
 forward: the main-thread wait moved to the next platform call before
-`runApp`, `p1_language_apply` (a preferences write), in 2 of 6 runs of a
-batch, and stayed in `p1_privacy_consent` in the others (alternating
+`runApp`, `p1_language_apply` (a preferences write), in 3 of 12 runs, and
+stayed in `p1_privacy_consent` in the others (alternating
 batches, `p2_run_app` median 1344 → 1308 ms on a slowed-down emulator, within
 noise). The P1 wait is the Android main thread finishing the activity, which
 the first frame needs anyway; reordering Dart awaits cannot remove it, and the
@@ -210,3 +210,124 @@ state, synchronous on the UI isolate during the launch intro) takes 1.6 ms
 Moving it to an isolate would cost more than it saves at this size. The step
 stays instrumented so it can be measured on a real account with a full school
 year.
+
+## Final before / after
+
+Baseline = commit `bc92d391` (instrumentation only), final = `9232f5a2`.
+Emulator rows: profile APKs of both commits, cold starts in interleaved
+batches on a freshly booted emulator (saved login: 2 rounds of 6 each;
+login page: 4 rounds of 6 each, order reversed in rounds 3–4), first run of
+each set reported apart, median [min–max] of the rest.
+
+| Phase / metric | Method | Before | After |
+| --- | --- | --- | --- |
+| P0 engine enter → framework init | `--trace-startup`, 4 runs | 250 [233–274] ms | not changed (no code on this path) |
+| P1 `p1_legacy_cleanup` | emulator, login page, n=23 | 3.1 [1.5–6.1] ms | 0.0 ms |
+| P1 total (`p2_run_app`) / P2 `p2_first_frame` | emulator, login page, n=23 | first frame 446 [406–594] | 448 [433–5228¹] |
+| P3 gate open, login page | emulator, n=23 | 585 [474–698] | 539 [501–5295¹] (within noise; no change on this path) |
+| P3 overlay removed, login page | emulator, n=23 | 2283 [2233–2481] | 2284 [2259–7061¹] |
+| P3 gate open, saved login (demo, local) | emulator, n=11 | 629 [553–679] | 584 [543–607] |
+| P3 overlay removed, saved login (demo, local) | emulator, n=11 | 2241 [2226–2263] | 2242 [2228–2262] |
+| P3 overlay removed, saved login, 3 s sign-in (simulated) | emulator, n=11 | 4743 [4588–4917] | 2448 [2397–2487] |
+| P4/P5 sign-in + first data done, same | emulator, n=11 | 3850 | 3842 (unchanged, now in the background) |
+| P3 gate open, slow server 0 / 0.5 / 3 / 20 s | simulation, n=3 | 102 / 1612 / 9111 / 60114 ms | 50 / 51 / 51 / 47 ms |
+| P3 gate open, failing server 0 / 0.5 / 3 / 20 s | simulation, n=3 | 76 / 583 / 3070 / 20077 ms | 49 / 51 / 50 / 47 ms |
+| P4 online sign-in done, 3 s server | simulation, n=3 | 6088 ms | 6085 ms (unchanged) |
+| Launch frames, slow build (>16.7 ms) median / worst build | emulator, login page, n=23 | 0 / 6.2 ms | 0 / 6.7 ms |
+| same, saved login (demo) | emulator, n=11 | 0 / 16.0 ms | 0 / 15.7 ms |
+| same, saved login, 3 s sign-in | emulator, n=11 | 1 / 17.5 ms | 0 / 15.9 ms |
+| P6 `p6_notifications_init` | emulator, login page, n=11 | 271 ms | 291 ms (not changed; after the first frame) |
+
+¹ One run of the reversed round hit a 5 s emulator stall in `p1_privacy_consent`
+before `runApp`; it is kept in the range but does not move the median.
+
+Unmeasured: real phones, Firebase initialization in release (not configured
+for profile), real school-server latency, iOS, Linux.
+
+## Animations
+
+Animations that play at start-up and on the first screens, and how they were
+checked:
+
+| Animation | Changed? | Check |
+| --- | --- | --- |
+| Launch overlay: intro (rest, retract/stretch, redraw with spring, light sweep, ring nudges, 1.3 s), hold pulse while waiting, circular reveal (0.5 s), skipped reveal (0.32 s), reduced-motion fade (0.3 s) | No: same `LaunchTimings`/`LaunchCurves`/painter. Only the moment the target is ready moved earlier, so the hold pulse is needed less often. | Launch frame summary (table above); `test/ui/launch_animation_test.dart` (choreography, skip, reduced motion, native splash colours) green. |
+| Native splash → first Flutter frame hand-over | No | Same first frame; `am start -W` within noise. |
+| Route transition login ↔ dashboard, `_popAll` | No | `p3_launch_target_ready` still waits for the transition (`waitForRouteTransition`). |
+| `SplashScreen` fade (250 ms, zero under the launch overlay) | No | – |
+| Login page motion (`auth_layout`, `login_page_content`) | No | `test/ui/auth_motion_test.dart` green. |
+| Dashboard/grades loading indicators (`AnimatedLinearProgressIndicator`, banners) | No | Now visible while the online sign-in runs on a saved login, as during any refresh. |
+| Grade chart animations, Hero on the grades chart | No | Not on the start-up path; grades/chart tests green. |
+
+With the gate change, the online sign-in and first data loads may finish
+after the reveal instead of under the hold loop. Their work is the same
+network-bound async work as before (no new synchronous work); the frame summary
+with the 3 s sign-in shows no slow build frame.
+
+## Not changed, and why
+
+- **Privacy consent before `runApp`.** It decides whether diagnostics and
+  analytics may run (and in release initializes Firebase). It stays the first
+  awaited step so no telemetry can start before the decision. It is also where
+  the main-thread wait usually lands; moving other steps did not help (see the
+  reverted experiment).
+- **Timeouts (15 s connect / 15 s send / 20 s receive).** Field data shows slow
+  but working school servers (17–28 s). Shorter timeouts would turn those into
+  failures. With the gate change a slow server no longer blocks the screen,
+  and the dashboard shows the loading indicator while it waits.
+- **Sign-in request chain.** Login → config page → first data are dependent
+  (session cookie, then student id); the first data loads (dashboard,
+  notifications, profile) already run in parallel.
+- **Notification service, package info, user preferences, deep links, server
+  notifications.** Already after the first frame (P6); they run during the
+  launch intro without slow build frames.
+- **Widget launch handler.** Synchronous handler registration, < 0.5 ms.
+- **First-run dialogs** (unmaintained notice, privacy consent) still appear
+  after the sign-in, as before; showing them earlier would change when the
+  consent question is asked.
+- **Lifecycle observer** is still registered after the start action (after the
+  online sign-in), as before.
+
+## Remaining bottlenecks and follow-ups
+
+- **School server latency** (P4/P5) is server-side. The app now shows saved
+  data during it; the time until fresh data arrives is unchanged.
+- **P1 main-thread wait** (~400 ms on the emulator): Android activity creation.
+  Needs device profiling (Android Studio system trace / Perfetto of a release
+  build) to see what the main thread is doing; plugin registration and
+  Firebase are the candidates.
+- **Saved-state decode on large accounts:** measure `p3_saved_state_decode`
+  on a device with a full school year before deciding on an isolate.
+- **Field data:** add Firebase Performance Monitoring (app-start trace plus
+  custom traces for the P3/P4/P5 marks), or give the tools Play vitals access.
+  Not added here (new dependency).
+
+## How to measure on a device
+
+Profile build (`flutter build apk --profile`) installs as `dr PROFILE` next to
+the real app. Cold start: `adb shell am force-stop it.bucci.digitalesregister.profile`,
+then `adb shell am start -W -n it.bucci.digitalesregister.profile/it.bucci.digitalesregister.MainActivity`,
+then `adb logcat -d | grep "\[startup\]"`. Cases worth running:
+
+1. Saved login, normal network: overlay should go away about 1.8 s after
+   `p2_first_frame`, with `p4_online_sign_in`/`p5_first_data` later or earlier
+   depending on the server.
+2. Saved login, airplane mode: saved dashboard after the intro; offline notice;
+   no long hold.
+3. Saved login, slow network (Android developer options or a throttling proxy):
+   saved dashboard after the intro, loading indicator until `p5_first_data`.
+4. No saved login: login page after the intro (unchanged).
+5. Opening grades right after the reveal on a slow network: saved grades with
+   the linear indicator, no full-screen spinner.
+
+## Verification
+
+| Check | Baseline (`dcc4f686`) | Final |
+| --- | --- | --- |
+| `flutter analyze` | no issues | no issues |
+| `flutter test` | 3377 passed, 1 skipped, 0 failed | 3387 passed, 1 skipped, 0 failed (10 new tests) |
+| `flutter build apk --debug` | – | built |
+| `flutter build apk --profile` | built | built (also with the scratch sign-in delay, not committed) |
+
+Not run: release builds (`assembleRelease` uploads to Crashlytics), iOS (no
+macOS), Linux desktop, a real phone.
