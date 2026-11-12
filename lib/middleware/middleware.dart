@@ -78,6 +78,7 @@ import 'package:dr/school_api_endpoints.dart';
 import 'package:dr/school_notification_service.dart';
 import 'package:dr/serializers.dart';
 import 'package:dr/settings_persistence_service.dart';
+import 'package:dr/startup_timeline.dart';
 import 'package:dr/state_persistence_service.dart';
 import 'package:dr/stored_login.dart';
 import 'package:dr/study_data_migration.dart';
@@ -1317,7 +1318,8 @@ Future<void> _loadAccounts(
   if (!api.state.noInternet) _popAll();
   Map<String, dynamic> login = <String, dynamic>{};
   try {
-    final raw = await secureStorage.read(key: 'login');
+    final raw = await startupTimeline.step(
+        'p3_saved_accounts_read', () => secureStorage.read(key: 'login'));
     login = decodeStoredLogin(raw);
     if (raw != null && json.encode(login) != raw) {
       await secureStorage.write(key: 'login', value: json.encode(login));
@@ -1513,11 +1515,14 @@ Future<void> _loggedIn(
   if (!action.payload.offlineOnly) {
     // A saved profile can show an avatar before there is a session to load it.
     retryProfilePictures();
-    await Future.wait([
-      api.actions.dashboardActions.load(api.state.dashboardState.future),
-      api.actions.notificationsActions.load(),
-      api.actions.profileActions.load(),
-    ]);
+    await startupTimeline.step(
+      'p5_first_data',
+      () => Future.wait([
+        api.actions.dashboardActions.load(api.state.dashboardState.future),
+        api.actions.notificationsActions.load(),
+        api.actions.profileActions.load(),
+      ]),
+    );
     // Dashboard loading starts holiday hydration independently in the background.
   }
   await schoolNotificationOperation(() async {

@@ -18,6 +18,7 @@
 import 'dart:async';
 import 'dart:math' as math;
 
+import 'package:dr/startup_timeline.dart';
 import 'package:dr/ui/launch/launch_logo_painter.dart';
 import 'package:dr/ui/launch/launch_tokens.dart';
 import 'package:flutter/foundation.dart';
@@ -61,7 +62,9 @@ class AppLaunchGate {
   bool get isOpen => _opened.isCompleted;
 
   void open() {
-    if (!_opened.isCompleted) _opened.complete();
+    if (_opened.isCompleted) return;
+    startupTimeline.mark('p3_launch_gate_open');
+    _opened.complete();
   }
 }
 

@@ -52,6 +52,7 @@ import 'package:dr/school_notification_engine.dart';
 import 'package:dr/school_notification_service.dart';
 import 'package:dr/server_notifications/server_notification_service.dart';
 import 'package:dr/settings_persistence_service.dart';
+import 'package:dr/startup_timeline.dart';
 import 'package:dr/theme_controller.dart';
 import 'package:dr/ui/grade_calculator.dart';
 import 'package:dr/ui/grades_chart_page.dart';
@@ -83,41 +84,57 @@ typedef SingleArgumentVoidCallback<T> = void Function(T arg);
 final AppActions actions = AppActions();
 
 Future<void> main() async {
+  startupTimeline.start();
   final startupStopwatch = Stopwatch()..start();
   WidgetsFlutterBinding.ensureInitialized();
+  startupTimeline.mark('p1_binding_ready');
 
   navigatorKey = GlobalKey();
   scaffoldKey = GlobalKey();
   scaffoldMessengerKey = GlobalKey();
   secureStorage = getFlutterSecureStorage();
-  await AnalyticsService.initLich();
-  await appClock.initialize();
+  await startupTimeline.step(
+      'p1_privacy_analytics', () => AnalyticsService.initLich());
+  await startupTimeline.step('p1_app_clock', appClock.initialize);
   await _loadStartupUserPreferences();
-  await _removeLegacyNotificationData();
+  await startupTimeline.step(
+      'p1_legacy_cleanup', _removeLegacyNotificationData);
   final store = Store<AppState, AppStateBuilder, AppActions>(
     appReducerBuilder.build(),
     AppState((b) => b.settingsState.replace(_startupSettingsState)),
     actions,
     middleware: middleware(),
   );
+  startupTimeline.mark('p1_store_created');
   AnalyticsService.refreshContext = () async {
     await refreshProductAnalyticsContext(store.state);
     await submitAcademicSummary(store.state);
   };
-  await AndroidWidgetPlatformBridge().registerLaunchHandler(
-    (destination) => handleAndroidWidgetLaunchDestination(
-      store.actions,
-      destination,
-      deferUntilLogin: !store.state.loginState.loggedIn,
+  await startupTimeline.step(
+    'p1_widget_launch_handler',
+    () => AndroidWidgetPlatformBridge().registerLaunchHandler(
+      (destination) => handleAndroidWidgetLaunchDestination(
+        store.actions,
+        destination,
+        deferUntilLogin: !store.state.loginState.loggedIn,
+      ),
     ),
   );
+  startupTimeline
+    ..mark('p2_run_app')
+    ..watchFrames();
   runApp(RegisterApp(store: store, launchTargetReady: _launchTargetReady()));
   WidgetsBinding.instance.addPostFrameCallback(
     (_) => unawaited(
-      _initializeAfterFirstFrame(
-        store: store,
-        startupStopwatch: startupStopwatch,
-      ).whenComplete(() {
+      startupTimeline
+          .step(
+        'p6_after_first_frame_init',
+        () => _initializeAfterFirstFrame(
+          store: store,
+          startupStopwatch: startupStopwatch,
+        ),
+      )
+          .whenComplete(() {
         appLaunchGate.open();
         serverNotifications.isLoggedIn = () => store.state.loginState.loggedIn;
         unawaited(serverNotifications.start());
@@ -137,6 +154,7 @@ Future<void> _launchTargetReady() async {
   }
   // The reveal must not uncover the login page halfway through its push.
   await waitForRouteTransition(() => navigatorKey?.currentState);
+  startupTimeline.mark('p3_launch_target_ready');
 }
 
 Future<void> _removeLegacyNotificationData() async {
@@ -166,10 +184,12 @@ Future<void> _initializeAfterFirstFrame({
     }
     await WidgetsBinding.instance.endOfFrame;
   }
+  startupTimeline.mark('p2_first_frame');
 
   unawaited(AnalyticsService.initLich());
-  unawaited(_loadPackageInfo());
-  unawaited(_restoreUserPreferences(store));
+  unawaited(startupTimeline.step('p6_package_info', _loadPackageInfo));
+  unawaited(startupTimeline.step(
+      'p6_restore_preferences', () => _restoreUserPreferences(store)));
 
   await AnalyticsService.logCustomEvent("app_first_frame", <String, Object>{
     "elapsedMs": startupStopwatch.elapsedMilliseconds,
@@ -265,14 +285,16 @@ Future<void> _initializeAfterFirstFrame({
   // Notification storage/OS scheduling is optional and can be busy in another
   // Flutter engine. It must not hold the splash screen or automatic login.
   unawaited(schoolNotificationOperation(() async {
-    await schoolNotifications.initialize();
+    await startupTimeline.step(
+        'p6_notifications_init', schoolNotifications.initialize);
     await schoolNotifications.onTap?.call();
   }));
   final loginTimer = Stopwatch()..start();
   runtimeTrace('AppStartup', 'login-start',
       detail: 'startupMs=${startupStopwatch.elapsedMilliseconds}');
   reminderSync.attach(store.nextState, store.state);
-  await store.actions.start(uri);
+  await startupTimeline.step(
+      'p3_p4_start_action', () => store.actions.start(uri));
   runtimeTrace('AppStartup', 'login-end',
       durationMs: loginTimer.elapsedMilliseconds);
   _showKeyringFallbackNotice();
@@ -308,18 +330,25 @@ Future<void> _restoreUserPreferences(
 }
 
 Future<void> _loadStartupUserPreferences() async {
-  await appLanguageController.load(
-    fallbackLocale: WidgetsBinding.instance.platformDispatcher.locale,
+  await startupTimeline.step(
+    'p1_language',
+    () => appLanguageController.load(
+      fallbackLocale: WidgetsBinding.instance.platformDispatcher.locale,
+    ),
   );
-  _startupSettingsState = await settingsPersistenceService.load() ??
+  _startupSettingsState = await startupTimeline.step(
+          'p1_settings', settingsPersistenceService.load) ??
       SettingsState(
         (b) => b.languageCode = appLanguageController.language.code,
       );
-  await appLanguageController.setLanguage(
-    AppLanguage.fromCode(_startupSettingsState.languageCode),
+  await startupTimeline.step(
+    'p1_language_apply',
+    () => appLanguageController.setLanguage(
+      AppLanguage.fromCode(_startupSettingsState.languageCode),
+    ),
   );
   final stopwatch = Stopwatch()..start();
-  await themeController.load();
+  await startupTimeline.step('p1_theme', themeController.load);
   stopwatch.stop();
   await AnalyticsService.logCustomEvent("theme_loaded", <String, Object>{
     "elapsedMs": stopwatch.elapsedMilliseconds,
@@ -504,7 +533,13 @@ class RegisterApp extends StatelessWidget {
   Widget _withLaunchAnimation(Widget app) {
     final ready = launchTargetReady;
     if (ready == null) return app;
-    return AppLaunchAnimation(targetReady: ready, child: app);
+    return AppLaunchAnimation(
+      targetReady: ready,
+      onFinished: () => startupTimeline
+        ..mark('p3_launch_overlay_removed')
+        ..stopFrames(),
+      child: app,
+    );
   }
 }
 

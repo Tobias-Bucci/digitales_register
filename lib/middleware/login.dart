@@ -177,13 +177,16 @@ Future<void> _login(
       // log the user in locally so they don't have to
       // wait for the network request to finish
       assert(action.payload.fromStorage);
-      await api.actions.loginActions.loggedIn(
-        LoggedInPayload(
-          (b) => b
-            ..username = action.payload.user // Keep displaying "debug"
-            ..fromStorage = true
-            ..offlineOnly = true
-            ..keepShowingLoadingIndicator = true,
+      await startupTimeline.step(
+        'p3_offline_sign_in',
+        () => api.actions.loginActions.loggedIn(
+          LoggedInPayload(
+            (b) => b
+              ..username = action.payload.user // Keep displaying "debug"
+              ..fromStorage = true
+              ..offlineOnly = true
+              ..keepShowingLoadingIndicator = true,
+          ),
         ),
       );
       await api.actions.setUrl(url);
@@ -191,27 +194,31 @@ Future<void> _login(
     }
 
     final loginWrapper = wrapper;
-    final dynamic result = await loginWrapper.login(
-      actualUser, // Send 'stbuctob' if it was a debug login
-      action.payload.pass,
-      null,
-      url,
-      logout: () {
-        // A response from an account we have left must not log out the new one.
-        if (!identical(wrapper, loginWrapper)) return;
-        unawaited(api.actions.loginActions.logout(
-          LogoutPayload(
-            (b) => b
-              ..hard = api.state.settingsState.noPasswordSaving
-              ..forced = true,
-          ),
-        ));
-      },
-      configLoaded: () => api.actions.setConfig(wrapper.config),
-      relogin: api.actions.loginActions.automaticallyReloggedIn.call,
-      addProtocolItem: api.actions.addNetworkProtocolItem.call,
-    );
-    final signedIn = await loginWrapper.loggedIn;
+    dynamic result;
+    final signedIn =
+        await startupTimeline.step<bool>('p4_online_sign_in', () async {
+      result = await loginWrapper.login(
+        actualUser, // Send 'stbuctob' if it was a debug login
+        action.payload.pass,
+        null,
+        url,
+        logout: () {
+          // A response from an account we have left must not log out the new one.
+          if (!identical(wrapper, loginWrapper)) return;
+          unawaited(api.actions.loginActions.logout(
+            LogoutPayload(
+              (b) => b
+                ..hard = api.state.settingsState.noPasswordSaving
+                ..forced = true,
+            ),
+          ));
+        },
+        configLoaded: () => api.actions.setConfig(wrapper.config),
+        relogin: api.actions.loginActions.automaticallyReloggedIn.call,
+        addProtocolItem: api.actions.addNetworkProtocolItem.call,
+      );
+      return loginWrapper.loggedIn;
+    });
     // The account was switched while signing in: the retired session's
     // outcome belongs to nobody, and must not show up as this account's.
     if (!identical(wrapper, loginWrapper)) return;
@@ -612,8 +619,8 @@ AppState _emptyAppStateKeepingSettings(AppState state) {
   // The learning notes belong to the account that is left. Nothing may be
   // saved for the next one until its own have been loaded.
   _studyDataScope = null;
-  return AppState((b) => b.settingsState
-      .replace(StudyData.empty.applyTo(state.settingsState)));
+  return AppState((b) =>
+      b.settingsState.replace(StudyData.empty.applyTo(state.settingsState)));
 }
 
 void _showUserTypeNotSupported(String url) {
