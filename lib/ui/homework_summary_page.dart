@@ -21,6 +21,7 @@ import 'package:dr/i18n/app_localizations.dart';
 import 'package:dr/middleware/middleware.dart';
 import 'package:dr/page_payload_cache.dart';
 import 'package:dr/ui/animated_linear_progress_indicator.dart';
+import 'package:dr/ui/homework_summary_page_new.dart';
 import 'package:dr/ui/linkified_text.dart';
 import 'package:dr/ui/no_internet.dart';
 import 'package:dr/ui/readable_content.dart';
@@ -209,6 +210,19 @@ class _HomeworkSummaryPageState extends State<HomeworkSummaryPage> {
 
   @override
   Widget build(BuildContext context) {
+    // Below the navigation of the new design, which follows a switch of the
+    // design at once. The loading above stays the same for both.
+    if (ResponsiveNavigationScope.isActive(context)) {
+      return HomeworkSummaryPageNew(
+        translationPrefix: widget.translationPrefix,
+        document: _document,
+        lastFetched: _lastFetched,
+        loadError: _loadError,
+        loading: _loading,
+        offline: isOffline(),
+        onRefresh: _refresh,
+      );
+    }
     final l10n = context.l10n;
     return Scaffold(
       appBar: ResponsiveAppBar(
