@@ -18,9 +18,12 @@
 
 import 'package:dr/actions/app_actions.dart';
 import 'package:dr/app_state.dart';
+import 'package:dr/data.dart';
 import 'package:dr/ui/absences_page.dart';
+import 'package:dr/ui/absences_page_new.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_built_redux/flutter_built_redux.dart';
+import 'package:responsive_scaffold/responsive_scaffold.dart';
 
 class AbsencesPageContainer extends StatelessWidget {
   const AbsencesPageContainer({super.key});
@@ -29,15 +32,30 @@ class AbsencesPageContainer extends StatelessWidget {
   Widget build(BuildContext context) {
     return StoreConnection<AppState, AppActions, (AbsencesState, bool)>(
       builder: (context, vm, actions) {
+        void onAddFutureAbsence(Map<String, dynamic> payload) {
+          actions.absencesActions.addFutureAbsence(payload);
+        }
+
+        void onRemoveFutureAbsence(FutureAbsence absence) {
+          actions.absencesActions.removeFutureAbsence(absence);
+        }
+
+        // Below the navigation of the new design. The setting decides about
+        // that, so this follows a switch of the design at once.
+        if (ResponsiveNavigationScope.isActive(context)) {
+          return AbsencesPageNew(
+            state: vm.$1,
+            noInternet: vm.$2,
+            onAddFutureAbsence: onAddFutureAbsence,
+            onRemoveFutureAbsence: onRemoveFutureAbsence,
+            onRetry: actions.absencesActions.load.call,
+          );
+        }
         return AbsencesPage(
           state: vm.$1,
           noInternet: vm.$2,
-          onAddFutureAbsence: (payload) {
-            actions.absencesActions.addFutureAbsence(payload);
-          },
-          onRemoveFutureAbsence: (absence) {
-            actions.absencesActions.removeFutureAbsence(absence);
-          },
+          onAddFutureAbsence: onAddFutureAbsence,
+          onRemoveFutureAbsence: onRemoveFutureAbsence,
           onRetry: actions.absencesActions.load.call,
         );
       },

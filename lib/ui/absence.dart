@@ -20,8 +20,12 @@ import 'package:dr/container/absence_group_container.dart';
 import 'package:dr/data.dart';
 import 'package:dr/i18n/app_localizations.dart';
 import 'package:dr/theme/app_palette.dart';
+import 'package:dr/ui/glass_page.dart';
+import 'package:dr/ui/glass_surface.dart' show showGlassSheet;
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
+import 'package:responsive_scaffold/responsive_scaffold.dart'
+    show tabletLayoutBreakpoint;
 
 class AbsenceGroupWidget extends StatelessWidget {
   final AbsencesViewModel vm;
@@ -107,6 +111,24 @@ class AbsenceGroupWidget extends StatelessWidget {
   }
 }
 
+/// When the future [absence] is, as "Mo 13.4.2026, 2. - 4. h".
+String formatFutureAbsenceRange(FutureAbsence absence, String localeTag) {
+  var fromTo = "";
+  if (absence.startDate == absence.endDate) {
+    fromTo +=
+        "${DateFormat("EE d.M.yyyy", localeTag).format(absence.startDate)}, ";
+    if (absence.startHour == absence.endHour) {
+      fromTo += "${absence.startHour}. h";
+    } else {
+      fromTo += "${absence.startHour}. - ${absence.endHour}. h";
+    }
+  } else {
+    fromTo +=
+        "${DateFormat("EE d.M.yyyy", localeTag).format(absence.startDate)} ${absence.startHour}. h - ${DateFormat("EE d.M.yyyy", localeTag).format(absence.endDate)} ${absence.endHour}. h ";
+  }
+  return fromTo;
+}
+
 class FutureAbsenceWidget extends StatelessWidget {
   final FutureAbsence absence;
   final VoidCallback? onRemove;
@@ -121,19 +143,7 @@ class FutureAbsenceWidget extends StatelessWidget {
     final l10n = context.l10n;
     final bodyStyle = Theme.of(context).textTheme.bodyMedium;
     final localeTag = Localizations.localeOf(context).toLanguageTag();
-    var fromTo = "";
-    if (absence.startDate == absence.endDate) {
-      fromTo +=
-          "${DateFormat("EE d.M.yyyy", localeTag).format(absence.startDate)}, ";
-      if (absence.startHour == absence.endHour) {
-        fromTo += "${absence.startHour}. h";
-      } else {
-        fromTo += "${absence.startHour}. - ${absence.endHour}. h";
-      }
-    } else {
-      fromTo +=
-          "${DateFormat("EE d.M.yyyy", localeTag).format(absence.startDate)} ${absence.startHour}. h - ${DateFormat("EE d.M.yyyy", localeTag).format(absence.endDate)} ${absence.endHour}. h ";
-    }
+    final fromTo = formatFutureAbsenceRange(absence, localeTag);
     final justifiedString = l10n.absenceJustificationLabel(absence.justified);
 
     const divider = Row(
@@ -222,8 +232,68 @@ class FutureAbsenceWidget extends StatelessWidget {
   }
 }
 
+/// Asks for the reason and the signature of an absence to justify, in a glass
+/// sheet of the new design. Null when the sheet is closed or cancelled.
+Future<({String reason, String signature})?> showAbsenceJustificationSheet(
+  BuildContext context,
+) async {
+  final submission = await showGlassSheet<_AbsenceJustificationSubmission>(
+    context: context,
+    builder: (_) => const _AbsenceJustificationDialog(sheet: true),
+  );
+  if (submission == null) return null;
+  return (reason: submission.reason, signature: submission.signature);
+}
+
+/// The frame of the absence forms in a glass sheet of the new design: the
+/// [title], the [children] and the [actions] at the end, above the keyboard
+/// on phones.
+class AbsenceFormPanel extends StatelessWidget {
+  const AbsenceFormPanel({
+    super.key,
+    required this.title,
+    required this.children,
+    required this.actions,
+  });
+
+  final String title;
+  final List<Widget> children;
+  final List<Widget> actions;
+
+  @override
+  Widget build(BuildContext context) {
+    // The centred panel of wide windows keeps clear of the keyboard itself.
+    final phone = MediaQuery.sizeOf(context).width < tabletLayoutBreakpoint;
+    return Padding(
+      padding: EdgeInsets.only(
+        bottom: phone ? MediaQuery.viewInsetsOf(context).bottom : 0,
+      ),
+      child: GlassPanel(
+        title: title,
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            ...children,
+            const SizedBox(height: 16),
+            OverflowBar(
+              alignment: MainAxisAlignment.end,
+              overflowAlignment: OverflowBarAlignment.end,
+              spacing: 8,
+              overflowSpacing: 4,
+              children: actions,
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
 class _AbsenceJustificationDialog extends StatefulWidget {
-  const _AbsenceJustificationDialog();
+  const _AbsenceJustificationDialog({this.sheet = false});
+
+  /// In a glass sheet of the new design rather than a dialog.
+  final bool sheet;
 
   @override
   State<_AbsenceJustificationDialog> createState() =>
@@ -246,9 +316,53 @@ class _AbsenceJustificationDialogState
     super.dispose();
   }
 
+  void _submit() {
+    Navigator.of(context).pop(
+      _AbsenceJustificationSubmission(
+        reason: _reasonController.text.trim(),
+        signature: _signatureController.text.trim(),
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final l10n = context.l10n;
+    if (widget.sheet) {
+      return AbsenceFormPanel(
+        title: l10n.text('absences.justification.dialog.title'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(),
+            child: Text(l10n.text('common.cancel')),
+          ),
+          FilledButton(
+            key: const Key('absence-justification-save'),
+            onPressed: _validInput ? _submit : null,
+            child: Text(l10n.text('button.save')),
+          ),
+        ],
+        children: [
+          TextField(
+            key: const Key('absence-justification-reason'),
+            controller: _reasonController,
+            decoration: InputDecoration(
+              labelText: l10n.text('absences.justification.dialog.reason'),
+            ),
+            onChanged: (_) => setState(() {}),
+          ),
+          const SizedBox(height: 8),
+          TextField(
+            key: const Key('absence-justification-signature'),
+            controller: _signatureController,
+            decoration: InputDecoration(
+              labelText: l10n.text('absences.justification.dialog.signature'),
+            ),
+            onChanged: (_) => setState(() {}),
+          ),
+        ],
+      );
+    }
     return AlertDialog(
       title: Text(l10n.text('absences.justification.dialog.title')),
       content: SingleChildScrollView(
