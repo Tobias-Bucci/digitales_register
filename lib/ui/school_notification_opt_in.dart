@@ -5,6 +5,10 @@ import 'package:dr/i18n/app_localizations.dart';
 import 'package:dr/school_notification_engine.dart';
 import 'package:dr/school_notification_service.dart';
 import 'package:dr/tutorial/tutorial_service.dart';
+import 'package:dr/ui/glass_page.dart' show GlassPanel, glassSheetRoute;
+import 'package:dr/ui/glass_surface.dart' show NewDesignTheme;
+import 'package:dr/ui/settings_page_new.dart' show SettingsSheetActions;
+import 'package:dr/ui/system_pages.dart' show newDesignChosen;
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 
@@ -39,7 +43,7 @@ class _SchoolNotificationOptInHostState
   bool _checking = false;
   int? _finishedSession;
   SchoolNotificationOptInOffer? _offer;
-  DialogRoute<void>? _route;
+  Route<void>? _route;
 
   @override
   void initState() {
@@ -124,16 +128,28 @@ class _SchoolNotificationOptInHostState
       }
       if (offer != null && offer.account == widget.account) {
         _offer = offer;
-        final route = DialogRoute<void>(
-            context: context,
-            settings: const RouteSettings(name: '/school-notification-opt-in'),
-            barrierDismissible: false,
-            builder: (_) => SchoolNotificationOptInDialog(
-                accountLabel: offer.label,
-                onDecision: (accept, grades, messages) async {
-                  await service.decideOptIn(offer,
-                      accept: accept, grades: grades, messages: messages);
-                }));
+        Future<void> decide(bool accept, bool grades, bool messages) =>
+            service.decideOptIn(offer,
+                accept: accept, grades: grades, messages: messages);
+        const settings = RouteSettings(name: '/school-notification-opt-in');
+        // Above the dashboard, outside the shell of the new design: the
+        // setting decides.
+        final route = newDesignChosen(context)
+            ? glassSheetRoute<void>(
+                context: context,
+                settings: settings,
+                dismissible: false,
+                builder: (_) => NewDesignTheme(
+                    child: SchoolNotificationOptInDialog(
+                        glass: true,
+                        accountLabel: offer.label,
+                        onDecision: decide)))
+            : DialogRoute<void>(
+                context: context,
+                settings: settings,
+                barrierDismissible: false,
+                builder: (_) => SchoolNotificationOptInDialog(
+                    accountLabel: offer.label, onDecision: decide));
         _route = route;
         await Navigator.of(context, rootNavigator: true).push(route);
       }
@@ -195,8 +211,14 @@ class _SchoolNotificationOptInHostState
 
 class SchoolNotificationOptInDialog extends StatefulWidget {
   const SchoolNotificationOptInDialog(
-      {super.key, required this.accountLabel, required this.onDecision});
+      {super.key,
+      required this.accountLabel,
+      required this.onDecision,
+      this.glass = false});
   final String accountLabel;
+
+  /// The content of a glass sheet of the new design instead of a dialog.
+  final bool glass;
   final Future<void> Function(bool accept, bool grades, bool messages)
       onDecision;
   @override
@@ -233,6 +255,67 @@ class _SchoolNotificationOptInDialogState
   Widget build(BuildContext context) {
     final l10n = context.l10n;
     final theme = Theme.of(context);
+    final checkboxes = [
+      CheckboxListTile(
+          contentPadding: EdgeInsets.zero,
+          controlAffinity: ListTileControlAffinity.leading,
+          title: Text(l10n.text('schoolNotifications.optIn.grades')),
+          value: _grades,
+          onChanged: _busy ? null : (v) => setState(() => _grades = v!)),
+      CheckboxListTile(
+          contentPadding: EdgeInsets.zero,
+          controlAffinity: ListTileControlAffinity.leading,
+          title: Text(l10n.text('schoolNotifications.optIn.messages')),
+          value: _messages,
+          onChanged: _busy ? null : (v) => setState(() => _messages = v!)),
+    ];
+    final failed = Padding(
+        padding: const EdgeInsets.only(top: 12),
+        child: Text(l10n.text('schoolNotifications.optIn.failed'),
+            style: TextStyle(color: theme.colorScheme.error)));
+    final actions = [
+      TextButton(
+          onPressed: _busy ? null : () => _decide(false),
+          child: Text(l10n.text('schoolNotifications.optIn.decline'))),
+      FilledButton.icon(
+          onPressed:
+              _busy || (!_grades && !_messages) ? null : () => _decide(true),
+          icon: _busy
+              ? const SizedBox.square(
+                  dimension: 16,
+                  child: CircularProgressIndicator(strokeWidth: 2))
+              : const Icon(Icons.notifications_outlined),
+          label: Text(l10n.text('schoolNotifications.optIn.accept'))),
+    ];
+    if (widget.glass) {
+      final muted = theme.colorScheme.onSurfaceVariant;
+      return PopScope(
+          canPop: false,
+          child: GlassPanel(
+              title: l10n.text('schoolNotifications.optIn.title'),
+              child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [
+                    Text(l10n.text('schoolNotifications.optIn.body'),
+                        style: theme.textTheme.bodyMedium
+                            ?.copyWith(color: muted, height: 1.4)),
+                    if (widget.accountLabel.isNotEmpty)
+                      Padding(
+                          padding: const EdgeInsets.only(top: 12),
+                          child: Text(widget.accountLabel,
+                              style: theme.textTheme.labelLarge
+                                  ?.copyWith(fontWeight: FontWeight.w600))),
+                    const SizedBox(height: 4),
+                    ...checkboxes,
+                    const SizedBox(height: 4),
+                    Text(l10n.text('schoolNotifications.optIn.privacy'),
+                        style: theme.textTheme.bodySmall
+                            ?.copyWith(color: muted, height: 1.4)),
+                    if (_failed) failed,
+                    const SizedBox(height: 16),
+                    SettingsSheetActions(children: actions),
+                  ])));
+    }
     return PopScope(
         canPop: false,
         child: AlertDialog(
@@ -254,45 +337,13 @@ class _SchoolNotificationOptInDialogState
                       padding: const EdgeInsets.symmetric(vertical: 12),
                       child: Text(widget.accountLabel,
                           style: theme.textTheme.labelLarge)),
-                CheckboxListTile(
-                    contentPadding: EdgeInsets.zero,
-                    controlAffinity: ListTileControlAffinity.leading,
-                    title: Text(l10n.text('schoolNotifications.optIn.grades')),
-                    value: _grades,
-                    onChanged:
-                        _busy ? null : (v) => setState(() => _grades = v!)),
-                CheckboxListTile(
-                    contentPadding: EdgeInsets.zero,
-                    controlAffinity: ListTileControlAffinity.leading,
-                    title:
-                        Text(l10n.text('schoolNotifications.optIn.messages')),
-                    value: _messages,
-                    onChanged:
-                        _busy ? null : (v) => setState(() => _messages = v!)),
+                ...checkboxes,
                 const SizedBox(height: 8),
                 Text(l10n.text('schoolNotifications.optIn.privacy'),
                     style: theme.textTheme.bodySmall),
-                if (_failed)
-                  Padding(
-                      padding: const EdgeInsets.only(top: 12),
-                      child: Text(l10n.text('schoolNotifications.optIn.failed'),
-                          style: TextStyle(color: theme.colorScheme.error))),
+                if (_failed) failed,
               ]),
-          actions: [
-            TextButton(
-                onPressed: _busy ? null : () => _decide(false),
-                child: Text(l10n.text('schoolNotifications.optIn.decline'))),
-            FilledButton.icon(
-                onPressed: _busy || (!_grades && !_messages)
-                    ? null
-                    : () => _decide(true),
-                icon: _busy
-                    ? const SizedBox.square(
-                        dimension: 16,
-                        child: CircularProgressIndicator(strokeWidth: 2))
-                    : const Icon(Icons.notifications_outlined),
-                label: Text(l10n.text('schoolNotifications.optIn.accept'))),
-          ],
+          actions: actions,
         ));
   }
 }

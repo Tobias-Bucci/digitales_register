@@ -619,44 +619,8 @@ AppState _emptyAppStateKeepingSettings(AppState state) {
 void _showUserTypeNotSupported(String url) {
   navigatorKey?.currentState?.push(
     MaterialPageRoute<void>(
-      builder: (context) => Scaffold(
-        body: Center(
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Padding(
-                padding: const EdgeInsets.all(16),
-                child: Text(
-                  context.t('login.userTypeUnsupported.title'),
-                  style: Theme.of(context).textTheme.headlineMedium,
-                  textAlign: TextAlign.center,
-                ),
-              ),
-              Padding(
-                padding: const EdgeInsets.all(16),
-                child: Text(
-                  context.t('login.userTypeUnsupported.message'),
-                  style: Theme.of(context).textTheme.headlineSmall,
-                  textAlign: TextAlign.center,
-                ),
-              ),
-              Row(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  TextButton(
-                    onPressed: () => Navigator.pop(context),
-                    child: Text(context.t('common.cancel')),
-                  ),
-                  const SizedBox(width: 16),
-                  ElevatedButton(
-                    onPressed: () => launchUrl(Uri.parse(url)),
-                    child: Text(context.t('login.userTypeUnsupported.website')),
-                  ),
-                ],
-              ),
-            ],
-          ),
-        ),
+      builder: (context) => UserTypeUnsupportedPage(
+        onOpenWebsite: () => launchUrl(Uri.parse(url)),
       ),
     ),
   );

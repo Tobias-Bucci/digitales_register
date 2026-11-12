@@ -48,12 +48,15 @@ import 'package:dr/ui/dashboard_app_header.dart';
 import 'package:dr/ui/dashboard_columns.dart';
 import 'package:dr/ui/dialog.dart';
 import 'package:dr/ui/favorite_subject_filter.dart';
+import 'package:dr/ui/glass_page.dart' show GlassPanel;
 import 'package:dr/ui/glass_surface.dart';
 import 'package:dr/ui/grade_colors.dart';
 import 'package:dr/ui/last_fetched_overlay.dart';
 import 'package:dr/ui/linkified_text.dart';
 import 'package:dr/ui/no_internet.dart';
 import 'package:dr/ui/readable_content.dart';
+import 'package:dr/ui/settings_page_new.dart'
+    show SettingsSheetActions, SettingsSheetKeyboardInset;
 import 'package:dr/utc_date_time.dart';
 import 'package:dr/util.dart';
 import 'package:flutter/material.dart';
@@ -950,6 +953,19 @@ Future<String?> showEnterReminderDialog(
   if (!context.mounted) {
     return null;
   }
+  // The new dashboard asks in a glass sheet; the Legacy one keeps its dialog.
+  if (ResponsiveNavigationScope.isActive(context)) {
+    return showGlassSheet<String>(
+      context: context,
+      builder: (context) => ControlledTextBuilder(
+        initialText: initialMessage,
+        builder: (context, controller) => _ReminderEntrySheet(
+          controller: controller,
+          showAssessmentHint: showAssessmentHint,
+        ),
+      ),
+    );
+  }
   return showDialog(
     context: context,
     builder: (context) {
@@ -1017,32 +1033,7 @@ Future<String?> showEnterReminderDialog(
                         style: Theme.of(context).textTheme.labelLarge,
                       ),
                       const SizedBox(height: 8),
-                      Wrap(
-                        spacing: 8,
-                        runSpacing: 8,
-                        children: [
-                          for (final suggestion
-                              in localReminderAssessmentSuggestions(message))
-                            ActionChip(
-                              label: Text(
-                                '/${suggestion.command} - ${_localizedAssessmentSuggestionLabel(l10n, suggestion.type)}',
-                              ),
-                              onPressed: () {
-                                final replaced =
-                                    applyLocalReminderAssessmentSuggestion(
-                                  controller.text,
-                                  suggestion,
-                                );
-                                controller.value = controller.value.copyWith(
-                                  text: replaced,
-                                  selection: TextSelection.collapsed(
-                                    offset: replaced.length,
-                                  ),
-                                );
-                              },
-                            ),
-                        ],
-                      ),
+                      _AssessmentSuggestionChips(controller: controller),
                     ],
                   ],
                 ),
@@ -1069,6 +1060,149 @@ Future<String?> showEnterReminderDialog(
       );
     },
   );
+}
+
+/// The commands that fit the text of [controller], such as `/test`, as chips
+/// that complete it.
+class _AssessmentSuggestionChips extends StatelessWidget {
+  const _AssessmentSuggestionChips({
+    required this.controller,
+    this.mouseCursor,
+  });
+
+  final TextEditingController controller;
+
+  /// The hand cursor of the new design, which chips do not take from
+  /// `NewDesignTheme`. Null in Legacy.
+  final MouseCursor? mouseCursor;
+
+  @override
+  Widget build(BuildContext context) {
+    final l10n = context.l10n;
+    return Wrap(
+      spacing: 8,
+      runSpacing: 8,
+      children: [
+        for (final suggestion
+            in localReminderAssessmentSuggestions(controller.text))
+          ActionChip(
+            mouseCursor: mouseCursor,
+            label: Text(
+              '/${suggestion.command} - ${_localizedAssessmentSuggestionLabel(l10n, suggestion.type)}',
+            ),
+            onPressed: () {
+              final replaced = applyLocalReminderAssessmentSuggestion(
+                controller.text,
+                suggestion,
+              );
+              controller.value = controller.value.copyWith(
+                text: replaced,
+                selection: TextSelection.collapsed(
+                  offset: replaced.length,
+                ),
+              );
+            },
+          ),
+      ],
+    );
+  }
+}
+
+/// [showEnterReminderDialog] in the new design: the same form, hints and
+/// commands in a glass sheet, above the keyboard on phones.
+class _ReminderEntrySheet extends StatelessWidget {
+  const _ReminderEntrySheet({
+    required this.controller,
+    required this.showAssessmentHint,
+  });
+
+  final TextEditingController controller;
+  final bool showAssessmentHint;
+
+  @override
+  Widget build(BuildContext context) {
+    final l10n = context.l10n;
+    final theme = Theme.of(context);
+    final scheme = theme.colorScheme;
+    final message = controller.text;
+    return SettingsSheetKeyboardInset(
+      child: GlassPanel(
+        title: l10n.text('dashboard.reminder'),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            if (showAssessmentHint) ...[
+              GlassCard(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      l10n.text('dashboard.assessmentShortcutHintTitle'),
+                      style: theme.textTheme.titleSmall?.copyWith(
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                    const SizedBox(height: 6),
+                    Text(
+                      l10n.text(
+                        'dashboard.assessmentShortcutHintBody',
+                        args: {
+                          'test': '/test',
+                          'classwork': '/cw',
+                          'exam': '/exam',
+                        },
+                      ),
+                      style: theme.textTheme.bodyMedium?.copyWith(
+                        color: scheme.onSurfaceVariant,
+                        height: 1.4,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              const SizedBox(height: 12),
+            ],
+            TextField(
+              controller: controller,
+              autofocus: true,
+              maxLines: null,
+              decoration: InputDecoration(
+                border: const OutlineInputBorder(),
+                hintText: l10n.text('dashboard.reminderHint'),
+              ),
+            ),
+            if (localReminderAssessmentSuggestions(message).isNotEmpty) ...[
+              const SizedBox(height: 12),
+              Text(
+                l10n.text('dashboard.assessmentShortcutSuggestions'),
+                style: theme.textTheme.labelLarge,
+              ),
+              const SizedBox(height: 8),
+              _AssessmentSuggestionChips(
+                controller: controller,
+                mouseCursor: NewDesignTheme.clickCursor,
+              ),
+            ],
+            const SizedBox(height: 16),
+            SettingsSheetActions(
+              children: [
+                TextButton(
+                  onPressed: () => Navigator.pop(context),
+                  child: Text(l10n.text('common.cancel')),
+                ),
+                FilledButton(
+                  onPressed: message.isNullOrEmpty
+                      ? null
+                      : () => Navigator.pop(context, controller.text),
+                  child: Text(l10n.text('button.save')),
+                ),
+              ],
+            ),
+          ],
+        ),
+      ),
+    );
+  }
 }
 
 String _localizedAssessmentSuggestionLabel(

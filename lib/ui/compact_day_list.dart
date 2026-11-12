@@ -28,11 +28,12 @@ import 'package:dr/theme/app_palette.dart';
 import 'package:dr/ui/committed_deleteable.dart';
 import 'package:dr/ui/dashboard_event_banner.dart';
 import 'package:dr/ui/days.dart' hide AsyncCallback;
-import 'package:dr/ui/dialog.dart';
+import 'package:dr/ui/glass_page.dart' show GlassPanel;
 import 'package:dr/ui/glass_surface.dart';
 import 'package:dr/ui/grade_colors.dart';
 import 'package:dr/ui/linkified_text.dart';
 import 'package:dr/ui/notepad_mark.dart';
+import 'package:dr/ui/settings_page_new.dart' show SettingsSheetActions;
 import 'package:dr/util.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_built_redux/flutter_built_redux.dart';
@@ -93,27 +94,26 @@ class CompactDayWidget extends StatelessWidget {
   final BuiltList<String> allSubjects;
 
   void _showDeletedEntries(BuildContext context) {
-    showDialog<void>(
+    showGlassSheet<void>(
       context: context,
-      builder: (context) => InfoDialog(
-        title: Text(context.t('dashboard.deletedEntries')),
-        content: SingleChildScrollView(
-          child: Column(
-            children: [
-              for (final homework in day.deletedHomework)
-                ItemWidget(
-                  item: homework,
-                  allSubjects: allSubjects,
-                  isDeletedView: true,
-                  onOpenAttachment: onOpenAttachment,
-                  colorBorder: colorBorders,
-                  subjectThemes: subjectThemes,
-                  colorTestsInRed: colorTestsInRed,
-                  askWhenDelete: vm.askWhenDelete,
-                  noInternet: vm.noInternet,
-                ),
-            ],
-          ),
+      builder: (context) => GlassPanel(
+        title: context.t('dashboard.deletedEntries'),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            for (final homework in day.deletedHomework)
+              ItemWidget(
+                item: homework,
+                allSubjects: allSubjects,
+                isDeletedView: true,
+                onOpenAttachment: onOpenAttachment,
+                colorBorder: colorBorders,
+                subjectThemes: subjectThemes,
+                colorTestsInRed: colorTestsInRed,
+                askWhenDelete: vm.askWhenDelete,
+                noInternet: vm.noInternet,
+              ),
+          ],
         ),
       ),
     );
@@ -329,13 +329,22 @@ class CompactEntryRow extends StatelessWidget {
 
   void _toggleDone() => setDone(!item.checked);
 
-  Future<void> _delete(BuildContext context, Future<void> Function() delete) =>
-      deleteReminderWithConfirmation(
-        context,
-        askWhenDelete: askWhenDelete,
-        setDoNotAskWhenDelete: setDoNotAskWhenDelete,
-        delete: delete,
+  /// Runs [delete], after asking in a glass sheet first if the user wants to
+  /// be asked, as `deleteReminderWithConfirmation` does in Legacy.
+  Future<void> _delete(
+    BuildContext context,
+    Future<void> Function() delete,
+  ) async {
+    if (askWhenDelete) {
+      final askAgain = await showGlassSheet<bool>(
+        context: context,
+        builder: (_) => const _ConfirmDeleteSheet(),
       );
+      if (askAgain == null) return;
+      if (!askAgain) setDoNotAskWhenDelete();
+    }
+    await delete();
+  }
 
   void _openDetails(BuildContext context, Future<void> Function() delete) {
     showGlassSheet<void>(
@@ -905,6 +914,53 @@ class EntryDetailsSheet extends StatelessWidget {
             ),
           ],
         ),
+      ),
+    );
+  }
+}
+
+/// Asks whether to delete a reminder, with the choice never to be asked
+/// again. Pops whether to ask again next time, or null for "no".
+class _ConfirmDeleteSheet extends StatefulWidget {
+  const _ConfirmDeleteSheet();
+
+  @override
+  State<_ConfirmDeleteSheet> createState() => _ConfirmDeleteSheetState();
+}
+
+class _ConfirmDeleteSheetState extends State<_ConfirmDeleteSheet> {
+  var _ask = true;
+
+  @override
+  Widget build(BuildContext context) {
+    final l10n = context.l10n;
+    return GlassPanel(
+      title: l10n.text('dashboard.reminder.deleteQuestion'),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          SwitchListTile.adaptive(
+            key: const Key('reminder-delete-never-ask'),
+            contentPadding: EdgeInsets.zero,
+            title: Text(l10n.text('dashboard.neverAsk')),
+            value: !_ask,
+            onChanged: (value) => setState(() => _ask = !value),
+          ),
+          const SizedBox(height: 12),
+          SettingsSheetActions(
+            children: [
+              TextButton(
+                onPressed: () => Navigator.pop(context),
+                child: Text(l10n.text('common.cancel')),
+              ),
+              FilledButton(
+                key: const Key('reminder-delete-confirm'),
+                onPressed: () => Navigator.pop(context, _ask),
+                child: Text(l10n.text('button.delete')),
+              ),
+            ],
+          ),
+        ],
       ),
     );
   }

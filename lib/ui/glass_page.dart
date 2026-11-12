@@ -728,7 +728,13 @@ Route<T> glassSheetRoute<T>({
     shape: const RoundedRectangleBorder(borderRadius: GlassSheet.sheetRadius),
     builder: (context) => GlassSheet(
       showDragHandle: dismissible,
-      child: builder(context),
+      // Without the handle, the space it takes, as a panel has above it.
+      child: dismissible
+          ? builder(context)
+          : Padding(
+              padding: const EdgeInsets.only(top: 20),
+              child: builder(context),
+            ),
     ),
   );
 }
