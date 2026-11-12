@@ -160,12 +160,16 @@ class DiagnosticSanitizer {
   static String log(String input) =>
       breadcrumbs.contains(input) ? input : '[redacted]';
 
+  // Release (AOT) builds print frames without a column, debug builds with one.
+  // Rejecting the column-less form dropped every frame of a release report.
+  static final _frame = RegExp(
+      r'^#\d+\s+(?:new )?[a-zA-Z0-9_.$<>]+(?:\.<anonymous closure>)*\s+\((?:package:[a-zA-Z0-9_./-]+|dart:[a-zA-Z0-9_./-]+):\d+(?::\d+)?\)\s*$');
+
   static StackTrace stack(StackTrace input) {
     // SDK receives symbol frames only. Drop absolute paths and unknown frames,
     // which may contain Windows usernames or isolate error message text.
-    final frames = input.toString().split('\n').where((line) => RegExp(
-            r'^#\d+\s+(?:new )?[a-zA-Z0-9_.$<>]+(?:\.<anonymous closure>)?\s+\((?:package:[a-zA-Z0-9_./-]+|dart:[a-zA-Z0-9_./-]+):\d+:\d+\)\s*$')
-        .hasMatch(line));
+    final frames =
+        input.toString().split('\n').where((line) => _frame.hasMatch(line));
     return StackTrace.fromString(frames.take(80).join('\n'));
   }
 }

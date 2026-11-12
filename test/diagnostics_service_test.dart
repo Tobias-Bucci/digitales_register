@@ -148,4 +148,26 @@ void main() {
     await service.flush();
     expect(sink.errors, hasLength(1));
   });
+  test('release (AOT) frames without a column survive sanitizing', () {
+    // Release builds print Dart frames without a column. Dropping them left
+    // Crashlytics with an empty stack, which it replaces with the sink's own
+    // frame, so every crash since 1.17.3 was grouped as one issue (#23).
+    final stack = DiagnosticSanitizer.stack(StackTrace.fromString(
+        '#0      Wrapper._readAssignmentValue (package:dr/wrapper.dart:488)\n'
+        '#1      Wrapper.parseConfig.<anonymous closure> (package:dr/wrapper.dart:460)\n'
+        '#2      _loadGrades.<anonymous closure>.<anonymous closure> (package:dr/middleware/grades.dart:66)\n'
+        '#3      _rootRunUnary (dart:async/zone.dart:1538)\n'
+        '<asynchronous suspension>\n'
+        '#4      Wrapper.login (package:dr/wrapper.dart:234)\n'
+        '#5      secret (file:///C:/Users/Alice/private.dart:3)\n'
+        '#6      password=secret (package:dr/data.dart:1)\n'
+        '#7      parse (package:dr/data.dart:1) token=secret'));
+    expect(stack.toString().split('\n'), [
+      '#0      Wrapper._readAssignmentValue (package:dr/wrapper.dart:488)',
+      '#1      Wrapper.parseConfig.<anonymous closure> (package:dr/wrapper.dart:460)',
+      '#2      _loadGrades.<anonymous closure>.<anonymous closure> (package:dr/middleware/grades.dart:66)',
+      '#3      _rootRunUnary (dart:async/zone.dart:1538)',
+      '#4      Wrapper.login (package:dr/wrapper.dart:234)',
+    ]);
+  });
 }
