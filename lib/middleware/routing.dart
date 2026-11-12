@@ -388,11 +388,36 @@ Future<void> _showMessage(
   await next(action);
 }
 
+const _gradesChartRoute = "/gradesChart";
+const _gradeCalculatorRoute = "/gradeCalculator";
+
+/// Opens a tool of the grades page (the chart in full screen, the calculator)
+/// on top of the page that offers it in the shell, so that the navigation
+/// stays and going back returns there. Legacy and the app without a shell keep
+/// the root routes.
+void _pushGradesTool(
+  MiddlewareApi<AppState, AppStateBuilder, AppActions> api,
+  String name,
+  WidgetBuilder builder,
+) {
+  final shell = _shellNavigator(api.state);
+  if (shell == null) {
+    unawaited(navigatorKey!.currentState!.pushNamed(name));
+    return;
+  }
+  // Asked for again while it is open.
+  if (_topRoute(shell)?.settings.name == name) return;
+  unawaited(shell.push(MaterialPageRoute<void>(
+    settings: RouteSettings(name: name),
+    builder: builder,
+  )));
+}
+
 Future<void> _showGradesChart(
     MiddlewareApi<AppState, AppStateBuilder, AppActions> api,
     ActionHandler next,
     Action<void> action) async {
-  unawaited(navigatorKey!.currentState!.pushNamed("/gradesChart"));
+  _pushGradesTool(api, _gradesChartRoute, (_) => const GradesChartPage());
   await next(action);
 }
 
@@ -400,7 +425,7 @@ Future<void> _showGradeCalculator(
     MiddlewareApi<AppState, AppStateBuilder, AppActions> api,
     ActionHandler next,
     Action<void> action) async {
-  unawaited(navigatorKey!.currentState!.pushNamed("/gradeCalculator"));
+  _pushGradesTool(api, _gradeCalculatorRoute, (_) => const GradeCalculator());
   await api.actions.gradesActions.load(Semester.all);
   await next(action);
 }

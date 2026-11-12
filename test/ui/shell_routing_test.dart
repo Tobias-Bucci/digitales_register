@@ -14,8 +14,12 @@ import 'package:dr/main.dart' show navigatorKey, nestedNavKey, scaffoldKey;
 import 'package:dr/middleware/middleware.dart';
 import 'package:dr/ui/app_navigation.dart';
 import 'package:dr/ui/change_email.dart';
+import 'package:dr/ui/grade_calculator.dart';
+import 'package:dr/ui/grades_chart_page.dart';
+import 'package:dr/ui/grades_chart_page_new.dart';
 import 'package:dr/ui/profile.dart';
 import 'package:dr/ui/settings_page_widget.dart';
+import 'package:dr/ui/target_grade_calculator.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:responsive_scaffold/responsive_scaffold.dart';
@@ -52,6 +56,14 @@ Route<dynamic>? _rootRoutes(RouteSettings settings) => switch (settings.name) {
       '/settings' => MaterialPageRoute<void>(
           settings: settings,
           builder: (_) => const SettingsPageContainer(),
+        ),
+      '/gradesChart' => MaterialPageRoute<void>(
+          settings: settings,
+          builder: (_) => const GradesChartPage(),
+        ),
+      '/gradeCalculator' => MaterialPageRoute<void>(
+          settings: settings,
+          builder: (_) => const GradeCalculator(),
         ),
       _ => null,
     };
@@ -325,9 +337,137 @@ void main() {
       expect(_rootCanPop(), isFalse);
       await _finish(tester);
     });
+
+    for (final (name, tile, page) in [
+      ('chart', 'grades-chart-open', find.byType(GradesChartPageNew)),
+      ('calculator', 'grades-calculator', find.byType(GradeCalculator)),
+    ]) {
+      testWidgets('the grades page opens the $name inside the shell',
+          (tester) async {
+        final store = await _pump(tester);
+        await store.actions.settingsActions.showGradesDiagram(true);
+        await _openGrades(tester);
+
+        await tester.ensureVisible(find.byKey(Key(tile)));
+        await tester.pump();
+        await tester.tap(find.byKey(Key(tile)));
+        await _settle(tester);
+
+        expect(page, findsOneWidget);
+        expect(_inShell(tester, page), isTrue);
+        expect(find.byType(FloatingNavigationBar), findsOneWidget);
+        expect(_highlighted(tester), AppDestination.grades);
+        expect(_rootCanPop(), isFalse);
+        expect(tester.takeException(), isNull);
+
+        await _back(tester);
+        expect(page, findsNothing);
+        expect(_current(), Pages.grades);
+        expect(_highlighted(tester), AppDestination.grades);
+        expect(nestedNavKey.currentState!.canPop(), isTrue);
+        await _finish(tester);
+      });
+    }
+
+    testWidgets('the target calculator opens on top of the calculator',
+        (tester) async {
+      final store = await _pump(tester);
+      await _openGrades(tester);
+      await store.actions.routingActions.showGradeCalculator();
+      await _settle(tester);
+      // Asked for again, it is not stacked.
+      await store.actions.routingActions.showGradeCalculator();
+      await _settle(tester);
+
+      await tester.tap(find.byKey(const Key('grade-calculator-target')));
+      await _settle(tester);
+      final target = find.byType(TargetGradeCalculator);
+      expect(target, findsOneWidget);
+      expect(_inShell(tester, target), isTrue);
+      expect(_highlighted(tester), AppDestination.grades);
+
+      await _back(tester);
+      expect(target, findsNothing);
+      expect(find.byKey(const Key('grade-calculator-welcome')), findsOneWidget);
+      await _back(tester);
+      expect(find.byType(GradeCalculator), findsNothing);
+      expect(_current(), Pages.grades);
+      await _finish(tester);
+    });
+
+    testWidgets('a destination closes the chart and the calculators',
+        (tester) async {
+      final store = await _pump(tester);
+      await _openGrades(tester);
+      await store.actions.routingActions.showGradeCalculator();
+      await _settle(tester);
+      await tester.tap(find.byKey(const Key('grade-calculator-target')));
+      await _settle(tester);
+
+      // The page below is the destination itself.
+      await tester.tap(find.byKey(const ValueKey('app-navigation-grades')));
+      await _settle(tester);
+      expect(find.byType(TargetGradeCalculator), findsNothing);
+      expect(find.byType(GradeCalculator), findsNothing);
+      expect(_current(), Pages.grades);
+
+      await store.actions.routingActions.showGradesChart();
+      await _settle(tester);
+      await tester.tap(find.byKey(const ValueKey('app-navigation-messages')));
+      await _settle(tester);
+      expect(find.byType(GradesChartPage), findsNothing);
+      expect(_current(), Pages.messages);
+      scaffoldKey!.currentState!.navigatorKey.currentState!.pop();
+      await _settle(tester);
+      expect(nestedNavKey.currentState!.canPop(), isFalse);
+      await _finish(tester);
+    });
+
+    testWidgets('switching the design keeps the calculator open once',
+        (tester) async {
+      final store = await _pump(tester);
+      await _openGrades(tester);
+      await store.actions.routingActions.showGradeCalculator();
+      await _settle(tester);
+
+      await store.actions.settingsActions.legacyDesign(true);
+      await _settle(tester);
+      expect(tester.takeException(), isNull);
+      // Legacy draws it as before.
+      expect(find.byType(Greeting), findsOneWidget);
+
+      await store.actions.settingsActions.legacyDesign(false);
+      await _settle(tester);
+      expect(find.byKey(const Key('grade-calculator-welcome')), findsOneWidget);
+      await _back(tester);
+      expect(find.byType(GradeCalculator), findsNothing);
+      expect(_current(), Pages.grades);
+      expect(_rootCanPop(), isFalse);
+      await _finish(tester);
+    });
   });
 
   group('legacy design', () {
+    testWidgets('the chart and the calculator stay root routes',
+        (tester) async {
+      final store = await _pump(tester, newDesign: false);
+      await store.actions.routingActions.showGradesChart();
+      await _settle(tester);
+      expect(find.byType(GradesChartPage), findsOneWidget);
+      expect(find.byType(GradesChartPageNew), findsNothing);
+      expect(_rootCanPop(), isTrue);
+      expect(nestedNavKey.currentState!.canPop(), isFalse);
+      navigatorKey!.currentState!.pop();
+      await _settle(tester);
+
+      await store.actions.routingActions.showGradeCalculator();
+      await _settle(tester);
+      expect(find.byType(Greeting), findsOneWidget);
+      expect(_rootCanPop(), isTrue);
+      expect(nestedNavKey.currentState!.canPop(), isFalse);
+      await _finish(tester);
+    });
+
     testWidgets('Profile and change email stay root routes', (tester) async {
       final store = await _pump(tester, newDesign: false);
       await store.actions.routingActions.showProfile();
@@ -376,6 +516,29 @@ void main() {
     await _settle(tester);
 
     expect(find.byType(Profile), findsOneWidget);
+    expect(_rootCanPop(), isTrue);
+    await _finish(tester);
+  });
+
+  testWidgets('without a shell the calculator falls back to the root route',
+      (tester) async {
+    final store = createStore(
+      initialState: _state(),
+      newDesign: true,
+      withMiddleware: true,
+    );
+    await pumpApp(
+      tester,
+      store: store,
+      home: const SizedBox(),
+      onGenerateRoute: _rootRoutes,
+    );
+    await settleFor(tester);
+    await store.actions.routingActions.showGradeCalculator();
+    await _settle(tester);
+
+    // Outside the shell it is the page of Legacy, as before.
+    expect(find.byType(Greeting), findsOneWidget);
     expect(_rootCanPop(), isTrue);
     await _finish(tester);
   });
