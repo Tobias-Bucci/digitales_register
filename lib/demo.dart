@@ -1727,7 +1727,7 @@ String _demoGradeTypeText(String value, String language) {
     'Schularbeit': {
       'de': 'Schularbeit',
       'en': 'Schoolwork',
-      'it': 'Compito in classe',
+      'it': 'Esame scritto',
       'lld': 'Compit de classa',
     },
     'Mitarbeit': {
@@ -1977,13 +1977,13 @@ final List<_DemoSubject> _demoSubjects = <_DemoSubject>[
     _grade(102, '2025-10-15', '6.50', 'Interrogazione',
         'Promessi sposi: capitoli iniziali'),
     _grade(103, '2025-11-07', '6.00', 'Verifica orale', 'Figure retoriche'),
-    _grade(104, '2025-12-03', '6.50', 'Compito in classe', 'Tema argomentativo',
+    _grade(104, '2025-12-03', '6.50', 'Esame scritto', 'Tema argomentativo',
         weight: 120),
     _grade(105, '2026-01-21', '7.00', 'Verifica scritta',
         'Poesia italiana dell’Ottocento'),
   ], secondSemester: <_DemoGrade>[
     _grade(106, '2026-02-26', '6.50', 'Interrogazione', 'Verga e il verismo'),
-    _grade(107, '2026-03-18', '7.00', 'Compito in classe',
+    _grade(107, '2026-03-18', '7.00', 'Esame scritto',
         'Analisi di un testo poetico',
         weight: 120),
     _grade(108, '2026-04-22', '7.50', 'Presentazione', 'Percorso di lettura'),
@@ -1996,7 +1996,7 @@ final List<_DemoSubject> _demoSubjects = <_DemoSubject>[
         weight: 120),
     _grade(203, '2025-11-20', '5.50', 'Interrogazione', 'Piano cartesiano'),
     _grade(
-        204, '2025-12-16', '6.00', 'Compito in classe', 'Sistemi di equazioni',
+        204, '2025-12-16', '6.00', 'Esame scritto', 'Sistemi di equazioni',
         weight: 120),
     _grade(205, '2026-01-27', '6.50', 'Test', 'Funzioni quadratiche'),
   ], secondSemester: <_DemoGrade>[
@@ -2005,14 +2005,14 @@ final List<_DemoSubject> _demoSubjects = <_DemoSubject>[
         207, '2026-03-24', '6.50', 'Verifica scritta', 'Equazioni esponenziali',
         weight: 120),
     _grade(208, '2026-04-29', '7.00', 'Test', 'Probabilità'),
-    _grade(209, '2026-05-27', '7.00', 'Compito in classe', 'Studio di funzione',
+    _grade(209, '2026-05-27', '7.00', 'Esame scritto', 'Studio di funzione',
         weight: 140),
   ]),
   _DemoSubject(id: 3, name: 'Inglese', firstSemester: <_DemoGrade>[
     _grade(301, '2025-10-02', '8.00', 'Test', 'Vocabulary: technology'),
     _grade(302, '2025-10-30', '7.50', 'Verifica orale',
         'Present perfect and past simple'),
-    _grade(303, '2025-11-26', '8.50', 'Compito in classe',
+    _grade(303, '2025-11-26', '8.50', 'Esame scritto',
         'Reading comprehension'),
     _grade(
         304, '2025-12-11', '8.00', 'Presentazione', 'My favourite innovation'),
@@ -2098,7 +2098,7 @@ final List<_DemoSubject> _demoSubjects = <_DemoSubject>[
   _DemoSubject(id: 8, name: 'Gestione progetto', firstSemester: <_DemoGrade>[
     _grade(801, '2025-09-16', '7.00', 'Verifica orale', 'Ruoli in un team'),
     _grade(
-        802, '2025-10-14', '7.50', 'Compito in classe', 'Diagramma di Gantt'),
+        802, '2025-10-14', '7.50', 'Esame scritto', 'Diagramma di Gantt'),
     _grade(803, '2025-11-11', '7.00', 'Presentazione', 'Idea di start-up'),
     _grade(804, '2025-12-02', '7.50', 'Test', 'Costi e preventivi'),
     _grade(
@@ -2376,7 +2376,7 @@ const Map<String, Map<String, String>> _demoTranslations =
   'dashboardTitleSchoolwork': {
     'de': 'Schularbeit',
     'en': 'Schoolwork',
-    'it': 'Compito in classe',
+    'it': 'Esame scritto',
     'lld': 'Compit de classa',
   },
   'dashboardTitleExam': {
