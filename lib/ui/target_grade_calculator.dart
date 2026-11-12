@@ -7,11 +7,21 @@ import 'package:dr/data.dart';
 import 'package:dr/exam_study_plan.dart';
 import 'package:dr/i18n/app_localizations.dart';
 import 'package:dr/target_grade_calculation.dart';
+import 'package:dr/ui/dashboard_app_header.dart';
+import 'package:dr/ui/glass_page.dart';
+import 'package:dr/ui/glass_segmented_control.dart';
+import 'package:dr/ui/glass_surface.dart';
 import 'package:dr/ui/grade_calculator.dart' show tryParseFormattedGrade;
+import 'package:dr/ui/grade_colors.dart';
+import 'package:dr/ui/grades_format.dart';
+import 'package:dr/ui/profile_new.dart' show glassFieldDecoration;
 import 'package:dr/util.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_built_redux/flutter_built_redux.dart';
 import 'package:intl/intl.dart';
+import 'package:responsive_scaffold/responsive_scaffold.dart';
+
+part 'target_grade_calculator_new.dart';
 
 class TargetGradeCalculator extends StatelessWidget {
   const TargetGradeCalculator({super.key});
@@ -207,7 +217,33 @@ class _TargetGradeCalculatorPageState
   String _formatContribution(int value) =>
       gradeAverageFormat.format(value / 10000);
 
+  /// Whatever changes the input makes the last result stale.
+  void _invalidate([VoidCallback? change]) => setState(() {
+        change?.call();
+        _calculation = null;
+        _error = null;
+      });
+
+  void _selectSubject(Subject? subject) =>
+      _invalidate(() => _subject = subject);
+
+  void _selectSemester(Semester semester) =>
+      _invalidate(() => _semester = semester);
+
+  void _toggleCalendarAssessments() => _invalidate(
+      () => _includeCalendarAssessments = !_includeCalendarAssessments);
+
+  void _removeExistingGrade(TargetGradeEntry grade) =>
+      _invalidate(() => _additionalExistingGrades.remove(grade));
+
   Future<void> _addExistingGrade() async {
+    if (ResponsiveNavigationScope.isActive(context)) {
+      // A sheet of glass in the new design, with the same checks.
+      final entry = await _showExistingGradeSheet(context);
+      if (!mounted || entry == null) return;
+      _invalidate(() => _additionalExistingGrades.add(entry));
+      return;
+    }
     final gradeController = TextEditingController();
     final weightController = TextEditingController(text: '100');
     String? error;
@@ -301,6 +337,18 @@ class _TargetGradeCalculatorPageState
     );
     final currentAverage =
         existingWeight == 0 ? null : existingScore / existingWeight;
+
+    // Inside the shell of the new design; Legacy keeps the page as it was.
+    if (ResponsiveNavigationScope.isActive(context)) {
+      return _NewTargetGradeCalculatorView(
+        state: this,
+        grades: grades,
+        calendarAssessments: calendarAssessments,
+        includedCalendarAssessments: includedCalendarAssessments,
+        calendarLimited: calendarLimited,
+        currentAverage: currentAverage,
+      );
+    }
 
     return Scaffold(
       appBar: AppBar(title: Text(l10n.text('targetCalculator.title'))),
@@ -474,7 +522,8 @@ class _TargetGradeCalculatorPageState
                     if (calendarLimited) ...[
                       const SizedBox(height: 4),
                       Text(
-                          l10n.text('targetCalculator.calendarAssessmentsLimited',
+                          l10n.text(
+                              'targetCalculator.calendarAssessmentsLimited',
                               args: {
                                 'used': includedCalendarAssessments.length
                                     .toString(),
