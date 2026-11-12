@@ -137,3 +137,40 @@ Findings:
 The gate opens after ≈ 3 × latency (login, config, first data) when the server
 answers, and after the failed request when it does not. During that time the
 launch animation "breathes" over a dashboard that already shows the saved data.
+
+## Changes
+
+### 1. Uncover saved data before the online sign-in (P3/P4)
+
+`_login` opens `appLaunchGate` right after the offline sign-in from storage
+has mounted the saved data, instead of `_loadAccounts` opening it after the
+whole `login` action (online sign-in + config + first data loads). The online
+sign-in and the first loads keep running exactly as before; the dashboard shows
+their progress with its existing loading indicator. Nothing else waits on the
+gate except the launch animation; the first-run dialogs in `_loadAccounts`
+still come after the sign-in as before.
+
+Behaviour that changes on purpose: with a saved login the user sees the saved
+dashboard while the sign-in runs. If the server then rejects the password
+(changed elsewhere) or needs a new 2FA code, the login page or 2FA dialog
+replaces the dashboard afterwards, as it already did for account switches.
+Before, a 2FA dialog during a cold start was pushed while the launch overlay
+still covered the app.
+
+| Measurement | Before | After |
+| --- | --- | --- |
+| Slow-server simulation, gate open at 500 ms / 3 s / 20 s per request | 1612 / 9111 / 60114 ms | see final table |
+| Emulator, demo login with a simulated 3 s sign-in, `p3_launch_overlay_removed` (median of 11, 2 alternating batches) | 4743 [4588–4917] | 2448 [2397–2487] |
+| same, `p5_first_data` (data refreshed) | 3850 | 3842 |
+| same, launch frames: slow build median / worst build | 1 / 17.5 ms | 0 / 15.9 ms |
+| Emulator, demo login without delay, `p3_launch_gate_open` (median of 10) | 710 | 658 |
+| same, `p3_launch_overlay_removed` | 2294 | 2317 (animation-bound, within noise) |
+| same, alternating batches (11 each): slow build median / worst build | 0 / 14.8 ms | 0 / 15.5 ms |
+
+The simulated sign-in delay was a temporary scratch patch in the demo branch of
+`Wrapper.login` (`Future.delayed`), built with
+`--dart-define=DR_SIM_SIGN_IN_MS=3000` for both APKs and never committed.
+
+Tests: `test/startup_offline_first_test.dart` (saved data uncovered while the
+server holds the sign-in; offline after a timeout; login page without a saved
+login). The first two fail without the change.

@@ -18,7 +18,10 @@ entfernt.
 Ablauf: `main.dart` übergibt `RegisterApp` das Future `_launchTargetReady()`.
 Es wird erfüllt, sobald die Start-Middleware (`_loadAccounts`) Login oder
 Dashboard gewählt hat (`appLaunchGate.open()`) und die Routen-Transition
-abgeschlossen ist. Ist es nach 1,3 s noch offen, „atmet“ das Häkchen, bis es
+abgeschlossen ist. Bei einem gespeicherten Login ist das der Moment, in dem
+die gespeicherten Daten offline angemeldet sind; die Online-Anmeldung und das
+erste Laden laufen danach sichtbar im Dashboard weiter
+(`docs/performance/startup-loading.md`). Ist es nach 1,3 s noch offen, „atmet“ das Häkchen, bis es
 erfüllt ist. Fehler beim Start öffnen das Gate ebenfalls.
 
 ## Anpassen

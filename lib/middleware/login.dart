@@ -191,6 +191,10 @@ Future<void> _login(
       );
       await api.actions.setUrl(url);
       offlineLogin = true;
+      // The saved data is on screen now. On a cold start the launch animation
+      // may uncover it: the online sign-in below can take up to its request
+      // timeouts, and the dashboard shows its progress (no-op later on).
+      appLaunchGate.open();
     }
 
     final loginWrapper = wrapper;
