@@ -28,7 +28,9 @@ import 'package:flutter_built_redux/flutter_built_redux.dart';
 /// Merges the exam calendar into the calendar destination of the new design:
 /// both pages show this toggle as the title of their app bar and stay on the
 /// same destination. The selected segment names the page, so there is no
-/// separate title text; screen readers still hear the page title as a header.
+/// separate title text. It is the `titleWidget` of a `GlassPageHeader`, whose
+/// heading gives screen readers the page title once; the segments stay
+/// buttons of their own inside of it.
 class CalendarViewSwitcher extends StatelessWidget {
   const CalendarViewSwitcher({super.key, required this.exams});
 
@@ -45,7 +47,6 @@ class CalendarViewSwitcher extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final pageTitle = context.t(exams ? 'exam.title' : 'calendar.title');
     final budget = math.max(
       0.0,
       math.min(
@@ -55,46 +56,40 @@ class CalendarViewSwitcher extends StatelessWidget {
     );
     return StoreConnection<AppState, AppActions, bool>(
       connect: (_) => true,
-      builder: (context, _, actions) => Semantics(
-        container: true,
-        header: true,
-        label: pageTitle,
-        explicitChildNodes: true,
-        child: LayoutBuilder(
-          builder: (context, constraints) => Align(
-            alignment: AlignmentDirectional.centerStart,
-            child: ConstrainedBox(
-              constraints: BoxConstraints(
-                maxWidth: math.min(budget, constraints.maxWidth),
-              ),
-              // Narrow phones and large text make the labels smaller instead
-              // of cutting them off, like the semester switch of the grades.
-              child: FittedBox(
-                fit: BoxFit.scaleDown,
-                alignment: AlignmentDirectional.centerStart,
-                child: GlassSegmentedControl<bool>(
-                  key: const Key('calendar-view-switcher'),
-                  selected: exams,
-                  segments: [
-                    GlassSegment(
-                      value: false,
-                      label: context.t('calendar.title'),
-                      fullLabel: context.t('calendar.title'),
-                    ),
-                    GlassSegment(
-                      value: true,
-                      label: context.t('calendar.view.exams'),
-                      fullLabel: context.t('calendar.view.exams'),
-                    ),
-                  ],
-                  onChanged: (showExams) {
-                    if (showExams) {
-                      showExamCalendarPage();
-                    } else {
-                      actions.routingActions.showCalendar();
-                    }
-                  },
-                ),
+      builder: (context, _, actions) => LayoutBuilder(
+        builder: (context, constraints) => Align(
+          alignment: AlignmentDirectional.centerStart,
+          child: ConstrainedBox(
+            constraints: BoxConstraints(
+              maxWidth: math.min(budget, constraints.maxWidth),
+            ),
+            // Narrow phones and large text make the labels smaller instead
+            // of cutting them off, like the semester switch of the grades.
+            child: FittedBox(
+              fit: BoxFit.scaleDown,
+              alignment: AlignmentDirectional.centerStart,
+              child: GlassSegmentedControl<bool>(
+                key: const Key('calendar-view-switcher'),
+                selected: exams,
+                segments: [
+                  GlassSegment(
+                    value: false,
+                    label: context.t('calendar.title'),
+                    fullLabel: context.t('calendar.title'),
+                  ),
+                  GlassSegment(
+                    value: true,
+                    label: context.t('calendar.view.exams'),
+                    fullLabel: context.t('calendar.view.exams'),
+                  ),
+                ],
+                onChanged: (showExams) {
+                  if (showExams) {
+                    showExamCalendarPage();
+                  } else {
+                    actions.routingActions.showCalendar();
+                  }
+                },
               ),
             ),
           ),
