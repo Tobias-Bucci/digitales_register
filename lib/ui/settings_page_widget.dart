@@ -40,7 +40,7 @@ import 'package:dr/ui/credits_page.dart';
 import 'package:dr/ui/dialog.dart';
 import 'package:dr/ui/glass_page.dart' show GlassPanel;
 import 'package:dr/ui/glass_segmented_control.dart';
-import 'package:dr/ui/glass_surface.dart' show showGlassSheet;
+import 'package:dr/ui/glass_surface.dart' show DesignTokens, showGlassSheet;
 import 'package:dr/ui/network_protocol_page.dart';
 import 'package:dr/ui/privacy_data_details_page.dart';
 import 'package:dr/ui/readable_content.dart';
@@ -1641,9 +1641,91 @@ class _SubjectColorsSettingsPageState
     _dashboardColorTestsInRed = widget.dashboardColorTestsInRed;
   }
 
+  Future<void> _pickColor(MapEntry<String, SubjectTheme> entry) async {
+    final color = await showSubjectSwatchPicker(
+      context,
+      subject: entry.key,
+      current: Color(entry.value.color),
+    );
+    if (color == null) {
+      return;
+    }
+    final updatedTheme = entry.value.rebuild(
+      (b) => b.color = color.toARGB32(),
+    );
+    setState(() {
+      _subjectThemes[entry.key] = updatedTheme;
+    });
+    widget.onSetSubjectTheme(
+      MapEntry(entry.key, updatedTheme),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final l10n = context.l10n;
+    final switches = [
+      SwitchListTile.adaptive(
+        title: Text(l10n.text('settings.subjectColors.borderHomework')),
+        value: _dashboardColorBorders,
+        onChanged: (value) {
+          setState(() {
+            _dashboardColorBorders = value;
+          });
+          widget.onSetDashboardColorBorders(value);
+        },
+      ),
+      SwitchListTile.adaptive(
+        title: Text(
+          l10n.text('settings.subjectColors.calendarBackground'),
+        ),
+        value: _calendarColorBackground,
+        onChanged: (value) {
+          setState(() {
+            _calendarColorBackground = value;
+          });
+          widget.onSetCalenderColorBackground(value);
+        },
+      ),
+      SwitchListTile.adaptive(
+        title: Text(l10n.text('settings.subjectColors.testsRed')),
+        value: _dashboardColorTestsInRed,
+        onChanged: (value) {
+          setState(() {
+            _dashboardColorTestsInRed = value;
+          });
+          widget.onSetDashboardColorTestsInRed(value);
+        },
+      ),
+    ];
+    if (ResponsiveNavigationScope.isActive(context)) {
+      return _SettingsDetailPage(
+        key: const Key('settings-subject-colors-page'),
+        title: l10n.text('settings.subjectColors.title'),
+        children: [
+          SettingsSectionNew(title: null, children: switches),
+          if (_subjectThemes.isNotEmpty) ...[
+            const SizedBox(height: 8),
+            SettingsSectionNew(
+              key: const Key('settings-subject-colors-list'),
+              title: l10n.text('grades.subjects'),
+              count: _subjectThemes.length,
+              description: l10n.text('settings.subjectColors.subtitle'),
+              children: [
+                for (final entry in _subjectThemes.entries)
+                  ListTile(
+                    key: ValueKey('subject-color-${entry.key}'),
+                    title: Text(entry.key),
+                    trailing:
+                        SettingsColorDisc(color: Color(entry.value.color)),
+                    onTap: () => _pickColor(entry),
+                  ),
+              ],
+            ),
+          ],
+        ],
+      );
+    }
     return _SettingsDetailPage(
       key: const Key('settings-subject-colors-page'),
       title: l10n.text('settings.subjectColors.title'),
@@ -1651,40 +1733,7 @@ class _SubjectColorsSettingsPageState
         Card(
           margin: EdgeInsets.zero,
           child: Column(
-            children: [
-              SwitchListTile.adaptive(
-                title: Text(l10n.text('settings.subjectColors.borderHomework')),
-                value: _dashboardColorBorders,
-                onChanged: (value) {
-                  setState(() {
-                    _dashboardColorBorders = value;
-                  });
-                  widget.onSetDashboardColorBorders(value);
-                },
-              ),
-              SwitchListTile.adaptive(
-                title: Text(
-                  l10n.text('settings.subjectColors.calendarBackground'),
-                ),
-                value: _calendarColorBackground,
-                onChanged: (value) {
-                  setState(() {
-                    _calendarColorBackground = value;
-                  });
-                  widget.onSetCalenderColorBackground(value);
-                },
-              ),
-              SwitchListTile.adaptive(
-                title: Text(l10n.text('settings.subjectColors.testsRed')),
-                value: _dashboardColorTestsInRed,
-                onChanged: (value) {
-                  setState(() {
-                    _dashboardColorTestsInRed = value;
-                  });
-                  widget.onSetDashboardColorTestsInRed(value);
-                },
-              ),
-            ],
+            children: switches,
           ),
         ),
         const SizedBox(height: 16),
@@ -1706,25 +1755,7 @@ class _SubjectColorsSettingsPageState
                       ),
                     ),
                   ),
-                  onTap: () async {
-                    final color = await showSubjectSwatchPicker(
-                      context,
-                      subject: entry.key,
-                      current: Color(entry.value.color),
-                    );
-                    if (color == null) {
-                      return;
-                    }
-                    final updatedTheme = entry.value.rebuild(
-                      (b) => b.color = color.toARGB32(),
-                    );
-                    setState(() {
-                      _subjectThemes[entry.key] = updatedTheme;
-                    });
-                    widget.onSetSubjectTheme(
-                      MapEntry(entry.key, updatedTheme),
-                    );
-                  },
+                  onTap: () => _pickColor(entry),
                 ),
             ],
           ),
@@ -1774,9 +1805,102 @@ class _GradesSettingsPageState extends State<_GradesSettingsPage> {
     _ignoreForGradesAverage = List<String>.from(widget.ignoreForGradesAverage);
   }
 
+  Future<void> _addExcludedSubject() async {
+    final newSubject = await _showAddSubject(
+      context,
+      availableSubjects: _notYetIgnoredForAverageSubjects,
+      title: context.l10n.text('settings.addSubject'),
+    );
+    if (newSubject == null || !mounted) {
+      return;
+    }
+    setState(() {
+      _ignoreForGradesAverage = [
+        ..._ignoreForGradesAverage,
+        newSubject,
+      ];
+    });
+    widget.onSetIgnoreForGradesAverage(_ignoreForGradesAverage);
+  }
+
+  Widget _excludedSubject(
+    String subject,
+    Widget Function(BuildContext, Future<void> Function()) builder, {
+    Duration duration = const Duration(milliseconds: 250),
+  }) =>
+      CommittedDeleteable(
+        onDeleted: () {
+          _ignoreForGradesAverage.remove(subject);
+          widget.onSetIgnoreForGradesAverage(List.of(_ignoreForGradesAverage));
+          if (mounted) setState(() {});
+        },
+        showExitAnimation: _ignoreForGradesAverage.length != 1,
+        showEntryAnimation: _ignoreForGradesAverage.length != 1,
+        duration: duration,
+        key: ValueKey(subject),
+        builder: builder,
+      );
+
   @override
   Widget build(BuildContext context) {
     final l10n = context.l10n;
+    final switches = [
+      SwitchListTile.adaptive(
+        title: Text(l10n.text('settings.grades.diagram')),
+        value: _showGradesDiagram,
+        onChanged: (value) {
+          setState(() {
+            _showGradesDiagram = value;
+          });
+          widget.onSetShowGradesDiagram(value);
+        },
+      ),
+      SwitchListTile.adaptive(
+        title: Text(l10n.text('settings.grades.averageAllSubjects')),
+        value: _showAllSubjectsAverage,
+        onChanged: (value) {
+          setState(() {
+            _showAllSubjectsAverage = value;
+          });
+          widget.onSetShowAllSubjectsAverage(value);
+        },
+      ),
+    ];
+    if (ResponsiveNavigationScope.isActive(context)) {
+      return _SettingsDetailPage(
+        key: const Key('settings-grades-page'),
+        title: l10n.text('settings.section.grades'),
+        children: [
+          SettingsSectionNew(title: null, children: switches),
+          const SizedBox(height: 8),
+          SettingsSectionNew(
+            key: const Key('settings-grades-excluded'),
+            title: l10n.text('settings.grades.excludeAverage'),
+            count: _ignoreForGradesAverage.length,
+            trailing: SettingsHeadingButton(
+              key: const Key('settings-grades-exclude-add'),
+              tooltip: l10n.text('settings.addSubject'),
+              onPressed: _addExcludedSubject,
+            ),
+            children: [
+              if (_ignoreForGradesAverage.isEmpty)
+                SettingsEmptyRow(
+                  text: l10n.text('settings.grades.noExcludedSubject'),
+                ),
+              for (final subject in _ignoreForGradesAverage)
+                _excludedSubject(
+                  subject,
+                  duration: _settingsMotion(context),
+                  (context, delete) => ListTile(
+                    title: Text(subject),
+                    trailing: _RemoveButton(onPressed: delete),
+                  ),
+                ),
+            ],
+          ),
+        ],
+      );
+    }
     return _SettingsDetailPage(
       key: const Key('settings-grades-page'),
       title: l10n.text('settings.section.grades'),
@@ -1785,49 +1909,12 @@ class _GradesSettingsPageState extends State<_GradesSettingsPage> {
           margin: EdgeInsets.zero,
           child: Column(
             children: [
-              SwitchListTile.adaptive(
-                title: Text(l10n.text('settings.grades.diagram')),
-                value: _showGradesDiagram,
-                onChanged: (value) {
-                  setState(() {
-                    _showGradesDiagram = value;
-                  });
-                  widget.onSetShowGradesDiagram(value);
-                },
-              ),
-              SwitchListTile.adaptive(
-                title: Text(l10n.text('settings.grades.averageAllSubjects')),
-                value: _showAllSubjectsAverage,
-                onChanged: (value) {
-                  setState(() {
-                    _showAllSubjectsAverage = value;
-                  });
-                  widget.onSetShowAllSubjectsAverage(value);
-                },
-              ),
+              ...switches,
               ListTile(
                 title: Text(l10n.text('settings.grades.excludeAverage')),
                 trailing: IconButton(
                   icon: const Icon(Icons.add),
-                  onPressed: () async {
-                    final newSubject = await showDialog<String>(
-                      context: context,
-                      builder: (context) => AddSubject(
-                        availableSubjects: _notYetIgnoredForAverageSubjects,
-                        title: l10n.text('settings.addSubject'),
-                      ),
-                    );
-                    if (newSubject == null || !mounted) {
-                      return;
-                    }
-                    setState(() {
-                      _ignoreForGradesAverage = [
-                        ..._ignoreForGradesAverage,
-                        newSubject,
-                      ];
-                    });
-                    widget.onSetIgnoreForGradesAverage(_ignoreForGradesAverage);
-                  },
+                  onPressed: _addExcludedSubject,
                 ),
               ),
             ],
@@ -1847,17 +1934,9 @@ class _GradesSettingsPageState extends State<_GradesSettingsPage> {
               : Column(
                   children: [
                     for (final subject in _ignoreForGradesAverage)
-                      CommittedDeleteable(
-                        onDeleted: () {
-                          _ignoreForGradesAverage.remove(subject);
-                          widget.onSetIgnoreForGradesAverage(
-                              List.of(_ignoreForGradesAverage));
-                          if (mounted) setState(() {});
-                        },
-                        showExitAnimation: _ignoreForGradesAverage.length != 1,
-                        showEntryAnimation: _ignoreForGradesAverage.length != 1,
-                        key: ValueKey(subject),
-                        builder: (context, delete) => ListTile(
+                      _excludedSubject(
+                        subject,
+                        (context, delete) => ListTile(
                           title: Text(subject),
                           trailing: IconButton(
                             icon: const Icon(Icons.close),
@@ -1920,6 +1999,17 @@ class _SubjectNicksSettingsPageState extends State<_SubjectNicksSettingsPage> {
     String? value,
     List<String> suggestions,
   ) {
+    if (ResponsiveNavigationScope.isActive(context)) {
+      return showGlassSheet<MapEntry<String, String>>(
+        context: context,
+        builder: (context) => EditSubjectsNicks(
+          subjectName: key,
+          subjectNick: value,
+          suggestions: suggestions,
+          sheet: true,
+        ),
+      );
+    }
     return showDialog<MapEntry<String, String>>(
       context: context,
       builder: (context) => EditSubjectsNicks(
@@ -1927,6 +2017,120 @@ class _SubjectNicksSettingsPageState extends State<_SubjectNicksSettingsPage> {
         subjectNick: value,
         suggestions: suggestions,
       ),
+    );
+  }
+
+  void _removeNick(String subject) {
+    setState(() {
+      _subjectNicks.remove(subject);
+    });
+    widget.onSetSubjectNicks(_subjectNicks);
+  }
+
+  void _resetNicks() {
+    final reset = Map<String, String>.of(defaultSubjectNicks);
+    setState(() {
+      _subjectNicks = reset;
+    });
+    widget.onSetSubjectNicks(reset);
+  }
+
+  Future<void> _editNick(
+    List<MapEntry<String, String>> entries,
+    MapEntry<String, String> entry,
+  ) async {
+    final newValue = await _showEditSubjectNickDialog(
+      entry.key,
+      entry.value,
+      [..._subjectsWithoutNick, entry.key],
+    );
+    if (newValue == null) {
+      return;
+    }
+    setState(() {
+      final updated = <String, String>{};
+      for (final item in entries) {
+        if (item.key == entry.key) {
+          updated[newValue.key] = newValue.value;
+        } else {
+          updated[item.key] = item.value;
+        }
+      }
+      _subjectNicks = updated;
+    });
+    widget.onSetSubjectNicks(_subjectNicks);
+  }
+
+  Widget _newDesignBuild(BuildContext context) {
+    final l10n = context.l10n;
+    final entries = _subjectNicks.entries.toList();
+    return _SettingsDetailPage(
+      key: const Key('settings-subject-nicks-page'),
+      title: l10n.text('settings.calendar.subjectNicks'),
+      children: [
+        SettingsSectionNew(
+          title: null,
+          children: [
+            SwitchListTile.adaptive(
+              title: Text(l10n.text('settings.calendar.subjectNicksHint')),
+              subtitle: Text(
+                l10n.text('settings.calendar.subjectNicksHintBody'),
+              ),
+              value: _showCalendarEditNicksBar,
+              onChanged: (value) {
+                setState(() {
+                  _showCalendarEditNicksBar = value;
+                });
+                widget.onSetShowCalendarEditNicksBar(value);
+              },
+            ),
+            ListTile(
+              key: const Key('settings-subject-nicks-reset'),
+              leading: const Icon(Icons.restore),
+              title: Text(l10n.text('settings.calendar.subjectNicksReset')),
+              onTap: _resetNicks,
+            ),
+          ],
+        ),
+        const SizedBox(height: 8),
+        SettingsSectionNew(
+          key: const Key('settings-subject-nicks-list'),
+          title: l10n.text('settings.subject.nick'),
+          count: entries.length,
+          trailing: SettingsHeadingButton(
+            key: const Key('settings-subject-nicks-add'),
+            tooltip: l10n.text('settings.subjectNick.add'),
+            onPressed: _addNick,
+          ),
+          children: [
+            if (entries.isEmpty)
+              SettingsEmptyRow(
+                text: l10n.text('settings.calendar.subjectNicksHintBody'),
+              ),
+            for (final entry in entries)
+              ListTile(
+                key: ValueKey(entry.key),
+                title: Text(entry.key),
+                subtitle: Text(entry.value),
+                onTap: () => _editNick(entries, entry),
+                trailing: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    IconButton(
+                      tooltip: l10n.text('settings.subjectNick.edit'),
+                      icon: const Icon(Icons.edit_outlined),
+                      onPressed: () => _editNick(entries, entry),
+                    ),
+                    _RemoveButton(
+                      icon: Icons.delete_outline,
+                      onPressed: () => _removeNick(entry.key),
+                    ),
+                  ],
+                ),
+              ),
+          ],
+        ),
+      ],
     );
   }
 
@@ -1948,6 +2152,9 @@ class _SubjectNicksSettingsPageState extends State<_SubjectNicksSettingsPage> {
 
   @override
   Widget build(BuildContext context) {
+    if (ResponsiveNavigationScope.isActive(context)) {
+      return _newDesignBuild(context);
+    }
     final l10n = context.l10n;
     final entries = _subjectNicks.entries.toList();
     return _SettingsDetailPage(
@@ -2126,13 +2333,11 @@ class _SubstituteSettingsPageState extends State<_SubstituteSettingsPage> {
   }
 
   Future<void> _showAddTeacherDialog(String subject) async {
-    final teacher = await showDialog<String>(
-      context: context,
-      builder: (context) => AddSubject(
-        availableSubjects: widget.allTeachers,
-        title: context.l10n.text(
-          'settings.calendar.substituteTeachers.addTeacher',
-        ),
+    final teacher = await _showAddSubject(
+      context,
+      availableSubjects: widget.allTeachers,
+      title: context.l10n.text(
+        'settings.calendar.substituteTeachers.addTeacher',
       ),
     );
     if (teacher == null) {
@@ -2162,8 +2367,130 @@ class _SubstituteSettingsPageState extends State<_SubstituteSettingsPage> {
     }
   }
 
+  void _removeTeacher(String subject, String teacher) {
+    final updated = Map<String, List<String>>.from(
+      _substitutePrimaryTeachers,
+    );
+    final teachers = List<String>.from(
+      updated[subject] ?? <String>[],
+    );
+    teachers.removeWhere(
+      (item) => equalsIgnoreCase(item, teacher),
+    );
+    updated[subject] = teachers;
+    _applySubstituteTeachersUpdate(
+      updated,
+      manuallyLockedSubjects: [subject],
+    );
+  }
+
+  /// A subject and its primary teachers as a row that opens in the card.
+  Widget _newSubjectRow(
+    BuildContext context,
+    MapEntry<String, List<String>> entry,
+  ) {
+    final l10n = context.l10n;
+    final reduceMotion = MediaQuery.disableAnimationsOf(context);
+    return RepaintBoundary(
+      child: ExpansionTile(
+        key: PageStorageKey<String>('substitute-subject-${entry.key}'),
+        shape: const Border(),
+        collapsedShape: const Border(),
+        expansionAnimationStyle:
+            reduceMotion ? AnimationStyle.noAnimation : null,
+        initiallyExpanded: _expandedSubstituteSubjects.any(
+          (subject) => equalsIgnoreCase(subject, entry.key),
+        ),
+        onExpansionChanged: (expanded) {
+          setState(() {
+            _expandedSubstituteSubjects.removeWhere(
+              (subject) => equalsIgnoreCase(subject, entry.key),
+            );
+            if (expanded) {
+              _expandedSubstituteSubjects.add(entry.key);
+            }
+          });
+        },
+        title: Text(entry.key),
+        subtitle: Text(
+          entry.value.isEmpty
+              ? l10n.text('settings.calendar.substituteTeachers.noTeachers')
+              : entry.value.join(', '),
+        ),
+        childrenPadding: const EdgeInsetsDirectional.only(start: 16),
+        children: [
+          for (final teacher in entry.value)
+            ListTile(
+              leading: const Icon(Icons.person_outline),
+              title: Text(teacher),
+              trailing: _RemoveButton(
+                onPressed: () => _removeTeacher(entry.key, teacher),
+              ),
+            ),
+          ListTile(
+            key: ValueKey('substitute-add-teacher-${entry.key}'),
+            leading: const Icon(Icons.person_add_alt_1_outlined),
+            title: Text(
+              l10n.text('settings.calendar.substituteTeachers.addTeacher'),
+            ),
+            onTap: () => _showAddTeacherDialog(entry.key),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _newDesignBuild(BuildContext context) {
+    final l10n = context.l10n;
+    return _SettingsDetailPage(
+      key: const Key('settings-substitute-page'),
+      title: l10n.text('settings.calendar.substituteTeachers.title'),
+      children: [
+        SettingsSectionNew(
+          title: null,
+          children: [
+            SwitchListTile.adaptive(
+              title: Text(
+                l10n.text('settings.calendar.substituteDetection.title'),
+              ),
+              subtitle: Text(
+                l10n.text('settings.calendar.substituteDetection.subtitle'),
+              ),
+              value: _substituteDetectionEnabled,
+              onChanged: (value) {
+                setState(() {
+                  _substituteDetectionEnabled = value;
+                });
+                widget.onSetSubstituteDetectionEnabled(value);
+              },
+            ),
+          ],
+        ),
+        const SizedBox(height: 8),
+        SettingsSectionNew(
+          key: const Key('settings-substitute-subjects'),
+          title: l10n.text('grades.subjects'),
+          count: _substitutePrimaryTeachers.length,
+          description:
+              l10n.text('settings.calendar.substituteTeachers.subtitle'),
+          children: [
+            if (_substitutePrimaryTeachers.isEmpty)
+              SettingsEmptyRow(
+                text: l10n.text('settings.calendar.substituteTeachers.none'),
+              ),
+            for (final entry in _substitutePrimaryTeachers.entries)
+              _newSubjectRow(context, entry),
+          ],
+        ),
+      ],
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
+    if (ResponsiveNavigationScope.isActive(context)) {
+      return _newDesignBuild(context);
+    }
     final l10n = context.l10n;
     return _SettingsDetailPage(
       key: const Key('settings-substitute-page'),
@@ -2319,9 +2646,82 @@ class _FavoriteSubjectsSettingsPageState
     _favoriteSubjects = List<String>.from(widget.favoriteSubjects);
   }
 
+  Future<void> _addFavorite() async {
+    final newSubject = await _showAddSubject(
+      context,
+      availableSubjects: _notYetFavoriteSubjects,
+      title: context.l10n.text('settings.calendar.favoriteSubjects'),
+      requireSuggestionMatch: true,
+    );
+    if (newSubject == null ||
+        !mounted ||
+        containsSubjectIgnoreCase(
+          _favoriteSubjects,
+          newSubject,
+        )) {
+      return;
+    }
+    setState(() {
+      _favoriteSubjects.add(newSubject);
+    });
+    widget.onSetFavoriteSubjects(_favoriteSubjects);
+  }
+
+  Widget _favorite(
+    String subject,
+    Widget Function(BuildContext, Future<void> Function()) builder, {
+    Duration duration = const Duration(milliseconds: 250),
+  }) =>
+      CommittedDeleteable(
+        onDeleted: () {
+          _favoriteSubjects.remove(subject);
+          widget.onSetFavoriteSubjects(List.of(_favoriteSubjects));
+          if (mounted) setState(() {});
+        },
+        showExitAnimation: _favoriteSubjects.length != 1,
+        showEntryAnimation: _favoriteSubjects.length != 1,
+        duration: duration,
+        key: ValueKey(subject),
+        builder: builder,
+      );
+
   @override
   Widget build(BuildContext context) {
     final l10n = context.l10n;
+    if (ResponsiveNavigationScope.isActive(context)) {
+      return _SettingsDetailPage(
+        key: const Key('settings-favorite-subjects-page'),
+        title: l10n.text('settings.calendar.favoriteSubjects'),
+        children: [
+          SettingsSectionNew(
+            key: const Key('settings-favorite-subjects-list'),
+            title: l10n.text('grades.subjects'),
+            count: _favoriteSubjects.length,
+            trailing: SettingsHeadingButton(
+              key: const Key('settings-favorite-subjects-add'),
+              tooltip: l10n.text('settings.addSubject'),
+              onPressed: _notYetFavoriteSubjects.isEmpty ? null : _addFavorite,
+            ),
+            children: [
+              if (_favoriteSubjects.isEmpty)
+                SettingsEmptyRow(
+                  text: l10n.text('settings.calendar.noFavoriteSubject'),
+                ),
+              for (final subject in _favoriteSubjects)
+                _favorite(
+                  subject,
+                  duration: _settingsMotion(context),
+                  (context, delete) => ListTile(
+                    leading: const Icon(Icons.star_outline_rounded),
+                    title: Text(subject),
+                    trailing: _RemoveButton(onPressed: delete),
+                  ),
+                ),
+            ],
+          ),
+        ],
+      );
+    }
     return _SettingsDetailPage(
       key: const Key('settings-favorite-subjects-page'),
       title: l10n.text('settings.calendar.favoriteSubjects'),
@@ -2332,31 +2732,7 @@ class _FavoriteSubjectsSettingsPageState
             title: Text(l10n.text('settings.calendar.favoriteSubjects')),
             trailing: IconButton(
               icon: const Icon(Icons.add),
-              onPressed: _notYetFavoriteSubjects.isEmpty
-                  ? null
-                  : () async {
-                      final newSubject = await showDialog<String>(
-                        context: context,
-                        builder: (context) => AddSubject(
-                          availableSubjects: _notYetFavoriteSubjects,
-                          title:
-                              l10n.text('settings.calendar.favoriteSubjects'),
-                          requireSuggestionMatch: true,
-                        ),
-                      );
-                      if (newSubject == null ||
-                          !mounted ||
-                          containsSubjectIgnoreCase(
-                            _favoriteSubjects,
-                            newSubject,
-                          )) {
-                        return;
-                      }
-                      setState(() {
-                        _favoriteSubjects.add(newSubject);
-                      });
-                      widget.onSetFavoriteSubjects(_favoriteSubjects);
-                    },
+              onPressed: _notYetFavoriteSubjects.isEmpty ? null : _addFavorite,
             ),
           ),
         ),
@@ -2374,17 +2750,9 @@ class _FavoriteSubjectsSettingsPageState
               : Column(
                   children: [
                     for (final subject in _favoriteSubjects)
-                      CommittedDeleteable(
-                        onDeleted: () {
-                          _favoriteSubjects.remove(subject);
-                          widget.onSetFavoriteSubjects(
-                              List.of(_favoriteSubjects));
-                          if (mounted) setState(() {});
-                        },
-                        showExitAnimation: _favoriteSubjects.length != 1,
-                        showEntryAnimation: _favoriteSubjects.length != 1,
-                        key: ValueKey(subject),
-                        builder: (context, delete) => ListTile(
+                      _favorite(
+                        subject,
+                        (context, delete) => ListTile(
                           title: Text(subject),
                           trailing: IconButton(
                             icon: const Icon(Icons.close),
@@ -2417,8 +2785,118 @@ class _CalendarSyncSettingsDetailPage extends StatelessWidget {
   final Future<void> Function() onRemoveCalendarSyncEvents;
   final Future<void> Function() onRecreateMissingEvents;
 
+  Widget _newDesignBuild(BuildContext context) {
+    final l10n = context.l10n;
+    return _SettingsDetailPage(
+      key: const Key('settings-calendar-sync-page'),
+      title: l10n.text('settings.calendarSync.title'),
+      children: [
+        FutureBuilder<List<CalendarSyncCalendar>>(
+          future: calendarsFuture,
+          builder: (context, snapshot) {
+            final calendars = snapshot.data ?? <CalendarSyncCalendar>[];
+            final selectedCalendar =
+                _selectedSyncCalendar(calendars, calendarSyncCalendarId);
+            final missing =
+                _isSyncCalendarMissing(snapshot, calendarSyncCalendarId);
+            final canChange = calendarSyncEnabled && calendars.isNotEmpty;
+            return SettingsSectionNew(
+              title: null,
+              children: [
+                ListTile(
+                  key: const Key('calendar-sync-calendar-picker'),
+                  enabled: canChange,
+                  leading: const Icon(Icons.event_outlined),
+                  title: Text(l10n.text('settings.calendarSync.select.title')),
+                  subtitle: Text(
+                    missing
+                        ? l10n.text('settings.calendarSync.select.missing')
+                        : selectedCalendar == null
+                            ? l10n.text('settings.calendarSync.select.none')
+                            : '${selectedCalendar.displayName}\n${selectedCalendar.accountLabel}',
+                    style: missing
+                        ? TextStyle(color: Theme.of(context).colorScheme.error)
+                        : null,
+                  ),
+                  trailing: snapshot.connectionState == ConnectionState.waiting
+                      ? const SizedBox(
+                          width: 20,
+                          height: 20,
+                          child: CircularProgressIndicator(strokeWidth: 2),
+                        )
+                      : const Icon(Icons.chevron_right),
+                  onTap: canChange
+                      ? () async {
+                          await onChangeCalendar();
+                        }
+                      : null,
+                ),
+              ],
+            );
+          },
+        ),
+        ValueListenableBuilder<int>(
+          valueListenable: CalendarSyncService.missingEventCount,
+          builder: (context, missing, _) => missing == 0 || !calendarSyncEnabled
+              ? const SizedBox.shrink()
+              : Padding(
+                  padding: const EdgeInsets.only(top: 8),
+                  child: SettingsSectionNew(
+                    title: null,
+                    children: [
+                      ListTile(
+                        key: const Key('calendar-sync-missing-events'),
+                        leading: const Icon(Icons.event_busy_outlined),
+                        title: Text(l10n.missingCalendarEventsLabel(missing)),
+                        subtitle: Text(
+                          l10n.text('settings.calendarSync.missing.body'),
+                        ),
+                      ),
+                      ListTile(
+                        key: const Key(
+                          'calendar-sync-recreate-missing-events',
+                        ),
+                        leading: const Icon(Icons.restore),
+                        title: Text(l10n.text(
+                          'settings.calendarSync.missing.recreate',
+                        )),
+                        onTap: () async {
+                          await onRecreateMissingEvents();
+                        },
+                      ),
+                    ],
+                  ),
+                ),
+        ),
+        const SizedBox(height: 8),
+        SettingsSectionNew(
+          title: null,
+          children: [
+            ListTile(
+              key: const Key('calendar-sync-remove-events-tile'),
+              leading: const Icon(Icons.delete_sweep_outlined),
+              title: Text(l10n.text('settings.calendarSync.disable.remove')),
+              subtitle: Text(
+                l10n.text('settings.calendarSync.disable.body'),
+              ),
+              enabled: calendarSyncEnabled,
+              onTap: calendarSyncEnabled
+                  ? () async {
+                      await onRemoveCalendarSyncEvents();
+                    }
+                  : null,
+            ),
+          ],
+        ),
+      ],
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
+    if (ResponsiveNavigationScope.isActive(context)) {
+      return _newDesignBuild(context);
+    }
     final l10n = context.l10n;
     return _SettingsDetailPage(
       key: const Key('settings-calendar-sync-page'),
@@ -2523,8 +3001,16 @@ class EditSubjectsNicks extends StatefulWidget {
   final String? subjectNick;
   final List<String>? suggestions;
 
-  const EditSubjectsNicks(
-      {super.key, this.subjectName, this.subjectNick, this.suggestions});
+  /// In a glass sheet of the new design rather than a dialog.
+  final bool sheet;
+
+  const EditSubjectsNicks({
+    super.key,
+    this.subjectName,
+    this.subjectNick,
+    this.suggestions,
+    this.sheet = false,
+  });
   @override
   _EditSubjectsNicksState createState() => _EditSubjectsNicksState();
 }
@@ -2558,8 +3044,83 @@ class _EditSubjectsNicksState extends State<EditSubjectsNicks> {
     super.dispose();
   }
 
+  bool get _complete =>
+      subjectNameController.text != "" && nickController.text != "";
+
+  void _submit() {
+    if (_complete) {
+      Navigator.of(context).pop(
+        MapEntry(subjectNameController.text, nickController.text),
+      );
+    }
+  }
+
+  Widget _sheet(BuildContext context) {
+    final l10n = context.l10n;
+    return SettingsSheetKeyboardInset(
+      child: GlassPanel(
+        title: forNewNick
+            ? l10n.text('settings.subjectNick.add')
+            : l10n.text('settings.subjectNick.edit'),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            TextField(
+              key: const Key('subject-nick-subject-field'),
+              controller: subjectNameController,
+              focusNode: nameFocusNode,
+              decoration: InputDecoration(
+                labelText: l10n.text('settings.subject.field'),
+              ),
+              onSubmitted: (_) => nickFocusNode.requestFocus(),
+              autofocus: subjectNameController.text.isEmpty,
+            ),
+            _SheetSuggestions(
+              query: subjectNameController.text,
+              suggestions: widget.suggestions ?? const [],
+              onSelected: (suggestion) {
+                subjectNameController.value = TextEditingValue(
+                  text: suggestion,
+                  selection: TextSelection.collapsed(offset: suggestion.length),
+                );
+                nickFocusNode.requestFocus();
+              },
+            ),
+            const SizedBox(height: 12),
+            TextField(
+              key: const Key('subject-nick-nick-field'),
+              controller: nickController,
+              textCapitalization: TextCapitalization.sentences,
+              decoration: InputDecoration(
+                labelText: l10n.text('settings.subject.nick'),
+              ),
+              onChanged: (_) => setState(() {}),
+              focusNode: nickFocusNode,
+              onSubmitted: (_) => _submit(),
+            ),
+            const SizedBox(height: 16),
+            SettingsSheetActions(
+              children: [
+                TextButton(
+                  onPressed: () => Navigator.of(context).pop(),
+                  child: Text(l10n.text('common.cancel')),
+                ),
+                FilledButton(
+                  key: const Key('subject-nick-done'),
+                  onPressed: _complete ? _submit : null,
+                  child: Text(l10n.text('common.done')),
+                ),
+              ],
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
+    if (widget.sheet) return _sheet(context);
     final l10n = context.l10n;
     return InfoDialog(
       title: Text(
@@ -2675,11 +3236,15 @@ class AddSubject extends StatefulWidget {
   final String? title;
   final bool requireSuggestionMatch;
 
+  /// In a glass sheet of the new design rather than a dialog.
+  final bool sheet;
+
   const AddSubject({
     super.key,
     this.availableSubjects,
     this.title,
     this.requireSuggestionMatch = false,
+    this.sheet = false,
   });
   @override
   _AddSubjectState createState() => _AddSubjectState();
@@ -2721,8 +3286,63 @@ class _AddSubjectState extends State<AddSubject> {
     super.dispose();
   }
 
+  Widget _sheet(BuildContext context) {
+    final l10n = context.l10n;
+    final selected = _selectedSubject;
+    return SettingsSheetKeyboardInset(
+      child: GlassPanel(
+        title: widget.title ?? l10n.text('settings.addSubject'),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            TextField(
+              key: const Key('add-subject-field'),
+              controller: subjectNameController,
+              focusNode: focusNode,
+              decoration: const InputDecoration(
+                prefixIcon: Icon(Icons.search_rounded),
+              ),
+              onSubmitted: (_) {
+                if (selected != null) Navigator.of(context).pop(selected);
+              },
+              autofocus: subjectNameController.text.isEmpty,
+            ),
+            _SheetSuggestions(
+              query: subjectNameController.text,
+              suggestions: widget.availableSubjects ?? const [],
+              onSelected: (suggestion) {
+                subjectNameController.value = TextEditingValue(
+                  text: suggestion,
+                  selection: TextSelection.collapsed(offset: suggestion.length),
+                );
+                focusNode.unfocus();
+              },
+            ),
+            const SizedBox(height: 16),
+            SettingsSheetActions(
+              children: [
+                TextButton(
+                  onPressed: () => Navigator.of(context).pop(),
+                  child: Text(l10n.text('common.cancel')),
+                ),
+                FilledButton(
+                  key: const Key('add-subject-done'),
+                  onPressed: selected != null
+                      ? () => Navigator.of(context).pop(selected)
+                      : null,
+                  child: Text(l10n.text('common.done')),
+                ),
+              ],
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
+    if (widget.sheet) return _sheet(context);
     final l10n = context.l10n;
     return InfoDialog(
       title: Text(widget.title ?? l10n.text('settings.addSubject')),
@@ -2779,6 +3399,122 @@ class _AddSubjectState extends State<AddSubject> {
           child: Text(l10n.text('common.done')),
         ),
       ],
+    );
+  }
+}
+
+/// Asks for a subject, or a teacher, to add: in a glass sheet in the new
+/// design, in a dialog in the legacy one.
+Future<String?> _showAddSubject(
+  BuildContext context, {
+  required List<String> availableSubjects,
+  required String title,
+  bool requireSuggestionMatch = false,
+}) {
+  if (ResponsiveNavigationScope.isActive(context)) {
+    return showGlassSheet<String>(
+      context: context,
+      builder: (context) => AddSubject(
+        availableSubjects: availableSubjects,
+        title: title,
+        requireSuggestionMatch: requireSuggestionMatch,
+        sheet: true,
+      ),
+    );
+  }
+  return showDialog<String>(
+    context: context,
+    builder: (context) => AddSubject(
+      availableSubjects: availableSubjects,
+      title: title,
+      requireSuggestionMatch: requireSuggestionMatch,
+    ),
+  );
+}
+
+/// How long a row of a list of the settings takes to come and go; at once
+/// with reduced motion.
+Duration _settingsMotion(BuildContext context) =>
+    MediaQuery.disableAnimationsOf(context)
+        ? Duration.zero
+        : const Duration(milliseconds: 250);
+
+/// Takes an entry off a list of the settings, in the new design.
+class _RemoveButton extends StatelessWidget {
+  const _RemoveButton({
+    required this.onPressed,
+    this.icon = Icons.close_rounded,
+  });
+
+  final VoidCallback onPressed;
+  final IconData icon;
+
+  @override
+  Widget build(BuildContext context) => IconButton(
+        tooltip: context.l10n.text('button.delete'),
+        icon: Icon(icon),
+        onPressed: onPressed,
+      );
+}
+
+/// The suggestions for the field of a sheet that match [query], as rows below
+/// it. A sheet sits at the bottom of the screen, where a list that opens below
+/// the field would run off it.
+class _SheetSuggestions extends StatelessWidget {
+  const _SheetSuggestions({
+    required this.query,
+    required this.suggestions,
+    required this.onSelected,
+  });
+
+  final String query;
+  final List<String> suggestions;
+  final ValueChanged<String> onSelected;
+
+  @override
+  Widget build(BuildContext context) {
+    final normalized = query.trim().toLowerCase();
+    final matches = [
+      for (final suggestion in suggestions)
+        if (suggestion.toLowerCase().contains(normalized) &&
+            suggestion.toLowerCase() != normalized)
+          suggestion,
+    ];
+    if (matches.isEmpty) return const SizedBox(height: 4);
+    final theme = Theme.of(context);
+    return Padding(
+      padding: const EdgeInsets.only(top: 8),
+      child: ConstrainedBox(
+        constraints: const BoxConstraints(maxHeight: 192),
+        child: DecoratedBox(
+          decoration: BoxDecoration(
+            borderRadius: DesignTokens.cardBorderRadius,
+            border: Border.all(
+              color: theme.colorScheme.outlineVariant,
+            ),
+          ),
+          child: Material(
+            type: MaterialType.transparency,
+            clipBehavior: Clip.antiAlias,
+            borderRadius: DesignTokens.cardBorderRadius,
+            child: ListView.builder(
+              key: const Key('sheet-suggestions'),
+              shrinkWrap: true,
+              padding: const EdgeInsets.symmetric(vertical: 4),
+              itemCount: matches.length,
+              itemBuilder: (context, index) => ListTile(
+                key: ValueKey('suggestion-${matches[index]}'),
+                visualDensity: VisualDensity.compact,
+                title: Text(
+                  matches[index],
+                  style: theme.textTheme.bodyLarge,
+                ),
+                onTap: () => onSelected(matches[index]),
+              ),
+            ),
+          ),
+        ),
+      ),
     );
   }
 }

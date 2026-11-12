@@ -22,6 +22,7 @@
 library;
 
 import 'package:dr/i18n/app_localizations.dart';
+import 'package:dr/ui/dashboard_app_header.dart' show HeaderDiscButton;
 import 'package:dr/ui/glass_page.dart';
 import 'package:dr/ui/glass_surface.dart';
 import 'package:flutter/material.dart';
@@ -111,6 +112,9 @@ class SettingsDetailPageNew extends StatelessWidget {
 /// [description] says what the section is about, at the top of the card.
 ///
 /// A section inside a section is a smaller heading inside the same card.
+///
+/// Without a [title] the card stands alone, as the first card of a sub-page
+/// does below its header.
 class SettingsSectionNew extends StatelessWidget {
   const SettingsSectionNew({
     super.key,
@@ -118,10 +122,14 @@ class SettingsSectionNew extends StatelessWidget {
     required this.children,
     this.description,
     this.trailing,
+    this.count,
   });
 
-  final String title;
+  final String? title;
   final String? description;
+
+  /// How many entries the section lists, after the [title].
+  final int? count;
 
   /// Beside the heading, such as a progress indicator.
   final Widget? trailing;
@@ -136,6 +144,7 @@ class SettingsSectionNew extends StatelessWidget {
     final theme = Theme.of(context);
     final scheme = theme.colorScheme;
     final description = this.description;
+    final title = this.title;
     final rows = [
       if (description != null)
         Padding(
@@ -157,18 +166,19 @@ class SettingsSectionNew extends StatelessWidget {
       return Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          Padding(
-            padding: const EdgeInsets.fromLTRB(16, 12, 16, 0),
-            child: Semantics(
-              header: true,
-              child: Text(
-                title,
-                style: theme.textTheme.labelLarge?.copyWith(
-                  color: scheme.onSurfaceVariant,
+          if (title != null)
+            Padding(
+              padding: const EdgeInsets.fromLTRB(16, 12, 16, 0),
+              child: Semantics(
+                header: true,
+                child: Text(
+                  title,
+                  style: theme.textTheme.labelLarge?.copyWith(
+                    color: scheme.onSurfaceVariant,
+                  ),
                 ),
               ),
             ),
-          ),
           ...rows,
         ],
       );
@@ -176,7 +186,8 @@ class SettingsSectionNew extends StatelessWidget {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
-        GlassSectionHeading(title: title, trailing: trailing),
+        if (title != null)
+          GlassSectionHeading(title: title, count: count, trailing: trailing),
         GlassCard(
           padding: EdgeInsets.zero,
           child: Material(
@@ -326,6 +337,75 @@ class SettingsSheetActions extends StatelessWidget {
         spacing: 8,
         overflowSpacing: 4,
         children: children,
+      );
+}
+
+/// The add button of a list of the settings beside its heading, as a disc
+/// ([SettingsSectionNew.trailing]). Null [onPressed] shows it disabled, for a
+/// list that has nothing left to add.
+class SettingsHeadingButton extends StatelessWidget {
+  const SettingsHeadingButton({
+    super.key,
+    required this.tooltip,
+    required this.onPressed,
+    this.icon = Icons.add,
+  });
+
+  final String tooltip;
+  final IconData icon;
+  final VoidCallback? onPressed;
+
+  @override
+  Widget build(BuildContext context) => IconButton(
+        tooltip: tooltip,
+        onPressed: onPressed,
+        iconSize: HeaderDiscButton.iconSize,
+        style: HeaderDiscButton.styleOf(Theme.of(context).colorScheme),
+        icon: Icon(icon),
+      );
+}
+
+/// What a list of the settings says when it is empty, as a quiet row of its
+/// card.
+class SettingsEmptyRow extends StatelessWidget {
+  const SettingsEmptyRow({super.key, required this.text});
+
+  final String text;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(16, 12, 16, 12),
+      child: Text(
+        text,
+        style: theme.textTheme.bodyMedium?.copyWith(
+          color: theme.colorScheme.onSurfaceVariant,
+        ),
+      ),
+    );
+  }
+}
+
+/// The colour of a subject as a disc, as the swatches of the colour sheet
+/// show it: outlined, so that pale colours do not melt into the card.
+class SettingsColorDisc extends StatelessWidget {
+  const SettingsColorDisc({super.key, required this.color});
+
+  final Color color;
+
+  @override
+  Widget build(BuildContext context) => SizedBox.square(
+        dimension: 28,
+        child: DecoratedBox(
+          decoration: BoxDecoration(
+            color: color,
+            shape: BoxShape.circle,
+            border: Border.all(
+              color: Theme.of(context).colorScheme.outlineVariant,
+            ),
+          ),
+        ),
       );
 }
 
