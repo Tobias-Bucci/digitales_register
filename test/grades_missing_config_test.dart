@@ -6,6 +6,7 @@ import 'package:dr/data.dart';
 import 'package:dr/wrapper.dart';
 import 'package:flutter_test/flutter_test.dart';
 
+import 'support/fixtures.dart';
 import 'support/test_harness.dart';
 
 /// A saved login first signs in offline; the server config, which holds the
@@ -71,6 +72,27 @@ void main() {
           ..semester = Semester.first.toBuilder()
           ..subject.replace(_subject)));
     expect(session.requests, isEmpty);
+  });
+
+  test('saved grades stay shown while a load waits for the sign-in', () async {
+    final session = _PendingSignIn();
+    await bootstrapTestEnvironment(wrapperOverride: session);
+    final saved = buildGradesPageState().rebuild((b) => b
+      ..loginState.loggedIn = true
+      ..loginState.username = 'test');
+    final store = createStore(initialState: saved, withMiddleware: true);
+    final pending = store.actions.gradesActions.load(Semester.first);
+    await Future<void>.delayed(Duration.zero);
+    // The page shows the saved subjects with its linear progress indicator
+    // ('shows linear loading state when grades already exist').
+    expect(store.state.gradesState.loading, isTrue);
+    expect(store.state.gradesState.subjects.map((s) => s.name),
+        ['Fach1', 'Fach2']);
+    expect(session.requests, isEmpty);
+    session.signIn.complete(false);
+    await pending;
+    expect(store.state.gradesState.subjects.map((s) => s.name),
+        ['Fach1', 'Fach2']);
   });
 
   test('grade load waits for a running sign-in and uses its student id',
