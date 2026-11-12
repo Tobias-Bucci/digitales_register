@@ -12,6 +12,7 @@ import 'package:dr/ui/glass_page.dart';
 import 'package:dr/utc_date_time.dart';
 import 'package:dr/util.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/semantics.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 import '../../support/fixtures.dart';
@@ -68,21 +69,50 @@ Pages _current() => scaffoldKey!.currentState!.currentSelected;
 
 final _switcher = find.byKey(const Key('calendar-view-switcher'));
 
-/// The app bar of the page that is open, with the switcher as its title.
-AppBar _appBarOf(WidgetTester tester, Type page) => tester.widget<AppBar>(
-      find.descendant(of: find.byType(page), matching: find.byType(AppBar)),
-    );
-
-/// The glass header of the calendar, with the switcher as its title.
-GlassPageHeader _calendarHeader(WidgetTester tester) =>
+/// The glass header of [page], with the switcher as its title.
+GlassPageHeader _headerOf(WidgetTester tester, Type page) =>
     tester.widget<GlassPageHeader>(
       find.descendant(
-        of: find.byType(Calendar),
+        of: find.byType(page),
         matching: find.byType(GlassPageHeader),
       ),
     );
 
+GlassPageHeader _calendarHeader(WidgetTester tester) =>
+    _headerOf(tester, Calendar);
+
 final _calendarHeaderSurface = find.byKey(const Key('calendar-app-header'));
+
+/// The header nodes in the glass header of the page that is open.
+List<SemanticsNode> _headerNodes(WidgetTester tester, Finder surface) {
+  final nodes = <SemanticsNode>[];
+  void visit(SemanticsNode node) {
+    if (node.getSemanticsData().flagsCollection.isHeader) {
+      nodes.add(node);
+    }
+    node.visitChildren((child) {
+      visit(child);
+      return true;
+    });
+  }
+
+  visit(tester.getSemantics(surface));
+  return nodes;
+}
+
+/// The page title is one heading, and both segments stay buttons in it.
+void _expectOneHeading(WidgetTester tester, Finder surface, String title) {
+  final headers = _headerNodes(tester, surface)
+      .where((node) => node.label == title)
+      .toList();
+  expect(headers, hasLength(1));
+  for (final segment in [false, true]) {
+    expect(
+      tester.getSemantics(find.byKey(ValueKey('glass-segment-$segment'))),
+      isSemantics(isButton: true, hasTapAction: true, isHeader: false),
+    );
+  }
+}
 
 void main() {
   setUp(() async {
@@ -105,10 +135,7 @@ void main() {
       findsOneWidget,
     );
     expect(find.text('Kalender'), findsOneWidget);
-    expect(
-      tester.getSemantics(find.byType(CalendarViewSwitcher)),
-      matchesSemantics(label: 'Kalender', isHeader: true),
-    );
+    _expectOneHeading(tester, _calendarHeaderSurface, 'Kalender');
     final calendarRect = tester.getRect(_switcher);
     expect(calendarRect.height, lessThanOrEqualTo(56));
 
@@ -128,13 +155,14 @@ void main() {
     await _settle(tester);
 
     expect(_current(), Pages.examCalendar);
-    final appBar = _appBarOf(tester, ExamCalendarPage);
-    expect(appBar.bottom, isNull);
-    expect(appBar.title, isA<CalendarViewSwitcher>());
+    final examHeader = _headerOf(tester, ExamCalendarPage);
+    expect(examHeader.bottom, isNull);
+    expect(examHeader.titleWidget, isA<CalendarViewSwitcher>());
     expect(find.byKey(const Key('exam-timeline-view')), findsOneWidget);
-    expect(
-      tester.getSemantics(find.byType(CalendarViewSwitcher)),
-      matchesSemantics(label: 'Prüfungskalender', isHeader: true),
+    _expectOneHeading(
+      tester,
+      find.byKey(const Key('exam-calendar-app-header')),
+      'Prüfungskalender',
     );
     // It does not jump when switching pages.
     expect(tester.getRect(_switcher), calendarRect);
@@ -165,10 +193,8 @@ void main() {
     expect(_current(), Pages.examCalendar);
     expect(tester.takeException(), isNull);
     final examRect = tester.getRect(_switcher);
-    // The glass header of the calendar limits large text to 150 %, the plain
-    // app bar of the exam calendar does not yet, so only the width is the same.
-    expect(examRect.left, calendarRect.left);
-    expect(examRect.right, calendarRect.right);
+    // Both pages share the glass header, so nothing moves.
+    expect(examRect, calendarRect);
     // The actions keep their room next to the switcher.
     final timelineButton =
         tester.getRect(find.byKey(const Key('exam-timeline-view')));

@@ -6,10 +6,19 @@ import 'package:dr/container/calendar_view_switcher.dart';
 import 'package:dr/exam_study_plan.dart';
 import 'package:dr/i18n/app_localizations.dart';
 import 'package:dr/middleware/middleware.dart';
+import 'package:dr/theme/app_palette.dart';
+import 'package:dr/ui/dashboard_app_header.dart' show HeaderDiscButton;
+import 'package:dr/ui/dashboard_columns.dart';
 import 'package:dr/ui/exam_timeline.dart';
+import 'package:dr/ui/glass_page.dart';
+import 'package:dr/ui/glass_surface.dart';
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import 'package:responsive_scaffold/responsive_scaffold.dart';
+
+// The views of the new design. They share the state, the helpers and the
+// detail page with the Legacy views of this library.
+part 'exam_calendar_new.dart';
 
 class ExamCalendarPage extends StatefulWidget {
   const ExamCalendarPage({
@@ -69,6 +78,37 @@ class _ExamCalendarPageState extends State<ExamCalendarPage> {
             widget.onAttachmentsChanged(assessment.id, value),
       );
 
+  /// An assessment in the new design, with the gap below it.
+  Widget _glassCard(ExamAssessment assessment) => Padding(
+        padding: const EdgeInsets.only(bottom: 8),
+        child: _GlassAssessmentCard(
+          assessment: assessment,
+          now: widget.now,
+          completed: widget.completedFor(assessment.id),
+          customPhases: widget.phasesFor(assessment.id),
+          onTap: () => _openDetails(assessment),
+        ),
+      );
+
+  void _openDetails(ExamAssessment assessment) =>
+      Navigator.of(context).push(MaterialPageRoute<void>(
+        builder: (_) => _ExamDetailPage(
+          assessment: assessment,
+          now: widget.now,
+          completed: widget.completedFor(assessment.id),
+          customPhases: widget.phasesFor(assessment.id),
+          note: widget.noteFor(assessment.id),
+          attachments: widget.attachmentsFor(assessment.id),
+          onProgressChanged: (value) =>
+              widget.onProgressChanged(assessment.id, value),
+          onPhasesChanged: (value) =>
+              widget.onPhasesChanged(assessment.id, value),
+          onNoteChanged: (value) => widget.onNoteChanged(assessment.id, value),
+          onAttachmentsChanged: (value) =>
+              widget.onAttachmentsChanged(assessment.id, value),
+        ),
+      ));
+
   @override
   Widget build(BuildContext context) {
     final upcoming = widget.assessments
@@ -93,6 +133,19 @@ class _ExamCalendarPageState extends State<ExamCalendarPage> {
         .toList()
         .reversed
         .toList();
+    if (ResponsiveNavigationScope.isActive(context)) {
+      return _NewExamCalendarView(
+        upcoming: upcoming,
+        past: past,
+        now: widget.now,
+        timeline: _timeline,
+        onToggleTimeline: () => setState(() => _timeline = !_timeline),
+        onOpenWeek: () => Navigator.of(context).push(MaterialPageRoute<void>(
+          builder: widget.weekViewBuilder ?? (_) => weekCalendar,
+        )),
+        cardBuilder: _glassCard,
+      );
+    }
     final title = Text(context.l10n.text('exam.title'));
     final actions = [
       IconButton(
@@ -112,12 +165,7 @@ class _ExamCalendarPageState extends State<ExamCalendarPage> {
       ),
     ];
     return Scaffold(
-      appBar: ResponsiveNavigationScope.isActive(context)
-          ? ResponsiveAppBar(
-              title: const CalendarViewSwitcher(exams: true),
-              actions: actions,
-            )
-          : AppBar(title: title, actions: actions),
+      appBar: AppBar(title: title, actions: actions),
       body: _timeline
           ? ExamTimeline(
               assessments: upcoming,
@@ -300,9 +348,30 @@ class _ExamDetailPageState extends State<_ExamDetailPage> {
     super.dispose();
   }
 
+  void _setPhaseDone(String id, bool done) => setState(() {
+        done ? completed.add(id) : completed.remove(id);
+        widget.onProgressChanged(completed);
+      });
+
   @override
   Widget build(BuildContext context) {
     final days = widget.assessment.daysUntil(widget.now);
+    if (ResponsiveNavigationScope.isActive(context)) {
+      return _NewExamDetailView(
+        assessment: widget.assessment,
+        days: days,
+        phases: _phases,
+        completed: completed,
+        onPhaseDone: _setPhaseDone,
+        onEditPhases: () => _editPhases(_phases),
+        noteController: noteController,
+        onNoteChanged: widget.onNoteChanged,
+        attachments: attachments,
+        onAddAttachment: _addAttachment,
+        onOpenAttachment: _openAttachment,
+        onRemoveAttachment: _removeAttachment,
+      );
+    }
     final padding = const EdgeInsets.all(16).copyWith(
       bottom: 16 + ResponsiveNavigationScope.bottomInsetOf(context),
     );
@@ -419,10 +488,17 @@ class _ExamDetailPageState extends State<_ExamDetailPage> {
   }
 
   Future<void> _editPhases(List<StudyPhase> current) async {
-    final editedPhases = await showDialog<List<StudyPhase>>(
-      context: context,
-      builder: (_) => _StudyPhaseEditor(initial: current),
-    );
+    final editedPhases = ResponsiveNavigationScope.isActive(context)
+        // A sheet of glass. It takes the theme of the page along, so the date
+        // picker it opens gets the rim of the glass.
+        ? await showGlassSheet<List<StudyPhase>>(
+            context: context,
+            builder: (_) => _StudyPhaseSheet(initial: current),
+          )
+        : await showDialog<List<StudyPhase>>(
+            context: context,
+            builder: (_) => _StudyPhaseEditor(initial: current),
+          );
     if (editedPhases == null) return;
     final completedIds = editedPhases.map((phase) => phase.id).toSet();
     setState(() {
@@ -479,6 +555,15 @@ class _ExamWeekCalendarState extends State<_ExamWeekCalendar> {
 
   @override
   Widget build(BuildContext context) {
+    if (ResponsiveNavigationScope.isActive(context)) {
+      return _NewExamWeekView(
+        monday: _monday,
+        now: widget.now,
+        onMondayChanged: (monday) => setState(() => _monday = monday),
+        entriesOn: _entriesOn,
+        onOpen: _openAssessment,
+      );
+    }
     final sunday = _monday.add(const Duration(days: 6));
     return Scaffold(
       appBar: AppBar(title: Text(context.l10n.text('exam.title'))),
@@ -541,7 +626,8 @@ class _ExamWeekCalendarState extends State<_ExamWeekCalendar> {
     );
   }
 
-  Widget _buildDay(DateTime date) {
+  /// The assessments on [date] and the study phases that cover it.
+  _DayEntries _entriesOn(DateTime date) {
     final exams = widget.assessments
         .where((assessment) => _sameDay(assessment.date, date))
         .toList();
@@ -555,6 +641,11 @@ class _ExamWeekCalendarState extends State<_ExamWeekCalendar> {
         }
       }
     }
+    return (exams: exams, phases: phases);
+  }
+
+  Widget _buildDay(DateTime date) {
+    final (:exams, :phases) = _entriesOn(date);
 
     final theme = Theme.of(context);
     return DecoratedBox(
@@ -829,6 +920,11 @@ class _StudyPhaseEditorState extends State<_StudyPhaseEditor> {
     });
   }
 }
+
+typedef _DayEntries = ({
+  List<ExamAssessment> exams,
+  List<({ExamAssessment assessment, StudyPhase phase})> phases,
+});
 
 bool _sameDay(DateTime a, DateTime b) =>
     a.year == b.year && a.month == b.month && a.day == b.day;

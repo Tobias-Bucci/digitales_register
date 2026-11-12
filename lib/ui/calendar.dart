@@ -534,8 +534,6 @@ class _CalendarState extends State<Calendar> with TickerProviderStateMixin {
     required List<String> availableFavoriteSubjects,
     required String? selectedFavoriteSubject,
   }) {
-    final theme = Theme.of(context);
-    final scheme = theme.colorScheme;
     final l10n = context.l10n;
     final reduceMotion = _reduceMotion(context);
     final floatingMaxWidth = glassHeaderFloatingWidth(width, twoColumns: true);
@@ -547,71 +545,20 @@ class _CalendarState extends State<Calendar> with TickerProviderStateMixin {
     final first = vm.first ?? vm.currentMonday;
     final last = vm.last ?? vm.currentMonday.add(const Duration(days: 5));
     final range = '${_dateFormat.format(first)} – ${_dateFormat.format(last)}';
-    final discStyle = HeaderDiscButton.styleOf(scheme);
     final week = Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: <Widget>[
         const SizedBox(height: 8),
-        SizedBox(
-          height: 48,
-          child: Row(
-            children: <Widget>[
-              FadeTransition(
-                opacity: chevronOpacity,
-                child: IconButton(
-                  key: const Key('calendar-previous-week'),
-                  tooltip: l10n.text('exam.previousWeek'),
-                  style: discStyle,
-                  iconSize: HeaderDiscButton.iconSize,
-                  onPressed: () => _goToPage(
-                    context,
-                    pageOf(vm.currentMonday) - 1,
-                  ),
-                  icon: const Icon(Icons.chevron_left),
-                ),
-              ),
-              const SizedBox(width: 4),
-              Expanded(
-                child: FadeTransition(
-                  opacity: rangeOpacity,
-                  child: Center(
-                    child: FilledButton.icon(
-                      key: const Key('calendar-week-range'),
-                      style: glassControlStyle(scheme),
-                      onPressed: () => unawaited(_pickWeek(context)),
-                      icon: const Icon(Icons.calendar_month_rounded, size: 18),
-                      label: FittedBox(
-                        fit: BoxFit.scaleDown,
-                        child: Text(
-                          range,
-                          maxLines: 1,
-                          style: theme.textTheme.titleSmall?.copyWith(
-                            fontWeight: FontWeight.w600,
-                            color: scheme.onSecondaryContainer,
-                          ),
-                        ),
-                      ),
-                    ),
-                  ),
-                ),
-              ),
-              const SizedBox(width: 4),
-              FadeTransition(
-                opacity: chevronOpacity,
-                child: IconButton(
-                  key: const Key('calendar-next-week'),
-                  tooltip: l10n.text('exam.nextWeek'),
-                  style: discStyle,
-                  iconSize: HeaderDiscButton.iconSize,
-                  onPressed: () => _goToPage(
-                    context,
-                    pageOf(vm.currentMonday) + 1,
-                  ),
-                  icon: const Icon(Icons.chevron_right),
-                ),
-              ),
-            ],
-          ),
+        GlassWeekBar(
+          previousKey: const Key('calendar-previous-week'),
+          nextKey: const Key('calendar-next-week'),
+          rangeKey: const Key('calendar-week-range'),
+          range: range,
+          chevronOpacity: chevronOpacity,
+          rangeOpacity: rangeOpacity,
+          onPrevious: () => _goToPage(context, pageOf(vm.currentMonday) - 1),
+          onNext: () => _goToPage(context, pageOf(vm.currentMonday) + 1),
+          onPickWeek: () => unawaited(_pickWeek(context)),
         ),
         if (availableFavoriteSubjects.isNotEmpty)
           FavoriteSubjectFilter(
