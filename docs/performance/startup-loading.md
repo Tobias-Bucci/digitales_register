@@ -174,3 +174,18 @@ The simulated sign-in delay was a temporary scratch patch in the demo branch of
 Tests: `test/startup_offline_first_test.dart` (saved data uncovered while the
 server holds the sign-in; offline after a timeout; login page without a saved
 login). The first two fail without the change.
+
+### 2. Skip the legacy cleanup round trips (P1)
+
+`removeLegacyNotificationData` ran five awaited `prefs.remove` calls before
+`runApp` on every start, although the keys are long gone on almost every
+device. It now removes only keys that exist (`containsKey` reads the cache
+that `SharedPreferences.getInstance` already loaded).
+
+| Measurement (emulator, demo login, alternating batches, median of 11) | Before | After |
+| --- | --- | --- |
+| `p1_legacy_cleanup` took | 3.2 [2.6–5.6] ms | 0.0 ms |
+| `p2_first_frame` | 609 ms | 613 ms (within noise: the main-thread wait dominates) |
+
+Kept because it provably removes five platform round trips from the critical
+path; it does not change the first frame measurably on its own.
