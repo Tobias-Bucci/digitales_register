@@ -301,6 +301,55 @@ void main() {
       await settleFor(tester);
       expect(loads, 2);
     });
+
+    testWidgets('a material shows its kind and when it was changed, as Legacy',
+        (tester) async {
+      final payload = _coursePayload(12, 'Physics course', ['Optics']);
+      final entry = ((payload['topics']! as List).single
+          as Map<String, Object?>)['entries']! as List;
+      (entry.single as Map<String, Object?>)
+        ..['typeName'] = 'Arbeitsblatt'
+        // The server's key is in lower case.
+        ..['lastmodified'] = '2026-11-03 10:15';
+      final courses = [
+        CourseMaterialCourse.fromJson(
+          payload,
+          CourseMaterialSource.fromJson(
+            {'classId': 1, 'subjectId': 4, 'subjectName': 'Physik'},
+          ),
+        ),
+      ];
+      expect(courses.single.topics.single.entries.single.lastModified,
+          '2026-11-03 10:15');
+
+      for (final newDesign in [false, true]) {
+        await _pump(
+          tester,
+          newDesign: newDesign,
+          size: const Size(1280, 800),
+          page: CourseMaterialsPage(
+            key: UniqueKey(),
+            loader: () async => courses,
+          ),
+        );
+        await tester.tap(find.text('Optics'));
+        await settleFor(tester);
+        // Legacy shows both as texts of their own, the new design on one
+        // line: the same words either way.
+        expect(find.textContaining('Arbeitsblatt'), findsOneWidget,
+            reason: 'newDesign: $newDesign');
+        expect(find.textContaining('2026-11-03 10:15'), findsOneWidget,
+            reason: 'newDesign: $newDesign');
+        if (newDesign) {
+          expect(
+            find.text('Arbeitsblatt · 2026-11-03 10:15'),
+            findsOneWidget,
+          );
+        }
+        await tester.pumpWidget(const SizedBox());
+        await tester.pump(const Duration(seconds: 6));
+      }
+    });
   });
 
   group('states', () {
