@@ -1060,7 +1060,7 @@ class _NewExamWeekView extends StatelessWidget {
           scrolls: false,
           header: GlassPageHeader(
             surfaceKey: const Key('exam-week-app-header'),
-            title: l10n.text('exam.title'),
+            title: l10n.text('calendar.title'),
             floatingMaxWidth: floatingMaxWidth,
             actions: [
               if (!_sameDay(monday, currentMonday))
