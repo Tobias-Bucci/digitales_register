@@ -85,8 +85,14 @@ import 'package:dr/study_data_service.dart';
 import 'package:dr/theme_controller.dart';
 import 'package:dr/ui/debug_page.dart';
 import 'package:dr/ui/dialog.dart';
+import 'package:dr/ui/glass_page.dart' show GlassPanel, glassSheetRoute;
+import 'package:dr/ui/glass_surface.dart' show NewDesignTheme;
+import 'package:dr/ui/grade_calculator.dart' show GradeCalculator;
+import 'package:dr/ui/grades_chart_page.dart' show GradesChartPage;
 import 'package:dr/ui/launch/app_launch_animation.dart';
 import 'package:dr/ui/school_notification_opt_in.dart';
+import 'package:dr/ui/settings_page_new.dart' show SettingsSheetActions;
+import 'package:dr/ui/system_pages.dart';
 import 'package:dr/utc_date_time.dart';
 import 'package:dr/util.dart';
 import 'package:dr/wrapper.dart';
@@ -1146,40 +1152,20 @@ NextActionHandler _errorMiddleware(
             await navigatorKey?.currentState?.push(
               MaterialPageRoute<void>(
                 fullscreenDialog: true,
-                builder: (context) {
-                  return Scaffold(
-                    appBar: AppBar(
-                      backgroundColor: Colors.red,
-                      title: Text(context.l10n.text('error.title')),
-                    ),
-                    body: ListView(
-                      padding: const EdgeInsets.all(16),
-                      children: <Widget>[
-                        Center(
-                          child: ElevatedButton(
-                            onPressed: () async {
-                              await launchUrl(
-                                Uri.parse(
-                                  "https://docs.google.com/forms/d/e/1FAIpQLScTmSAZzj0bjwX_8IHVx9dVTTVrncJJpZo_D20dF7mrnU_zdQ/viewform",
-                                ),
-                              );
-                            },
-                            child: Text(context.l10n.text('error.contact')),
-                          ),
-                        ),
-                        Padding(
-                          padding: const EdgeInsets.all(8.0),
-                          child: Text(
-                              context.l10n.text(e is UnexpectedLogoutException
-                                  ? 'error.session'
-                                  : e is ParseException
-                                      ? 'error.parse'
-                                      : 'error.generic')),
-                        ),
-                      ],
-                    ),
-                  );
-                },
+                builder: (context) => ErrorPage(
+                  messageKey: e is UnexpectedLogoutException
+                      ? 'error.session'
+                      : e is ParseException
+                          ? 'error.parse'
+                          : 'error.generic',
+                  onContact: () async {
+                    await launchUrl(
+                      Uri.parse(
+                        "https://docs.google.com/forms/d/e/1FAIpQLScTmSAZzj0bjwX_8IHVx9dVTTVrncJJpZo_D20dF7mrnU_zdQ/viewform",
+                      ),
+                    );
+                  },
+                ),
               ),
             );
           }
@@ -1667,6 +1653,18 @@ Future<void> showLegacyStudyDataDialog(
   final navigator = navigatorKey?.currentState;
   final context = navigatorKey?.currentContext;
   if (navigator == null || context == null) return;
+  if (newDesignChosen(context)) {
+    final choice = await navigator.push<_LegacyStudyChoice>(
+      glassSheetRoute(
+        context: context,
+        builder: (context) => NewDesignTheme(
+          child: _LegacyStudyDataSheet(summary: summary),
+        ),
+      ),
+    );
+    await _actOnLegacyStudyChoice(actions, summary, choice);
+    return;
+  }
   final choice = await navigator.push<_LegacyStudyChoice>(
     DialogRoute(
       context: context,
@@ -1692,6 +1690,14 @@ Future<void> showLegacyStudyDataDialog(
       ),
     ),
   );
+  await _actOnLegacyStudyChoice(actions, summary, choice);
+}
+
+Future<void> _actOnLegacyStudyChoice(
+  AppActions actions,
+  LegacyStudySummary summary,
+  _LegacyStudyChoice? choice,
+) async {
   switch (choice) {
     case _LegacyStudyChoice.assign:
       await actions.assignLegacyStudyData();
@@ -1705,28 +1711,83 @@ Future<void> showLegacyStudyDataDialog(
   }
 }
 
-Future<bool?> _confirmDiscardLegacyStudyData(LegacyStudySummary summary) {
-  final context = navigatorKey?.currentContext;
-  if (context == null) return Future.value(false);
-  return navigatorKey!.currentState!.push<bool>(
-    DialogRoute(
-      context: context,
-      builder: (context) => InfoDialog(
-        title: Text(tr('studyData.legacy.discardConfirm.title')),
-        content: Text(tr('studyData.legacy.discardConfirm.body',
-            args: _legacyStudySummaryArgs(summary))),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context, true),
-            child: Text(tr('studyData.legacy.discardConfirm.confirm')),
+/// The question of [showLegacyStudyDataDialog] in the new design, as a glass
+/// sheet with the same texts and answers.
+class _LegacyStudyDataSheet extends StatelessWidget {
+  const _LegacyStudyDataSheet({required this.summary});
+
+  final LegacyStudySummary summary;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    return GlassPanel(
+      title: tr('studyData.legacy.title'),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          Text(
+            tr('studyData.legacy.body', args: _legacyStudySummaryArgs(summary)),
+            style: theme.textTheme.bodyMedium?.copyWith(
+              color: theme.colorScheme.onSurfaceVariant,
+              height: 1.4,
+            ),
           ),
-          FilledButton(
-            autofocus: true,
-            onPressed: () => Navigator.pop(context, false),
-            child: Text(tr('common.cancel')),
+          const SizedBox(height: 16),
+          SettingsSheetActions(
+            children: [
+              TextButton(
+                onPressed: () =>
+                    Navigator.pop(context, _LegacyStudyChoice.discard),
+                child: Text(tr('studyData.legacy.discard')),
+              ),
+              TextButton(
+                onPressed: () =>
+                    Navigator.pop(context, _LegacyStudyChoice.assign),
+                child: Text(tr('studyData.legacy.assign')),
+              ),
+              FilledButton(
+                autofocus: true,
+                onPressed: () =>
+                    Navigator.pop(context, _LegacyStudyChoice.later),
+                child: Text(tr('studyData.legacy.later')),
+              ),
+            ],
           ),
         ],
       ),
+    );
+  }
+}
+
+Future<bool?> _confirmDiscardLegacyStudyData(LegacyStudySummary summary) {
+  final context = navigatorKey?.currentContext;
+  if (context == null) return Future.value(false);
+  final newDesign = newDesignChosen(context);
+  return navigatorKey!.currentState!.push<bool>(
+    DialogRoute(
+      context: context,
+      // A short yes or no stays a dialog, as in the settings; in the new
+      // design it has the rim of the glass.
+      builder: (context) {
+        final dialog = InfoDialog(
+          title: Text(tr('studyData.legacy.discardConfirm.title')),
+          content: Text(tr('studyData.legacy.discardConfirm.body',
+              args: _legacyStudySummaryArgs(summary))),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(context, true),
+              child: Text(tr('studyData.legacy.discardConfirm.confirm')),
+            ),
+            FilledButton(
+              autofocus: true,
+              onPressed: () => Navigator.pop(context, false),
+              child: Text(tr('common.cancel')),
+            ),
+          ],
+        );
+        return newDesign ? NewDesignTheme(child: dialog) : dialog;
+      },
     ),
   );
 }

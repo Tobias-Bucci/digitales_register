@@ -26,6 +26,7 @@ import 'package:dr/ui/dashboard_app_header.dart';
 import 'package:dr/ui/dashboard_columns.dart';
 import 'package:dr/ui/dashboard_event_banner.dart';
 import 'package:dr/ui/days.dart';
+import 'package:dr/ui/glass_page.dart' show GlassPanel;
 import 'package:dr/ui/glass_surface.dart';
 import 'package:dr/ui/grades_subject_list.dart';
 import 'package:dr/ui/notepad_mark.dart';
@@ -533,7 +534,7 @@ void main() {
 
         await tester.sendKeyEvent(LogicalKeyboardKey.enter);
         await settleFor(tester);
-        expect(find.byType(AlertDialog), findsOneWidget);
+        expect(find.byType(GlassPanel), findsOneWidget);
       });
 
       testWidgets('a tap asks for the text of the entry', (tester) async {
@@ -542,7 +543,7 @@ void main() {
         await tester.tap(addButton);
         await settleFor(tester);
 
-        expect(find.byType(AlertDialog), findsOneWidget);
+        expect(find.byType(GlassPanel), findsOneWidget);
       });
 
       testWidgets('offline, it stays visible but does nothing', (tester) async {
@@ -551,7 +552,7 @@ void main() {
         expect(addButton, findsOneWidget);
         await tester.tap(addButton, warnIfMissed: false);
         await settleFor(tester);
-        expect(find.byType(AlertDialog), findsNothing);
+        expect(find.byType(GlassPanel), findsNothing);
       });
 
       testWidgets('leaves more room for the date on a small phone',
@@ -3304,7 +3305,10 @@ void main() {
         _dashboardState().rebuild((b) => b.noInternet = false),
       );
 
-      await tester.tap(find.byKey(ValueKey('day-add-entry-$_today')));
+      unawaited(showDialog<void>(
+        context: tester.element(find.byType(CompactDayWidget)),
+        builder: (_) => const AlertDialog(content: Text('Dialog')),
+      ));
       await settleFor(tester);
 
       final dialog = find.descendant(
