@@ -175,6 +175,36 @@ void main() {
       );
     });
 
+    testWidgets('an entry shows everything Legacy shows', (tester) async {
+      const html = '''
+<div class="summary"><h3>Woche vom 18/5/2026</h3>
+<table><thead><tr><th>Datum</th><th>Fach</th><th>Art</th><th>Name</th><th>Online Abgabe</th><th>Lehrperson</th></tr></thead>
+<tr><td>Mo, 18/05</td><td>Italienisch</td><td>Prüfung</td><td>Interrogazioni</td><td>Nein</td><td>Rossi</td></tr>
+</table></div>''';
+      for (final newDesign in [false, true]) {
+        await _pump(
+          tester,
+          newDesign: newDesign,
+          size: const Size(1280, 800),
+          page: HomeworkSummaryPage(key: UniqueKey(), loader: () async => html),
+        );
+        for (final text in [
+          // Due date, subject, type, the task and the further columns.
+          'Mo, 18/05',
+          'Italienisch',
+          'Prüfung',
+          'Interrogazioni',
+          'Online Abgabe: Nein',
+          'Lehrperson: Rossi',
+        ]) {
+          expect(find.text(text), findsOneWidget,
+              reason: '$text, newDesign: $newDesign');
+        }
+        await tester.pumpWidget(const SizedBox());
+        await tester.pump(const Duration(seconds: 6));
+      }
+    });
+
     testWidgets('the refresh disc loads again', (tester) async {
       var loads = 0;
       await _pump(

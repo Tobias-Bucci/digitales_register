@@ -258,6 +258,99 @@ void main() {
       await settleFor(tester, duration: const Duration(seconds: 1));
       expect(loads, 3);
     });
+
+    testWidgets('a lesson shows everything Legacy shows', (tester) async {
+      final lesson = ClassRegisterLesson.fromJson({
+        'date': '2026-06-12',
+        'hour': 2,
+        'toHour': 3,
+        'timeStart': 30000,
+        'timeEnd': 33000,
+        'className': '5AT',
+        'subject': {'name': 'Physik'},
+        'lessonTypeName': 'Fachunterricht',
+        'description': 'Versuch zum freien Fall',
+        'note': 'Laborkittel mitbringen',
+        'signedByCurrentUser': true,
+        'signedByOne': true,
+        'isSubstitute': 1,
+        'rooms': [
+          {'name': 'Labor 1'},
+          {'name': 'R 2.14'},
+        ],
+        'teachers': [
+          {'firstName': 'Maria', 'lastName': 'Huber'},
+          {'firstName': 'Paul', 'lastName': 'Gruber'},
+        ],
+        'lessonContents': const [],
+        'homeworkExams': [
+          {'name': 'Protokoll'},
+        ],
+        'grades': [
+          {'name': 'Mitarbeit', 'grade': '8'},
+        ],
+        'missingStudents': [
+          {'firstName': 'Anna', 'lastName': 'Rossi'},
+        ],
+        'criticalObservations': ['Handy im Unterricht'],
+      });
+      for (final newDesign in [false, true]) {
+        await _pump(
+          tester,
+          newDesign: newDesign,
+          size: const Size(1280, 800),
+          loader: () async => [lesson],
+        );
+        final reason = 'newDesign: $newDesign';
+        for (final text in [
+          'Physik',
+          '2 - 3',
+          '08:20 - 09:10',
+          '5AT',
+          'Labor 1, R 2.14',
+          'Fachunterricht',
+          'Versuch zum freien Fall',
+          // Signed state, substitution and what was entered.
+          'Unterschrieben',
+          'Supplenz',
+          '1 Aufgabe',
+          '1 Bewertung',
+          '1 Absenz',
+          'Protokoll',
+          'Mitarbeit: 8',
+          'Anna Rossi',
+          'Laborkittel mitbringen',
+          'Handy im Unterricht',
+          'Lehrpersonen: Maria Huber, Paul Gruber',
+        ]) {
+          expect(find.textContaining(text), findsWidgets,
+              reason: '$text, $reason');
+        }
+        await tester.pumpWidget(const SizedBox());
+        await tester.pump(const Duration(seconds: 6));
+      }
+    });
+
+    for (final (name, json, label) in const [
+      ('open', {'hasToBeSigned': true}, 'Offen'),
+      ('recorded', {'signedByOne': true}, 'Eingetragen'),
+      ('read only', <String, Object>{}, 'Nur Lesen'),
+    ]) {
+      testWidgets('the state of a $name lesson', (tester) async {
+        await _pump(
+          tester,
+          loader: () async => [
+            ClassRegisterLesson.fromJson({
+              'date': '2026-06-12',
+              'hour': 1,
+              'subject': {'name': 'Physik'},
+              ...json,
+            }),
+          ],
+        );
+        expect(find.text(label), findsOneWidget);
+      });
+    }
   });
 
   group('states', () {
