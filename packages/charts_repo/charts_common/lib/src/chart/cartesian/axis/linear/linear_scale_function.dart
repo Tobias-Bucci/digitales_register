@@ -47,6 +47,12 @@ class LinearScaleFunction {
 
   /// Translates the given range output back to a domainValue.
   double reverse(double viewPixels) {
+    // A 0 px range (chart laid out without width, e.g. offstage or while
+    // rotating) gives a zero factor: every domain value sits on the same
+    // pixel, so answer with the domain start instead of dividing by zero.
+    if (scalingFactor == 0) {
+      return -domainTranslate.toDouble();
+    }
     return ((viewPixels - rangeTranslate) / scalingFactor) - domainTranslate;
   }
 
