@@ -19,6 +19,15 @@ void main() {
     expect(lines.last, isNot(contains('took=')));
   });
 
+  test('times synchronous steps once', () {
+    final lines = <String>[];
+    final timeline = StartupTimeline(enabled: true, output: lines.add)..start();
+    expect(timeline.stepSync('p3_decode', () => 1), 1);
+    expect(timeline.stepSync('p3_decode', () => 2), 2);
+    expect(timeline.marks.single.name, 'p3_decode');
+    expect(lines.single, contains('took='));
+  });
+
   test('records nothing before main() started the clock', () async {
     final lines = <String>[];
     final timeline = StartupTimeline(enabled: true, output: lines.add);

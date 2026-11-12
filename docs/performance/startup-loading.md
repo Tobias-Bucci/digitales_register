@@ -11,7 +11,7 @@ in [Method](#method); anything that could not be measured is marked as such.
 | P0 | process start → `main()` | not visible to Dart; `am start -W` minus P1+P2, and `start_up_info.json` |
 | P1 | `main()` → `runApp` (every awaited call) | `p1_binding_ready`, `p1_privacy_analytics` (= `p1_privacy_consent` + `p1_launch_context`), `p1_app_clock`, `p1_language`, `p1_settings`, `p1_language_apply`, `p1_theme`, `p1_legacy_cleanup`, `p1_store_created`, `p1_widget_launch_handler`, `p2_run_app` |
 | P2 | `runApp` → first frame | `p2_first_frame` (navigator mounted after the first frame) |
-| P3 | first frame → first meaningful screen (login page, or dashboard with saved data) | `p3_saved_accounts_read`, `p3_offline_sign_in`, `p3_launch_gate_open`, `p3_launch_target_ready`, `p3_launch_overlay_removed` |
+| P3 | first frame → first meaningful screen (login page, or dashboard with saved data) | `p3_saved_accounts_read`, `p3_offline_sign_in` (contains `p3_saved_state_decode`), `p3_launch_gate_open`, `p3_launch_target_ready`, `p3_launch_overlay_removed` |
 | P4 | online sign-in (login request + config page) | `p4_online_sign_in` |
 | P5 | first network data (dashboard, notifications, profile) | `p5_first_data` |
 | P6 | deferred services after the first frame | `p6_after_first_frame_init` (whole start action included), `p6_package_info`, `p6_restore_preferences`, `p6_notifications_init` |
@@ -189,3 +189,24 @@ that `SharedPreferences.getInstance` already loaded).
 
 Kept because it provably removes five platform round trips from the critical
 path; it does not change the first frame measurably on its own.
+
+### Tried and reverted: launch context after the first frame (P1)
+
+Moving `p1_launch_context` (package info, install source, version write for
+the diagnostics context) behind the first frame did not bring `runApp`
+forward: the main-thread wait moved to the next platform call before
+`runApp`, `p1_language_apply` (a preferences write), in 2 of 6 runs of a
+batch, and stayed in `p1_privacy_consent` in the others (alternating
+batches, `p2_run_app` median 1344 → 1308 ms on a slowed-down emulator, within
+noise). The P1 wait is the Android main thread finishing the activity, which
+the first frame needs anyway; reordering Dart awaits cannot remove it, and the
+consent step must stay before `runApp`. Reverted, not committed.
+
+### Measured, left alone: saved-state decode (P3)
+
+`p3_saved_state_decode` (JSON decode + `built_value` deserialize of the saved
+state, synchronous on the UI isolate during the launch intro) takes 1.6 ms
+[1.3–2.7] for the demo account (~60 KB saved state; emulator, median of 10).
+Moving it to an isolate would cost more than it saves at this size. The step
+stays instrumented so it can be measured on a real account with a full school
+year.
