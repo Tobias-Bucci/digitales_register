@@ -363,13 +363,18 @@ class MainActivity: FlutterFragmentActivity() {
             null,
             null,
         )?.use { cursor ->
-            val idIndex = cursor.getColumnIndexOrThrow(CalendarContract.Calendars._ID)
-            val nameIndex = cursor.getColumnIndexOrThrow(CalendarContract.Calendars.CALENDAR_DISPLAY_NAME)
-            val accountNameIndex = cursor.getColumnIndexOrThrow(CalendarContract.Calendars.ACCOUNT_NAME)
-            val ownerAccountIndex = cursor.getColumnIndexOrThrow(CalendarContract.Calendars.OWNER_ACCOUNT)
-            val primaryIndex = cursor.getColumnIndexOrThrow(CalendarContract.Calendars.IS_PRIMARY)
-            val visibleIndex = cursor.getColumnIndexOrThrow(CalendarContract.Calendars.VISIBLE)
-            val accessIndex = cursor.getColumnIndexOrThrow(CalendarContract.Calendars.CALENDAR_ACCESS_LEVEL)
+            // Read the columns by their place in the projection, which the
+            // provider keeps. Some providers (seen on Android 9) name the
+            // IS_PRIMARY column after its SQL expression
+            // "COALESCE(isPrimary, ownerAccount = account_name)", so a lookup
+            // by name throws and no calendar could be listed.
+            val idIndex = projection.indexOf(CalendarContract.Calendars._ID)
+            val nameIndex = projection.indexOf(CalendarContract.Calendars.CALENDAR_DISPLAY_NAME)
+            val accountNameIndex = projection.indexOf(CalendarContract.Calendars.ACCOUNT_NAME)
+            val ownerAccountIndex = projection.indexOf(CalendarContract.Calendars.OWNER_ACCOUNT)
+            val primaryIndex = projection.indexOf(CalendarContract.Calendars.IS_PRIMARY)
+            val visibleIndex = projection.indexOf(CalendarContract.Calendars.VISIBLE)
+            val accessIndex = projection.indexOf(CalendarContract.Calendars.CALENDAR_ACCESS_LEVEL)
 
             while (cursor.moveToNext()) {
                 val visible = cursor.getInt(visibleIndex) == 1
