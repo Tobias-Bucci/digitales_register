@@ -40,6 +40,11 @@ class GradesChart extends StatelessWidget {
   final VoidCallback? goFullscreen;
   final bool isFullscreen;
   final bool colorGrades;
+
+  /// Axis labels, grid and the selection in the colours of the scheme, as the
+  /// new design has them. Legacy keeps black, white and grey.
+  final bool newDesign;
+  final ColorScheme scheme;
   final List<
       charts
       .Series<MapEntry<UtcDateTime, Tuple2<int, String>>, UtcDateTime>> grades;
@@ -53,8 +58,16 @@ class GradesChart extends StatelessWidget {
     this.goFullscreen,
     this.colorGrades = false,
     required this.isFullscreen,
-    required ColorScheme scheme,
+    required this.scheme,
+    this.newDesign = false,
   }) : grades = convert(graphs, scheme, colorGrades: colorGrades);
+
+  static charts.Color _chartColor(Color color) => charts.Color(
+        r: _channelValue(color.r),
+        g: _channelValue(color.g),
+        b: _channelValue(color.b),
+        a: _channelValue(color.a),
+      );
 
   bool get _shouldIncludePreviewPoints =>
       colorGrades ||
@@ -181,6 +194,14 @@ class GradesChart extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final darkMode = Theme.of(context).brightness == Brightness.dark;
+    final labelColor = newDesign
+        ? _chartColor(scheme.onSurfaceVariant)
+        : darkMode
+            ? charts.MaterialPalette.white
+            : charts.MaterialPalette.black;
+    final lineColor = newDesign
+        ? _chartColor(scheme.outlineVariant)
+        : charts.MaterialPalette.gray.shadeDefault;
     return GestureDetector(
       onTap: isFullscreen ? null : goFullscreen,
       child: Stack(
@@ -264,13 +285,11 @@ class GradesChart extends StatelessWidget {
                 renderSpec: charts.GridlineRendererSpec(
                   labelStyle: charts.TextStyleSpec(
                     fontSize: 10,
-                    color: darkMode
-                        ? charts.MaterialPalette.white
-                        : charts.MaterialPalette.black,
+                    color: labelColor,
                   ),
                   lineStyle: charts.LineStyleSpec(
                     thickness: isFullscreen ? 0 : 1,
-                    color: charts.MaterialPalette.gray.shadeDefault,
+                    color: lineColor,
                   ),
                 ),
               ),
@@ -285,14 +304,12 @@ class GradesChart extends StatelessWidget {
                 renderSpec: charts.SmallTickRendererSpec(
                   labelStyle: charts.TextStyleSpec(
                     fontSize: 10,
-                    color: darkMode
-                        ? charts.MaterialPalette.white
-                        : charts.MaterialPalette.black,
+                    color: labelColor,
                   ),
                   labelAnchor: charts.TickLabelAnchor.inside,
                   lineStyle: charts.LineStyleSpec(
                     thickness: 0,
-                    color: charts.MaterialPalette.gray.shadeDefault,
+                    color: lineColor,
                   ),
                 ),
               ),
@@ -309,6 +326,7 @@ class GradesChart extends StatelessWidget {
                       child: SelectionWidget(
                         date: data?.item1,
                         selections: data?.item2,
+                        newDesign: newDesign,
                       ),
                     ),
                   );
@@ -323,14 +341,30 @@ class SelectionWidget extends StatelessWidget {
   final UtcDateTime? date;
   final BuiltList<_Selection>? selections;
 
-  const SelectionWidget({super.key, this.date, this.selections});
+  const SelectionWidget({
+    super.key,
+    this.date,
+    this.selections,
+    this.newDesign = false,
+  });
+
+  /// Pills in the colours of the scheme instead of black and grey.
+  final bool newDesign;
 
   @override
   Widget build(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
+    // The new design: a calm pill that keeps its contrast on every theme, also
+    // on AMOLED black.
+    final neutral = newDesign ? scheme.inverseSurface : null;
+    final onNeutral = newDesign ? scheme.onInverseSurface : Colors.white;
+    final duration = newDesign && MediaQuery.disableAnimationsOf(context)
+        ? Duration.zero
+        : const Duration(milliseconds: 150);
     return AnimatedSwitcher(
       layoutBuilder: (currentChild, previousChildren) => AnimatedSize(
         alignment: Alignment.topCenter,
-        duration: const Duration(milliseconds: 150),
+        duration: duration,
         curve: Curves.ease,
         child: Stack(
           alignment: Alignment.topCenter,
@@ -340,7 +374,7 @@ class SelectionWidget extends StatelessWidget {
           ],
         ),
       ),
-      duration: const Duration(milliseconds: 150),
+      duration: duration,
       child: date != null && selections?.isNotEmpty == true
           ? Column(
               key: ValueKey(selections),
@@ -353,14 +387,14 @@ class SelectionWidget extends StatelessWidget {
                   ),
                   margin: const EdgeInsets.all(4),
                   decoration: BoxDecoration(
-                    borderRadius: BorderRadius.circular(4),
-                    color: Colors.black,
+                    borderRadius: BorderRadius.circular(newDesign ? 20 : 4),
+                    color: neutral ?? Colors.black,
                   ),
                   child: Text(
                     DateFormat.MMMMd(
                       Localizations.localeOf(context).toLanguageTag(),
                     ).format(date!),
-                    style: const TextStyle(color: Colors.white),
+                    style: TextStyle(color: onNeutral),
                   ),
                 ),
                 for (final selection in selections!)
@@ -390,12 +424,13 @@ class SelectionWidget extends StatelessWidget {
               ),
               margin: const EdgeInsets.all(4),
               decoration: BoxDecoration(
-                borderRadius: BorderRadius.circular(4),
-                color: Colors.grey.shade700,
+                borderRadius: BorderRadius.circular(newDesign ? 20 : 4),
+                color: neutral ?? Colors.grey.shade700,
               ),
               child: Text(
                 context.l10n.text('ui.chartHint'),
-                style: const TextStyle(color: Colors.white),
+                textAlign: newDesign ? TextAlign.center : null,
+                style: TextStyle(color: onNeutral),
               ),
             ),
     );

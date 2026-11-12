@@ -18,13 +18,20 @@
 import 'package:dr/container/chart_legend_container.dart';
 import 'package:dr/container/grades_chart_container.dart';
 import 'package:dr/i18n/app_localizations.dart';
+import 'package:dr/ui/grades_chart_page_new.dart';
 import 'package:flutter/material.dart';
+import 'package:responsive_scaffold/responsive_scaffold.dart';
 
 class GradesChartPage extends StatelessWidget {
   const GradesChartPage({super.key});
 
   @override
   Widget build(BuildContext context) {
+    // Inside the shell of the new design; Legacy and the root route keep this
+    // page as it was.
+    if (ResponsiveNavigationScope.isActive(context)) {
+      return const GradesChartPageNew();
+    }
     return Scaffold(
       appBar: AppBar(
         title: Text(context.l10n.text('ui.gradeChart')),

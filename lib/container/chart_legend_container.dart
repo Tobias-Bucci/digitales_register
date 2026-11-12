@@ -31,12 +31,13 @@ class ChartLegendContainer extends StatelessWidget {
           vm: vm,
         );
       },
-      connect: (state) {
-        return <String>{
-          ...state.settingsState.subjectThemes.keys,
-          ...state.gradesState.subjects.map((subject) => subject.name),
-        }.toBuiltList();
-      },
+      connect: subjectsOf,
     );
   }
+
+  /// The subjects the legend lists: those with a colour and those with grades.
+  static BuiltList<String> subjectsOf(AppState state) => <String>{
+        ...state.settingsState.subjectThemes.keys,
+        ...state.gradesState.subjects.map((subject) => subject.name),
+      }.toBuiltList();
 }
