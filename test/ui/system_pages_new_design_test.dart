@@ -5,6 +5,7 @@ import 'package:dr/actions/dashboard_actions.dart';
 import 'package:dr/app_state.dart';
 import 'package:dr/container/days_container.dart';
 import 'package:dr/data.dart';
+import 'package:dr/main.dart' show RegisterApp, navigatorKey;
 import 'package:dr/middleware/middleware.dart' show showLegacyStudyDataDialog;
 import 'package:dr/school_notification_engine.dart';
 import 'package:dr/school_notification_service.dart';
@@ -268,6 +269,31 @@ void main() {
       expect(
           find.widgetWithText(AppBar, 'Seite nicht gefunden'), findsOneWidget);
     });
+  });
+
+  group('unknown route in the app', () {
+    for (final newDesign in [true, false]) {
+      testWidgets(
+          'the routes of the app open the page '
+          '${newDesign ? 'in the new design' : 'in Legacy'}', (tester) async {
+        _size(tester, _phone);
+        await tester.pumpWidget(RegisterApp(
+          store: createStore(initialState: _state(), newDesign: newDesign),
+        ));
+        await tester.pump();
+        unawaited(navigatorKey!.currentState!.pushNamed('/no-such-page'));
+        await settleFor(tester, duration: const Duration(milliseconds: 600));
+
+        expect(find.byType(UnknownRoutePage), findsOneWidget);
+        expect(find.textContaining('/no-such-page'), findsOneWidget);
+        expect(find.byKey(const Key('unknown-route-page-new')),
+            newDesign ? findsOneWidget : findsNothing);
+        expect(find.byType(GlassStateCard),
+            newDesign ? findsOneWidget : findsNothing);
+        await tester.pumpWidget(const SizedBox());
+        await tester.pump(const Duration(seconds: 6));
+      });
+    }
   });
 
   group('system pages in the new design', () {
