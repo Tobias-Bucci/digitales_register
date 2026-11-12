@@ -107,6 +107,8 @@ class ChartGestureDetector {
     final container = _containerResolver();
     final localPosition = container.globalToLocal(d.focalPoint);
     _lastTapPoint = new Point(localPosition.dx, localPosition.dy);
+    // Do not carry the scale of an earlier drag into this one.
+    _lastScale = null;
 
     _isDragging = container.gestureProxy.onDragStart(_lastTapPoint!);
   }
@@ -131,8 +133,11 @@ class ChartGestureDetector {
 
     final container = _containerResolver();
 
-    container.gestureProxy
-        .onDragEnd(_lastTapPoint!, _lastScale!, d.velocity.pixelsPerSecond.dx);
+    // A drag can win the gesture arena and end without a single update (a
+    // short swipe past the tap slop), so there may be no scale yet: that is
+    // an unscaled drag.
+    container.gestureProxy.onDragEnd(
+        _lastTapPoint!, _lastScale ?? 1.0, d.velocity.pixelsPerSecond.dx);
   }
 }
 
