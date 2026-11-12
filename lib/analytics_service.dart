@@ -22,6 +22,7 @@ import 'package:dr/diagnostics_service.dart';
 import 'package:dr/i18n/app_localizations.dart';
 import 'package:dr/privacy_consent.dart';
 import 'package:dr/product_analytics.dart';
+import 'package:dr/startup_timeline.dart';
 import 'package:dr/telemetry_capabilities.dart';
 import 'package:dr/ui/glass_surface.dart' show GlassRimBorder;
 import 'package:dr/ui/privacy_data_details_page.dart';
@@ -133,7 +134,12 @@ class AnalyticsService {
   static Future<void> initLich() => _initialization ??= _initialize();
   static Future<void> _initialize() async {
     diagnostics.installGlobalHandlers();
-    await privacy.initialize();
+    await startupTimeline.step('p1_privacy_consent', privacy.initialize);
+    await startupTimeline.step('p1_launch_context', _resolveLaunchContext);
+  }
+
+  /// Puts the install/upgrade context into the diagnostics. Never throws.
+  static Future<void> _resolveLaunchContext() async {
     try {
       final prefs = await SharedPreferences.getInstance();
       final info = await PackageInfo.fromPlatform();
