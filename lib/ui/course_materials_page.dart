@@ -23,6 +23,7 @@ import 'package:dr/main.dart';
 import 'package:dr/middleware/middleware.dart';
 import 'package:dr/page_payload_cache.dart';
 import 'package:dr/ui/animated_linear_progress_indicator.dart';
+import 'package:dr/ui/course_materials_page_new.dart';
 import 'package:dr/ui/no_internet.dart';
 import 'package:dr/ui/readable_content.dart';
 import 'package:flutter/material.dart';
@@ -243,6 +244,21 @@ class _CourseMaterialsPageState extends State<CourseMaterialsPage> {
 
   @override
   Widget build(BuildContext context) {
+    // Below the navigation of the new design, which follows a switch of the
+    // design at once. The loading above stays the same for both.
+    if (ResponsiveNavigationScope.isActive(context)) {
+      return CourseMaterialsPageNew(
+        courses: _courses,
+        lastFetched: _lastFetched,
+        loadError: _loadError,
+        refreshError: _refreshError,
+        openingEntryId: _openingEntryId,
+        loading: _loading,
+        offline: isOffline(),
+        onRefresh: _refresh,
+        onOpenEntry: _openEntry,
+      );
+    }
     final l10n = context.l10n;
     return Scaffold(
       appBar: ResponsiveAppBar(
