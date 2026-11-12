@@ -97,8 +97,7 @@ Future<void> main() async {
       'p1_privacy_analytics', () => AnalyticsService.initLich());
   await startupTimeline.step('p1_app_clock', appClock.initialize);
   await _loadStartupUserPreferences();
-  await startupTimeline.step(
-      'p1_legacy_cleanup', _removeLegacyNotificationData);
+  await startupTimeline.step('p1_legacy_cleanup', removeLegacyNotificationData);
   final store = Store<AppState, AppStateBuilder, AppActions>(
     appReducerBuilder.build(),
     AppState((b) => b.settingsState.replace(_startupSettingsState)),
@@ -157,7 +156,9 @@ Future<void> _launchTargetReady() async {
   startupTimeline.mark('p3_launch_target_ready');
 }
 
-Future<void> _removeLegacyNotificationData() async {
+/// Removes what older versions stored for background notification polling.
+@visibleForTesting
+Future<void> removeLegacyNotificationData() async {
   final prefs = await SharedPreferences.getInstance();
   for (final key in const [
     'pushNotificationsEnabled',
@@ -166,7 +167,8 @@ Future<void> _removeLegacyNotificationData() async {
     'backgroundNotificationPollLease',
     'backgroundNotificationPollLastCompleted',
   ]) {
-    await prefs.remove(key);
+    // Usually long gone: skip the platform round trip before the first frame.
+    if (prefs.containsKey(key)) await prefs.remove(key);
   }
 }
 
