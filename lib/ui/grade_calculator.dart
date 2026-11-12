@@ -288,12 +288,15 @@ class _GradeCalculatorState extends State<GradeCalculator> {
     return Scaffold(
       appBar: AppBar(
         title: Text(context.t('gradeCalculator.title')),
+        // The greeting already offers the target calculator, so the app bar
+        // only does once there are grades (#115).
         actions: [
-          IconButton(
-            onPressed: showTargetCalculator,
-            icon: const Icon(Icons.track_changes),
-            tooltip: context.t('targetCalculator.open'),
-          ),
+          if (!showGreeting)
+            IconButton(
+              onPressed: showTargetCalculator,
+              icon: const Icon(Icons.track_changes),
+              tooltip: context.t('targetCalculator.open'),
+            ),
         ],
       ),
       body: AnimatedCrossFade(

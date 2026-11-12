@@ -128,13 +128,16 @@ class _NewGradeCalculatorView extends StatelessWidget {
             width,
             twoColumns: grades.isNotEmpty,
           ),
+          // The welcome card already offers the target calculator, so the
+          // header only does once there are grades (#115).
           actions: [
-            HeaderDiscButton(
-              key: const Key('grade-calculator-target'),
-              tooltip: l10n.text('targetCalculator.open'),
-              icon: Icons.track_changes,
-              onPressed: state.showTargetCalculator,
-            ),
+            if (grades.isNotEmpty)
+              HeaderDiscButton(
+                key: const Key('grade-calculator-target'),
+                tooltip: l10n.text('targetCalculator.open'),
+                icon: Icons.track_changes,
+                onPressed: state.showTargetCalculator,
+              ),
           ],
         ),
         body: grades.isEmpty

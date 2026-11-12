@@ -66,6 +66,15 @@ void main() {
 
     await pumpApp(tester, store: store, home: const GradeCalculator());
     expect(tester.takeException(), isNull);
+    // The greeting offers the target calculator, the app bar does not as
+    // well (#115).
+    expect(
+      find.descendant(
+        of: find.byType(AppBar),
+        matching: find.byIcon(Icons.track_changes),
+      ),
+      findsNothing,
+    );
 
     final scrollable = find.descendant(
       of: find.byType(Greeting),
@@ -285,8 +294,8 @@ void main() {
         weighted(1000, 0),
         weighted(400, -50),
       ]);
-      expect(store.state.gradesState.subjects.single.average(Semester.first),
-          750);
+      expect(
+          store.state.gradesState.subjects.single.average(Semester.first), 750);
       await tester.tap(find.widgetWithText(ElevatedButton, 'Importieren'));
       await tester.pumpAndSettle();
 
