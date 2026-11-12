@@ -17,6 +17,7 @@
 
 import 'package:dr/i18n/app_localizations.dart';
 import 'package:flutter/material.dart';
+import 'package:responsive_scaffold/responsive_scaffold.dart';
 
 class DebugPageContainer extends StatelessWidget {
   const DebugPageContainer({super.key});
@@ -35,7 +36,13 @@ class DebugPageWidget extends StatelessWidget {
     return Scaffold(
       appBar: AppBar(title: Text(context.l10n.text('ui.debug'))),
       body: ListView(
-        padding: const EdgeInsets.all(16),
+        // Ends above the floating bar of the new design; 0 elsewhere.
+        padding: EdgeInsets.fromLTRB(
+          16,
+          16,
+          16,
+          16 + ResponsiveNavigationScope.bottomInsetOf(context),
+        ),
         children: [
           ElevatedButton(
             onPressed: () async {

@@ -20,6 +20,8 @@ import 'dart:convert';
 import 'package:dr/app_state.dart';
 import 'package:dr/i18n/app_localizations.dart';
 import 'package:dr/main.dart';
+import 'package:dr/ui/glass_page.dart';
+import 'package:dr/ui/glass_surface.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:responsive_scaffold/responsive_scaffold.dart';
@@ -31,6 +33,26 @@ class NetworkProtocol extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    if (ResponsiveNavigationScope.isActive(context)) {
+      if (items.isEmpty) {
+        return GlassStateCard(
+          icon: Icons.lan_outlined,
+          title: context.l10n.text('network.empty'),
+          body: context.l10n.text('network.emptyHint'),
+        );
+      }
+      return GlassListBody.builder(
+        listKey: const Key('network-protocol-list'),
+        itemCount: items.length,
+        itemBuilder: (context, index) => Padding(
+          padding: EdgeInsets.only(top: index == 0 ? 0 : 8),
+          child: _NewItem(
+            item: items[index],
+            index: items.length - index,
+          ),
+        ),
+      );
+    }
     if (items.isEmpty) {
       return Center(
         child: Padding(
@@ -212,6 +234,228 @@ class _Item extends StatelessWidget {
   }
 }
 
+/// An entry of the protocol in the new design: a glass card that opens the
+/// details in a sheet, with the same facts as the legacy card.
+class _NewItem extends StatelessWidget {
+  const _NewItem({required this.item, required this.index});
+
+  static const _shape = RoundedRectangleBorder(
+    borderRadius: DesignTokens.cardBorderRadius,
+  );
+
+  final NetworkProtocolItem item;
+  final int index;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final scheme = theme.colorScheme;
+    final l10n = context.l10n;
+    final addressInfo = _splitAddress(item.address);
+    final preview =
+        _contentPreview(item.response) ?? _contentPreview(item.parameters);
+    final chips = [
+      (
+        Icons.tune_rounded,
+        l10n.text(item.parameters.trim().isNotEmpty
+            ? 'network.parameters'
+            : 'network.noParameters'),
+      ),
+      (
+        Icons.reply_all_rounded,
+        l10n.text(item.response.trim().isNotEmpty
+            ? 'network.response'
+            : 'network.noResponse'),
+      ),
+      (
+        Icons.notes_rounded,
+        l10n.text('network.characters', args: {
+          'count':
+              '${_contentLength(item.parameters) + _contentLength(item.response)}'
+        }),
+      ),
+    ];
+    final previewText =
+        preview == null ? null : _localProtocolText(context, preview);
+    return RepaintBoundary(
+      child: GlassFocusRing(
+        shape: _shape,
+        activeTint: scheme.onSurface.withValues(alpha: 0.05),
+        child: Semantics(
+          button: true,
+          label: [
+            addressInfo.path,
+            if (addressInfo.host.isNotEmpty) addressInfo.host,
+            for (final (_, label) in chips) label,
+            if (previewText != null) previewText,
+          ].join(', '),
+          excludeSemantics: true,
+          onTap: () => _showProtocolDetails(context, item),
+          child: Material(
+            type: MaterialType.transparency,
+            child: InkWell(
+              customBorder: _shape,
+              hoverColor: Colors.transparent,
+              focusColor: Colors.transparent,
+              mouseCursor: NewDesignTheme.clickCursor,
+              onTap: () => _showProtocolDetails(context, item),
+              child: GlassCard(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Row(
+                      children: [
+                        DecoratedBox(
+                          decoration: BoxDecoration(
+                            color: scheme.primaryContainer,
+                            borderRadius: BorderRadius.circular(10),
+                          ),
+                          child: SizedBox.square(
+                            dimension: 32,
+                            child: Center(
+                              child: Text(
+                                '$index',
+                                style: theme.textTheme.labelMedium?.copyWith(
+                                  color: scheme.onPrimaryContainer,
+                                  fontWeight: FontWeight.w700,
+                                ),
+                              ),
+                            ),
+                          ),
+                        ),
+                        const SizedBox(width: 10),
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                addressInfo.path,
+                                maxLines: 2,
+                                overflow: TextOverflow.ellipsis,
+                                style: theme.textTheme.labelLarge?.copyWith(
+                                  fontWeight: FontWeight.w600,
+                                ),
+                              ),
+                              if (addressInfo.host.isNotEmpty)
+                                Text(
+                                  addressInfo.host,
+                                  maxLines: 1,
+                                  overflow: TextOverflow.ellipsis,
+                                  style: theme.textTheme.labelSmall?.copyWith(
+                                    color: scheme.onSurfaceVariant,
+                                  ),
+                                ),
+                            ],
+                          ),
+                        ),
+                        const SizedBox(width: 4),
+                        Icon(
+                          Icons.chevron_right_rounded,
+                          size: 20,
+                          color: scheme.onSurfaceVariant,
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 10),
+                    Wrap(
+                      spacing: 6,
+                      runSpacing: 6,
+                      children: [
+                        for (final (icon, label) in chips)
+                          GlassChip(icon: icon, label: label),
+                      ],
+                    ),
+                    if (previewText != null) ...[
+                      const SizedBox(height: 8),
+                      Text(
+                        previewText,
+                        maxLines: 2,
+                        overflow: TextOverflow.ellipsis,
+                        style: theme.textTheme.bodySmall?.copyWith(
+                          color: scheme.onSurfaceVariant,
+                        ),
+                      ),
+                    ],
+                  ],
+                ),
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+/// The details of an entry in a glass sheet of the new design.
+class _NewDetails extends StatelessWidget {
+  const _NewDetails({required this.item});
+
+  final NetworkProtocolItem item;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final l10n = context.l10n;
+    final addressInfo = _splitAddress(item.address);
+    return GlassPanel(
+      title: addressInfo.path,
+      child: Column(
+        key: const Key('network-protocol-details'),
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          if (addressInfo.host.isNotEmpty) ...[
+            SelectableText(
+              addressInfo.fullAddress,
+              style: theme.textTheme.bodyMedium?.copyWith(
+                color: theme.colorScheme.onSurfaceVariant,
+                height: 1.4,
+              ),
+            ),
+            const SizedBox(height: 12),
+          ],
+          Wrap(
+            spacing: 6,
+            runSpacing: 6,
+            children: [
+              GlassChip(
+                icon: Icons.link_rounded,
+                label: addressInfo.host.isEmpty
+                    ? l10n.text('network.request')
+                    : addressInfo.host,
+              ),
+              GlassChip(
+                icon: Icons.tune_rounded,
+                label: l10n.text('network.parameterCharacters',
+                    args: {'count': '${_contentLength(item.parameters)}'}),
+              ),
+              GlassChip(
+                icon: Icons.reply_rounded,
+                label: l10n.text('network.responseCharacters',
+                    args: {'count': '${_contentLength(item.response)}'}),
+              ),
+            ],
+          ),
+          const SizedBox(height: 16),
+          _ProtocolSection(
+            title: l10n.text('network.parameters'),
+            content: item.parameters,
+            icon: Icons.tune_rounded,
+            glass: true,
+          ),
+          const SizedBox(height: 8),
+          _ProtocolSection(
+            title: l10n.text('network.response'),
+            content: item.response,
+            icon: Icons.reply_all_rounded,
+            glass: true,
+          ),
+        ],
+      ),
+    );
+  }
+}
+
 class _InfoChip extends StatelessWidget {
   const _InfoChip({
     required this.icon,
@@ -254,11 +498,15 @@ class _ProtocolSection extends StatelessWidget {
     required this.title,
     required this.content,
     required this.icon,
+    this.glass = false,
   });
 
   final String title;
   final String? content;
   final IconData icon;
+
+  /// On a glass card, in the sheet of the new design.
+  final bool glass;
 
   @override
   Widget build(BuildContext context) {
@@ -266,6 +514,54 @@ class _ProtocolSection extends StatelessWidget {
     final formattedContent =
         _localProtocolText(context, _formatProtocolContent(content, title));
 
+    final body = Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Padding(
+          padding: const EdgeInsets.fromLTRB(14, 14, 8, 10),
+          child: Row(
+            children: [
+              Icon(icon, size: 18),
+              const SizedBox(width: 8),
+              Expanded(
+                child: Text(
+                  title,
+                  style: theme.textTheme.titleSmall?.copyWith(
+                    fontWeight: FontWeight.w700,
+                  ),
+                ),
+              ),
+              IconButton(
+                tooltip: context.l10n.text('network.copy'),
+                icon: const Icon(Icons.content_copy_rounded),
+                onPressed: () {
+                  Clipboard.setData(ClipboardData(text: formattedContent));
+                  showSnackBar(context.l10n.text('network.copiedToClipboard'));
+                },
+              ),
+            ],
+          ),
+        ),
+        const Divider(height: 1),
+        SizedBox(
+          width: double.infinity,
+          child: SingleChildScrollView(
+            scrollDirection: Axis.horizontal,
+            padding: const EdgeInsets.all(14),
+            child: SelectableText(
+              formattedContent,
+              style: theme.textTheme.bodyMedium?.copyWith(
+                fontFamily: 'monospace',
+                height: 1.45,
+              ),
+            ),
+          ),
+        ),
+      ],
+    );
+    if (glass) {
+      return GlassCard(padding: EdgeInsets.zero, child: body);
+    }
     return Container(
       decoration: BoxDecoration(
         color: theme.colorScheme.surfaceContainerLowest,
@@ -274,56 +570,19 @@ class _ProtocolSection extends StatelessWidget {
           color: theme.colorScheme.outlineVariant,
         ),
       ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Padding(
-            padding: const EdgeInsets.fromLTRB(14, 14, 8, 10),
-            child: Row(
-              children: [
-                Icon(icon, size: 18),
-                const SizedBox(width: 8),
-                Expanded(
-                  child: Text(
-                    title,
-                    style: theme.textTheme.titleSmall?.copyWith(
-                      fontWeight: FontWeight.w700,
-                    ),
-                  ),
-                ),
-                IconButton(
-                  tooltip: context.l10n.text('network.copy'),
-                  icon: const Icon(Icons.content_copy_rounded),
-                  onPressed: () {
-                    Clipboard.setData(ClipboardData(text: formattedContent));
-                    showSnackBar(context.l10n.text('network.copiedToClipboard'));
-                  },
-                ),
-              ],
-            ),
-          ),
-          const Divider(height: 1),
-          SizedBox(
-            width: double.infinity,
-            child: SingleChildScrollView(
-              scrollDirection: Axis.horizontal,
-              padding: const EdgeInsets.all(14),
-              child: SelectableText(
-                formattedContent,
-                style: theme.textTheme.bodyMedium?.copyWith(
-                  fontFamily: 'monospace',
-                  height: 1.45,
-                ),
-              ),
-            ),
-          ),
-        ],
-      ),
+      child: body,
     );
   }
 }
 
 void _showProtocolDetails(BuildContext context, NetworkProtocolItem item) {
+  if (ResponsiveNavigationScope.isActive(context)) {
+    showGlassSheet<void>(
+      context: context,
+      builder: (context) => _NewDetails(item: item),
+    );
+    return;
+  }
   final addressInfo = _splitAddress(item.address);
   showModalBottomSheet<void>(
     context: context,

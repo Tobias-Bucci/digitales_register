@@ -490,6 +490,7 @@ class GlassStateCard extends StatelessWidget {
     this.actionLabel,
     this.onAction,
     this.actionIcon = Icons.refresh_rounded,
+    this.secondaryActions = const [],
   });
 
   final IconData icon;
@@ -499,6 +500,9 @@ class GlassStateCard extends StatelessWidget {
   final String? actionLabel;
   final VoidCallback? onAction;
   final IconData actionIcon;
+
+  /// Further ways to start, below the action, such as `TextButton.icon`s.
+  final List<Widget> secondaryActions;
 
   @override
   Widget build(BuildContext context) {
@@ -560,6 +564,13 @@ class GlassStateCard extends StatelessWidget {
                     style: glassControlStyle(scheme),
                     icon: Icon(actionIcon, size: 20),
                     label: Text(actionLabel),
+                  ),
+                ],
+                if (secondaryActions.isNotEmpty) ...[
+                  const SizedBox(height: 4),
+                  Wrap(
+                    alignment: WrapAlignment.center,
+                    children: secondaryActions,
                   ),
                 ],
               ],
@@ -660,6 +671,66 @@ class GlassPanel extends StatelessWidget {
           ),
         ),
       );
+}
+
+/// The route of `showGlassSheet` on the root navigator, for a caller that has
+/// to keep hold of it, such as a question that is taken back once it no longer
+/// applies: a glass sheet on phones, a centred panel from 720 px.
+///
+/// With [dismissible] off, neither the scrim nor a drag closes it and it has
+/// no handle; a `PopScope` in the content keeps the back button from closing
+/// it, too. The themes of [context] go with it, as with `showGlassSheet`.
+Route<T> glassSheetRoute<T>({
+  required BuildContext context,
+  required WidgetBuilder builder,
+  bool dismissible = true,
+  RouteSettings? settings,
+}) {
+  final navigator = Navigator.of(context, rootNavigator: true);
+  final themes = InheritedTheme.capture(from: context, to: navigator.context);
+  final localizations = MaterialLocalizations.of(context);
+  if (MediaQuery.sizeOf(context).width >= tabletLayoutBreakpoint) {
+    return DialogRoute<T>(
+      context: context,
+      themes: themes,
+      settings: settings,
+      barrierDismissible: dismissible,
+      barrierLabel: localizations.modalBarrierDismissLabel,
+      barrierColor:
+          Theme.of(context).dialogTheme.barrierColor ?? Colors.black54,
+      builder: (context) => Dialog(
+        backgroundColor: Colors.transparent,
+        surfaceTintColor: Colors.transparent,
+        shadowColor: Colors.transparent,
+        elevation: 0,
+        shape:
+            const RoundedRectangleBorder(borderRadius: GlassSheet.panelRadius),
+        insetPadding: const EdgeInsets.all(24),
+        child: ConstrainedBox(
+          constraints: const BoxConstraints(maxWidth: GlassSheet.panelMaxWidth),
+          child: GlassSheet.panel(child: builder(context)),
+        ),
+      ),
+    );
+  }
+  return ModalBottomSheetRoute<T>(
+    capturedThemes: themes,
+    settings: settings,
+    isScrollControlled: true,
+    isDismissible: dismissible,
+    enableDrag: dismissible,
+    barrierLabel: localizations.scrimLabel,
+    barrierOnTapHint:
+        localizations.scrimOnTapHint(localizations.bottomSheetLabel),
+    modalBarrierColor: Theme.of(context).bottomSheetTheme.modalBarrierColor,
+    backgroundColor: Colors.transparent,
+    elevation: 0,
+    shape: const RoundedRectangleBorder(borderRadius: GlassSheet.sheetRadius),
+    builder: (context) => GlassSheet(
+      showDragHandle: dismissible,
+      child: builder(context),
+    ),
+  );
 }
 
 /// A card that leads somewhere: an icon, a [title], an optional [subtitle] and
@@ -782,6 +853,58 @@ class GlassTile extends StatelessWidget {
           ],
         ),
       );
+}
+
+/// A fact as a small pill of glass, such as a size or a state: an [icon] and a
+/// [label], in the tone of the other controls. It does not react to taps.
+/// Light only, so it may stand on a card in a scrolling list; opaque with an
+/// outline in high contrast.
+class GlassChip extends StatelessWidget {
+  const GlassChip({super.key, required this.icon, required this.label});
+
+  final IconData icon;
+  final String label;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final scheme = theme.colorScheme;
+    final highContrast = MediaQuery.highContrastOf(context);
+    const shape = StadiumBorder();
+    return GlassEdge(
+      shape: shape,
+      sheen: false,
+      child: DecoratedBox(
+        decoration: ShapeDecoration(
+          color: scheme.secondaryContainer.withValues(
+            alpha: highContrast ? 1 : DesignTokens.controlOpacity,
+          ),
+          shape: highContrast
+              ? StadiumBorder(side: BorderSide(color: scheme.outline))
+              : shape,
+        ),
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Icon(icon, size: 16, color: scheme.onSecondaryContainer),
+              const SizedBox(width: 6),
+              Flexible(
+                child: Text(
+                  label,
+                  style: theme.textTheme.labelMedium?.copyWith(
+                    fontWeight: FontWeight.w600,
+                    color: scheme.onSecondaryContainer,
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
 }
 
 /// The heading of a section of a list: its [title], an optional [count] after

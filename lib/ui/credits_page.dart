@@ -17,7 +17,10 @@
 
 import 'package:dr/i18n/app_localizations.dart';
 import 'package:dr/theme/app_palette.dart';
+import 'package:dr/ui/glass_page.dart';
+import 'package:dr/ui/glass_surface.dart';
 import 'package:flutter/material.dart';
+import 'package:responsive_scaffold/responsive_scaffold.dart';
 
 /// A person thanked on the credits page.
 ///
@@ -55,9 +58,33 @@ class CreditsPage extends StatelessWidget {
 
   final List<CreditEntry> entries;
 
+  Color _accent(int index) =>
+      AppPalette.subjectSwatches[index * 5 % AppPalette.subjectSwatches.length];
+
   @override
   Widget build(BuildContext context) {
     final l10n = context.l10n;
+    if (ResponsiveNavigationScope.isActive(context)) {
+      return GlassPage(
+        header: GlassPageHeader(
+          surfaceKey: const Key('credits-app-header'),
+          title: l10n.text('credits.title'),
+          floatingMaxWidth:
+              glassHeaderFloatingWidth(MediaQuery.sizeOf(context).width),
+        ),
+        body: GlassListBody(
+          listKey: const Key('credits-list'),
+          children: [
+            const _CreditsHeader(),
+            const SizedBox(height: 20),
+            for (var i = 0; i < entries.length; i++) ...[
+              if (i > 0) const SizedBox(height: 8),
+              _CreditCard(entry: entries[i], accent: _accent(i), glass: true),
+            ],
+          ],
+        ),
+      );
+    }
     return Scaffold(
       appBar: AppBar(title: Text(l10n.text('credits.title'))),
       body: ListView(
@@ -69,8 +96,7 @@ class CreditsPage extends StatelessWidget {
             if (i > 0) const SizedBox(height: 12),
             _CreditCard(
               entry: entries[i],
-              accent: AppPalette
-                  .subjectSwatches[i * 5 % AppPalette.subjectSwatches.length],
+              accent: _accent(i),
             ),
           ],
         ],
@@ -131,80 +157,99 @@ class _CreditsHeader extends StatelessWidget {
 }
 
 class _CreditCard extends StatelessWidget {
-  const _CreditCard({required this.entry, required this.accent});
+  const _CreditCard({
+    required this.entry,
+    required this.accent,
+    this.glass = false,
+  });
 
   final CreditEntry entry;
   final Color accent;
+
+  /// A glass card of the new design rather than a Material card.
+  final bool glass;
 
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final scheme = theme.colorScheme;
     final l10n = context.l10n;
-    return Card(
-      margin: EdgeInsets.zero,
-      child: Padding(
-        padding: const EdgeInsets.all(20),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
+    final onAccent = glass ? AppPalette.onSubjectColor(accent) : Colors.white;
+    final content = Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Row(
           children: [
-            Row(
-              children: [
-                ExcludeSemantics(
-                  child: CircleAvatar(
-                    radius: 26,
-                    backgroundColor: accent,
-                    foregroundColor: Colors.white,
-                    child: Text(
-                      entry.initials,
-                      style: theme.textTheme.titleMedium?.copyWith(
-                        color: Colors.white,
-                        fontWeight: FontWeight.w700,
-                      ),
+            ExcludeSemantics(
+              child: CircleAvatar(
+                radius: 26,
+                backgroundColor: accent,
+                foregroundColor: onAccent,
+                child: Text(
+                  entry.initials,
+                  style: theme.textTheme.titleMedium?.copyWith(
+                    color: onAccent,
+                    fontWeight: FontWeight.w700,
+                  ),
+                ),
+              ),
+            ),
+            const SizedBox(width: 16),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    entry.name,
+                    style: glass
+                        ? theme.textTheme.titleSmall?.copyWith(
+                            fontWeight: FontWeight.w600,
+                          )
+                        : theme.textTheme.titleMedium?.copyWith(
+                            fontWeight: FontWeight.w700,
+                          ),
+                  ),
+                  const SizedBox(height: 2),
+                  Text(
+                    l10n.text(entry.roleKey),
+                    style: theme.textTheme.bodySmall?.copyWith(
+                      color: scheme.onSurfaceVariant,
                     ),
                   ),
-                ),
-                const SizedBox(width: 16),
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        entry.name,
-                        style: theme.textTheme.titleMedium?.copyWith(
-                          fontWeight: FontWeight.w700,
-                        ),
-                      ),
-                      const SizedBox(height: 2),
-                      Text(
-                        l10n.text(entry.roleKey),
-                        style: theme.textTheme.bodySmall?.copyWith(
-                          color: scheme.onSurfaceVariant,
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-              ],
-            ),
-            const SizedBox(height: 16),
-            DecoratedBox(
-              decoration: BoxDecoration(
-                border: Border(left: BorderSide(color: accent, width: 3)),
-              ),
-              child: Padding(
-                padding: const EdgeInsets.only(left: 14),
-                child: Text(
-                  l10n.text(entry.messageKey),
-                  style: theme.textTheme.bodyLarge?.copyWith(
-                    fontStyle: FontStyle.italic,
-                    height: 1.45,
-                  ),
-                ),
+                ],
               ),
             ),
           ],
         ),
+        const SizedBox(height: 16),
+        DecoratedBox(
+          decoration: BoxDecoration(
+            border: Border(left: BorderSide(color: accent, width: 3)),
+          ),
+          child: Padding(
+            padding: const EdgeInsets.only(left: 14),
+            child: Text(
+              l10n.text(entry.messageKey),
+              style: theme.textTheme.bodyLarge?.copyWith(
+                fontStyle: FontStyle.italic,
+                height: 1.45,
+              ),
+            ),
+          ),
+        ),
+      ],
+    );
+    if (glass) {
+      return GlassCard(
+        padding: const EdgeInsets.all(16),
+        child: Semantics(container: true, child: content),
+      );
+    }
+    return Card(
+      margin: EdgeInsets.zero,
+      child: Padding(
+        padding: const EdgeInsets.all(20),
+        child: content,
       ),
     );
   }
