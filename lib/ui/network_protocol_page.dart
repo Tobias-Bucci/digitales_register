@@ -17,13 +17,26 @@
 
 import 'package:dr/container/network_protocol_container.dart';
 import 'package:dr/i18n/app_localizations.dart';
+import 'package:dr/ui/glass_page.dart';
 import 'package:flutter/material.dart';
+import 'package:responsive_scaffold/responsive_scaffold.dart';
 
 class NetworkProtocolPage extends StatelessWidget {
   const NetworkProtocolPage({super.key});
 
   @override
   Widget build(BuildContext context) {
+    if (ResponsiveNavigationScope.isActive(context)) {
+      return GlassPage(
+        header: GlassPageHeader(
+          surfaceKey: const Key('network-protocol-app-header'),
+          title: context.l10n.text('settings.advanced.networkProtocol'),
+          floatingMaxWidth:
+              glassHeaderFloatingWidth(MediaQuery.sizeOf(context).width),
+        ),
+        body: NetworkProtocolContainer(),
+      );
+    }
     return Scaffold(
       appBar: AppBar(
         title: Text(context.l10n.text('settings.advanced.networkProtocol')),

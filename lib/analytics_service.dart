@@ -23,6 +23,7 @@ import 'package:dr/i18n/app_localizations.dart';
 import 'package:dr/privacy_consent.dart';
 import 'package:dr/product_analytics.dart';
 import 'package:dr/telemetry_capabilities.dart';
+import 'package:dr/ui/glass_surface.dart' show GlassRimBorder;
 import 'package:dr/ui/privacy_data_details_page.dart';
 import 'package:firebase_analytics/firebase_analytics.dart';
 import 'package:firebase_core/firebase_core.dart';
@@ -299,7 +300,11 @@ class _PrivacyConsentDialogState extends State<_PrivacyConsentDialog> {
       canPop: widget.management && !_saving,
       child: Dialog(
         insetPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 24),
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
+        // Opened from the settings of the new design, it gets the rim of its
+        // glass panels; on first start, above the shell, it keeps its corners.
+        shape: theme.dialogTheme.shape is GlassRimBorder
+            ? theme.dialogTheme.shape
+            : RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
         clipBehavior: Clip.antiAlias,
         child: ConstrainedBox(
           constraints: BoxConstraints(

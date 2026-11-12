@@ -1,6 +1,9 @@
 import 'package:dr/analytics_service.dart';
 import 'package:dr/i18n/app_localizations.dart';
+import 'package:dr/ui/glass_page.dart';
+import 'package:dr/ui/glass_surface.dart';
 import 'package:flutter/material.dart';
+import 'package:responsive_scaffold/responsive_scaffold.dart';
 import 'package:url_launcher/url_launcher.dart';
 
 class PrivacyDataDetailsPage extends StatelessWidget {
@@ -33,8 +36,94 @@ class PrivacyDataDetailsPage extends StatelessWidget {
     'rights': Icons.gavel_outlined,
   };
 
+  void _openContact() =>
+      launchUrl(Uri(scheme: 'mailto', path: 'buccitobias774@gmail.com'),
+          mode: LaunchMode.externalApplication);
+
+  void _openFirebasePrivacy() {
+    AnalyticsService.product
+        .event('external_action', {'action_type': 'open_privacy_policy'});
+    launchUrl(Uri.parse('https://firebase.google.com/support/privacy'),
+        mode: LaunchMode.externalApplication);
+  }
+
+  /// Inside the shell of the new design. From the consent dialog, on the root
+  /// navigator, the page keeps the legacy look below.
+  Widget _newDesign(BuildContext context) {
+    final l10n = context.l10n;
+    final theme = Theme.of(context);
+    final scheme = theme.colorScheme;
+    return GlassPage(
+      header: GlassPageHeader(
+        surfaceKey: const Key('privacy-details-app-header'),
+        title: l10n.text('privacyDetails.title'),
+        floatingMaxWidth:
+            glassHeaderFloatingWidth(MediaQuery.sizeOf(context).width),
+      ),
+      body: GlassListBody(
+        listKey: const Key('privacy-details-list'),
+        children: [
+          for (final section in sections.entries) ...[
+            GlassCard(
+              key: ValueKey('privacy-details-${section.key}'),
+              padding: const EdgeInsets.fromLTRB(16, 14, 16, 16),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(children: [
+                    Icon(section.value, size: 20, color: scheme.primary),
+                    const SizedBox(width: 10),
+                    Expanded(
+                      child: Semantics(
+                        header: true,
+                        child: Text(
+                          l10n.text('privacyDetails.${section.key}.title'),
+                          style: theme.textTheme.titleSmall
+                              ?.copyWith(fontWeight: FontWeight.w600),
+                        ),
+                      ),
+                    ),
+                  ]),
+                  const SizedBox(height: 8),
+                  Text(
+                    l10n.text('privacyDetails.${section.key}.body'),
+                    style: theme.textTheme.bodyMedium?.copyWith(
+                      color: scheme.onSurfaceVariant,
+                      height: 1.4,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            const SizedBox(height: 8),
+          ],
+          GlassTile(
+            key: const Key('privacy-details-contact'),
+            icon: Icons.email_outlined,
+            title: 'buccitobias774@gmail.com',
+            subtitle: l10n.text('privacyDetails.contact'),
+            trailing: const Icon(Icons.open_in_new_rounded),
+            onTap: _openContact,
+          ),
+          const SizedBox(height: 8),
+          GlassTile(
+            key: const Key('privacy-details-firebase'),
+            icon: Icons.policy_outlined,
+            title: 'firebase.google.com',
+            subtitle: l10n.text('privacyDetails.firebase'),
+            trailing: const Icon(Icons.open_in_new_rounded),
+            onTap: _openFirebasePrivacy,
+          ),
+        ],
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
+    if (ResponsiveNavigationScope.isActive(context)) {
+      return _newDesign(context);
+    }
     final l10n = context.l10n;
     final theme = Theme.of(context);
     return Scaffold(
@@ -77,20 +166,11 @@ class PrivacyDataDetailsPage extends StatelessWidget {
                   leading: const Icon(Icons.email_outlined),
                   title: const Text('buccitobias774@gmail.com'),
                   subtitle: Text(l10n.text('privacyDetails.contact')),
-                  onTap: () => launchUrl(
-                      Uri(scheme: 'mailto', path: 'buccitobias774@gmail.com'),
-                      mode: LaunchMode.externalApplication)),
+                  onTap: _openContact),
               ListTile(
                   leading: const Icon(Icons.open_in_new),
                   title: Text(l10n.text('privacyDetails.firebase')),
-                  onTap: () {
-                    AnalyticsService.product.event('external_action',
-                        {'action_type': 'open_privacy_policy'});
-                    launchUrl(
-                        Uri.parse(
-                            'https://firebase.google.com/support/privacy'),
-                        mode: LaunchMode.externalApplication);
-                  }),
+                  onTap: _openFirebasePrivacy),
             ],
           ),
         ),

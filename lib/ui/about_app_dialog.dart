@@ -1,4 +1,5 @@
 import 'package:dr/i18n/app_localizations.dart';
+import 'package:dr/ui/glass_surface.dart' show GlassRimBorder;
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:url_launcher/url_launcher.dart';
@@ -32,7 +33,11 @@ class AboutAppDialog extends StatelessWidget {
     final displayVersion = version.startsWith('v') ? version : 'v$version';
     return Dialog(
       insetPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 24),
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
+      // The new design gives dialogs the rim of its glass panels; Legacy keeps
+      // its own corners.
+      shape: theme.dialogTheme.shape is GlassRimBorder
+          ? theme.dialogTheme.shape
+          : RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
       clipBehavior: Clip.antiAlias,
       child: ConstrainedBox(
         key: const Key('about-dialog-panel'),
