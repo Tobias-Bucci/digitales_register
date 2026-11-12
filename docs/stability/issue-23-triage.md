@@ -1,6 +1,6 @@
 # Issue #23 – Crash, load-time and memory triage
 
-Status: triage complete, fixes in progress. Refs #23.
+Status: triage and fixes done; the fixes ship with the next release. Refs #23.
 
 ## Sources and scope
 
@@ -133,4 +133,33 @@ All C9–C14 events in the window come from 1.9–1.16 installs.
 
 ## Final status
 
-Filled in after the fixes.
+| Finding | Root cause group | Status | Commit |
+| --- | --- | --- | --- |
+| C1 `E02_asyncFatal` / `E01_flutterFatal` | G1 (opaque reports), partly G2 | fixed: reports keep their frames, the grades part is fixed. The rest needs data from the next release. | `46b1e5db`, `58b2585f` |
+| C2, C16 `E08_login` | G1 + G7 (sign-in timeouts) | documented. Reports become groupable via `46b1e5db`; the timeouts are server-side. | `46b1e5db` |
+| C3 `_loadGrades` null check | G2 | fixed, regression test | `58b2585f` |
+| C4 `_loadGradesDetails` null check | G2 | fixed, regression test | `58b2585f` |
+| C5 `DateTimeScale.reverse` NaN | G3 | fixed, regression test | `2127c02b` |
+| C6 `onScaleEnd` null check | G4 | fixed, reproduced by a widget test | `b725f115` |
+| C7 calendar `isPrimary` column | G5 | fixed, source test (not verified on a device) | `969cfa4b` |
+| C8 notification tap NPE | G6 | already fixed, not yet released | `2c5650be` |
+| C9–C14 | G6 | outdated / already fixed (1.17.0 / 1.17.4+54) | see G6 |
+| C15 empty school host | G7 | outdated as crash; UX defect left for a separate change | – |
+| C17 Hero assertion | G8 | needs more data | – |
+| A1 ANR | G8 | needs more data | – |
+
+How to confirm after the next release: the single issue C1 should break up into issues blamed on real `package:dr/…` frames. C3/C4/C5/C6/C7 should not appear for the new version.
+
+### Verification
+
+| Check | Baseline (`c6a15767`) | After |
+| --- | --- | --- |
+| `flutter analyze` | no issues | no issues |
+| `flutter test` | 3368 passed, 1 skipped, 0 failed | 3377 passed, 1 skipped, 0 failed (9 new tests) |
+| `flutter build apk --debug` | – | built (also compiles the Kotlin fix) |
+
+Not run: release builds (`assembleRelease` uploads a mapping file to Crashlytics), iOS (no macOS here), and device tests of the Android calendar and gesture fixes.
+
+### Load time and memory: before/after
+
+No numbers could be measured: there is no Performance Monitoring, no Play vitals access and no device or emulator in this environment. Static review found no defect worth changing, so no load-time or memory change was made (before = after). To get numbers later: add Firebase Performance Monitoring (app start and screen traces), or share Play vitals, and run a DevTools memory comparison on a device.
