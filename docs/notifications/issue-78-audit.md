@@ -162,6 +162,11 @@ What is open:
    (`server_notification_poller.dart:195`, `server_notification_service.dart:59`),
    because `privacy_boundary_test.dart` forbids the feature from importing
    `diagnostics_service`. They would never show up in Crashlytics.
+   *Fixed:* the service and the poller now pass such errors to
+   `onUnexpectedError`, which `lib/main.dart` connects to the consent-gated
+   diagnostics (category `notification`, sanitized stack). Network and server
+   failures are still not reported, and the feature folders still import no
+   diagnostics.
 3. **Critical backlog on a fresh install is silent.** By the #103 design, a
    critical message that is already active when someone installs the app is
    listed without popup or badge. *Changed on your decision:* critical backlog

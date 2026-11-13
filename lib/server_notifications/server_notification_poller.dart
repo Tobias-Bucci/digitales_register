@@ -71,6 +71,7 @@ class ServerNotificationPoller {
     this.policy = const ServerNotificationPollPolicy(),
     DateTime Function()? now,
     math.Random? random,
+    this.onUnexpectedError,
   })  : _now = now ?? DateTime.now,
         _random = random ?? math.Random();
 
@@ -78,6 +79,10 @@ class ServerNotificationPoller {
   /// one. Failures are reported with [ServerNotificationFailure].
   final Future<int?> Function() fetch;
   final ServerNotificationPollPolicy policy;
+
+  /// Told about errors that are not a [ServerNotificationFailure], which
+  /// means a bug rather than the network. Expected failures never reach it.
+  final void Function(Object error, StackTrace stack)? onUnexpectedError;
   final DateTime Function() _now;
   final math.Random _random;
 
@@ -192,8 +197,9 @@ class ServerNotificationPoller {
     } on ServerNotificationFailure catch (failure) {
       next = _delayAfter(failure);
       _notBefore = _now().add(next);
-    } catch (_) {
+    } catch (error, stack) {
       // Notifications never take the app down, whatever went wrong.
+      onUnexpectedError?.call(error, stack);
       next = _delayAfter(const ServerNotificationFailure(
           ServerNotificationFailureKind.transient));
       _notBefore = _now().add(next);
