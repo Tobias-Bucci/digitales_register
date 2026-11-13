@@ -220,8 +220,12 @@ class ServerNotificationRepository extends ChangeNotifier {
   /// It is decided by membership in that list, never by comparing times, so
   /// neither the device clock nor the moment of publishing can let a backlog
   /// item through or silence one published after this sync.
+  ///
+  /// Critical ones are the exception: what is critical now matters to a new
+  /// user too, so they stay unread and alert like a new notification.
   void _adoptBacklog(DateTime now) {
     for (final item in _items.values) {
+      if (item.type.critical) continue;
       _device.records[item.id] =
           (_device.records[item.id] ?? ServerNotificationRecord(lastSeen: now))
               .copyWith(

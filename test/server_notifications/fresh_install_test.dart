@@ -115,6 +115,33 @@ void main() {
       expect(repo.pendingAlerts.map((n) => n.id), [a]);
     });
 
+    test('a critical item of the backlog still alerts and counts', () async {
+      final repo = repository();
+      server.replyList([
+        ...backlog,
+        item(publishedAt: '2026-10-01T08:00:00Z', critical: true)
+      ]);
+      await repo.sync(selection);
+      expect(repo.notifications, hasLength(13));
+      expect(repo.unreadCount, 1);
+      expect(repo.pendingAlerts.map((n) => n.id), [a]);
+    });
+
+    test('a critical backlog item alerts once, also across a restart',
+        () async {
+      final repo = repository();
+      final critical = item(critical: true);
+      server.replyList([critical]);
+      await repo.sync(selection);
+      await repo.markAlerted(repo.pendingAlerts);
+
+      final second = await restarted();
+      server.replyList([critical]);
+      await second.sync(selection);
+      expect(second.pendingAlerts, isEmpty);
+      expect(second.unreadCount, 1, reason: 'unread until it is opened');
+    });
+
     test('covers every page of the collection', () async {
       final repo = repository();
       server
