@@ -40,6 +40,7 @@ class Harness {
   int calls = 0;
   final List<FutureOr<int?> Function()> script = [];
   FutureOr<int?> Function()? always;
+  final List<Object> reported = [];
   late final ServerNotificationPoller poller = ServerNotificationPoller(
     fetch: () async {
       calls++;
@@ -48,6 +49,7 @@ class Harness {
     },
     now: () => DateTime.utc(2026).add(async.elapsed),
     random: FixedRandom(1),
+    onUnexpectedError: (error, _) => reported.add(error),
   );
 
   void wait(Duration duration) => async.elapse(duration);
@@ -354,6 +356,22 @@ void main() {
         async.flushMicrotasks();
         expect(h.poller.failures, 1);
         expect(h.poller.hasTimer, isTrue);
+        expect(h.reported, [isA<StateError>()], reason: 'a bug is reported');
+      });
+    });
+
+    test('expected failures are not reported', () {
+      run((async, h) {
+        h.script
+          ..add(() => throw transient)
+          ..add(() => throw const ServerNotificationFailure(
+              ServerNotificationFailureKind.permanent,
+              status: 400));
+        h.poller.start();
+        async.flushMicrotasks();
+        h.wait(const Duration(minutes: 1));
+        expect(h.calls, 2);
+        expect(h.reported, isEmpty);
       });
     });
 
@@ -452,6 +470,39 @@ void main() {
       await subject.start();
       expect(subject.enabled, isFalse);
       expect(server.requests, isEmpty);
+    });
+
+    test('a failure while starting is reported and leaves the app as it is',
+        () async {
+      final server = FakeServer();
+      final reported = <Object>[];
+      final subject = ServerNotificationService(
+        repository: ServerNotificationRepository(storage: FakeStorage()),
+        baseUri: baseUri,
+        platform: 'android',
+        enabledByBuild: true,
+        appVersion: () async => throw StateError('no package info'),
+        client: server.client,
+      )..onUnexpectedError = (error, _) => reported.add(error);
+      await subject.start();
+      expect(reported, [isA<StateError>()]);
+      expect(subject.poller.hasTimer, isFalse);
+      expect(server.requests, isEmpty);
+    });
+
+    test('a bug during a fetch reaches the service hook', () async {
+      final reported = <Object>[];
+      final subject = ServerNotificationService(
+        repository: _ThrowingRepository(),
+        baseUri: baseUri,
+        platform: 'android',
+        enabledByBuild: true,
+        appVersion: () async => '2.0.0',
+      )..onUnexpectedError = (error, _) => reported.add(error);
+      await subject.start();
+      await pumpEventQueue();
+      expect(reported, [isA<StateError>()]);
+      subject.dispose();
     });
 
     test('a version the server would refuse fetches nothing', () async {
@@ -587,4 +638,12 @@ void main() {
       });
     });
   });
+}
+
+class _ThrowingRepository extends ServerNotificationRepository {
+  _ThrowingRepository() : super(storage: FakeStorage());
+
+  @override
+  Future<int?> sync(ServerNotificationSelection selection) async =>
+      throw StateError('bug');
 }

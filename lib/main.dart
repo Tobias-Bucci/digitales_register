@@ -136,6 +136,10 @@ Future<void> main() async {
           .whenComplete(() {
         appLaunchGate.open();
         serverNotifications.isLoggedIn = () => store.state.loginState.loggedIn;
+        // Bugs only, as a category and a sanitized stack, and only with the
+        // diagnostics consent. Network failures never get this far.
+        serverNotifications.onUnexpectedError = (error, stack) =>
+            diagnostics.report(error, stack, DiagnosticError.notification);
         unawaited(serverNotifications.start());
       }),
     ),

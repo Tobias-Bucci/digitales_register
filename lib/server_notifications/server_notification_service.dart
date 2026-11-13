@@ -31,7 +31,11 @@ class ServerNotificationService with WidgetsBindingObserver {
         _enabledByBuild = enabledByBuild ?? serverNotificationsEnabledByBuild,
         _appVersion = appVersion ?? _packageVersion,
         _client = client {
-    poller = ServerNotificationPoller(fetch: _sync, policy: policy);
+    poller = ServerNotificationPoller(
+      fetch: _sync,
+      policy: policy,
+      onUnexpectedError: (error, stack) => onUnexpectedError(error, stack),
+    );
   }
 
   static Future<String> _packageVersion() async =>
@@ -52,6 +56,10 @@ class ServerNotificationService with WidgetsBindingObserver {
   /// Whether a login exists, so that links into the app can work.
   bool Function() isLoggedIn = () => false;
 
+  /// Told about bugs, never about network or server failures. The app sets
+  /// it, so that this feature itself reaches no diagnostics or analytics.
+  void Function(Object error, StackTrace stack) onUnexpectedError = (_, __) {};
+
   /// Whether this build can use the feature at all.
   bool get enabled => _enabledByBuild && _baseUri != null && _platform != null;
 
@@ -70,8 +78,9 @@ class ServerNotificationService with WidgetsBindingObserver {
       poller
         ..setActive(_isForeground(binding.lifecycleState))
         ..start();
-    } catch (_) {
+    } catch (error, stack) {
       // Without notifications the app works as before.
+      onUnexpectedError(error, stack);
     }
   }
 
