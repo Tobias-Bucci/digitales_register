@@ -32,7 +32,7 @@ Uri? parseServerNotificationBaseUrl(String value) {
 Uri? get configuredServerNotificationBaseUri =>
     parseServerNotificationBaseUrl(_configuredBaseUrl);
 
-/// The `platform` value of this build, or null where the API has none (macOS).
+/// The `platform` value of this build, or null where the API has none.
 String? serverNotificationPlatform({
   bool web = kIsWeb,
   TargetPlatform? platform,
@@ -43,7 +43,8 @@ String? serverNotificationPlatform({
     TargetPlatform.iOS => 'ios',
     TargetPlatform.windows => 'windows',
     TargetPlatform.linux => 'linux',
-    TargetPlatform.macOS || TargetPlatform.fuchsia => null,
+    TargetPlatform.macOS => 'macos',
+    TargetPlatform.fuchsia => null,
   };
 }
 

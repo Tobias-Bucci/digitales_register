@@ -114,5 +114,6 @@ DR_NOTIFICATIONS_E2E_URL=https://api.digitalesregister.com flutter test test/ser
 
 Unit and widget tests cover the behaviour. There is no `web/` folder in this
 repository, so no web build exists yet; the new code contains no `dart:io` and sends
-`platform=web` there. macOS has no value in the API, so nothing is fetched there
-and the bell is not shown.
+`platform=web` there. macOS sends `platform=macos` (contract 1.1.0). A server
+older than that answers `400`, which the client treats as a permanent failure:
+no announcements on macOS, retried hourly, nothing else affected.

@@ -186,3 +186,6 @@ Paths in this section are relative to the server repository.
    return the running fetch, and the center passes it to the indicator.
 6. **macOS** builds show no announcements because the API has no `macos` value.
    The issue does not ask for macOS.
+   *Added on your decision:* the server accepts `platform=macos` (server commit
+   `f9d9db8`, contract 1.1.0) and the app sends it on macOS. Until that server
+   version is deployed, macOS gets a `400` and simply shows no announcements.
