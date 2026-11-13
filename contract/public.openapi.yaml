@@ -1,11 +1,11 @@
 openapi: 3.1.0
 info:
   title: Digitales Register Notifications API
-  version: 1.0.0
+  version: 1.1.0
   summary: Public, anonymous read API for in-app notifications.
   description: |
     Polling API consumed by the Digitales Register app on web, Android, iOS,
-    Windows and Linux. No login, no device identifiers.
+    Windows, Linux and macOS. No login, no device identifiers.
 
     **Not confidential.** `platform` and `app_version` are supplied by the
     client and are not authenticated. Audience targeting decides what is
@@ -184,7 +184,7 @@ components:
   schemas:
     Platform:
       type: string
-      enum: [web, android, ios, windows, linux]
+      enum: [web, android, ios, windows, linux, macos]
     NotificationList:
       type: object
       additionalProperties: false

@@ -270,14 +270,14 @@ void main() {
       }
     });
 
-    test('each platform has its contract value, macOS has none', () {
+    test('each platform has its contract value', () {
       expect(serverNotificationPlatform(web: true), 'web');
       for (final entry in {
         TargetPlatform.android: 'android',
         TargetPlatform.iOS: 'ios',
         TargetPlatform.windows: 'windows',
         TargetPlatform.linux: 'linux',
-        TargetPlatform.macOS: null,
+        TargetPlatform.macOS: 'macos',
         TargetPlatform.fuchsia: null,
       }.entries) {
         expect(serverNotificationPlatform(web: false, platform: entry.key),

@@ -21,7 +21,7 @@ import 'package:http/http.dart' as http;
 
 final String? _configured = Platform.environment['DR_NOTIFICATIONS_E2E_URL'];
 
-const _platforms = ['web', 'android', 'ios', 'windows', 'linux'];
+const _platforms = ['web', 'android', 'ios', 'windows', 'linux', 'macos'];
 const _version = '2.0.0';
 
 final _weakEtag = RegExp(r'^W/"[^"]+"$');
