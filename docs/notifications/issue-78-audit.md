@@ -72,7 +72,7 @@ What is open:
 | L1 | Initial request once the app is ready, refresh on return with a freshness window | done | Started after the first-frame init and the launch gate (`lib/main.dart:139`), so it cannot delay start-up; resume uses a 60 s freshness window (`server_notification_poller.dart:117`); tests `resume refreshes stale data at once`, `resume within the freshness window fetches nothing extra` | – |
 | L2 | Poll every 300 s, server suggestion bounded | done | `server_notification_poller.dart:11`, `clampInterval` 60 s to 1 h; tests `the default is five minutes`, `a too eager server cannot speed the client up` | – |
 | L3 | One poller, no overlap, timers cleaned up, nothing in the background | done | `start()` idempotent (`:104`), `_run` single in-flight future (`:171`), `stop`/`dispose`; tests `one poller: a second start changes nothing`, `calls never overlap`, `nothing runs in the background`, `stop cleans up the timer` | – |
-| L4 | Resume on foreground, lifecycle on all five platforms | partial | `server_notification_service.dart:105` maps `hidden`/`paused`/`detached` to background, `inactive` keeps polling; test `inactive keeps polling, hidden and paused do not`. Device run 2026-11-13 with a temporary entry point (real service, poller, API client, repository, popup host, bell and center; no login) against a local server: Android 15 emulator and Windows desktop. On Android: no request in 75 s on the home screen, an immediate refresh (`304`) on return. On Windows: polling and `304` revalidation seen; minimizing was not exercised. iOS and Linux not run here; web has no build | iOS/Linux run by you; web deferred |
+| L4 | Resume on foreground, lifecycle on all five platforms | done on Android and Windows; iOS, Linux deferred by decision | `server_notification_service.dart:105` maps `hidden`/`paused`/`detached` to background, `inactive` keeps polling; test `inactive keeps polling, hidden and paused do not`. Device run 2026-11-13 with a temporary entry point (real service, poller, API client, repository, popup host, bell and center; no login) against a local server: Android 15 emulator and Windows desktop. On Android: no request in 75 s on the home screen, an immediate refresh (`304`) on return. On Windows: polling and `304` revalidation seen; minimizing was not exercised. iOS and Linux not run here; web has no build | iOS/Linux run by you; web deferred |
 | L5 | Timeout ~10 s, exponential backoff with jitter, rate limits, no storms | done | `server_notification_api.dart:70`; `server_notification_poller.dart:53` (30 s to 30 min, equal jitter), `Retry-After` up to 24 h, `4xx` waits 1 h; tests group `backoff`, `429 and Retry-After`, `quick switching between apps cannot cause a storm` | – |
 | L6 | Versioned GET, `ETag`/`If-None-Match`/`304`, expiry still applied on `304`, validator per selection | done | `server_notification_api.dart:138`, `:183`; `server_notification_repository.dart:148` (validator only for the same selection and a complete local copy); tests `sends the validator and reports 304 as unchanged`, `304 still applies known expiry`, `a validator is not reused for another selection`, `a 304 after a restart cannot lose read items` | – |
 | L7 | Complete set with cursor pagination, no silent overflow; empty/offline/timeout/malformed/4xx/5xx safe; never blocks the app | done | `_walk` (`server_notification_api.dart:126`) returns nothing for a partial walk, restarts once on a stale cursor, caps loops; tests group `cursor pagination`, group `failures`, `a failed sync is a note, not an error page` | – |
@@ -95,7 +95,7 @@ What is open:
 
 | # | Requirement | Status | Evidence | Needed |
 |---|---|---|---|---|
-| C1 | Base URL from build configuration, HTTPS only; platforms `web`, `android`, `ios`, `windows`, `linux`; accurate semver | partial | `DR_NOTIFICATIONS_BASE_URL`, `DR_NOTIFICATIONS_ENABLED` (`server_notification_config.dart:19`), non-HTTPS turns the feature off; version without build number. **Web**: the code sends `platform=web`, but the repo has no `web/` target, so no web client exists. **macOS** has no API value, so the feature is off there (`server_notification_config.dart:46`) | Decide on web (own issue recommended) |
+| C1 | Base URL from build configuration, HTTPS only; platforms `web`, `android`, `ios`, `windows`, `linux`; accurate semver | deferred by decision (web) | `DR_NOTIFICATIONS_BASE_URL`, `DR_NOTIFICATIONS_ENABLED` (`server_notification_config.dart:19`), non-HTTPS turns the feature off; version without build number. **Web**: the code sends `platform=web`, but the repo has no `web/` target, so no web client exists. **macOS** has no API value, so the feature is off there (`server_notification_config.dart:46`) | Decide on web (own issue recommended) |
 | C2 | Schema validation, unknown versions/fields, `https://` only, internal allowlist, plain text, icon fallback | done | `ServerNotificationPage.parse` (`server_notification_models.dart:239`), `validateExternalNotificationUrl` (`server_notification_links.dart:36`), route allowlist (`:7`); tests group `schema validation`, `links`, `allowlists match the published contract` | – |
 | C3 | Public contract and fixtures, client builds without the private repo | done | `contract/` in this repo, identical to the server's | – |
 | C4 | Client and server agree on fields, types, status codes, headers, timing | done | Fixtures byte-equal; route keys equal (`database/migrations/0001_init.sql:166` on the server vs `serverNotificationRouteKeys`); live response checked today. No automated guard against future drift: the client CI cannot see the private repo | See Q6 |
@@ -104,10 +104,10 @@ What is open:
 
 | # | Requirement | Status | Evidence | Needed |
 |---|---|---|---|---|
-| P1 | Optional `opened` event via `POST /api/v1/events` | missing (optional) | Not implemented; the server has no events endpoint and its brief excluded analytics (`docs/APP_NOTIFICATIONS.md`, "Not implemented") | Decide: drop or defer |
+| P1 | Optional `opened` event via `POST /api/v1/events` | dropped by decision | Not implemented; the server has no events endpoint and its brief excluded analytics (`docs/APP_NOTIFICATIONS.md`, "Not implemented") | Decide: drop or defer |
 | P2 | No user names, grades, schools, accounts, device ids | done | test `it uses no identifier of the user, account or device`, `sends exactly the contract parameters and nothing identifying` | – |
 | P3 | Fetches work without analytics consent; analytics follow consent | done | test `fetches without any consent and sends the version bare`; the feature cannot reach analytics or diagnostics at all (`test/server_notifications/privacy_boundary_test.dart`) | – |
-| P4 | Privacy disclosure reviewed | done, legal basis open | `docs/PRIVACY_DATA_INVENTORY.md:54`, notice v5 (`docs/PRIVACY_IMPLEMENTATION.md`); the inventory itself says "Legal basis to be reviewed" | Your legal review |
+| P4 | Privacy disclosure reviewed | done; legal review deferred by decision | `docs/PRIVACY_DATA_INVENTORY.md:54`, notice v5 (`docs/PRIVACY_IMPLEMENTATION.md`); the inventory itself says "Legal basis to be reviewed" | Your legal review |
 | P5 | Aggregated server event counts, bounded offline queue | n/a | No events exist, so nothing is counted or queued | – |
 
 ### Server (private repository)
@@ -140,7 +140,7 @@ Paths in this section are relative to the server repository.
 
 | # | Requirement | Status | Evidence | Needed |
 |---|---|---|---|---|
-| A1 | Initial launch on Web, Android, iOS, Windows and Linux fetches; resume refresh works | partial (web deferred) | Device run 2026-11-13 with a temporary entry point (real service, poller, API client, repository, popup host, bell and center; no login) against a local server: Android 15 emulator and Windows desktop. Android: fresh install lists the backlog quietly with only the critical item popping up (stays open past 6 s), badge; two new items give one summary popup that closes itself; center newest first, HTML literal, emoji, Windows-only item absent; dismissal confirmed and final even after an important edit; routine edit updates in place without popup; important edit of a read item alerts again; server stopped: retries after about 5, 9, 12, 29 and 58 s, stale note, no crash; expiry removed offline on time; offline restart shows only unread content; recovery after backoff, first request without `If-None-Match`. Windows: fresh-install baseline including the Windows-only item, critical item unread and cached, `304` every 30 s. The real `main.dart` wiring was not run on a device (covered by code reading and unit tests). iOS and Linux need your devices; web has no build | See section Open points |
+| A1 | Initial launch on Web, Android, iOS, Windows and Linux fetches; resume refresh works | done on Android and Windows; web, iOS, Linux deferred by decision | Device run 2026-11-13 with a temporary entry point (real service, poller, API client, repository, popup host, bell and center; no login) against a local server: Android 15 emulator and Windows desktop. Android: fresh install lists the backlog quietly with only the critical item popping up (stays open past 6 s), badge; two new items give one summary popup that closes itself; center newest first, HTML literal, emoji, Windows-only item absent; dismissal confirmed and final even after an important edit; routine edit updates in place without popup; important edit of a read item alerts again; server stopped: retries after about 5, 9, 12, 29 and 58 s, stale note, no crash; expiry removed offline on time; offline restart shows only unread content; recovery after backoff, first request without `If-None-Match`. Windows: fresh-install baseline including the Windows-only item, critical item unread and cached, `304` every 30 s. The real `main.dart` wiring was not run on a device (covered by code reading and unit tests). iOS and Linux need your devices; web has no build | See section Open points |
 | A2 | Normal use works with the server down | done | Fails open everywhere (`server_notification_service.dart:59`); tests `offline is a transient failure`, `a failed sync is a note, not an error page`, `read failure leaves a working, empty repository` | Confirm on a device (A1) |
 
 ### Edge cases from the audit brief
@@ -189,3 +189,61 @@ Paths in this section are relative to the server repository.
    *Added on your decision:* the server accepts `platform=macos` (server commit
    `f9d9db8`, contract 1.1.0) and the app sends it on macOS. Until that server
    version is deployed, macOS gets a `400` and simply shows no announcements.
+
+## Final status (2026-11-13)
+
+Every row is done, or deferred or dropped by the decisions taken during the
+audit. #78 is closed with this document.
+
+### Fixed or added during the audit
+
+| Change | Client | Server |
+|---|---|---|
+| Critical items of a fresh install's backlog alert once (risk 3) | `786af850` | – |
+| Unexpected errors reach the consent-gated diagnostics (risk 2) | `2aa2f686` | – |
+| Pull to refresh waits for the update (risk 5) | `e2ca2cf0` | – |
+| Opt-in end-to-end test against a real server (Q6) | `52c30566` | – |
+| Publishing guide (S5, Q5) | `32b37d81` (audit) | `a5165bd` |
+| Contract and allowlist drift check (risk 1) | – | `01bc078` |
+| macOS as a platform (risk 6) | `ca7331fe` | `f9d9db8` |
+| Device smoke test on Android and Windows (L4, A1) | `4e9a37cd` | – |
+
+### Deferred or dropped by decision
+
+- **Web:** no web target exists; a stray `flutter create` scaffold was removed.
+  Web needs its own work (plugins such as secure storage and Firebase).
+- **iOS and Linux device runs:** not possible here; see the steps below.
+- **Legal basis** in `docs/PRIVACY_DATA_INVENTORY.md`: still to be reviewed.
+- **`opened` event (P1):** dropped; the server has no events endpoint.
+
+### Results
+
+| Check | Baseline | Final |
+|---|---|---|
+| Client `flutter analyze` | no issues | no issues |
+| Client `flutter test` | 3387 passed, 1 skipped | 3397 passed, 12 skipped (11 are the opt-in live tests) |
+| Client `flutter build apk --debug` | – | built |
+| Server `cargo fmt`, `clippy -D warnings` | clean | clean |
+| Server `cargo test` | 196 passed | 198 passed |
+| Server web, admin tests | 83, 26 passed | 83, 26 passed |
+| Server drift check, public repository audit | – | agree, clean |
+
+### Not deployed
+
+The server commits are pushed, not deployed. Until they are, macOS apps get a
+`400` and show no announcements (nothing else changes), and the live test's
+macOS case fails against production.
+
+### Checking on iOS and Linux
+
+1. Install a debug build and open the app signed out: the bell sits in the top
+   corner of the sign-in page.
+2. Publish a test notification for a version no real app has (see the
+   server's publishing guide), and one for all users with a normal type.
+3. Within 5 minutes in the foreground: popup at the top, badge on the bell; it
+   closes after 6 s. A critical type stays until closed.
+4. Open it: the dot goes, the badge drops. Hide one: confirm, it is gone and
+   stays gone after an important change on the server.
+5. Send the app to the background for a few minutes, return: it updates at
+   once. Turn on flight mode: the list stays, with a note that it could not
+   update; restart the app offline: only unread items are listed.
