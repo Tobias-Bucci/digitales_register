@@ -22,7 +22,7 @@ What is open:
   `platform=web`), but "launch on Web" cannot be met or tested.
 - **End-to-end smoke test (Q6):** the contract is identical in both repositories
   and the live API matches it (checked today with read-only requests), but no
-  automated client test runs against a real server.
+  automated client test runs against a real server. *Fixed, see Q6.*
 - **Device verification (A1):** behaviour is covered by unit and widget tests
   only. A run on real platforms is still to be done (Android emulator and Windows
   are possible here; iOS needs macOS).
@@ -132,7 +132,7 @@ What is open:
 | Q3 | Summary popup, critical popup, link validation | done | `ui_test.dart`, `contract_models_test.dart` | – |
 | Q4 | Pagination, empty, error, offline, timeout covered | done | `api_test.dart` groups `cursor pagination`, `failures` | – |
 | Q5 | Feature and API documented, how to publish | partial | `docs/APP_NOTIFICATIONS.md`, `contract/README.md`, `contract/public.openapi.yaml`; publishing guide missing (S5) | See S5 |
-| Q6 | Contract/integration tests on the published schema; end-to-end smoke test against the backend | partial | Fixtures parse in the client (`contract_models_test.dart`); the server validates fixtures and live responses against the schema (`apps/api/tests/contract.rs`). No automated client test against a running server; today's live check was manual | Opt-in client test against a real server URL |
+| Q6 | Contract/integration tests on the published schema; end-to-end smoke test against the backend | done (fixed) | Was partial: fixtures parsed in the client, the server checked fixtures and live responses (`apps/api/tests/contract.rs`), but nothing ran the client against a server. Now `test/server_notifications/live_contract_test.dart`, opt-in through `DR_NOTIFICATIONS_E2E_URL`, GET only: every page for all five platforms against the contract, client and raw walk agree, `304` through the client, one-item pages give the same set, links and icons known, three languages complete, unknown platform refused. Passed 2026-11-13 against a local server seeded with 154 items (two pages) and read-only against production | – |
 
 ### Platforms and acceptance
 

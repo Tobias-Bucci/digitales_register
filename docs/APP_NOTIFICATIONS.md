@@ -99,6 +99,17 @@ that is a visible desktop window without focus.
 The optional `opened` event: the server has no events endpoint. It would have to
 follow the existing analytics consent.
 
+## Checking against a real server
+
+`test/server_notifications/live_contract_test.dart` is skipped unless
+`DR_NOTIFICATIONS_E2E_URL` names a server. It sends only GET requests, so it
+is safe against production, and also accepts `http://127.0.0.1:<port>` for a
+local server:
+
+```bash
+DR_NOTIFICATIONS_E2E_URL=https://api.digitalesregister.com flutter test test/server_notifications/live_contract_test.dart
+```
+
 ## Platforms
 
 Unit and widget tests cover the behaviour. There is no `web/` folder in this
