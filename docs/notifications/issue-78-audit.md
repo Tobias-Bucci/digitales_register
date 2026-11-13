@@ -176,6 +176,8 @@ What is open:
    still fading. The 6 s timer leaves enough time to read it; not observed on a
    device.
 5. **Pull to refresh ends at once.** `RefreshIndicator.onRefresh` does not wait
-   for the sync, so the spinner disappears before new data arrives.
+   for the sync, so the spinner disappears before new data arrives. *Fixed:*
+   `ServerNotificationPoller.refresh` and `ServerNotificationService.refresh`
+   return the running fetch, and the center passes it to the indicator.
 6. **macOS** builds show no announcements because the API has no `macos` value.
    The issue does not ask for macOS.

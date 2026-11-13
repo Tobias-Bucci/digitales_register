@@ -190,7 +190,7 @@ void main() {
       ServerNotificationRepository repository, {
       ThemeMode mode = ThemeMode.light,
       ServerNotificationLinkOpener? openLink,
-      VoidCallback? onRefresh,
+      Future<void> Function()? onRefresh,
       Size size = const Size(400, 800),
     }) async {
       tester.view.physicalSize = size;
@@ -200,7 +200,7 @@ void main() {
         mode: mode,
         home: ServerNotificationCenterPage(
           repository: repository,
-          onRefresh: onRefresh ?? () {},
+          onRefresh: onRefresh ?? () async {},
           openLink:
               openLink ?? (_) async => ServerNotificationLinkResult.opened,
         ),
@@ -250,9 +250,24 @@ void main() {
         (tester) async {
       var refreshed = 0;
       final repository = await filled(tester, []);
-      await pumpCenter(tester, repository, onRefresh: () => refreshed++);
+      await pumpCenter(tester, repository, onRefresh: () async => refreshed++);
       await tester.tap(find.byTooltip('Aktualisieren'));
       expect(refreshed, 1);
+    });
+
+    testWidgets('pull to refresh spins until the update is done',
+        (tester) async {
+      final update = Completer<void>();
+      final repository = await filled(tester, [item()]);
+      await pumpCenter(tester, repository, onRefresh: () => update.future);
+      await tester.fling(find.byKey(const Key('server-notification-list')),
+          const Offset(0, 400), 1000);
+      await tester.pump();
+      await tester.pump(const Duration(seconds: 1));
+      expect(find.byType(RefreshProgressIndicator), findsOneWidget);
+      update.complete();
+      await tester.pumpAndSettle();
+      expect(find.byType(RefreshProgressIndicator), findsNothing);
     });
 
     testWidgets('opening a notification reads it', (tester) async {
@@ -316,7 +331,7 @@ void main() {
           ),
           child: ServerNotificationCenterPage(
             repository: repository,
-            onRefresh: () {},
+            onRefresh: () async {},
           ),
         ),
       ));
@@ -1209,7 +1224,7 @@ void main() {
       final repository = await filled(tester, [item(color: 'nonsense')]);
       await tester.pumpWidget(app(
         home: ServerNotificationCenterPage(
-            repository: repository, onRefresh: () {}),
+            repository: repository, onRefresh: () async {}),
       ));
       await tester.pumpAndSettle();
       expect(tester.takeException(), isNull);
@@ -1220,7 +1235,7 @@ void main() {
       final repository = await filled(tester, [item(icon: 'skull')]);
       await tester.pumpWidget(app(
         home: ServerNotificationCenterPage(
-            repository: repository, onRefresh: () {}),
+            repository: repository, onRefresh: () async {}),
       ));
       await tester.pumpAndSettle();
       expect(find.byIcon(serverNotificationFallbackIcon), findsOneWidget);
@@ -1234,7 +1249,7 @@ void main() {
         await tester.pumpWidget(app(
           locale: locale,
           home: ServerNotificationCenterPage(
-              repository: repository, onRefresh: () {}),
+              repository: repository, onRefresh: () async {}),
         ));
         await tester.pumpAndSettle();
         expect(tester.takeException(), isNull);
@@ -1271,7 +1286,7 @@ void main() {
       await tester.pumpWidget(app(
         locale: const Locale('it'),
         home: ServerNotificationCenterPage(
-            repository: repository, onRefresh: () {}),
+            repository: repository, onRefresh: () async {}),
       ));
       await tester.pumpAndSettle();
       expect(find.text('Manutenzione'), findsOneWidget);

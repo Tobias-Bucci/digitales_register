@@ -142,7 +142,7 @@ Future<void> _pumpCenter(
   String languageCode = 'de',
   String? initialId,
   int? initialSchoolId,
-  VoidCallback? onRefresh,
+  Future<void> Function()? onRefresh,
 }) async {
   tester.view.physicalSize = size;
   tester.view.devicePixelRatio = 1;
@@ -164,7 +164,7 @@ Future<void> _pumpCenter(
       school: school,
       initialId: initialId,
       initialSchoolId: initialSchoolId,
-      onRefresh: onRefresh ?? () {},
+      onRefresh: onRefresh ?? () async {},
       openLink: (_) async => ServerNotificationLinkResult.opened,
     ),
   )));
@@ -242,7 +242,7 @@ void main() {
         theme: ThemeData(colorScheme: AppPalette.light),
         home: ServerNotificationCenterPage(
           repository: repository,
-          onRefresh: () {},
+          onRefresh: () async {},
         ),
       ));
       await tester.pumpAndSettle();
@@ -328,7 +328,7 @@ void main() {
     testWidgets('refresh is a disc in the header', (tester) async {
       var refreshed = 0;
       final repository = await _repository(tester, _appItems);
-      await _pumpCenter(tester, repository, onRefresh: () => refreshed++);
+      await _pumpCenter(tester, repository, onRefresh: () async => refreshed++);
 
       final refresh = find.descendant(
         of: _header,
@@ -337,6 +337,21 @@ void main() {
       expect(refresh, findsOneWidget);
       await tester.tap(refresh);
       expect(refreshed, 1);
+    });
+
+    testWidgets('pull to refresh spins until the update is done',
+        (tester) async {
+      final update = Completer<void>();
+      final repository = await _repository(tester, _appItems);
+      await _pumpCenter(tester, repository, onRefresh: () => update.future);
+      await tester.fling(
+          find.byType(Scrollable).first, const Offset(0, 400), 1000);
+      await tester.pump();
+      await tester.pump(const Duration(seconds: 1));
+      expect(find.byType(RefreshProgressIndicator), findsOneWidget);
+      update.complete();
+      await tester.pumpAndSettle();
+      expect(find.byType(RefreshProgressIndicator), findsNothing);
     });
 
     testWidgets('marking all read covers both sources', (tester) async {
@@ -554,7 +569,7 @@ void main() {
       var refreshed = 0;
       final repository =
           await _repository(tester, _appItems, failAfterwards: true);
-      await _pumpCenter(tester, repository, onRefresh: () => refreshed++);
+      await _pumpCenter(tester, repository, onRefresh: () async => refreshed++);
 
       expect(
           find.byKey(const Key('notification-center-stale')), findsOneWidget);

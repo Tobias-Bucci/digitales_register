@@ -105,9 +105,8 @@ class ServerNotificationService with WidgetsBindingObserver {
   }
 
   /// Updates on request of the user, within the limits of the poller.
-  void refresh() {
-    if (_started) poller.refresh();
-  }
+  /// Completes when that update is done, so a refresh indicator can wait.
+  Future<void> refresh() => _started ? poller.refresh() : Future<void>.value();
 
   /// Only `hidden`, `paused` and `detached` mean nobody can see the app.
   /// `inactive` is a desktop window without focus, or a brief transition.

@@ -63,10 +63,10 @@ class NotificationPageContainer extends StatelessWidget {
             },
             lastFetched: vm.item2,
           ),
-          onRefresh: () {
-            serverNotifications.refresh();
-            refreshSchoolNotificationFeed(actions);
-          },
+          onRefresh: () => Future.wait([
+            serverNotifications.refresh(),
+            refreshSchoolNotificationFeed(actions),
+          ]),
         );
       },
       connect: (state) {

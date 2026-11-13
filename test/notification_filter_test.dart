@@ -207,7 +207,7 @@ void main() {
             apps ?? [_app('a', 'info'), _app('b', 'update')],
             read: read,
           ),
-          onRefresh: () {},
+          onRefresh: () async {},
           filterStore: store,
           school: SchoolNotificationFeed(
             notifications: schoolItems,
