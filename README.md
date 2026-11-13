@@ -10,10 +10,12 @@
 </p>
 
 <p align="center">
-  <a href="https://apps.apple.com/us/app/digitales-register-s%C3%BCdtirol/id6823350366"><img src="https://img.shields.io/badge/App_Store-iPhone_%26_iPad-18181B?style=for-the-badge&amp;logo=apple&amp;logoColor=white" alt="Für iPhone und iPad im App Store herunterladen"></a>
-  <a href="https://play.google.com/store/apps/details?id=it.bucci.digitalesregister&amp;pcampaignid=web_share"><img src="https://img.shields.io/badge/Google_Play-Android-18181B?style=for-the-badge&amp;logo=googleplay&amp;logoColor=white" alt="Für Android bei Google Play herunterladen"></a>
-  <a href="https://apps.microsoft.com/detail/9N6033B6640C?hl=en-us&amp;gl=IT&amp;ocid=pdpshare"><img src="https://img.shields.io/badge/Microsoft_Store-Windows-18181B?style=for-the-badge" alt="Für Windows im Microsoft Store herunterladen"></a>
-  <a href="https://flathub.org/en/apps/io.github.tobias_bucci.digitales_register"><img src="https://img.shields.io/badge/Flathub-Linux-18181B?style=for-the-badge&amp;logo=flathub&amp;logoColor=white" alt="Für Linux bei Flathub herunterladen"></a>
+  <a href="https://apps.apple.com/us/app/digitales-register-s%C3%BCdtirol/id6823350366"><img src="https://img.shields.io/badge/App_Store-18181B?style=for-the-badge&amp;logo=apple&amp;logoColor=white" alt="Für iPhone und iPad im App Store herunterladen"></a>
+  <a href="https://play.google.com/store/apps/details?id=it.bucci.digitalesregister&amp;pcampaignid=web_share"><img src="https://img.shields.io/badge/Google_Play-18181B?style=for-the-badge&amp;logo=googleplay&amp;logoColor=white" alt="Für Android bei Google Play herunterladen"></a>
+  <a href="https://apps.microsoft.com/detail/9N6033B6640C?hl=en-us&amp;gl=IT&amp;ocid=pdpshare"><img src="https://img.shields.io/badge/Microsoft_Store-18181B?style=for-the-badge&amp;logo=data:image/svg%2Bxml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCAyNCAyNCI%2BPHBhdGggZmlsbD0id2hpdGUiIGQ9Ik0wIDBoMTEuNHYxMS40SDB6TTEyLjYgMEgyNHYxMS40SDEyLjZ6TTAgMTIuNmgxMS40VjI0SDB6TTEyLjYgMTIuNkgyNFYyNEgxMi42eiIvPjwvc3ZnPg%3D%3D" alt="Für Windows im Microsoft Store herunterladen"></a>
+  <a href="https://flathub.org/en/apps/io.github.tobias_bucci.digitales_register"><img src="https://img.shields.io/badge/Flathub-18181B?style=for-the-badge&amp;logo=flathub&amp;logoColor=white" alt="Für Linux bei Flathub herunterladen"></a>
+  <br>
+  <sub>iPhone &amp; iPad · Android · Windows · Linux</sub>
 </p>
 
 ## Die App
