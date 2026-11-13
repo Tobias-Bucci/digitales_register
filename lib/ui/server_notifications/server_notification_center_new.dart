@@ -177,7 +177,7 @@ class _NewNotificationList extends StatelessWidget {
   final ValueChanged<NotificationFilter> onFilterChanged;
   final String? selectedKey;
   final ValueChanged<NotificationFeedEntry> onOpen;
-  final VoidCallback onRefresh;
+  final Future<void> Function() onRefresh;
   final VoidCallback? onMarkAllRead;
 
   Widget _tile(BuildContext context, NotificationFeedEntry entry) {
@@ -229,7 +229,7 @@ class _NewNotificationList extends StatelessWidget {
     final top = MediaQuery.paddingOf(context).top;
     Widget refreshable(Widget child) => RefreshIndicator(
           edgeOffset: top,
-          onRefresh: () async => onRefresh(),
+          onRefresh: onRefresh,
           child: child,
         );
 

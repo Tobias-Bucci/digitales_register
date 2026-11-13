@@ -105,7 +105,9 @@ class ServerNotificationCenterPage extends StatefulWidget {
 
   final ServerNotificationRepository? repository;
   final SchoolNotificationFeed? school;
-  final VoidCallback? onRefresh;
+
+  /// Completes when the update is done, which ends pull to refresh.
+  final Future<void> Function()? onRefresh;
   final ServerNotificationLinkOpener openLink;
   final String? initialId;
 
@@ -156,7 +158,8 @@ class _ServerNotificationCenterPageState
     unawaited(widget.filterStore.save(filter));
   }
 
-  void _refresh() => (widget.onRefresh ?? serverNotifications.refresh)();
+  Future<void> _refresh() =>
+      (widget.onRefresh ?? serverNotifications.refresh)();
 
   void _open(String id, {required bool twoPanes}) {
     if (twoPanes) {
@@ -340,7 +343,7 @@ class _NotificationList extends StatelessWidget {
   final ValueChanged<NotificationFilter> onFilterChanged;
   final String? selectedKey;
   final ValueChanged<NotificationFeedEntry> onOpen;
-  final VoidCallback onRefresh;
+  final Future<void> Function() onRefresh;
 
   /// Null where nothing can be marked read right now.
   final VoidCallback? onMarkAllRead;
@@ -367,7 +370,7 @@ class _NotificationList extends StatelessWidget {
                 availableTypes: types.keys.toSet()))
             .toList();
     return RefreshIndicator(
-      onRefresh: () async => onRefresh(),
+      onRefresh: onRefresh,
       child: Align(
         alignment: Alignment.topCenter,
         child: ConstrainedBox(

@@ -131,9 +131,11 @@ class ServerNotificationPoller {
     }
   }
 
-  /// The user asked for an update.
-  void refresh() {
+  /// The user asked for an update. Completes when the fetch it started, or
+  /// the one already running, is done; at once if none may run yet.
+  Future<void> refresh() {
     if (_running && _active) _fetchUnlessBlocked(policy.manualGap);
+    return _inFlight ?? Future<void>.value();
   }
 
   /// What is asked for changed, so the current data no longer fits. Still

@@ -131,7 +131,7 @@ void main() {
         tester,
         store: store,
         home: ServerNotificationCenterPage(
-          onRefresh: () {},
+          onRefresh: () async {},
           school: SchoolNotificationFeed(
             notifications: [
               Notification((b) => b
@@ -164,7 +164,7 @@ void main() {
         tester,
         store: store,
         home: ServerNotificationCenterPage(
-          onRefresh: () {},
+          onRefresh: () async {},
           school: SchoolNotificationFeed(
             notifications: [_school(1, UtcDateTime(2026, 3, 2))],
             noInternet: true,

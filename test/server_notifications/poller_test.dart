@@ -219,6 +219,36 @@ void main() {
       });
     });
 
+    test('a manual refresh completes with its fetch', () {
+      run((async, h) {
+        h.poller.start();
+        async.flushMicrotasks();
+        h.wait(const Duration(seconds: 16));
+        final answer = Completer<int?>();
+        h.script.add(() => answer.future);
+        var done = false;
+        unawaited(h.poller.refresh().then((_) => done = true));
+        async.flushMicrotasks();
+        expect(h.calls, 2);
+        expect(done, isFalse, reason: 'the fetch is still running');
+        answer.complete(300);
+        async.flushMicrotasks();
+        expect(done, isTrue);
+      });
+    });
+
+    test('a refresh that may not fetch completes at once', () {
+      run((async, h) {
+        h.poller.start();
+        async.flushMicrotasks();
+        var done = false;
+        unawaited(h.poller.refresh().then((_) => done = true));
+        async.flushMicrotasks();
+        expect(h.calls, 1, reason: 'within the minimum distance');
+        expect(done, isTrue);
+      });
+    });
+
     test('a changed selection fetches at once, or right after a running one',
         () {
       run((async, h) {
