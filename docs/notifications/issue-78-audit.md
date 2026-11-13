@@ -2,7 +2,7 @@
 
 Audit of issue #78 ("cross-platform in-app notification center and polling")
 against the client code in this repository and the private notification server
-(`digitales_register_server`), done on 2026-11-13. The issue text is the
+(private repository), done on 2026-11-13. The issue text is the
 reference; the user's audit brief added the edge cases at the end.
 
 Status values: **done** (code and a passing test or a direct check point to it),
@@ -28,7 +28,7 @@ What is open:
   are possible here; iOS needs macOS).
 - **Authoring guide (S5):** the admin portal and the CLI exist and are secure,
   but no document explains how to write, schedule, edit importantly, expire or
-  revoke a notification.
+  revoke a notification. *Fixed, see S5.*
 - **Optional `opened` event (P1):** not implemented. The issue calls it optional,
   and the server has no events endpoint by design.
 
@@ -110,7 +110,9 @@ What is open:
 | P4 | Privacy disclosure reviewed | done, legal basis open | `docs/PRIVACY_DATA_INVENTORY.md:54`, notice v5 (`docs/PRIVACY_IMPLEMENTATION.md`); the inventory itself says "Legal basis to be reviewed" | Your legal review |
 | P5 | Aggregated server event counts, bounded offline queue | n/a | No events exist, so nothing is counted or queued | – |
 
-### Server (`digitales_register_server`)
+### Server (private repository)
+
+Paths in this section are relative to the server repository.
 
 | # | Requirement | Status | Evidence | Needed |
 |---|---|---|---|---|
@@ -118,8 +120,8 @@ What is open:
 | S2 | Data model: ids, timestamps, severity, localized texts with German fallback, link, expiry, targeting | done | `database/migrations/0001_init.sql:108`; `models.rs:226`; tests `locale_selection_and_german_fallback`, `scheduled_items_appear_and_expired_items_vanish_on_time_without_invalidation` | – |
 | S3 | Input validation, safe links | done | `validate.rs:33` (text), `:142` (URL), `admin/notifications.rs:155` (internal keys from the seeded table); unit tests in `validate.rs`, `html_stays_inert_plain_text` | – |
 | S4 | Rate limiting, caching, cheap `304` path | done | In-memory snapshot and rendered-page cache (`public/snapshot.rs:289`), no database work per poll; per-IP token bucket and concurrency cap (`public/ratelimit.rs:55`); tests `rate_limit_answers_429_with_retry_after`, `cache_serves_mutations_immediately_and_outside_writes_within_the_ttl`; `deploy/loadtest-server.sh` | – |
-| S5 | Authoring: create, edit, schedule, expire, revoke; documented and secure | partial | Admin portal (`apps/admin/src/screens/Editor.tsx`, `List.tsx`, `Types.tsx`), password plus TOTP, CLI bootstrap/reset (`docs/operations.md`, "First admin account"); 81 lifecycle tests. **No guide** explains publishing, important edits, scheduling, expiry, revoke-is-final, duplicate, audience rules or critical types | Write `docs/publishing.md` in the server repo |
-| S6 | Logging without personal data | done | `server.rs:99` logs method, path, status, duration only; `docs/operations.md` "Logs and privacy" (5xx entries by Caddy keep an IP for at most 15 days, disclosed) | – |
+| S5 | Authoring: create, edit, schedule, expire, revoke; documented and secure | done (fixed) | Admin portal (`apps/admin/src/screens/Editor.tsx`, `List.tsx`, `Types.tsx`), password plus TOTP, CLI bootstrap and reset commands, documented in the server's operations guide; 81 lifecycle tests. Was partial: no guide explained publishing. Now `docs/publishing.md` in the server repository (commit `a5165bd`): content rules and German fallback, types and manual-close popups, links, audience rules, scheduling, what users see, routine versus important edits, expiry, final withdrawal, duplication, and a test-audience tip | – |
+| S6 | Logging without personal data | done | `server.rs:99` logs method, path, status, duration only; the server's operations guide, "Logs and privacy" (5xx entries by Caddy keep an IP for at most 15 days, disclosed) | – |
 | S7 | CORS, security headers, TLS, error responses | done | `public/mod.rs:30`; tests `cors_*`, `errors_carry_cors_headers_too`, `unknown_routes_and_methods_use_the_error_model`; HSTS and `nosniff` seen live | – |
 | S8 | Server tests for endpoint, `ETag`/`304`, validation | done | 196 Rust tests, see baseline | – |
 
@@ -131,7 +133,7 @@ What is open:
 | Q2 | Read/dismiss persistence, offline cache, server down | done | `repository_test.dart`, `fresh_install_test.dart` | – |
 | Q3 | Summary popup, critical popup, link validation | done | `ui_test.dart`, `contract_models_test.dart` | – |
 | Q4 | Pagination, empty, error, offline, timeout covered | done | `api_test.dart` groups `cursor pagination`, `failures` | – |
-| Q5 | Feature and API documented, how to publish | partial | `docs/APP_NOTIFICATIONS.md`, `contract/README.md`, `contract/public.openapi.yaml`; publishing guide missing (S5) | See S5 |
+| Q5 | Feature and API documented, how to publish | done (fixed) | `docs/APP_NOTIFICATIONS.md`, `contract/README.md`, `contract/public.openapi.yaml`; publishing guide added on the server (S5) | – |
 | Q6 | Contract/integration tests on the published schema; end-to-end smoke test against the backend | done (fixed) | Was partial: fixtures parsed in the client, the server checked fixtures and live responses (`apps/api/tests/contract.rs`), but nothing ran the client against a server. Now `test/server_notifications/live_contract_test.dart`, opt-in through `DR_NOTIFICATIONS_E2E_URL`, GET only: every page for all five platforms against the contract, client and raw walk agree, `304` through the client, one-item pages give the same set, links and icons known, three languages complete, unknown platform refused. Passed 2026-11-13 against a local server seeded with 154 items (two pages) and read-only against production | – |
 
 ### Platforms and acceptance
@@ -157,6 +159,9 @@ What is open:
 
 1. **No contract drift guard.** Both copies are equal today, but nothing fails
    when one side changes. The client's CI cannot read the private repo.
+   *Fixed:* the server repository has `contract/check-client-sync.sh` (commit
+   `01bc078`), which compares the contract files, the app route keys, the icon
+   names and the platform values with a checkout of this repository.
 2. **Unexpected errors are silent.** Expected failures (network, `4xx`, `5xx`)
    are handled and must stay quiet. Programming errors are swallowed too
    (`server_notification_poller.dart:195`, `server_notification_service.dart:59`),
