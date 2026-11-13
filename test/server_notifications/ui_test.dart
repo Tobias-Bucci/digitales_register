@@ -1359,11 +1359,7 @@ void main() {
     final backlog = [
       item(title: 'Alt 1', publishedAt: '2026-03-01T08:00:00Z'),
       item(id: b, title: 'Alt 2', publishedAt: '2026-05-01T08:00:00Z'),
-      item(
-          id: c,
-          title: 'Alt 3',
-          critical: true,
-          publishedAt: '2026-07-01T08:00:00Z'),
+      item(id: c, title: 'Alt 3', publishedAt: '2026-07-01T08:00:00Z'),
     ];
 
     Future<void> pumpEverything(
@@ -1435,6 +1431,27 @@ void main() {
       expect(find.descendant(of: popup, matching: find.text('Neu')),
           findsOneWidget);
       expect(find.text('1'), findsOneWidget, reason: 'the badge');
+    });
+
+    testWidgets('a critical backlog item pops up, counts and stays open',
+        (tester) async {
+      final server = FakeServer()
+        ..replyList([
+          item(
+              id: '00000000-0000-4000-8000-000000000098',
+              title: 'Ausfall',
+              critical: true,
+              publishedAt: '2026-08-01T08:00:00Z'),
+          ...backlog,
+        ]);
+      final repository = await freshlyInstalled(tester, server);
+      await pumpEverything(tester, repository);
+      expect(popup, findsOneWidget);
+      expect(find.descendant(of: popup, matching: find.text('Ausfall')),
+          findsOneWidget);
+      expect(find.text('1'), findsOneWidget, reason: 'the badge');
+      await tester.pump(const Duration(seconds: 30));
+      expect(popup, findsOneWidget, reason: 'critical: closed by hand only');
     });
   });
 }

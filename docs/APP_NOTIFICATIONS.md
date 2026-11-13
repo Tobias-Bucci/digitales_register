@@ -44,7 +44,9 @@ from the local reminders, which is why the app calls them "App-Mitteilungen".
 - **The backlog of a new installation is quiet (#103).** No saved device state
   means a fresh installation (or deleted app data). Its first complete `200`
   list is recorded as read and announced, so it is listed in the center without
-  popup or badge. Only what a later sync adds alerts. It is decided by
+  popup or badge. Only what a later sync adds alerts, and critical
+  notifications (type `critical: true`) of that first list, which stay unread
+  and pop up once (#78 audit). It is decided by
   membership in that list, not by time, so no device clock or publishing moment
   can let a backlog item through. A failed or partial sync, or a `304`, sets
   nothing. Saved state from earlier versions, and state that cannot be read,

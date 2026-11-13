@@ -164,7 +164,8 @@ What is open:
    `diagnostics_service`. They would never show up in Crashlytics.
 3. **Critical backlog on a fresh install is silent.** By the #103 design, a
    critical message that is already active when someone installs the app is
-   listed without popup or badge.
+   listed without popup or badge. *Changed on your decision:* critical backlog
+   items now stay unread and pop up once; normal backlog stays quiet.
 4. **Popup during the launch reveal.** Polling starts when the launch gate opens,
    so with a fast network a pending popup can appear while the logo overlay is
    still fading. The 6 s timer leaves enough time to read it; not observed on a
