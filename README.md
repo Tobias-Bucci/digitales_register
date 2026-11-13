@@ -13,11 +13,12 @@
   <a href="https://apps.apple.com/us/app/digitales-register-s%C3%BCdtirol/id6823350366"><img src="https://img.shields.io/badge/App_Store-iPhone_%26_iPad-18181B?style=for-the-badge&amp;logo=apple&amp;logoColor=white" alt="Für iPhone und iPad im App Store herunterladen"></a>
   <a href="https://play.google.com/store/apps/details?id=it.bucci.digitalesregister&amp;pcampaignid=web_share"><img src="https://img.shields.io/badge/Google_Play-Android-18181B?style=for-the-badge&amp;logo=googleplay&amp;logoColor=white" alt="Für Android bei Google Play herunterladen"></a>
   <a href="https://apps.microsoft.com/detail/9N6033B6640C?hl=en-us&amp;gl=IT&amp;ocid=pdpshare"><img src="https://img.shields.io/badge/Microsoft_Store-Windows-18181B?style=for-the-badge" alt="Für Windows im Microsoft Store herunterladen"></a>
+  <a href="https://flathub.org/en/apps/io.github.tobias_bucci.digitales_register"><img src="https://img.shields.io/badge/Flathub-Linux-18181B?style=for-the-badge&amp;logo=flathub&amp;logoColor=white" alt="Für Linux bei Flathub herunterladen"></a>
 </p>
 
 ## Die App
 
-Noten, Termine und Mitteilungen an einem Ort – auf dem Smartphone, Tablet oder Windows-PC. Melde dich mit deinem bestehenden Schulkonto an.
+Noten, Termine und Mitteilungen an einem Ort – auf dem Smartphone, Tablet, Windows- oder Linux-PC. Melde dich mit deinem bestehenden Schulkonto an.
 
 - **Überblick behalten:** Noten und ihre Entwicklung einsehen.
 - **Schulalltag planen:** Stundenplan, Kalender und Hausaufgaben im Blick behalten.
