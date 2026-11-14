@@ -28,6 +28,7 @@ import 'package:dr/theme/auth_tokens.dart';
 import 'package:dr/ui/auth_layout.dart';
 import 'package:dr/util.dart';
 import 'package:flutter/foundation.dart';
+import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:fuzzy/fuzzy.dart';
@@ -1371,6 +1372,57 @@ class _AccountRow extends StatelessWidget {
   }
 }
 
+/// Privacy policy and account deletion, as one line of text links.
+class _LegalLinks extends StatefulWidget {
+  const _LegalLinks({required this.color, required this.muted});
+
+  final Color color;
+  final Color muted;
+
+  @override
+  State<_LegalLinks> createState() => _LegalLinksState();
+}
+
+class _LegalLinksState extends State<_LegalLinks> {
+  late final _privacy = TapGestureRecognizer()
+    ..onTap = () => openLegalLink(privacyPolicyUrl);
+  late final _delete = TapGestureRecognizer()
+    ..onTap = () => openLegalLink(deleteAccountUrl);
+
+  @override
+  void dispose() {
+    _privacy.dispose();
+    _delete.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final l10n = context.l10n;
+    final base = Theme.of(context)
+        .textTheme
+        .bodySmall
+        ?.copyWith(fontSize: 13, height: 1.4, color: widget.muted);
+    final link = TextStyle(
+        color: widget.color, decoration: TextDecoration.underline);
+    return Text.rich(
+      key: const Key('login-legal-links'),
+      TextSpan(style: base, children: [
+        TextSpan(
+            text: l10n.text('legal.privacyShort'),
+            style: link,
+            recognizer: _privacy),
+        const TextSpan(text: '  ·  '),
+        TextSpan(
+            text: l10n.text('legal.deleteShort'),
+            style: link,
+            recognizer: _delete),
+      ]),
+      textAlign: TextAlign.center,
+    );
+  }
+}
+
 class _Footer extends StatelessWidget {
   const _Footer({required this.onFeedback});
 
@@ -1391,32 +1443,20 @@ class _Footer extends StatelessWidget {
           child: AuthLink(
               label: l10n.text('login.feedback'), onPressed: onFeedback),
         ),
+        // Inline links, not buttons: the form must still fit a small phone
+        // without scrolling.
+        _LegalLinks(color: tokens.link, muted: tokens.secondaryText),
         // The web app is reached from a website; it says up front that it is
         // not an official service. The native app says so in About.
         if (kIsWeb)
           Padding(
-            padding: const EdgeInsets.only(top: 8),
+            padding: const EdgeInsets.only(top: 4),
             child: Text(l10n.text('legal.nonAffiliation'),
                 key: const Key('login-non-affiliation'),
                 textAlign: TextAlign.center,
                 style: Theme.of(context).textTheme.bodySmall?.copyWith(
                     fontSize: 12, height: 1.4, color: tokens.secondaryText)),
           ),
-        Wrap(
-          alignment: WrapAlignment.center,
-          children: [
-            AuthLink(
-              key: const Key('login-privacy-policy'),
-              label: l10n.text('legal.privacyPolicy'),
-              onPressed: () => openLegalLink(privacyPolicyUrl),
-            ),
-            AuthLink(
-              key: const Key('login-delete-account'),
-              label: l10n.text('legal.deleteAccount'),
-              onPressed: () => openLegalLink(deleteAccountUrl),
-            ),
-          ],
-        ),
       ],
     );
   }

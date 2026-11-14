@@ -918,6 +918,8 @@
   "error.timeout": "La richiesta è scaduta. Riprova.",
   "legal.privacyPolicy": "Informativa sulla privacy",
   "legal.deleteAccount": "Elimina account e dati",
+  "legal.privacyShort": "Privacy",
+  "legal.deleteShort": "Elimina account",
   "privacyConsent.age.title": "Conferma l’età",
   "privacyConsent.age.body": "Ho almeno 14 anni oppure chi esercita la responsabilità genitoriale è d’accordo.",
   "privacyConsent.age.confirm": "Confermo",

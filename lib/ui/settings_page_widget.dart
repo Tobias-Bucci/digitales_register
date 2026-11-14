@@ -1261,7 +1261,7 @@ class _SettingsPageWidgetState extends State<SettingsPageWidget> {
               key: const Key('settings-technical-id'),
               leading: const Icon(Icons.fingerprint),
               title: Text(l10n.text('privacySettings.technicalId')),
-              subtitle: SelectableText(id == null
+              subtitle: Text(id == null
                   ? l10n.text('privacySettings.technicalId.none')
                   : '$id\n${l10n.text('privacySettings.technicalId.hint')}'),
               trailing: id == null

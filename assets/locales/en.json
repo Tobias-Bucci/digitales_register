@@ -918,6 +918,8 @@
   "error.timeout": "The request timed out. Please try again.",
   "legal.privacyPolicy": "Privacy policy",
   "legal.deleteAccount": "Delete account and data",
+  "legal.privacyShort": "Privacy",
+  "legal.deleteShort": "Delete account",
   "privacyConsent.age.title": "Confirm your age",
   "privacyConsent.age.body": "I am at least 14 years old or my parent or guardian agrees.",
   "privacyConsent.age.confirm": "Confirm",

@@ -918,6 +918,8 @@
   "error.timeout": "La domanda é scadüda. Pröia d’agof.",
   "legal.privacyPolicy": "Declaraziun de proteziun dles dades",
   "legal.deleteAccount": "Sodé l’account y les dades",
+  "legal.privacyShort": "Proteziun dles dades",
+  "legal.deleteShort": "Sodé l’account",
   "privacyConsent.age.title": "Confermé l’eté",
   "privacyConsent.age.body": "Iö à almanco 14 agn o mi genitori o tutori é d’acordo.",
   "privacyConsent.age.confirm": "Confermé",
