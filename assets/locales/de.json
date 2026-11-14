@@ -916,6 +916,8 @@
   "exam.deepen": "Stoff vertiefen",
   "exam.practice": "Üben und Wissenslücken schließen",
   "error.timeout": "Die Anfrage hat das Zeitlimit überschritten. Bitte versuche es erneut.",
+  "legal.privacyPolicy": "Datenschutzerklärung",
+  "legal.deleteAccount": "Konto und Daten löschen",
   "error.network": "Die Verbindung ist fehlgeschlagen. Prüfe deine Internetverbindung und versuche es erneut.",
   "error.webProxyUnavailable": "Die Web-App ist vorübergehend nicht verfügbar. Bitte versuche es später erneut oder verwende die App.",
   "login.credentialsRejected": "Die Anmeldung wurde abgelehnt. Prüfe deine Zugangsdaten.",

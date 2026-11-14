@@ -1,8 +1,8 @@
 import 'package:dr/i18n/app_localizations.dart';
+import 'package:dr/legal_links.dart';
 import 'package:dr/ui/glass_surface.dart' show GlassRimBorder;
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
-import 'package:url_launcher/url_launcher.dart';
 
 class AboutAppDialog extends StatelessWidget {
   const AboutAppDialog({super.key, required this.version});
@@ -16,8 +16,7 @@ class AboutAppDialog extends StatelessWidget {
         title: Text(title),
         subtitle: subtitle == null ? null : Text(subtitle),
         trailing: const Icon(Icons.open_in_new, size: 18),
-        onTap: () =>
-            launchUrl(Uri.parse(url), mode: LaunchMode.externalApplication),
+        onTap: () => openLegalLink(url),
       );
 
   @override
@@ -100,6 +99,12 @@ class AboutAppDialog extends StatelessWidget {
                             'https://digitalesregister.it',
                             subtitle: l10n
                                 .text('settings.about.officialSourcesTitle')),
+                        Divider(height: 1, color: colors.outlineVariant),
+                        _link(context, l10n.text('legal.privacyPolicy'),
+                            privacyPolicyUrl),
+                        Divider(height: 1, color: colors.outlineVariant),
+                        _link(context, l10n.text('legal.deleteAccount'),
+                            deleteAccountUrl),
                         Divider(height: 1, color: colors.outlineVariant),
                         ExpansionTile(
                           tilePadding:

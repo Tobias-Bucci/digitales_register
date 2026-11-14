@@ -23,6 +23,7 @@ import 'package:collection/collection.dart';
 import 'package:dr/analytics_service.dart';
 import 'package:dr/container/login_page.dart';
 import 'package:dr/i18n/app_localizations.dart';
+import 'package:dr/legal_links.dart';
 import 'package:dr/theme/auth_tokens.dart';
 import 'package:dr/ui/auth_layout.dart';
 import 'package:dr/util.dart';
@@ -1389,6 +1390,21 @@ class _Footer extends StatelessWidget {
         Center(
           child: AuthLink(
               label: l10n.text('login.feedback'), onPressed: onFeedback),
+        ),
+        Wrap(
+          alignment: WrapAlignment.center,
+          children: [
+            AuthLink(
+              key: const Key('login-privacy-policy'),
+              label: l10n.text('legal.privacyPolicy'),
+              onPressed: () => openLegalLink(privacyPolicyUrl),
+            ),
+            AuthLink(
+              key: const Key('login-delete-account'),
+              label: l10n.text('legal.deleteAccount'),
+              onPressed: () => openLegalLink(deleteAccountUrl),
+            ),
+          ],
         ),
       ],
     );
