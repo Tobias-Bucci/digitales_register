@@ -6,9 +6,9 @@ import 'package:dr/server_notifications/server_notification_api.dart';
 import 'package:dr/server_notifications/server_notification_config.dart';
 import 'package:dr/server_notifications/server_notification_poller.dart';
 import 'package:dr/server_notifications/server_notification_repository.dart';
+import 'package:dr/web_app/app_package_info.dart';
 import 'package:flutter/widgets.dart';
 import 'package:http/http.dart' as http;
-import 'package:package_info_plus/package_info_plus.dart';
 
 /// Connects the repository and the poller to the app's lifecycle.
 ///
@@ -39,7 +39,7 @@ class ServerNotificationService with WidgetsBindingObserver {
   }
 
   static Future<String> _packageVersion() async =>
-      (await PackageInfo.fromPlatform()).version;
+      (await appPackageInfo()).version;
 
   final ServerNotificationRepository repository;
   late final ServerNotificationPoller poller;
