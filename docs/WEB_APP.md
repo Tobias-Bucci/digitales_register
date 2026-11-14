@@ -92,6 +92,21 @@ Readable paths (`usePathUrlStrategy`): `/`, `/grades`, `/absences`,
   button. Flutter's Navigator 1.0 keeps a single browser history entry, so
   there is nothing to go *forward* to after going back.
 
+### `/demo`: try it without an account
+
+`https://app.digitalesregister.com/demo` opens the web app straight into the
+built-in demo account (`lib/web_app/demo_entry.dart`). The website's "try it
+without an account" link points here.
+
+- It signs in as the demo account would (school empty, `demo` / `demo`): local
+  sample data, no sign-in request, no school server, no proxy.
+- It stores nothing in the browser. Before anything reads storage, the app
+  swaps shared_preferences and flutter_secure_storage for in-memory stores for
+  the whole tab. Saved accounts of the visitor are neither read nor changed.
+- The address then follows the open page as usual, so a reload or a new tab
+  starts the normal web app (sign-in page or the saved account).
+- Native builds never enter it, and every other address starts as before.
+
 ## Build and run locally
 
 ```bash
@@ -107,4 +122,5 @@ SDK) is served where the engine looks for its default font, so nothing is
 loaded from Google.
 
 `flutter run -d chrome` works for UI work; signing in to a real school needs
-the proxy, so use the demo account (school empty, `demo` / `demo`) there.
+the proxy, so use the demo account (school empty, `demo` / `demo`) there, or
+open `/demo`.

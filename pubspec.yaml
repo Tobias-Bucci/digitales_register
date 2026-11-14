@@ -73,6 +73,8 @@ dependencies:
   scroll_to_index: ^3.0.1
   scrollable_positioned_list: ^0.3.1
   shared_preferences: ^2.5.3
+  # DemoEntry (/demo in the web app) swaps in its in-memory store.
+  shared_preferences_platform_interface: ^2.4.2
   sqflite: 2.4.2
   timezone: ^0.11.2
   tuple: ^2.0.0
@@ -115,7 +117,6 @@ dev_dependencies:
   matcher: ^0.12.10-nullsafety.3
   msix: ^3.16.13
   quiver: ^3.2.2
-  shared_preferences_platform_interface: ^2.4.2
 
 flutter_icons:
   android: "launcher_icon"

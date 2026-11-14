@@ -21,6 +21,7 @@ import 'dart:io';
 
 import 'package:biometric_storage/biometric_storage.dart';
 import 'package:dr/host_platform.dart';
+import 'package:dr/web_app/demo_entry.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart'
@@ -44,6 +45,9 @@ bool isDesktop() {
 const keychainAnyAccessibility = secure_storage.IOSOptions(accessibility: null);
 
 secure_storage.FlutterSecureStorage getFlutterSecureStorage() {
+  // A /demo session in the browser keeps everything in memory.
+  final demo = DemoEntry.secureStorage;
+  if (demo != null) return demo;
   if (isDesktop() && !HostPlatform.isWindows) {
     return DesktopSecureStorage();
   } else {
@@ -123,7 +127,8 @@ class DesktopSecureStorage extends secure_storage.FlutterSecureStorage {
   /// Linux desktops without a Secret Service (e.g. minimal setups or a
   /// Raspberry Pi) report D-Bus errors such as ServiceUnknown here.
   static bool _isKeyringUnavailable(Object error) =>
-      HostPlatform.isLinux && (error is PlatformException || error is AuthException);
+      HostPlatform.isLinux &&
+      (error is PlatformException || error is AuthException);
 
   static Future<bool> _hasDatabase(Directory homeDirectory) =>
       File("${homeDirectory.path}/database.hive").exists();

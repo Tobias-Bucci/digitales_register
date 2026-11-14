@@ -101,6 +101,7 @@ import 'package:dr/ui/system_pages.dart';
 import 'package:dr/utc_date_time.dart';
 import 'package:dr/util.dart';
 import 'package:dr/web_app/browser_download.dart';
+import 'package:dr/web_app/demo_entry.dart';
 import 'package:dr/web_app/web_routing.dart';
 import 'package:dr/wrapper.dart';
 import 'package:file_picker/file_picker.dart';
@@ -1327,18 +1328,23 @@ Future<void> _loadAccounts(
   wrapper.noInternet = api.state.noInternet;
   await beforeLoad?.call();
   if (!api.state.noInternet) _popAll();
+  // Opened at /demo: the demo account instead of any saved login. Its storage
+  // is memory only (DemoEntry), so there is nothing saved to read anyway.
+  final demoSignIn = DemoEntry.takeSignIn();
   Map<String, dynamic> login = <String, dynamic>{};
-  try {
-    final raw = await startupTimeline.step(
-        'p3_saved_accounts_read', () => secureStorage.read(key: 'login'));
-    login = decodeStoredLogin(raw);
-    if (raw != null && json.encode(login) != raw) {
-      await secureStorage.write(key: 'login', value: json.encode(login));
+  if (!demoSignIn) {
+    try {
+      final raw = await startupTimeline.step(
+          'p3_saved_accounts_read', () => secureStorage.read(key: 'login'));
+      login = decodeStoredLogin(raw);
+      if (raw != null && json.encode(login) != raw) {
+        await secureStorage.write(key: 'login', value: json.encode(login));
+      }
+    } catch (e, stack) {
+      diagnostics.report(e, stack, DiagnosticError.storage);
+      // A failed repair must not discard the valid accounts already recovered.
+      showSnackBar(tr('error.savedDataLoadFailed'));
     }
-  } catch (e, stack) {
-    diagnostics.report(e, stack, DiagnosticError.storage);
-    // A failed repair must not discard the valid accounts already recovered.
-    showSnackBar(tr('error.savedDataLoadFailed'));
   }
 
   final user = getString(login["user"]);
@@ -1367,7 +1373,17 @@ Future<void> _loadAccounts(
     otherAccounts.insert(0, user);
   }
   await api.actions.loginActions.setAvailableAccounts(otherAccounts);
-  if ((api.state.url != null && api.state.url != url) ||
+  if (demoSignIn) {
+    await api.actions.loginActions.login(
+      LoginPayload(
+        (b) => b
+          ..user = 'demo'
+          ..pass = 'demo'
+          ..url = ''
+          ..fromStorage = false,
+      ),
+    );
+  } else if ((api.state.url != null && api.state.url != url) ||
       (api.state.loginState.username != null &&
           api.state.loginState.username != user)) {
     // TODO: Figure out when exactly we'd hit this code path and how to handle it better.

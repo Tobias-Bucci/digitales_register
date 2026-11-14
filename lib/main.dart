@@ -63,6 +63,7 @@ import 'package:dr/ui/server_notifications/server_notification_popup.dart';
 import 'package:dr/ui/system_pages.dart';
 import 'package:dr/util.dart';
 import 'package:dr/web_app/app_package_info.dart';
+import 'package:dr/web_app/demo_entry.dart';
 import 'package:dr/web_app/web_routing.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
@@ -94,6 +95,9 @@ Future<void> main() async {
     // Readable addresses (/grades) instead of /#/grades. Before the binding
     // reads the initial route.
     usePathUrlStrategy();
+    // /demo: memory-only storage and the demo account. Before anything
+    // reads storage.
+    DemoEntry.start(Uri.base);
     WebUrlSync.instance.start();
   }
   WidgetsFlutterBinding.ensureInitialized();
