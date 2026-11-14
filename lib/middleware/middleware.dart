@@ -19,6 +19,7 @@
 import 'dart:async';
 import 'dart:convert';
 import 'dart:io';
+
 import 'dart:typed_data';
 
 import 'package:built_collection/built_collection.dart';
@@ -64,6 +65,7 @@ import 'package:dr/course_materials.dart';
 import 'package:dr/data.dart';
 import 'package:dr/diagnostics_service.dart';
 import 'package:dr/external_links.dart';
+import 'package:dr/host_platform.dart';
 import 'package:dr/i18n/app_language.dart';
 import 'package:dr/i18n/app_localizations.dart';
 import 'package:dr/local_data_inventory.dart';
@@ -76,6 +78,7 @@ import 'package:dr/profile_picture.dart';
 import 'package:dr/reminder_sync.dart';
 import 'package:dr/school_api_endpoints.dart';
 import 'package:dr/school_notification_service.dart';
+import 'package:dr/school_proxy.dart';
 import 'package:dr/serializers.dart';
 import 'package:dr/settings_persistence_service.dart';
 import 'package:dr/startup_timeline.dart';
@@ -92,13 +95,17 @@ import 'package:dr/ui/grade_calculator.dart' show GradeCalculator;
 import 'package:dr/ui/grades_chart_page.dart' show GradesChartPage;
 import 'package:dr/ui/launch/app_launch_animation.dart';
 import 'package:dr/ui/school_notification_opt_in.dart';
+import 'package:dr/ui/server_notifications/server_notification_routes.dart';
 import 'package:dr/ui/settings_page_new.dart' show SettingsSheetActions;
 import 'package:dr/ui/system_pages.dart';
 import 'package:dr/utc_date_time.dart';
 import 'package:dr/util.dart';
+import 'package:dr/web_app/browser_download.dart';
+import 'package:dr/web_app/web_routing.dart';
 import 'package:dr/wrapper.dart';
 import 'package:file_picker/file_picker.dart';
-import 'package:flutter/foundation.dart' show defaultTargetPlatform, kDebugMode;
+import 'package:flutter/foundation.dart'
+    show defaultTargetPlatform, kDebugMode, kIsWeb;
 import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart' hide Action, Notification;
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
@@ -566,7 +573,7 @@ bool? courseMaterialDebugLogsOverride;
 // exception messages, which may contain personal data or account names.
 void _materialLog(String stage, Map<String, Object?> fields) {
   if (!(courseMaterialDebugLogsOverride ?? kDebugMode)) return;
-  if (Platform.isWindows || Platform.isLinux) {
+  if (HostPlatform.isWindows || HostPlatform.isLinux) {
     debugPrint('[CourseMaterial] ${jsonEncode({'stage': stage, ...fields})}');
   }
 }
@@ -631,6 +638,8 @@ Future<CourseMaterialOpenResult> openCourseMaterialEntryWithStatus(
         outdated = true;
       }
     }
+    // Web: the download went to the browser, which opens it from there.
+    if (kIsWeb) return CourseMaterialOpenResult.opened;
     stage = 'open';
     final file = await _attachmentFile(entry.uniqueName, session.scope);
     if (file == null) return failed;
@@ -739,12 +748,13 @@ Future<bool> _downloadCourseMaterialFile(
     return false;
   }
 
-  final saveFile = await _attachmentFile(entry.uniqueName, session.scope);
-  if (saveFile == null) {
+  final saveFile =
+      kIsWeb ? null : await _attachmentFile(entry.uniqueName, session.scope);
+  if (saveFile == null && !kIsWeb) {
     return false;
   }
-  _materialLog('destination', {'exists': await saveFile.exists()});
-  if (!replaceOutdated && await saveFile.exists()) {
+  _materialLog('destination', {'exists': await saveFile?.exists() ?? false});
+  if (saveFile != null && !replaceOutdated && await saveFile.exists()) {
     final shouldOverwrite = await askShouldOverwriteFile(entry.uniqueName);
     session.ensureCurrent();
     if (shouldOverwrite == null) {
@@ -771,6 +781,7 @@ Future<bool> _downloadCourseMaterialFile(
     final bytes = result.bytes;
     if (bytes != null) {
       _workingCourseMaterialCandidate = index;
+      if (saveFile == null) return saveInBrowser(entry.uniqueName, bytes);
       await _writeFileAtomically(saveFile, bytes);
       await _rememberCourseMaterialVersion(session, entry);
       _materialLog('saved', {
@@ -782,7 +793,7 @@ Future<bool> _downloadCourseMaterialFile(
     if (result.stop) break;
   }
 
-  if (!replaceOutdated && await saveFile.exists()) {
+  if (saveFile != null && !replaceOutdated && await saveFile.exists()) {
     await saveFile.delete();
   }
   _materialLog('download_failed', {'saved': false});
@@ -2005,7 +2016,7 @@ String getStorageKey(String? user, String server) {
 }
 
 String escapeKey(String key) {
-  if (Platform.isWindows) {
+  if (HostPlatform.isWindows) {
     // secure_storage does not support certain characters on Windows.
     return key.replaceAll(RegExp(r'[\\/:*?"<>|]'), "_");
   }
@@ -2192,6 +2203,17 @@ Future<void> _start(
   Action<Uri?> action,
 ) async {
   await api.actions.loginActions.clearAfterLoginCallbacks();
+  // Web: the page of the address the app was opened with (/grades, ...),
+  // once signed in, like a link from a widget or a notification.
+  final webDestination = WebUrlSync.instance.takePendingDestination();
+  final openWebDestination = webDestination == null
+      ? null
+      : webDestination == 'extras'
+          ? api.actions.routingActions.showExtras.call
+          : serverNotificationDestinations[webDestination];
+  if (openWebDestination != null) {
+    await api.actions.loginActions.addAfterLoginCallback(openWebDestination);
+  }
   if (action.payload != null) {
     await api.actions.setUrl(action.payload!.origin);
     final parameters = action.payload!.queryParameters;
@@ -2388,12 +2410,15 @@ Future<bool> downloadFile(
     return false;
   }
 
-  final saveFile = await _attachmentFile(fileName, session.scope);
-  if (saveFile == null) {
+  // The browser has no app folder: the web app hands the document to the
+  // browser's downloads instead of saving it (see browser_download.dart).
+  final saveFile =
+      kIsWeb ? null : await _attachmentFile(fileName, session.scope);
+  if (saveFile == null && !kIsWeb) {
     privacyLog('technical_operation');
     return false;
   }
-  if (await saveFile.exists()) {
+  if (saveFile != null && await saveFile.exists()) {
     final shouldOverwrite = await askShouldOverwriteFile(fileName);
     session.ensureCurrent();
     if (shouldOverwrite == null) {
@@ -2443,6 +2468,7 @@ Future<bool> downloadFile(
 
     switch (validateDownloadedDocument(bytes, contentType, fileName)) {
       case DownloadValidation.valid:
+        if (saveFile == null) return saveInBrowser(fileName, bytes);
         try {
           await _writeFileAtomically(saveFile, bytes);
           return true;
@@ -2575,17 +2601,25 @@ Future<Uint8List> fetchAuthenticatedBytes(String url) async {
   }
 }
 
+/// [url] on a school server as the current session must request it: through
+/// the school proxy in the web build. Unchanged in native builds.
+String schoolTransportUrl(String url) => wrapper.transportUrl(url);
+
 /// Whether the account signed in now has [fileName] saved.
 Future<bool> canOpenFile(String fileName) =>
     _canOpenFileIn(_Session.capture(), fileName);
 
 Future<bool> _canOpenFileIn(_Session session, String fileName) async {
+  // Web: nothing is kept; every open downloads the document again.
+  if (kIsWeb) return false;
   return await (await _attachmentFile(fileName, session.scope))?.exists() ??
       false;
 }
 
 /// Opens a downloaded attachment and tells the user when that fails.
 Future<void> openFile(String fileName) async {
+  // Web: downloadFile has already handed the document to the browser.
+  if (kIsWeb) return;
   privacyLog('technical_operation');
   final file = await _attachmentFile(fileName, _Session.capture().scope);
   if (file == null || !await _openDownloadedFile(file)) {
@@ -2632,7 +2666,17 @@ Future<bool?> askShouldOverwriteFile(String fileName) {
   );
 }
 
+const _welcomeShownPreference = 'unmaintainedAlertShown';
+
 Future<void> _checkShowUnmaintainedAlert() async {
+  if (kIsWeb) {
+    // The browser has no app folder; a preference marks it instead.
+    final prefs = await SharedPreferences.getInstance();
+    if (prefs.getBool(_welcomeShownPreference) ?? false) return;
+    await _showWelcomeDialog();
+    await prefs.setBool(_welcomeShownPreference, true);
+    return;
+  }
   final appDirectory = await getApplicationSupportDirectory();
   final file = File("${appDirectory.path}/unmaintainedAlertShown");
   if (await file.exists()) {
@@ -2651,6 +2695,11 @@ Future<void> _checkShowUnmaintainedAlert() async {
     return;
   }
 
+  await _showWelcomeDialog();
+  await file.create(recursive: true);
+}
+
+Future<void> _showWelcomeDialog() async {
   await showDialog<void>(
     context: navigatorKey!.currentContext!,
     builder: (context) {
@@ -2698,11 +2747,11 @@ Future<void> _checkShowUnmaintainedAlert() async {
       );
     },
   );
-
-  await file.create(recursive: true);
 }
 
 Future<void> _checkShowPrivacyConsentAlert() async {
+  // The web app has no optional purposes (no Firebase), so nothing to ask.
+  if (kIsWeb) return;
   final context = navigatorKey?.currentContext;
   if (context == null || !context.mounted) {
     return;

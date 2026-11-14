@@ -59,6 +59,7 @@ import 'package:dr/ui/settings_page_new.dart'
     show SettingsSheetActions, SettingsSheetKeyboardInset;
 import 'package:dr/utc_date_time.dart';
 import 'package:dr/util.dart';
+import 'package:dr/web_app/web_routing.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/rendering.dart';
 import 'package:flutter_built_redux/flutter_built_redux.dart';
@@ -827,6 +828,7 @@ class _DaysWidgetState extends State<DaysWidget> {
       extendHomeBodyBehindAppBar: modern,
       homeBody: modern ? DashboardBackdrop(child: body) : body,
       onRouteChanged: (route) {
+        WebUrlSync.instance.pageChanged(route);
         if (route == Pages.homework) {
           widget.refresh();
         }

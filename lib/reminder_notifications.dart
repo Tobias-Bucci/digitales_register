@@ -17,8 +17,8 @@
 
 import 'dart:async';
 import 'dart:convert';
-import 'dart:io';
 
+import 'package:dr/host_platform.dart';
 import 'package:dr/reminder_schedule.dart';
 import 'package:dr/runtime_trace.dart';
 import 'package:dr/school_notification_service.dart';
@@ -52,8 +52,8 @@ enum ReminderBackend {
 }
 
 ReminderBackend reminderBackendForPlatform() {
-  if (Platform.isLinux) return ReminderBackend.whileRunning;
-  if (Platform.isWindows) return ReminderBackend.systemOneTime;
+  if (HostPlatform.isLinux) return ReminderBackend.whileRunning;
+  if (HostPlatform.isWindows) return ReminderBackend.systemOneTime;
   return ReminderBackend.systemRepeating;
 }
 
@@ -101,7 +101,7 @@ class ReminderNotificationService {
   bool get onlyWhileRunning => backend == ReminderBackend.whileRunning;
 
   /// Whether the user can be sent to a system page to allow notifications.
-  bool get canOpenSystemSettings => Platform.isAndroid || Platform.isIOS;
+  bool get canOpenSystemSettings => HostPlatform.isAndroid || HostPlatform.isIOS;
 
   Future<void> openSystemSettings() => schoolNotifications.openSystemSettings();
 

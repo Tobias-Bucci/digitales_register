@@ -19,7 +19,6 @@
 // ignore_for_file: use_build_context_synchronously
 
 import 'dart:async';
-import 'dart:io';
 
 import 'package:built_redux/built_redux.dart';
 import 'package:dr/actions/app_actions.dart';
@@ -40,6 +39,7 @@ import 'package:dr/container/request_pass_reset_container.dart';
 import 'package:dr/container/settings_page.dart';
 import 'package:dr/desktop.dart';
 import 'package:dr/diagnostics_service.dart';
+import 'package:dr/host_platform.dart';
 import 'package:dr/i18n/app_language.dart';
 import 'package:dr/i18n/app_localizations.dart';
 import 'package:dr/middleware/middleware.dart';
@@ -50,6 +50,7 @@ import 'package:dr/reminder_sync.dart';
 import 'package:dr/runtime_trace.dart';
 import 'package:dr/school_notification_engine.dart';
 import 'package:dr/school_notification_service.dart';
+import 'package:dr/school_proxy.dart';
 import 'package:dr/server_notifications/server_notification_service.dart';
 import 'package:dr/settings_persistence_service.dart';
 import 'package:dr/startup_timeline.dart';
@@ -61,9 +62,12 @@ import 'package:dr/ui/server_notifications/server_notification_bell.dart';
 import 'package:dr/ui/server_notifications/server_notification_popup.dart';
 import 'package:dr/ui/system_pages.dart';
 import 'package:dr/util.dart';
+import 'package:dr/web_app/web_routing.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_built_redux/flutter_built_redux.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
+import 'package:flutter_web_plugins/url_strategy.dart';
 import 'package:package_info_plus/package_info_plus.dart';
 import 'package:responsive_scaffold/responsive_scaffold.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -86,6 +90,12 @@ final AppActions actions = AppActions();
 Future<void> main() async {
   startupTimeline.start();
   final startupStopwatch = Stopwatch()..start();
+  if (kIsWeb) {
+    // Readable addresses (/grades) instead of /#/grades. Before the binding
+    // reads the initial route.
+    usePathUrlStrategy();
+    WebUrlSync.instance.start();
+  }
   WidgetsFlutterBinding.ensureInitialized();
   startupTimeline.mark('p1_binding_ready');
 
@@ -160,6 +170,25 @@ Future<void> _launchTargetReady() async {
   startupTimeline.mark('p3_launch_target_ready');
 }
 
+DateTime? _proxyNoticeShown;
+
+/// Web: the proxy to the school servers is out of today's free quota.
+void _showSchoolProxyUnavailable() {
+  final now = DateTime.now();
+  final last = _proxyNoticeShown;
+  if (last != null && now.difference(last) < const Duration(minutes: 1)) {
+    return;
+  }
+  final context = navigatorKey?.currentContext;
+  final messenger = scaffoldMessengerKey?.currentState;
+  if (context == null || messenger == null) return;
+  _proxyNoticeShown = now;
+  messenger.showSnackBar(SnackBar(
+    content: Text(context.l10n.text('error.webProxyUnavailable')),
+    duration: const Duration(seconds: 8),
+  ));
+}
+
 /// Removes what older versions stored for background notification polling.
 @visibleForTesting
 Future<void> removeLegacyNotificationData() async {
@@ -201,8 +230,10 @@ Future<void> _initializeAfterFirstFrame({
     "elapsedMs": startupStopwatch.elapsedMilliseconds,
   });
 
+  onSchoolProxyUnavailable = _showSchoolProxyUnavailable;
+
   Uri? uri;
-  if (Platform.isAndroid) {
+  if (HostPlatform.isAndroid) {
     uri = await getInitialUri();
     await _uriLinkSubscription?.cancel();
     _uriLinkSubscription = uriLinkStream.listen((event) async {
@@ -426,13 +457,28 @@ class RegisterApp extends StatelessWidget {
                 return supportedLocales.first;
               },
               navigatorKey: navigatorKey,
+              // The browser tab's title; native builds keep their app name.
+              title: kIsWeb ? 'Digitales Register' : '',
               navigatorObservers: [
                 DiagnosticsNavigatorObserver(
                     onScreen: (screen) =>
-                        unawaited(AnalyticsService.logScreenView(screen)))
+                        unawaited(AnalyticsService.logScreenView(screen))),
+                if (kIsWeb) WebUrlSync.instance,
               ],
               scaffoldMessengerKey: scaffoldMessengerKey,
               initialRoute: "/",
+              // The browser's address would otherwise become the initial
+              // route stack ('/' and '/grades', past the login). The web app
+              // starts at home like the native app and opens the address's
+              // page after signing in (WebUrlSync).
+              onGenerateInitialRoutes: kIsWeb
+                  ? (_) => [
+                        MaterialPageRoute<void>(
+                          settings: const RouteSettings(name: '/'),
+                          builder: (_) => HomePage(),
+                        ),
+                      ]
+                  : null,
               onGenerateRoute: (RouteSettings settings) {
                 final List<String> pathElements = settings.name!.split("/");
                 if (pathElements[0] != "") return null;

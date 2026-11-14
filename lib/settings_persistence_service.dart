@@ -23,6 +23,7 @@ import 'package:dr/privacy_log.dart';
 import 'package:dr/serializers.dart';
 import 'package:dr/study_data_service.dart';
 import 'package:dr/util.dart';
+import 'package:flutter/foundation.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 const globalSettingsPreferenceKey = 'globalSettingsState';
@@ -39,7 +40,12 @@ class SettingsPersistenceService {
   /// migration that deals with them.
   Future<SettingsState?> load() async {
     final stored = await _readStored();
-    return stored == null ? null : _withoutStudyData(stored);
+    if (stored == null) return null;
+    // The legacy design is not offered in the web app.
+    final settings = kIsWeb && stored.legacyDesign
+        ? stored.rebuild((b) => b..legacyDesign = false)
+        : stored;
+    return _withoutStudyData(settings);
   }
 
   /// The learning notes still stored in the shared blob, or null when there

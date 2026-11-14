@@ -17,12 +17,13 @@
 // along with digitales_register.  If not, see <http://www.gnu.org/licenses/>.
 
 import 'dart:convert';
-import 'dart:io';
 
 import 'package:collection/collection.dart';
 import 'package:dr/app_clock.dart';
 import 'package:dr/diagnostics_service.dart';
+import 'package:dr/host_platform.dart';
 import 'package:dr/privacy_log.dart';
+import 'package:dr/school_proxy.dart';
 import 'package:dr/utc_date_time.dart';
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
@@ -38,7 +39,7 @@ PackageInfo packageInfo = PackageInfo(
 );
 
 String get appVersion {
-  if (Platform.environment.containsKey('FLUTTER_TEST')) {
+  if (HostPlatform.environment.containsKey('FLUTTER_TEST')) {
     return "1.0";
   }
   return packageInfo.version;
@@ -380,13 +381,24 @@ Future<void> retryStorageWrite(
 }
 
 Future<bool> cannotConnectTo(String url) async {
-  final uri = Uri.parse(url);
+  var uri = Uri.parse(url);
   if (uri.scheme != 'https') {
     return true;
   }
+  // The browser may not read other origins: the web build checks the school
+  // through its proxy, or its own server.
+  if (usesSchoolProxy) uri = Uri.parse(webConnectivityProbeUrl(url));
   var noInternet = false;
   try {
     final result = await http.get(uri).timeout(const Duration(seconds: 10));
+    if (usesSchoolProxy &&
+        isProxyQuotaResponse(
+            result.statusCode, result.headers[proxyMarkerHeader])) {
+      // The internet works; the proxy is out of quota, which the app reports
+      // on its own.
+      onSchoolProxyUnavailable?.call();
+      return false;
+    }
     noInternet = result.statusCode != 200;
   } catch (e) {
     noInternet = true;

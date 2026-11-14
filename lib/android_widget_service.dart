@@ -17,12 +17,12 @@
 
 import 'dart:async';
 import 'dart:convert';
-import 'dart:io';
 
 import 'package:dr/actions/app_actions.dart';
 import 'package:dr/android_widget_snapshot.dart';
 import 'package:dr/app_state.dart';
 import 'package:dr/diagnostics_service.dart';
+import 'package:dr/host_platform.dart';
 import 'package:dr/main.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/services.dart';
@@ -57,7 +57,7 @@ class AndroidWidgetPlatformBridge {
 
   // The historical Android service also feeds the WidgetKit app group.
   Future<void> writePlanningSnapshot(String? payload) async {
-    if (!Platform.isIOS) return;
+    if (!HostPlatform.isIOS) return;
     try {
       await _channel.invokeMethod<void>('writePlanningSnapshot', payload);
     } catch (_) {
@@ -66,7 +66,7 @@ class AndroidWidgetPlatformBridge {
   }
 
   Future<void> refreshWidgets() async {
-    if (!Platform.isAndroid && !Platform.isIOS) {
+    if (!HostPlatform.isAndroid && !HostPlatform.isIOS) {
       return;
     }
     try {
@@ -77,7 +77,7 @@ class AndroidWidgetPlatformBridge {
   }
 
   Future<AndroidWidgetLaunchDestination?> consumeLaunchDestination() async {
-    if (!Platform.isAndroid && !Platform.isIOS) {
+    if (!HostPlatform.isAndroid && !HostPlatform.isIOS) {
       return null;
     }
     try {
@@ -93,7 +93,7 @@ class AndroidWidgetPlatformBridge {
   Future<void> registerLaunchHandler(
     Future<void> Function(AndroidWidgetLaunchDestination destination) handler,
   ) async {
-    if (!Platform.isAndroid && !Platform.isIOS) {
+    if (!HostPlatform.isAndroid && !HostPlatform.isIOS) {
       return;
     }
     _channel.setMethodCallHandler((call) async {

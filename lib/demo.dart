@@ -102,6 +102,11 @@ class _DemoStore {
       return;
     }
     _state = _initialState();
+    // The web app keeps the demo in memory: a reload starts it fresh.
+    if (kIsWeb) {
+      _loaded = true;
+      return;
+    }
     final file = await _storageFile();
     if (await file.exists()) {
       try {
@@ -121,6 +126,7 @@ class _DemoStore {
   Future<void> resetForTest() async {
     _loaded = false;
     _storagePath = null;
+    if (kIsWeb) return;
     final file = await _storageFile();
     if (await file.exists()) {
       try {
@@ -360,6 +366,10 @@ class _DemoStore {
 
   Future<void> clear() async {
     await ensureLoaded();
+    if (kIsWeb) {
+      _state = _initialState();
+      return;
+    }
     final file = await _storageFile();
     // Delete the sole demo-store file first instead of producing deleted
     // records. The freshly written state has no references to old records.
@@ -1422,6 +1432,7 @@ class _DemoStore {
   }
 
   Future<void> _persist() async {
+    if (kIsWeb) return;
     final file = await _storageFile();
     await file.parent.create(recursive: true);
     await file.writeAsString(json.encode(_state));

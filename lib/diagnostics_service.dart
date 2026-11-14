@@ -1,7 +1,8 @@
 import 'dart:async';
 import 'dart:collection';
-import 'dart:io';
 import 'dart:isolate';
+
+import 'package:dr/host_platform.dart';
 import 'package:dr/telemetry_capabilities.dart';
 import 'package:firebase_crashlytics/firebase_crashlytics.dart';
 import 'package:flutter/foundation.dart';
@@ -516,7 +517,7 @@ class DiagnosticsService {
     safeLog('developer_test');
     report(Exception('test'), StackTrace.current, DiagnosticError.caught);
     await flush();
-    if (nativeCrash && (Platform.isAndroid || Platform.isIOS)) {
+    if (nativeCrash && (HostPlatform.isAndroid || HostPlatform.isIOS)) {
       FirebaseCrashlytics.instance.crash();
     }
   }

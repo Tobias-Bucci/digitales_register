@@ -16,6 +16,7 @@ analyzer:
     - windows/**
     - macos/**
     - linux/**
+    - web/**
   errors:
     # This lint is not helpful in combination with implicit-dynamic: false.
     avoid_dynamic_calls: ignore

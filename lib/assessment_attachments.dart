@@ -2,6 +2,7 @@ import 'dart:convert';
 import 'dart:io';
 
 import 'package:dr/account_scope.dart';
+import 'package:dr/host_platform.dart';
 import 'package:dr/privacy_log.dart';
 import 'package:dr/util.dart';
 import 'package:file_picker/file_picker.dart';
@@ -60,14 +61,14 @@ Future<Directory> assessmentAttachmentsRoot() async {
   if (override != null) return override();
   final root = await getApplicationSupportDirectory();
   return Directory(
-      '${root.path}${Platform.pathSeparator}assessment_attachments');
+      '${root.path}${HostPlatform.pathSeparator}assessment_attachments');
 }
 
 /// The folder of the attachments of one account. Files of other accounts, and
 /// those older versions kept loose in the shared folder, are not in it.
 Future<Directory> assessmentAttachmentFolder(AccountScope scope) async {
   final root = await assessmentAttachmentsRoot();
-  return Directory('${root.path}${Platform.pathSeparator}${scope.fileId}');
+  return Directory('${root.path}${HostPlatform.pathSeparator}${scope.fileId}');
 }
 
 final _absolutePath = RegExp(r'^([\\/]|[A-Za-z]:[\\/])');
@@ -86,7 +87,7 @@ Future<File?> resolveAssessmentAttachmentFile(
   final folder = await assessmentAttachmentFolder(scope);
   if (await FileSystemEntity.isLink(folder.path)) return null;
   final file =
-      File('${folder.path}${Platform.pathSeparator}${attachment.path}');
+      File('${folder.path}${HostPlatform.pathSeparator}${attachment.path}');
   if (await FileSystemEntity.isLink(file.path)) return null;
   return file;
 }
@@ -104,7 +105,7 @@ Future<AssessmentAttachment?> pickAndStoreAssessmentAttachment(
   final safeName = name.replaceAll(RegExp('[^A-Za-z0-9._-]'), '_');
   final storedName = '${DateTime.now().microsecondsSinceEpoch}_$safeName';
   final destination =
-      File('${folder.path}${Platform.pathSeparator}$storedName');
+      File('${folder.path}${HostPlatform.pathSeparator}$storedName');
   final bytes = selected.bytes;
   if (bytes != null && bytes.isNotEmpty) {
     await destination.writeAsBytes(bytes, flush: true);
@@ -125,7 +126,7 @@ Future<String?> openAssessmentAttachment(
   if (stored == null || !await stored.exists()) {
     return 'Die lokale Datei wurde nicht gefunden.';
   }
-  if (Platform.isWindows) {
+  if (HostPlatform.isWindows) {
     try {
       await Process.start('explorer.exe', [stored.path]);
       return null;
@@ -137,7 +138,7 @@ Future<String?> openAssessmentAttachment(
   // external storage on Android and requests MANAGE_EXTERNAL_STORAGE. Export a
   // disposable copy to our own external cache instead; FileProvider can grant
   // the reader access to that path without any storage permission.
-  final path = Platform.isAndroid
+  final path = HostPlatform.isAndroid
       ? await _copyToExternalCacheForOpening(attachment, stored)
       : stored.path;
   if (path == null) {
@@ -157,7 +158,7 @@ Future<String?> _copyToExternalCacheForOpening(
     await folder.create(recursive: true);
     final safeName = attachment.name.replaceAll(RegExp('[^A-Za-z0-9._-]'), '_');
     final destination = File(
-        '${folder.path}${Platform.pathSeparator}${DateTime.now().microsecondsSinceEpoch}_$safeName');
+        '${folder.path}${HostPlatform.pathSeparator}${DateTime.now().microsecondsSinceEpoch}_$safeName');
     await stored.copy(destination.path);
     return destination.path;
   } catch (_) {
@@ -172,11 +173,11 @@ Future<Directory?> Function()? assessmentOpenCopiesFolderOverride;
 Future<Directory?> _openCopiesFolder() async {
   final override = assessmentOpenCopiesFolderOverride;
   if (override != null) return override();
-  if (!Platform.isAndroid) return null;
+  if (!HostPlatform.isAndroid) return null;
   final directories = await getExternalCacheDirectories();
   if (directories == null || directories.isEmpty) return null;
   return Directory(
-      '${directories.first.path}${Platform.pathSeparator}assessment_open');
+      '${directories.first.path}${HostPlatform.pathSeparator}assessment_open');
 }
 
 /// Deletes the copies of attachments that Android makes to hand them to a

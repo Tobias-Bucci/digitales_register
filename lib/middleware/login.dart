@@ -89,7 +89,10 @@ Future<void> _logout(
       savedLogin = <String, dynamic>{};
     }
   }
-  if (api.state.settingsState.deleteDataOnLogout && action.payload.hard) {
+  // In a browser, which may be shared, signing out always removes the
+  // account's saved register data as well (cookies go with the session).
+  if ((kIsWeb || api.state.settingsState.deleteDataOnLogout) &&
+      action.payload.hard) {
     await bestEffort(() => api.actions.deleteData());
   }
   if (!action.payload.forced) {
@@ -158,6 +161,21 @@ Future<void> _login(
         LoginFailedPayload(
           (b) => b
             ..cause = httpsRequired
+            ..username = action.payload.user,
+        ),
+      );
+      return;
+    }
+    // The web app reaches schools only through its proxy, which serves
+    // addresses on digitalesregister.it and nothing else.
+    if (usesSchoolProxy &&
+        !isDemoLogin &&
+        !isProxiedSchoolHost(Uri.parse(url).host)) {
+      final unsupported = await _loginText('login.webSchoolUnsupported');
+      await fail(
+        LoginFailedPayload(
+          (b) => b
+            ..cause = unsupported
             ..username = action.payload.user,
         ),
       );

@@ -455,7 +455,12 @@ void main() {
       'lib/app_subject_translation_controller.dart': {
         '_subjectTranslationEnabledPreferenceKey',
       },
-      'lib/middleware/middleware.dart': {'_legacyStudyPromptedKey'},
+      'lib/middleware/middleware.dart': {
+        '_legacyStudyPromptedKey',
+        // Web only: the welcome dialog was shown in this browser (the native
+        // app keeps this marker as a file in its folder).
+        '_welcomeShownPreference',
+      },
       // How the notification center is filtered on this device, like the
       // theme. Holds no content and no account.
       'lib/notification_feed.dart': {'notificationFilterPreferenceKey'},
