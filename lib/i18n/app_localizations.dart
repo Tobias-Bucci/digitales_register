@@ -757,6 +757,7 @@ class AppLocalizations {
       'error.timeout',
       'error.network',
       'error.generic',
+      'error.webProxyUnavailable',
       'login.credentialsRejected'
     };
     if (keys.contains(value)) return text(value!);

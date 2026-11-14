@@ -67,14 +67,27 @@ Future<void> _savePass(MiddlewareApi<AppState, AppStateBuilder, AppActions> api,
     });
   }
 
+  // In the browser a stored password is only as safe as the browser profile
+  // (see docs/web.md). The web app keeps passwords only for "stay logged in";
+  // otherwise it remembers the accounts without their passwords.
+  final keepPasswords = !kIsWeb || !api.state.settingsState.noPasswordSaving;
   await secureStorage.write(
     key: "login",
     value: json.encode(
       <String, Object?>{
         "user": userToSave,
-        "pass": wrapper.pass,
+        if (keepPasswords) "pass": wrapper.pass,
         "url": wrapper.url,
-        "otherAccounts": otherAccounts,
+        "otherAccounts": keepPasswords
+            ? otherAccounts
+            : [
+                for (final account in otherAccounts)
+                  if (account is Map)
+                    {
+                      for (final e in account.entries)
+                        if (e.key != 'pass') e.key: e.value
+                    }
+              ],
       },
     ),
   );

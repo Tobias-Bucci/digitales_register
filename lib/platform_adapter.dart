@@ -15,11 +15,11 @@
 // You should have received a copy of the GNU General Public License
 // along with digitales_register.  If not, see <http://www.gnu.org/licenses/>.
 
-import 'dart:io';
-
+import 'package:dr/host_platform.dart';
 import 'package:flutter/foundation.dart';
 
 @visibleForTesting
 bool Function()? isAndroidOverride;
 
-bool get isAndroidPlatform => isAndroidOverride?.call() ?? Platform.isAndroid;
+bool get isAndroidPlatform =>
+    isAndroidOverride?.call() ?? HostPlatform.isAndroid;

@@ -1,4 +1,4 @@
-import 'dart:io';
+import 'package:dr/host_platform.dart';
 import 'package:flutter/foundation.dart';
 
 /// One production policy shared by all Firebase telemetry adapters.
@@ -7,13 +7,13 @@ class TelemetryCapabilities {
   final TargetPlatform platform;
   final bool web;
   factory TelemetryCapabilities.current() => TelemetryCapabilities(
-      Platform.isAndroid
+      HostPlatform.isAndroid
           ? TargetPlatform.android
-          : Platform.isIOS
+          : HostPlatform.isIOS
               ? TargetPlatform.iOS
-              : Platform.isMacOS
+              : HostPlatform.isMacOS
                   ? TargetPlatform.macOS
-                  : Platform.isWindows
+                  : HostPlatform.isWindows
                       ? TargetPlatform.windows
                       : TargetPlatform.linux,
       web: kIsWeb);

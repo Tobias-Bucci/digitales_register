@@ -6,6 +6,7 @@ import 'package:dio/dio.dart';
 import 'package:dr/account_scope.dart';
 import 'package:dr/app_language_controller.dart';
 import 'package:dr/desktop.dart';
+import 'package:dr/host_platform.dart';
 import 'package:dr/i18n/app_localizations.dart';
 import 'package:dr/runtime_trace.dart';
 import 'package:dr/school_notification_background.dart';
@@ -29,7 +30,7 @@ final schoolNotifications = SchoolNotificationService();
 /// System notifications for school news are offered on Android, iOS and macOS
 /// only. Linux and Windows stay without alerts and background checks.
 bool schoolNotificationsSupported() =>
-    Platform.isAndroid || Platform.isIOS || Platform.isMacOS;
+    HostPlatform.isAndroid || HostPlatform.isIOS || HostPlatform.isMacOS;
 
 /// Shared with the reminders, which use the same plugin on every platform.
 const schoolNotificationInitializationSettings = InitializationSettings(
@@ -70,7 +71,7 @@ void schoolNotificationDispatcher() {
       return true;
     }
     final service = SchoolNotificationService(
-        backgroundBudget: Platform.isAndroid
+        backgroundBudget: HostPlatform.isAndroid
             ? const Duration(minutes: 2)
             : const Duration(seconds: 20));
     try {
@@ -172,8 +173,8 @@ class SchoolNotificationService extends ChangeNotifier
   /// initialization, consent prompts, polling and the settings section are all
   /// gated on this flag.
   bool get supported => _platformSupported ?? schoolNotificationsSupported();
-  bool get mobileBackgroundSupported => Platform.isAndroid || Platform.isIOS;
-  bool get androidBackgroundSupported => Platform.isAndroid;
+  bool get mobileBackgroundSupported => HostPlatform.isAndroid || HostPlatform.isIOS;
+  bool get androidBackgroundSupported => HostPlatform.isAndroid;
   String accountKey(String server, String user) {
     return notificationDigest([canonicalSchoolServer(server), user]);
   }
@@ -309,7 +310,7 @@ class SchoolNotificationService extends ChangeNotifier
       if (!background) {
         // The tap that started the app comes first: a failure of the cleanup
         // below must not lose it, and a later retry must not repeat it.
-        if (!_launchTapHandled && !Platform.isLinux) {
+        if (!_launchTapHandled && !HostPlatform.isLinux) {
           final launch = await _native.getNotificationAppLaunchDetails();
           _launchTapHandled = true;
           if (launch?.didNotificationLaunchApp ?? false) {
@@ -399,7 +400,7 @@ class SchoolNotificationService extends ChangeNotifier
 
   Future<bool> _hasPermission() async {
     if (_permission != null) return _permission();
-    if (Platform.isMacOS) {
+    if (HostPlatform.isMacOS) {
       return (await _native
                   .resolvePlatformSpecificImplementation<
                       MacOSFlutterLocalNotificationsPlugin>()
@@ -407,13 +408,13 @@ class SchoolNotificationService extends ChangeNotifier
               ?.isEnabled ??
           false;
     }
-    if (Platform.isLinux || Platform.isWindows) {
+    if (HostPlatform.isLinux || HostPlatform.isWindows) {
       // These desktop daemons enforce system policy and expose no permission
       // request API. Require explicit in-app consent before submitting alerts.
       return await _storage.read(key: 'school-notification-desktop-consent') ==
           'true';
     }
-    if (Platform.isAndroid) {
+    if (HostPlatform.isAndroid) {
       return await _native
               .resolvePlatformSpecificImplementation<
                   AndroidFlutterLocalNotificationsPlugin>()
@@ -522,7 +523,7 @@ class SchoolNotificationService extends ChangeNotifier
       await _storage.delete(key: 'school-notification-alert-ids-v1');
     }
     // Filter by our own channels/payloads. General app announcements are retained.
-    if (Platform.isLinux) return; // The plugin cannot enumerate Linux alerts.
+    if (HostPlatform.isLinux) return; // The plugin cannot enumerate Linux alerts.
     for (final alert in await _native.getActiveNotifications()) {
       if (alert.id != null &&
           (alert.channelId == 'school_grade' ||
@@ -535,7 +536,7 @@ class SchoolNotificationService extends ChangeNotifier
 
   Future<bool> _presentationAllowed() async {
     if (await _foregroundSessionActive()) return false;
-    if (Platform.isAndroid || Platform.isIOS) {
+    if (HostPlatform.isAndroid || HostPlatform.isIOS) {
       // Registered in both UI and headless engines. Missing native integration
       // fails closed instead of producing a late popup during startup.
       if (await const MethodChannel('dr/school_notifications')
@@ -549,7 +550,7 @@ class SchoolNotificationService extends ChangeNotifier
 
   Future<bool> _foregroundSessionActive() async {
     if (_foreground) return true;
-    if (androidBackgroundSupported || Platform.isIOS) {
+    if (androidBackgroundSupported || HostPlatform.isIOS) {
       // A missing channel fails closed. Job/engine process importance is not
       // evidence that an Activity is visible.
       return await const MethodChannel('dr/school_notifications')
@@ -579,7 +580,7 @@ class SchoolNotificationService extends ChangeNotifier
   }
 
   Future<void> openSystemSettings() async {
-    if (Platform.isAndroid || Platform.isIOS) {
+    if (HostPlatform.isAndroid || HostPlatform.isIOS) {
       await const MethodChannel('dr/school_notifications')
           .invokeMethod<void>('openSettings');
     }
@@ -653,7 +654,7 @@ class SchoolNotificationService extends ChangeNotifier
                       ? 'credentials'
                       : null;
     });
-    if (Platform.isAndroid || Platform.isIOS) {
+    if (HostPlatform.isAndroid || HostPlatform.isIOS) {
       platformStatus = await const MethodChannel('dr/school_notifications')
               .invokeMapMethod<String, dynamic>('diagnostics') ??
           {};
@@ -679,7 +680,7 @@ class SchoolNotificationService extends ChangeNotifier
     var canAsk = !alreadyAsked && !await _hasPermission();
     if (canAsk && _canRequestPermission != null) {
       canAsk = await _canRequestPermission();
-    } else if (canAsk && (Platform.isAndroid || Platform.isIOS)) {
+    } else if (canAsk && (HostPlatform.isAndroid || HostPlatform.isIOS)) {
       canAsk = await const MethodChannel('dr/school_notifications')
               .invokeMethod<bool>('canRequestNotificationPermission') ==
           true;
@@ -711,17 +712,17 @@ class SchoolNotificationService extends ChangeNotifier
     permissionRequested = true;
     if (_permissionRequest != null) {
       await _permissionRequest();
-    } else if (Platform.isAndroid) {
+    } else if (HostPlatform.isAndroid) {
       await _native
           .resolvePlatformSpecificImplementation<
               AndroidFlutterLocalNotificationsPlugin>()
           ?.requestNotificationsPermission();
-    } else if (Platform.isIOS) {
+    } else if (HostPlatform.isIOS) {
       await _native
           .resolvePlatformSpecificImplementation<
               IOSFlutterLocalNotificationsPlugin>()
           ?.requestPermissions(alert: true, badge: true, sound: true);
-    } else if (Platform.isMacOS) {
+    } else if (HostPlatform.isMacOS) {
       await _native
           .resolvePlatformSpecificImplementation<
               MacOSFlutterLocalNotificationsPlugin>()
@@ -928,7 +929,7 @@ class SchoolNotificationService extends ChangeNotifier
   /// Caller holds the account lock. Upgrade only after notification consent,
   /// without introducing a second credential record.
   Future<void> _prepareBackgroundCredentials() async {
-    if (!Platform.isIOS ||
+    if (!HostPlatform.isIOS ||
         !granted ||
         !(await _readPreferences()).enabled ||
         await _storage.read(key: 'school-notification-background') != 'true') {
@@ -1031,7 +1032,7 @@ class SchoolNotificationService extends ChangeNotifier
               'true') {
         await _scheduler.cancel();
       } else {
-        if (Platform.isIOS &&
+        if (HostPlatform.isIOS &&
             await const MethodChannel('dr/school_notifications')
                     .invokeMethod<bool>('backgroundRefreshAvailable') !=
                 true) {
@@ -1042,7 +1043,7 @@ class SchoolNotificationService extends ChangeNotifier
         await _scheduler.schedule();
       }
       backgroundAvailable = true;
-      if (Platform.isAndroid || Platform.isIOS) {
+      if (HostPlatform.isAndroid || HostPlatform.isIOS) {
         platformStatus = await const MethodChannel('dr/school_notifications')
                 .invokeMapMethod<String, dynamic>('diagnostics') ??
             {};

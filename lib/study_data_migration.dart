@@ -21,6 +21,7 @@ import 'dart:io';
 import 'package:crypto/crypto.dart';
 import 'package:dr/account_scope.dart';
 import 'package:dr/assessment_attachments.dart';
+import 'package:dr/host_platform.dart';
 import 'package:dr/settings_persistence_service.dart';
 import 'package:dr/study_data_service.dart';
 import 'package:dr/util.dart';
@@ -351,7 +352,7 @@ class StudyDataMigration {
       final sourceHash = await _hash(source);
       for (var attempt = 0; attempt < 50; attempt++) {
         final candidate = attempt == 0 ? name : 'm${attempt}_$name';
-        final target = File('${folder.path}${Platform.pathSeparator}$candidate');
+        final target = File('${folder.path}${HostPlatform.pathSeparator}$candidate');
         if (await FileSystemEntity.isLink(target.path)) continue;
         if (await target.exists()) {
           // An earlier run copied it already.

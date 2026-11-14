@@ -32,6 +32,7 @@ import 'package:dr/i18n/app_localizations.dart';
 import 'package:dr/main.dart';
 import 'package:dr/privacy_log.dart';
 import 'package:dr/school_api_endpoints.dart';
+import 'package:dr/school_proxy.dart';
 import 'package:dr/star_rating.dart';
 import 'package:dr/ui/controlled_text_builder.dart';
 import 'package:dr/ui/dialog.dart';
@@ -94,7 +95,14 @@ Duration requestRetryDelay = const Duration(milliseconds: 400);
 
 class Wrapper {
   static bool _networkActivityEnabled = true;
+
+  /// Native builds only: the browser owns the cookies of the web build.
   final cookieJar = DefaultCookieJar();
+
+  /// Web build only: this session's cookie slot at the school proxy, and the
+  /// schools it has talked to through it. See school_proxy.dart.
+  String _proxySlot = newProxySlot();
+  final Set<String> _proxySlotHosts = <String>{};
   late final Dio dio;
   final bool allowInsecureConnections;
   String get loginAddress => '$baseAddress$schoolLoginEndpoint';
@@ -175,7 +183,15 @@ class Wrapper {
         receiveTimeout: const Duration(seconds: 20),
       ),
     );
-    dio.interceptors.add(CookieManager(cookieJar));
+    if (usesSchoolProxy) {
+      // First, so that every later interceptor sees the final address.
+      dio.interceptors.add(SchoolProxyInterceptor(
+        () => _proxySlot,
+        onProxied: _proxySlotHosts.add,
+      ));
+    } else {
+      dio.interceptors.add(CookieManager(cookieJar));
+    }
     dio.interceptors.add(DiagnosticsInterceptor());
     dio.interceptors.add(InterceptorsWrapper(onRequest: (options, handler) {
       // Only the logout request of a retiring session may still go out.
@@ -201,14 +217,24 @@ class Wrapper {
       _activeRequestTokens.remove(error.requestOptions.cancelToken);
       handler.next(error);
     }));
-    (dio.httpClientAdapter as IOHttpClientAdapter).createHttpClient = () {
-      final client = HttpClient();
-      client.userAgent =
-          "Digitales-Register-App $appVersion; https://github.com/Tobias-Bucci/digitales_register";
-      return client;
-    };
+    // In the browser dio uses XMLHttpRequest, which cannot set a user agent;
+    // the proxy sends its own.
+    if (!usesSchoolProxy) {
+      (dio.httpClientAdapter as IOHttpClientAdapter).createHttpClient = () {
+        final client = HttpClient();
+        client.userAgent =
+            "Digitales-Register-App $appVersion; https://github.com/Tobias-Bucci/digitales_register";
+        return client;
+      };
+    }
     //dio.interceptors.add(DebugInterceptor());
   }
+
+  /// [url] as the browser must request it: through the school proxy in the
+  /// web build, with this session's cookies. Unchanged in native builds.
+  String transportUrl(String url) => usesSchoolProxy
+      ? proxiedSchoolUrl(url, _proxySlot, origin: Uri.base.origin) ?? url
+      : url;
 
   String? get url => _url;
   set url(String? value) {
@@ -230,7 +256,9 @@ class Wrapper {
   bool noInternet = false;
   Future<bool> refreshNoInternet() async {
     if (!_appInForeground) return noInternet;
-    final address = url != null ? baseAddress : "https://digitalesregister.it";
+    final address = url != null && url!.isNotEmpty
+        ? baseAddress
+        : "https://digitalesregister.it";
     return noInternet = await cannotConnectTo(address);
   }
 
@@ -445,6 +473,9 @@ class Wrapper {
   AppRequestException _mapRequestError(Object error) {
     if (error is AppRequestException) {
       return error;
+    }
+    if (error is DioException && error.error is SchoolProxyUnavailable) {
+      return const AppRequestException(message: 'error.webProxyUnavailable');
     }
     if (error is TimeoutException) {
       return const AppRequestException(
@@ -1163,6 +1194,23 @@ class Wrapper {
   }
 
   void _clearCookies() {
-    cookieJar.deleteAll();
+    if (usesSchoolProxy) {
+      _rotateProxySlot();
+    } else {
+      cookieJar.deleteAll();
+    }
+  }
+
+  /// Starts a fresh, empty cookie slot at once and asks the proxy to delete
+  /// the old one's cookies. Requests made from now on can neither use nor
+  /// lose those cookies, however the deletion and they are ordered.
+  void _rotateProxySlot() {
+    final old = _proxySlot;
+    final hosts = _proxySlotHosts.toList();
+    _proxySlot = newProxySlot();
+    _proxySlotHosts.clear();
+    for (final host in hosts) {
+      unawaited(clearProxyCookies(host, old));
+    }
   }
 }

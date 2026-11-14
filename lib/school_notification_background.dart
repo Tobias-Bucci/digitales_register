@@ -1,11 +1,11 @@
 import 'dart:async';
 import 'dart:convert';
-import 'dart:io';
 
 import 'package:cookie_jar/cookie_jar.dart';
 import 'package:dio/dio.dart';
 import 'package:dio_cookie_manager/dio_cookie_manager.dart';
 import 'package:dr/desktop.dart';
+import 'package:dr/host_platform.dart';
 import 'package:dr/school_api_endpoints.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/services.dart';
@@ -80,7 +80,7 @@ class SchoolNotificationKeychain extends FlutterSecureStorage {
 class SchoolNotificationScheduler {
   SchoolNotificationScheduler({Workmanager? workmanager, bool? android})
       : _workmanager = workmanager ?? Workmanager(),
-        _android = android ?? Platform.isAndroid;
+        _android = android ?? HostPlatform.isAndroid;
   final Workmanager _workmanager;
   final bool _android;
 

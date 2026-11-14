@@ -1,0 +1,70 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+  <!-- Replaced by `flutter build web --base-href`; the web app lives at the root. -->
+  <base href="$FLUTTER_BASE_HREF">
+
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="color-scheme" content="light dark">
+  <meta name="theme-color" media="(prefers-color-scheme: light)" content="#f7f8fa">
+  <meta name="theme-color" media="(prefers-color-scheme: dark)" content="#121418">
+  <meta name="description" content="Digitales Register im Browser: Noten, Kalender, Hausaufgaben und Mitteilungen. Inoffiziell und quelloffen. Anmeldung mit dem Konto deiner Schule.">
+  <meta name="robots" content="noindex">
+  <meta name="referrer" content="no-referrer">
+
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="default">
+  <meta name="apple-mobile-web-app-title" content="Digitales Register">
+  <link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
+  <link rel="icon" href="favicon.ico" sizes="48x48">
+  <link rel="icon" href="favicon.png" type="image/png" sizes="32x32">
+  <link rel="manifest" href="manifest.json">
+
+  <title>Digitales Register</title>
+
+  <!-- The loading screen is plain HTML and CSS, so it shows before any script
+       runs and there is no unstyled flash. It matches the app's own launch
+       screen (lib/ui/launch) and fades out once Flutter draws. -->
+  <style>
+    :root { color-scheme: light dark; --bg: #f7f8fa; --fg: #162033; --muted: #586173; --track: #d9e0ea; --accent: #2f5da8; }
+    @media (prefers-color-scheme: dark) {
+      :root { --bg: #121418; --fg: #e6e9ef; --muted: #a3abb8; --track: #2a2f37; --accent: #9dbef5; }
+    }
+    html, body { margin: 0; height: 100%; background: var(--bg); }
+    body { overflow: hidden; font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif; }
+    #dr-splash {
+      position: fixed; inset: 0; z-index: 10; display: flex; flex-direction: column;
+      align-items: center; justify-content: center; gap: 20px; background: var(--bg);
+      color: var(--fg); transition: opacity 220ms ease-out;
+    }
+    #dr-splash.dr-gone { opacity: 0; pointer-events: none; }
+    #dr-splash img { width: 96px; height: 96px; }
+    #dr-splash .dr-bar { width: 120px; height: 3px; border-radius: 3px; background: var(--track); overflow: hidden; }
+    #dr-splash .dr-bar::after {
+      content: ""; display: block; width: 40%; height: 100%; border-radius: 3px; background: var(--accent);
+      animation: dr-slide 1.1s ease-in-out infinite;
+    }
+    @keyframes dr-slide { from { transform: translateX(-100%); } to { transform: translateX(250%); } }
+    @media (prefers-reduced-motion: reduce) { #dr-splash .dr-bar::after { animation: none; width: 100%; } }
+    #dr-splash p { margin: 0; max-width: 32rem; padding: 0 24px; text-align: center; font-size: 15px; line-height: 1.5; color: var(--muted); }
+    #dr-splash p[hidden] { display: none; }
+    #dr-splash a { color: var(--accent); }
+  </style>
+</head>
+<body>
+  <div id="dr-splash" role="status" aria-live="polite">
+    <img src="icons/Icon-192.png" alt="Digitales Register" width="96" height="96">
+    <div class="dr-bar" aria-hidden="true"></div>
+    <p id="dr-splash-error" hidden></p>
+    <noscript>
+      <p>Für Digitales Register muss JavaScript aktiviert sein.<br>
+      Per usare Digitales Register è necessario attivare JavaScript.<br>
+      Por adoré Digitales Register mëss JavaScript ester ativé.<br>
+      Digitales Register needs JavaScript to be enabled.</p>
+    </noscript>
+  </div>
+  <script src="flutter_bootstrap.js" async></script>
+</body>
+</html>

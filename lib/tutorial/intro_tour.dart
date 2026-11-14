@@ -21,6 +21,7 @@ import 'package:dr/i18n/app_language.dart';
 import 'package:dr/i18n/app_localizations.dart';
 import 'package:dr/tutorial/design_choice.dart';
 import 'package:dr/tutorial/intro_illustrations.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
@@ -48,6 +49,11 @@ const introTourPages = <IntroTourPage>[
 ];
 
 const _designPage = 'design';
+
+/// The tour as shown: the web app has the new design only (no choice).
+final List<IntroTourPage> _tourPages = kIsWeb
+    ? introTourPages.where((p) => p.key != _designPage).toList()
+    : introTourPages;
 
 /// From this width a page puts its picture beside the text.
 const _wideLayout = 720.0;
@@ -113,7 +119,7 @@ class _IntroTourState extends State<IntroTour> {
   late bool _legacyDesign = widget.legacyDesign;
   int _page = 0;
 
-  bool get _isLast => _page == introTourPages.length - 1;
+  bool get _isLast => _page == _tourPages.length - 1;
 
   @override
   void dispose() {
@@ -136,7 +142,7 @@ class _IntroTourState extends State<IntroTour> {
   }
 
   void _goTo(int page) {
-    if (page < 0 || page >= introTourPages.length) return;
+    if (page < 0 || page >= _tourPages.length) return;
     if (MediaQuery.disableAnimationsOf(context)) {
       _controller.jumpToPage(page);
     } else {
@@ -159,7 +165,7 @@ class _IntroTourState extends State<IntroTour> {
 
   void _skip() {
     if (widget.designChoicePending && !_isLast) {
-      _goTo(introTourPages.length - 1);
+      _goTo(_tourPages.length - 1);
     } else {
       Navigator.of(context).pop(false);
     }
@@ -209,7 +215,7 @@ class _IntroTourState extends State<IntroTour> {
                               child: Text(
                                 l10n.text('tutorial.progress', args: {
                                   'current': '${_page + 1}',
-                                  'total': '${introTourPages.length}',
+                                  'total': '${_tourPages.length}',
                                 }),
                                 style: theme.textTheme.labelLarge?.copyWith(
                                   color: scheme.onSurfaceVariant,
@@ -249,10 +255,10 @@ class _IntroTourState extends State<IntroTour> {
                     Expanded(
                       child: PageView.builder(
                         controller: _controller,
-                        itemCount: introTourPages.length,
+                        itemCount: _tourPages.length,
                         onPageChanged: (page) => setState(() => _page = page),
                         itemBuilder: (context, index) => _IntroPageView(
-                          page: introTourPages[index],
+                          page: _tourPages[index],
                           accentIndex: index,
                           active: index == _page,
                           footer: index == 0
@@ -261,7 +267,7 @@ class _IntroTourState extends State<IntroTour> {
                                   onSelected: _selectLanguage,
                                   alignStart: wide,
                                 )
-                              : introTourPages[index].key == _designPage
+                              : _tourPages[index].key == _designPage
                                   ? Column(
                                       children: [
                                         DesignChoicePicker(
@@ -278,7 +284,7 @@ class _IntroTourState extends State<IntroTour> {
                         ),
                       ),
                     ),
-                    _PageDots(count: introTourPages.length, current: _page),
+                    _PageDots(count: _tourPages.length, current: _page),
                     Padding(
                       padding: const EdgeInsets.fromLTRB(16, 16, 16, 16),
                       child: Row(

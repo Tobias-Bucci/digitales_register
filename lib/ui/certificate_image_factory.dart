@@ -2,6 +2,7 @@
 //
 // This file is part of digitales_register.
 
+import 'package:dr/middleware/middleware.dart' show schoolTransportUrl;
 import 'package:flutter/material.dart';
 import 'package:flutter_widget_from_html_core/flutter_widget_from_html_core.dart';
 
@@ -44,7 +45,7 @@ class CertificateImageFactory extends WidgetFactory {
     final resolved = resolveCertificateImageUri(url, baseUrl);
     return resolved == null
         ? null
-        : super.imageProviderFromNetwork('$resolved');
+        : super.imageProviderFromNetwork(schoolTransportUrl('$resolved'));
   }
 
   @override
@@ -54,7 +55,7 @@ class CertificateImageFactory extends WidgetFactory {
       final resolved = resolveCertificateImageUri(url, baseUrl);
       return resolved == null
           ? null
-          : super.imageProviderFromNetwork('$resolved');
+          : super.imageProviderFromNetwork(schoolTransportUrl('$resolved'));
     }
     return super.imageProviderFromFileUri(url);
   }

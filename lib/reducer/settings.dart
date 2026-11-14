@@ -24,6 +24,7 @@ import 'package:dr/app_state.dart';
 import 'package:dr/dashboard_items.dart';
 import 'package:dr/reminder_schedule.dart';
 import 'package:dr/theme/app_palette.dart';
+import 'package:flutter/foundation.dart';
 
 final settingsReducerBuilder = NestedReducerBuilder<AppState, AppStateBuilder,
     SettingsState, SettingsStateBuilder>(
@@ -344,7 +345,8 @@ void _amoledMode(
 
 void _legacyDesign(
     SettingsState state, Action<bool> action, SettingsStateBuilder builder) {
-  builder.legacyDesign = action.payload;
+  // The legacy design is not offered in the web app.
+  builder.legacyDesign = !kIsWeb && action.payload;
 }
 
 void _biometricAppLockEnabled(

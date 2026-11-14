@@ -49,6 +49,7 @@ import 'package:dr/ui/school_notification_settings.dart';
 import 'package:dr/ui/settings_page_new.dart';
 import 'package:dr/ui/subject_swatch_picker.dart';
 import 'package:dr/util.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:responsive_scaffold/responsive_scaffold.dart';
 import 'package:url_launcher/url_launcher.dart';
@@ -892,31 +893,34 @@ class _SettingsPageWidgetState extends State<SettingsPageWidget> {
             onChanged: _selectTheme,
           ),
         ),
-        ListTile(
-          key: const Key('settings-design-tile'),
-          title: Text(l10n.text('settings.design.title')),
-          subtitle: Text(l10n.text(widget.vm.legacyDesign
-              ? 'settings.design.legacyHint'
-              : 'settings.design.newHint')),
-        ),
-        SettingsSegmentedRow(
-          child: GlassSegmentedControl<bool>(
-            key: const Key('settings-design-switch'),
-            segments: [
-              for (final (legacy, key) in [
-                (false, 'settings.design.new'),
-                (true, 'settings.design.legacy'),
-              ])
-                GlassSegment(
-                  value: legacy,
-                  label: l10n.text(key),
-                  fullLabel: l10n.text(key),
-                ),
-            ],
-            selected: widget.vm.legacyDesign,
-            onChanged: widget.onSetLegacyDesign,
+        // The web app has the new design only.
+        if (!kIsWeb) ...[
+          ListTile(
+            key: const Key('settings-design-tile'),
+            title: Text(l10n.text('settings.design.title')),
+            subtitle: Text(l10n.text(widget.vm.legacyDesign
+                ? 'settings.design.legacyHint'
+                : 'settings.design.newHint')),
           ),
-        ),
+          SettingsSegmentedRow(
+            child: GlassSegmentedControl<bool>(
+              key: const Key('settings-design-switch'),
+              segments: [
+                for (final (legacy, key) in [
+                  (false, 'settings.design.new'),
+                  (true, 'settings.design.legacy'),
+                ])
+                  GlassSegment(
+                    value: legacy,
+                    label: l10n.text(key),
+                    fullLabel: l10n.text(key),
+                  ),
+              ],
+              selected: widget.vm.legacyDesign,
+              onChanged: widget.onSetLegacyDesign,
+            ),
+          ),
+        ],
       ];
 
   Widget _buildAppearanceSection(AppLocalizations l10n, _Theme currentTheme) {
@@ -1400,30 +1404,33 @@ class _SettingsPageWidgetState extends State<SettingsPageWidget> {
         _buildDashboardSection(l10n),
         _buildCalendarSection(l10n),
         _buildTutorialSection(l10n),
-        _buildPrivacySection(l10n),
-        const SchoolNotificationSettings(),
-        ReminderSettings(
-          mensaEnabled: widget.vm.mensaReminderEnabled,
-          mensaMinuteOfDay: widget.vm.mensaReminderMinuteOfDay,
-          mensaUrl: widget.vm.mensaReminderUrl,
-          onSetMensaEnabled: widget.onSetMensaReminderEnabled,
-          onSetMensaMinuteOfDay: widget.onSetMensaReminderMinuteOfDay,
-          onSetMensaUrl: widget.onSetMensaReminderUrl,
-          mensaWeekdays: widget.vm.mensaReminderWeekdays,
-          onSetMensaWeekdays: widget.onSetMensaReminderWeekdays,
-          assessmentsEnabled: widget.vm.assessmentRemindersEnabled,
-          assessmentDays: widget.vm.assessmentReminderDays,
-          onSetAssessmentsEnabled: widget.onSetAssessmentRemindersEnabled,
-          examsEnabled: widget.vm.examRemindersEnabled,
-          onSetExamsEnabled: widget.onSetExamRemindersEnabled,
-          testsEnabled: widget.vm.testRemindersEnabled,
-          onSetTestsEnabled: widget.onSetTestRemindersEnabled,
-          homeworkEnabled: widget.vm.homeworkRemindersEnabled,
-          onSetHomeworkEnabled: widget.onSetHomeworkRemindersEnabled,
-          onSetAssessmentDays: widget.onSetAssessmentReminderDays,
-          assessmentMinuteOfDay: widget.vm.assessmentReminderMinuteOfDay,
-          onSetAssessmentMinuteOfDay: widget.onSetAssessmentReminderMinuteOfDay,
-        ),
+        // The web app has no Firebase, no notifications and no reminders.
+        if (!kIsWeb) _buildPrivacySection(l10n),
+        if (!kIsWeb) const SchoolNotificationSettings(),
+        if (!kIsWeb)
+          ReminderSettings(
+            mensaEnabled: widget.vm.mensaReminderEnabled,
+            mensaMinuteOfDay: widget.vm.mensaReminderMinuteOfDay,
+            mensaUrl: widget.vm.mensaReminderUrl,
+            onSetMensaEnabled: widget.onSetMensaReminderEnabled,
+            onSetMensaMinuteOfDay: widget.onSetMensaReminderMinuteOfDay,
+            onSetMensaUrl: widget.onSetMensaReminderUrl,
+            mensaWeekdays: widget.vm.mensaReminderWeekdays,
+            onSetMensaWeekdays: widget.onSetMensaReminderWeekdays,
+            assessmentsEnabled: widget.vm.assessmentRemindersEnabled,
+            assessmentDays: widget.vm.assessmentReminderDays,
+            onSetAssessmentsEnabled: widget.onSetAssessmentRemindersEnabled,
+            examsEnabled: widget.vm.examRemindersEnabled,
+            onSetExamsEnabled: widget.onSetExamRemindersEnabled,
+            testsEnabled: widget.vm.testRemindersEnabled,
+            onSetTestsEnabled: widget.onSetTestRemindersEnabled,
+            homeworkEnabled: widget.vm.homeworkRemindersEnabled,
+            onSetHomeworkEnabled: widget.onSetHomeworkRemindersEnabled,
+            onSetAssessmentDays: widget.onSetAssessmentReminderDays,
+            assessmentMinuteOfDay: widget.vm.assessmentReminderMinuteOfDay,
+            onSetAssessmentMinuteOfDay:
+                widget.onSetAssessmentReminderMinuteOfDay,
+          ),
         _SettingsSectionCard(
           title: l10n.text('export.title'),
           children: [

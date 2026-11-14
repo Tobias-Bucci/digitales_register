@@ -8,6 +8,7 @@ import 'package:dr/app_state.dart';
 import 'package:dr/main.dart';
 import 'package:dr/tutorial/design_choice.dart';
 import 'package:dr/tutorial/intro_tour.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_built_redux/flutter_built_redux.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -54,6 +55,8 @@ class TutorialService extends ChangeNotifier {
 
   /// Whether the user has not chosen a design yet.
   Future<bool> designChoicePending() async {
+    // The web app has the new design only.
+    if (kIsWeb) return false;
     final prefs = await SharedPreferences.getInstance();
     return prefs.getBool(designChoiceKey) != true;
   }

@@ -73,8 +73,11 @@ class ExportService {
     return compute(_csvFiles, (sections, l10n, stem));
   }
 
-  Future<bool> save(ExportFile file, String title) async =>
-      await saveDialog(file, title) != null;
+  Future<bool> save(ExportFile file, String title) async {
+    final path = await saveDialog(file, title);
+    // In the browser the file goes to the downloads, and there is no path.
+    return path != null || (kIsWeb && identical(saveDialog, _nativeSave));
+  }
 
   static Future<String?> _nativeSave(ExportFile file, String title) =>
       FilePicker.saveFile(

@@ -16,9 +16,9 @@
 // along with digitales_register.  If not, see <http://www.gnu.org/licenses/>.
 
 import 'dart:async';
-import 'dart:io';
 
 import 'package:dr/diagnostics_service.dart';
+import 'package:dr/host_platform.dart';
 import 'package:dr/i18n/app_localizations.dart';
 import 'package:dr/privacy_consent.dart';
 import 'package:dr/product_analytics.dart';
@@ -161,9 +161,9 @@ class AnalyticsService {
             defaultValue: 'unknown'),
         'flutter_version': const String.fromEnvironment('FLUTTER_VERSION',
             defaultValue: 'unknown'),
-        'dart_version': Platform.version.split(' ').first
+        'dart_version': HostPlatform.version.split(' ').first
       });
-      if (Platform.isAndroid) {
+      if (HostPlatform.isAndroid) {
         try {
           final source = await const MethodChannel('dr/privacy_bootstrap')
               .invokeMethod<String>('installationSource');
