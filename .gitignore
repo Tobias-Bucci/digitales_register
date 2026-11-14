@@ -51,7 +51,6 @@ packages/uni_links/**/**/.settings/
 **/build/
 
 # Web
-lib/generated_plugin_registrant.dart
 
 # Debug symbols and obfuscation
 app.*.symbols
