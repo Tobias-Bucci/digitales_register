@@ -1,0 +1,17 @@
+{
+  "detector": {
+    "ignoreRules": [],
+    "ignoreFiles": [],
+    "ignoreValues": [
+      {
+        "rule": "marquee",
+        "value": "*",
+        "files": [
+          "web/index.html"
+        ],
+        "createdAt": "2026-11-14T16:51:35.834Z",
+        "reason": "Claude triage: the only animation is the splash screen's indeterminate loading bar (dr-slide), removed once Flutter draws, static under prefers-reduced-motion; no content scrolls"
+      }
+    ]
+  }
+}
