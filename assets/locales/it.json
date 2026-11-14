@@ -916,6 +916,8 @@
   "exam.deepen": "Approfondisci il materiale",
   "exam.practice": "Esercitati e colma le lacune",
   "error.timeout": "La richiesta è scaduta. Riprova.",
+  "legal.privacyPolicy": "Informativa sulla privacy",
+  "legal.deleteAccount": "Elimina account e dati",
   "error.network": "La connessione non è riuscita. Controlla la connessione e riprova.",
   "error.webProxyUnavailable": "La web app non è temporaneamente disponibile. Riprova più tardi o usa l’app.",
   "login.credentialsRejected": "Accesso rifiutato. Controlla le credenziali.",

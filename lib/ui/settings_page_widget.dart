@@ -28,6 +28,7 @@ import 'package:dr/container/settings_page.dart';
 import 'package:dr/demo.dart';
 import 'package:dr/i18n/app_language.dart';
 import 'package:dr/i18n/app_localizations.dart';
+import 'package:dr/legal_links.dart';
 import 'package:dr/platform_adapter.dart';
 import 'package:dr/theme/app_palette.dart';
 import 'package:dr/theme_controller.dart';
@@ -1231,6 +1232,26 @@ class _SettingsPageWidgetState extends State<SettingsPageWidget> {
   Widget _buildPrivacySection(AppLocalizations l10n) => _SettingsSectionCard(
         title: l10n.text('privacySettings.title'),
         children: [
+          // The web app has no optional purposes (no Firebase): only the links.
+          if (!kIsWeb) ..._buildPrivacyChoices(l10n),
+          ListTile(
+            key: const Key('settings-privacy-policy'),
+            leading: const Icon(Icons.privacy_tip_outlined),
+            title: Text(l10n.text('legal.privacyPolicy')),
+            trailing: const Icon(Icons.open_in_new),
+            onTap: () => openLegalLink(privacyPolicyUrl),
+          ),
+          ListTile(
+            key: const Key('settings-delete-account'),
+            leading: const Icon(Icons.person_remove_outlined),
+            title: Text(l10n.text('legal.deleteAccount')),
+            trailing: const Icon(Icons.open_in_new),
+            onTap: () => openLegalLink(deleteAccountUrl),
+          ),
+        ],
+      );
+
+  List<Widget> _buildPrivacyChoices(AppLocalizations l10n) => [
           for (final category in ['diagnostics', 'usage', 'academic'])
             ListTile(
                 title: Text(l10n.text('privacyCategory.$category.title')),
@@ -1249,8 +1270,7 @@ class _SettingsPageWidgetState extends State<SettingsPageWidget> {
               onTap: () => Navigator.of(context).push(MaterialPageRoute<void>(
                   settings: const RouteSettings(name: '/privacy_details'),
                   builder: (_) => const PrivacyDataDetailsPage()))),
-        ],
-      );
+        ];
 
   Widget _buildAdvancedSection(AppLocalizations l10n) {
     return _SettingsSectionCard(
@@ -1405,7 +1425,7 @@ class _SettingsPageWidgetState extends State<SettingsPageWidget> {
         _buildCalendarSection(l10n),
         _buildTutorialSection(l10n),
         // The web app has no Firebase, no notifications and no reminders.
-        if (!kIsWeb) _buildPrivacySection(l10n),
+        _buildPrivacySection(l10n),
         if (!kIsWeb) const SchoolNotificationSettings(),
         if (!kIsWeb)
           ReminderSettings(

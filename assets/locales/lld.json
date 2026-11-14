@@ -916,6 +916,8 @@
   "exam.deepen": "Aprofondì la materia",
   "exam.practice": "Fá esercizi y stlüje lacunes de savëi",
   "error.timeout": "La domanda é scadüda. Pröia d’agof.",
+  "legal.privacyPolicy": "Declaraziun de proteziun dles dades",
+  "legal.deleteAccount": "Sodé l’account y les dades",
   "error.network": "La conescion n’é nia reuscida. Controleia la conescion y pröia d’agof.",
   "error.webProxyUnavailable": "La web app n’é por le momënt nia a disposiziun. Pröia plü tert o adora l’app.",
   "login.credentialsRejected": "L’azès é gnü refudé. Controleia tües credenziales.",
