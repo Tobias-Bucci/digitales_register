@@ -87,6 +87,11 @@ class AboutAppDialog extends StatelessWidget {
                     Text(l10n.text('settings.about.independent'),
                         style: theme.textTheme.bodySmall?.copyWith(
                             color: colors.onSurfaceVariant, height: 1.4)),
+                    const SizedBox(height: 8),
+                    Text(l10n.text('legal.nonAffiliation'),
+                        key: const Key('about-non-affiliation'),
+                        style: theme.textTheme.bodySmall?.copyWith(
+                            color: colors.onSurfaceVariant, height: 1.4)),
                     const SizedBox(height: 20),
                     Material(
                       color: colors.surfaceContainerLow,

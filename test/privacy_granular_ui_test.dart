@@ -55,7 +55,7 @@ void main() {
     await tester.pumpAndSettle();
   }
 
-  testWidgets('customize needs no age; academic depends on usage',
+  testWidgets('customize asks no age up front; academic depends on usage',
       (tester) async {
     await tester.runAsync(() async {
       await open(tester);
@@ -76,6 +76,11 @@ void main() {
       await tester.pumpAndSettle();
       await tester.tap(find.text('Auswahl speichern'));
       await tester.pumpAndSettle();
+      // Switching a purpose on asks for the age confirmation (Art. 2-quinquies
+      // D.Lgs. 196/2003).
+      expect(find.byKey(const Key('privacy-age-confirm')), findsOneWidget);
+      await tester.tap(find.byKey(const Key('privacy-age-confirm')));
+      await tester.pumpAndSettle();
       final decision = AnalyticsService.privacy.decision;
       expect(decision.diagnosticsAllowed, true);
       expect(decision.analyticsAllowed, false);
@@ -95,11 +100,16 @@ void main() {
       expect(AnalyticsService.hasCurrentConsent, false);
       await tester.tap(find.text('Auswahl speichern'));
       await tester.pumpAndSettle();
+      // Switching a purpose on asks for the age confirmation (Art. 2-quinquies
+      // D.Lgs. 196/2003).
+      expect(find.byKey(const Key('privacy-age-confirm')), findsOneWidget);
+      await tester.tap(find.byKey(const Key('privacy-age-confirm')));
+      await tester.pumpAndSettle();
       expect(AnalyticsService.privacy.decision.allOptionalAllowed, true);
       expect(find.byType(Dialog), findsNothing);
     });
   });
-  testWidgets('allow all saves immediately with no extra question',
+  testWidgets('allow all asks for the age confirmation, then saves',
       (tester) async {
     await tester.runAsync(() async {
       await open(tester);
@@ -111,9 +121,49 @@ void main() {
           findsOneWidget);
       await tester.tap(find.text('Alle optionalen Daten erlauben'));
       await tester.pumpAndSettle();
-      expect(find.text('Bist du mindestens 14 Jahre alt?'), findsNothing);
+      expect(
+          find.text('Ich bin mindestens 14 Jahre alt oder meine '
+              'Erziehungsberechtigten sind einverstanden.'),
+          findsOneWidget);
+      // Switching a purpose on asks for the age confirmation (Art. 2-quinquies
+      // D.Lgs. 196/2003).
+      expect(find.byKey(const Key('privacy-age-confirm')), findsOneWidget);
+      await tester.tap(find.byKey(const Key('privacy-age-confirm')));
+      await tester.pumpAndSettle();
       expect(find.byType(Dialog), findsNothing);
       expect(AnalyticsService.privacy.decision.allOptionalAllowed, true);
+    });
+  });
+  testWidgets('without the age confirmation nothing is switched on',
+      (tester) async {
+    await tester.runAsync(() async {
+      await open(tester);
+      await tester.tap(find.text('Alle optionalen Daten erlauben'));
+      await tester.pumpAndSettle();
+      await tester.tap(find.byKey(const Key('privacy-age-cancel')));
+      await tester.pumpAndSettle();
+      // The privacy dialog stays open and nothing was decided.
+      expect(find.text('Alle optionalen Daten erlauben'), findsOneWidget);
+      expect(AnalyticsService.hasCurrentConsent, false);
+      expect(AnalyticsService.privacy.decision.diagnosticsAllowed, false);
+      expect(AnalyticsService.privacy.decision.analyticsAllowed, false);
+      expect(AnalyticsService.privacy.decision.academicStatsAllowed, false);
+      // Close the dialog, so that the next test opens a new one.
+      await tester
+          .tap(find.widgetWithText(TextButton, 'Nur erforderliche Daten'));
+      await tester.pumpAndSettle();
+    });
+  });
+  testWidgets('necessary only asks no age', (tester) async {
+    await tester.runAsync(() async {
+      await open(tester);
+      await tester
+          .tap(find.widgetWithText(TextButton, 'Nur erforderliche Daten'));
+      await tester.pumpAndSettle();
+      expect(find.byKey(const Key('privacy-age-confirm')), findsNothing);
+      expect(find.byType(Dialog), findsNothing);
+      expect(AnalyticsService.hasCurrentConsent, true);
+      expect(AnalyticsService.privacy.decision.allOptionalAllowed, false);
     });
   });
   testWidgets('custom selection can enable usage and revoke academic again',
@@ -148,6 +198,11 @@ void main() {
               .value,
           false);
       await tester.tap(find.text('Auswahl speichern'));
+      await tester.pumpAndSettle();
+      // Switching a purpose on asks for the age confirmation (Art. 2-quinquies
+      // D.Lgs. 196/2003).
+      expect(find.byKey(const Key('privacy-age-confirm')), findsOneWidget);
+      await tester.tap(find.byKey(const Key('privacy-age-confirm')));
       await tester.pumpAndSettle();
       expect(AnalyticsService.privacy.decision.diagnosticsAllowed, true);
       expect(AnalyticsService.privacy.decision.analyticsAllowed, false);

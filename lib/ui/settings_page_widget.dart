@@ -52,6 +52,7 @@ import 'package:dr/ui/subject_swatch_picker.dart';
 import 'package:dr/util.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:responsive_scaffold/responsive_scaffold.dart';
 import 'package:url_launcher/url_launcher.dart';
 
@@ -1252,6 +1253,36 @@ class _SettingsPageWidgetState extends State<SettingsPageWidget> {
       );
 
   List<Widget> _buildPrivacyChoices(AppLocalizations l10n) => [
+        FutureBuilder<String?>(
+          future: AnalyticsService.product.currentPseudonymousId(),
+          builder: (context, snapshot) {
+            final id = snapshot.data;
+            return ListTile(
+              key: const Key('settings-technical-id'),
+              leading: const Icon(Icons.fingerprint),
+              title: Text(l10n.text('privacySettings.technicalId')),
+              subtitle: SelectableText(id == null
+                  ? l10n.text('privacySettings.technicalId.none')
+                  : '$id\n${l10n.text('privacySettings.technicalId.hint')}'),
+              trailing: id == null
+                  ? null
+                  : IconButton(
+                      key: const Key('settings-technical-id-copy'),
+                      tooltip: l10n.text('privacySettings.technicalId.copy'),
+                      icon: const Icon(Icons.copy_rounded),
+                      onPressed: () async {
+                        await Clipboard.setData(ClipboardData(text: id));
+                        if (context.mounted) {
+                          ScaffoldMessenger.maybeOf(context)?.showSnackBar(
+                              SnackBar(
+                                  content: Text(l10n
+                                      .text('network.copiedToClipboard'))));
+                        }
+                      },
+                    ),
+            );
+          },
+        ),
           for (final category in ['diagnostics', 'usage', 'academic'])
             ListTile(
                 title: Text(l10n.text('privacyCategory.$category.title')),

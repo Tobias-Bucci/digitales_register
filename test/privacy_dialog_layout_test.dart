@@ -64,6 +64,8 @@ void main() {
             expect(find.byIcon(Icons.verified_user_outlined), findsNothing);
             await tester.tap(buttons);
             await tester.pumpAndSettle();
+            await tester.tap(find.byKey(const Key('privacy-age-confirm')));
+            await tester.pumpAndSettle();
             expect(find.byType(Dialog), findsNothing);
             expect(AnalyticsService.privacy.decision.allOptionalAllowed, true);
           });

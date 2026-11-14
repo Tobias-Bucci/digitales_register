@@ -256,8 +256,50 @@ class _PrivacyConsentDialogState extends State<_PrivacyConsentDialog> {
   late bool _academic = !AnalyticsService.hasCurrentConsent ||
       AnalyticsService.privacy.decision.academicStatsAllowed;
 
-  Future<void> _save({bool requiredOnly = false}) async {
-    if (_saving) return;
+  /// Whether saving would switch on a purpose that is not allowed now.
+  bool get _enablesPurpose {
+    final current = AnalyticsService.hasCurrentConsent;
+    final d = AnalyticsService.privacy.decision;
+    return (_diagnostics && !(current && d.diagnosticsAllowed)) ||
+        (_usage && !(current && d.analyticsAllowed)) ||
+        (_academic && !(current && d.academicStatsAllowed));
+  }
+
+  /// Minors: in Italy from 14 a person can consent alone (Art. 2-quinquies
+  /// D.Lgs. 196/2003); younger users need their parents' agreement. The app
+  /// asks for no age or ID (data minimisation), only for this confirmation,
+  /// and only when an optional purpose is switched on.
+  Future<bool> _confirmAge() async {
+    final l10n = context.l10n;
+    final confirmed = await showDialog<bool>(
+      context: context,
+      routeSettings: const RouteSettings(name: '/privacy_age_confirmation'),
+      builder: (context) => AlertDialog(
+        title: Text(l10n.text('privacyConsent.age.title')),
+        content: Text(l10n.text('privacyConsent.age.body')),
+        actions: [
+          TextButton(
+            key: const Key('privacy-age-cancel'),
+            onPressed: () => Navigator.of(context).pop(false),
+            child: Text(l10n.text('privacyConsent.cancel')),
+          ),
+          FilledButton(
+            key: const Key('privacy-age-confirm'),
+            onPressed: () => Navigator.of(context).pop(true),
+            child: Text(l10n.text('privacyConsent.age.confirm')),
+          ),
+        ],
+      ),
+    );
+    return confirmed == true;
+  }
+
+  Future<bool> _save({bool requiredOnly = false}) async {
+    if (_saving) return false;
+    if (!requiredOnly && _enablesPurpose && !await _confirmAge()) {
+      return false;
+    }
+    if (!mounted) return false;
     setState(() {
       _saving = true;
       _failed = false;
@@ -276,6 +318,7 @@ class _PrivacyConsentDialogState extends State<_PrivacyConsentDialog> {
       unawaited(AnalyticsService.product
           .event('privacy_settings_changed', {'action': 'saved'}));
       if (mounted) Navigator.of(context).pop();
+      return true;
     } catch (_) {
       if (mounted) {
         setState(() {
@@ -283,12 +326,21 @@ class _PrivacyConsentDialogState extends State<_PrivacyConsentDialog> {
           _failed = true;
         });
       }
+      return false;
     }
   }
 
   Future<void> _allowAll() async {
+    final before = (_diagnostics, _usage, _academic);
     _diagnostics = _usage = _academic = true;
-    await _save();
+    // Not confirmed: the switches show what they showed before.
+    if (!await _save() && mounted && !_saving && !_failed) {
+      setState(() {
+        _diagnostics = before.$1;
+        _usage = before.$2;
+        _academic = before.$3;
+      });
+    }
   }
 
   void _details() {

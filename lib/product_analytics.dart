@@ -228,6 +228,24 @@ class ProductAnalytics {
     });
   }
 
+  /// The pseudonymous Analytics id of the open account, or null if none was
+  /// ever created (it only exists after consent to usage analytics). Shown in
+  /// the settings so a privacy request can name it (Art. 11(2) GDPR): the
+  /// operator stores no account or name it could be found by. Creates nothing.
+  Future<String?> currentPseudonymousId() async {
+    final key = _accountKey;
+    if (key == null) return null;
+    try {
+      final raw = await store.read('analyticsIdentityMapV4');
+      if (raw == null) return null;
+      final decoded = jsonDecode(raw);
+      final id = decoded is Map<String, dynamic> ? decoded[key] : null;
+      return id is String ? id : null;
+    } catch (_) {
+      return null;
+    }
+  }
+
   Future<void> clearIdentity() {
     _epoch++;
     gradeOwnership.clear();

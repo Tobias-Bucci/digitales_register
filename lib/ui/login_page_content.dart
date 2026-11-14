@@ -1391,6 +1391,17 @@ class _Footer extends StatelessWidget {
           child: AuthLink(
               label: l10n.text('login.feedback'), onPressed: onFeedback),
         ),
+        // The web app is reached from a website; it says up front that it is
+        // not an official service. The native app says so in About.
+        if (kIsWeb)
+          Padding(
+            padding: const EdgeInsets.only(top: 8),
+            child: Text(l10n.text('legal.nonAffiliation'),
+                key: const Key('login-non-affiliation'),
+                textAlign: TextAlign.center,
+                style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                    fontSize: 12, height: 1.4, color: tokens.secondaryText)),
+          ),
         Wrap(
           alignment: WrapAlignment.center,
           children: [

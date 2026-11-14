@@ -84,6 +84,8 @@ void main() {
     expect(find.text('Alle optionalen Daten erlauben'), findsOneWidget);
     await tester.tap(find.text('Alle optionalen Daten erlauben'));
     await tester.pumpAndSettle();
+    await tester.tap(find.byKey(const Key('privacy-age-confirm')));
+    await tester.pumpAndSettle();
     expect(AnalyticsService.privacy.decision.allowsTelemetry, true);
     expect(tester.takeException(), isNull);
   });
