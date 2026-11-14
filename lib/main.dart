@@ -62,13 +62,13 @@ import 'package:dr/ui/server_notifications/server_notification_bell.dart';
 import 'package:dr/ui/server_notifications/server_notification_popup.dart';
 import 'package:dr/ui/system_pages.dart';
 import 'package:dr/util.dart';
+import 'package:dr/web_app/app_package_info.dart';
 import 'package:dr/web_app/web_routing.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_built_redux/flutter_built_redux.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:flutter_web_plugins/url_strategy.dart';
-import 'package:package_info_plus/package_info_plus.dart';
 import 'package:responsive_scaffold/responsive_scaffold.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:uni_links/uni_links.dart';
@@ -394,7 +394,7 @@ Future<void> _loadStartupUserPreferences() async {
 
 Future<void> _loadPackageInfo() async {
   try {
-    setPackageInfo(await PackageInfo.fromPlatform());
+    setPackageInfo(await appPackageInfo());
   } catch (_) {
     // Keep the default placeholder values when platform package info is unavailable.
   }

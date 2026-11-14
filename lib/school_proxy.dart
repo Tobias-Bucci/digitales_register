@@ -136,6 +136,16 @@ class SchoolProxyInterceptor extends Interceptor {
     final target = options.uri;
     final proxied =
         proxiedSchoolUrl(target.toString(), _slot(), origin: _origin());
+    // Without a school (an empty address, as in demo mode) the native app's
+    // request fails for lack of a host. In the browser such a relative URL
+    // would reach the web app's own server instead, so it fails here too.
+    if (proxied == null && (!target.hasAuthority || target.host.isEmpty)) {
+      handler.reject(DioException(
+        requestOptions: options,
+        error: ArgumentError('No school address in $target'),
+      ));
+      return;
+    }
     if (proxied != null) {
       onProxied?.call(target.host);
       options

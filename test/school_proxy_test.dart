@@ -86,6 +86,15 @@ void main() {
       expect(seen, ['vinzentinum.digitalesregister.it']);
     });
 
+    test('a request without a school address fails without leaving the app',
+        () async {
+      await expectLater(
+        dio.post<String>('/v2/?semesterWechsel=1'),
+        throwsA(isA<DioException>()),
+      );
+      expect(seen, isEmpty);
+    });
+
     test('an answer from Cloudflare instead of the proxy means "unavailable"',
         () async {
       _FakeAdapter.next = (status: 429, marker: false);
