@@ -9,6 +9,7 @@ import 'package:dr/school_timeline.dart';
 import 'package:dr/ui/dashboard_card_layout.dart';
 import 'package:dr/ui/dashboard_edit_mode.dart';
 import 'package:dr/ui/glass_surface.dart';
+import 'package:dr/util.dart';
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import 'package:responsive_scaffold/responsive_scaffold.dart';
@@ -42,7 +43,9 @@ class SchoolCountdownOverview extends StatelessWidget {
     return AnimatedBuilder(
       animation: appClock,
       builder: (context, _) {
-        final today = appClock.now;
+        // [now] is the app's single notion of today (simulated in the demo,
+        // pinned in tests) so the cards match the loaded calendar weeks.
+        final today = now;
         final holiday = timeline.holidayCountdownAt(today);
         final deadline = timeline.gradeDeadlineCountdownAt(today);
         final cards = <Widget>[
