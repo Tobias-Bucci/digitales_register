@@ -120,13 +120,8 @@ Rect _tile(WidgetTester tester, String subject) => tester.getRect(
           .first,
     );
 
-void _expectWednesdayLaidOut(WidgetTester tester, {bool legacy = false}) {
-  final error = tester.takeException();
-  // The legacy week header is a little too wide for a 412 px phone; that
-  // happens without parallel lessons as well and is not part of the grid.
-  if (!(legacy && '$error'.contains('overflowed'))) {
-    expect(error, isNull);
-  }
+void _expectWednesdayLaidOut(WidgetTester tester) {
+  expect(tester.takeException(), isNull);
   expect(_gridOverflows(tester), isFalse);
   for (final subject in _wednesdayLessons) {
     expect(find.text(subject), findsOneWidget, reason: subject);
@@ -163,7 +158,7 @@ void main() {
     testWidgets('legacy design shows all six lessons on a $name',
         (tester) async {
       await _pump(tester, newDesign: false, size: size);
-      _expectWednesdayLaidOut(tester, legacy: true);
+      _expectWednesdayLaidOut(tester);
       // The other days are unaffected.
       expect(find.text('Religion'), findsNWidgets(4));
     });

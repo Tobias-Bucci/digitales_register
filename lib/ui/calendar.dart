@@ -724,12 +724,15 @@ class EditNickBar extends StatelessWidget {
                         onPressed: onShowEditNicks,
                         child: Row(
                           children: [
-                            Padding(
-                              padding:
-                                  const EdgeInsets.symmetric(horizontal: 8),
-                              child: Text(context.t('calendar.editNicknames')),
+                            // Wraps instead of overflowing a small phone.
+                            Expanded(
+                              child: Padding(
+                                padding:
+                                    const EdgeInsets.symmetric(horizontal: 8),
+                                child:
+                                    Text(context.t('calendar.editNicknames')),
+                              ),
                             ),
-                            const Spacer(),
                           ],
                         ),
                       ),
@@ -809,17 +812,20 @@ class CalendarSubstituteBar extends StatelessWidget {
                   onPressed: onOpenSettings,
                   child: Row(
                     children: [
-                      Padding(
-                        padding: const EdgeInsets.symmetric(horizontal: 8),
-                        child: Text(
-                          context.t(
-                            enabled
-                                ? 'calendar.reportSubstituteError'
-                                : 'calendar.configureSubstitute',
+                      // The German text wraps instead of overflowing a small
+                      // phone.
+                      Expanded(
+                        child: Padding(
+                          padding: const EdgeInsets.symmetric(horizontal: 8),
+                          child: Text(
+                            context.t(
+                              enabled
+                                  ? 'calendar.reportSubstituteError'
+                                  : 'calendar.configureSubstitute',
+                            ),
                           ),
                         ),
                       ),
-                      const Spacer(),
                       const Icon(Icons.chevron_right),
                     ],
                   ),
