@@ -3,6 +3,7 @@ import 'dart:async';
 import 'package:dr/i18n/app_localizations.dart';
 import 'package:dr/school_notification_engine.dart';
 import 'package:dr/school_notification_service.dart';
+import 'package:dr/ui/school_notification_debug_page.dart';
 import 'package:dr/ui/settings_page_new.dart';
 import 'package:flutter/material.dart';
 import 'package:responsive_scaffold/responsive_scaffold.dart';
@@ -152,6 +153,34 @@ class _SchoolNotificationSettingsState extends State<SchoolNotificationSettings>
                   SchoolNotificationCategory.message, value)),
         ),
         SwitchListTile.adaptive(
+          secondary: const Icon(Icons.assignment_outlined),
+          title: Text(l10n.text('schoolNotifications.settings.homework')),
+          value: service.preferences.homework,
+          onChanged: _busy || !service.preferences.enabled
+              ? null
+              : (value) => _run(() => service.setCategory(
+                  SchoolNotificationCategory.homework, value)),
+        ),
+        SwitchListTile.adaptive(
+          secondary: const Icon(Icons.event_note_outlined),
+          title: Text(l10n.text('schoolNotifications.settings.other')),
+          value: service.preferences.other,
+          onChanged: _busy || !service.preferences.enabled
+              ? null
+              : (value) => _run(() =>
+                  service.setCategory(SchoolNotificationCategory.other, value)),
+        ),
+        SwitchListTile.adaptive(
+          secondary: const Icon(Icons.visibility_outlined),
+          title: Text(l10n.text('schoolNotifications.settings.details')),
+          subtitle:
+              Text(l10n.text('schoolNotifications.settings.detailsPrivacy')),
+          value: service.preferences.details,
+          onChanged: _busy || !service.preferences.enabled
+              ? null
+              : (value) => _run(() => service.setShowDetails(value)),
+        ),
+        SwitchListTile.adaptive(
           secondary: const Icon(Icons.privacy_tip_outlined),
           title: Text(l10n.text('schoolNotifications.settings.count')),
           subtitle:
@@ -175,8 +204,15 @@ class _SchoolNotificationSettingsState extends State<SchoolNotificationSettings>
         if (service.mobileBackgroundSupported)
           ExpansionTile(
               leading: const Icon(Icons.sync_outlined),
-              title:
-                  Text(l10n.text('schoolNotifications.settings.diagnostics')),
+              // Hidden debug page: long-press the heading.
+              title: GestureDetector(
+                onLongPress: () => Navigator.of(context).push(
+                    MaterialPageRoute<void>(
+                        builder: (_) =>
+                            SchoolNotificationDebugPage(service: service))),
+                child:
+                    Text(l10n.text('schoolNotifications.settings.diagnostics')),
+              ),
               children: [
                 if (service.platformStatus['scheduled'] is bool)
                   Padding(
@@ -216,6 +252,20 @@ class _SchoolNotificationSettingsState extends State<SchoolNotificationSettings>
                           l10n.text(
                               'schoolNotifications.result.${service.diagnostics['backgroundResult']}'),
                           style: Theme.of(context).textTheme.bodySmall)),
+                if (service.platformStatus['batteryOptimized'] == true) ...[
+                  Padding(
+                      padding: const EdgeInsets.fromLTRB(16, 8, 16, 0),
+                      child: Text(
+                          l10n.text('schoolNotifications.settings.battery'),
+                          style: Theme.of(context).textTheme.bodySmall)),
+                  TextButton.icon(
+                    onPressed:
+                        _busy ? null : () => _run(service.openBatterySettings),
+                    icon: const Icon(Icons.battery_saver_outlined),
+                    label: Text(
+                        l10n.text('schoolNotifications.settings.batteryOpen')),
+                  ),
+                ],
                 TextButton.icon(
                   onPressed:
                       _busy ? null : () => _run(service.openSystemSettings),

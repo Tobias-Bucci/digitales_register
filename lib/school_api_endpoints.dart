@@ -4,3 +4,4 @@ String schoolApiBase(String server) =>
     '${server.replaceAll(RegExp(r'/+$'), '')}/v2/';
 const schoolLoginEndpoint = 'api/auth/login';
 const schoolUnreadNotificationsEndpoint = 'api/notification/unread';
+const schoolDashboardEndpoint = 'api/student/dashboard/dashboard';

@@ -18,6 +18,9 @@ object SchoolNotificationVisibility : Application.ActivityLifecycleCallbacks {
     val isForeground: Boolean
         get() = visible.isNotEmpty()
 
+    /** Channels of personal school alerts; lib/school_notification_service.dart lists the same. */
+    val channels = setOf("school_grade", "school_message", "school_homework", "school_other")
+
     override fun onActivityStarted(activity: Activity) { visible.add(activity) }
     override fun onActivityStopped(activity: Activity) { visible.remove(activity) }
     override fun onActivityDestroyed(activity: Activity) { visible.remove(activity) }

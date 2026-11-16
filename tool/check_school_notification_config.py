@@ -45,6 +45,13 @@ def main():
     check('android.permission.POST_NOTIFICATIONS' in permissions, 'Android notification permission declared')
     check('android.permission.REQUEST_IGNORE_BATTERY_OPTIMIZATIONS' not in permissions,
           'No direct battery exemption permission requested')
+    dart_channels = set(re.findall(r"'(school_[a-z]+)'",
+                                   re.search(r'const schoolNotificationChannels = \[(.*?)\];', service, re.S)[1]))
+    visibility = (ROOT / 'android/app/src/main/kotlin/it/bucci/digitalesregister/'
+                  'SchoolNotificationVisibility.kt').read_text(encoding='utf-8')
+    kotlin_channels = set(re.findall(r'"(school_[a-z]+)"', re.search(r'val channels = setOf\((.*?)\)', visibility)[1]))
+    check(dart_channels == kotlin_channels and len(dart_channels) == 4,
+          'Dart and Android list the same personal notification channels')
     check((ROOT / 'android/app/src/main/res/drawable/ic_school_notification.xml').is_file(),
           'Android notification icon available')
     if args.merged_manifest:

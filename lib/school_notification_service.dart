@@ -5,11 +5,14 @@ import 'dart:io';
 import 'package:dio/dio.dart';
 import 'package:dr/account_scope.dart';
 import 'package:dr/app_language_controller.dart';
+import 'package:dr/app_subject_translation_controller.dart';
 import 'package:dr/desktop.dart';
 import 'package:dr/host_platform.dart';
+import 'package:dr/i18n/app_language.dart';
 import 'package:dr/i18n/app_localizations.dart';
 import 'package:dr/runtime_trace.dart';
 import 'package:dr/school_notification_background.dart';
+import 'package:dr/school_notification_content.dart';
 import 'package:dr/school_notification_engine.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter/widgets.dart';
@@ -26,6 +29,16 @@ export 'package:dr/school_notification_background.dart'
     show schoolNotificationTask;
 
 final schoolNotifications = SchoolNotificationService();
+
+/// Android channels of personal school notifications, one per category.
+/// The native side (MainActivity, SchoolLocalNotificationsPlugin) lists the
+/// same IDs.
+const schoolNotificationChannels = [
+  'school_grade',
+  'school_message',
+  'school_homework',
+  'school_other',
+];
 
 /// System notifications for school news are offered on Android, iOS and macOS
 /// only. Linux and Windows stay without alerts and background checks.
@@ -166,6 +179,10 @@ class SchoolNotificationService extends ChangeNotifier
   Future<void> Function()? onTap;
   Future<void> Function()? refresh;
 
+  /// The time the hourly dashboard schedule compares against.
+  @visibleForTesting
+  DateTime Function() dashboardClock = DateTime.now;
+
   /// Receives the payload of a tapped notification that is no school alert.
   Future<void> Function(String? payload)? onReminderTap;
 
@@ -173,7 +190,8 @@ class SchoolNotificationService extends ChangeNotifier
   /// initialization, consent prompts, polling and the settings section are all
   /// gated on this flag.
   bool get supported => _platformSupported ?? schoolNotificationsSupported();
-  bool get mobileBackgroundSupported => HostPlatform.isAndroid || HostPlatform.isIOS;
+  bool get mobileBackgroundSupported =>
+      HostPlatform.isAndroid || HostPlatform.isIOS;
   bool get androidBackgroundSupported => HostPlatform.isAndroid;
   String accountKey(String server, String user) {
     return notificationDigest([canonicalSchoolServer(server), user]);
@@ -348,8 +366,7 @@ class SchoolNotificationService extends ChangeNotifier
     _timer = Timer.periodic(const Duration(minutes: 3), (_) {
       unawaited(schoolNotificationOperation(() async {
         await _markForeground(true);
-        if (preferences.enabled &&
-            (preferences.grades || preferences.messages)) {
+        if (preferences.enabled && preferences.anyCategory) {
           await refresh?.call();
         }
       }));
@@ -476,13 +493,27 @@ class SchoolNotificationService extends ChangeNotifier
     } else {
       consent = SchoolNotificationConsent.unknown;
     }
+    final legacyAccepted = consent == SchoolNotificationConsent.accepted &&
+        !data.containsKey('details');
     return SchoolNotificationPreferences(
         consent: consent,
         enabled: consent == SchoolNotificationConsent.accepted &&
             data['enabled'] != false,
         showEventCount: data['showEventCount'] == true,
         grades: data['grades'] != false,
-        messages: data['messages'] != false);
+        messages: data['messages'] != false,
+        // Accounts that accepted before #133 agreed to generic grade and
+        // message alerts only. They keep exactly that until they turn the new
+        // options on; a new decision gets them on.
+        homework: data.containsKey('homework')
+            ? data['homework'] != false
+            : !legacyAccepted,
+        other: data.containsKey('other')
+            ? data['other'] != false
+            : !legacyAccepted,
+        details: data.containsKey('details')
+            ? data['details'] == true
+            : !legacyAccepted);
   }
 
   Future<void> _loadPreferences({String? account}) async {
@@ -523,11 +554,11 @@ class SchoolNotificationService extends ChangeNotifier
       await _storage.delete(key: 'school-notification-alert-ids-v1');
     }
     // Filter by our own channels/payloads. General app announcements are retained.
-    if (HostPlatform.isLinux) return; // The plugin cannot enumerate Linux alerts.
+    // The plugin cannot enumerate Linux alerts.
+    if (HostPlatform.isLinux) return;
     for (final alert in await _native.getActiveNotifications()) {
       if (alert.id != null &&
-          (alert.channelId == 'school_grade' ||
-              alert.channelId == 'school_message' ||
+          (schoolNotificationChannels.contains(alert.channelId) ||
               SchoolNotificationDestination.decode(alert.payload) != null)) {
         await _native.cancel(id: alert.id!, tag: alert.tag);
       }
@@ -586,6 +617,48 @@ class SchoolNotificationService extends ChangeNotifier
     }
   }
 
+  /// Android only: the system list of battery optimizations, where the user
+  /// can exempt the app. Nothing is changed automatically.
+  Future<void> openBatterySettings() async {
+    if (HostPlatform.isAndroid) {
+      await const MethodChannel('dr/school_notifications')
+          .invokeMethod<void>('openBatterySettings');
+    }
+  }
+
+  /// The last checks of every account, newest first, for the debug page.
+  Future<List<Map<String, dynamic>>> checkLog() async {
+    if (!supported || !_initialized) return const [];
+    return _locked(() async {
+      final raw = await _history!.get(_checkLogKey);
+      return raw == null
+          ? <Map<String, dynamic>>[]
+          : (jsonDecode(raw) as List).cast<Map<String, dynamic>>();
+    }, label: 'check-log-read');
+  }
+
+  static const _checkLogKey = 'school-notification-check-log-v1';
+  static const _checkLogLimit = 30;
+
+  /// Appends one entry: when, which account (shortened hash), the result and
+  /// how many alerts were requested. No school data.
+  Future<void> _logCheck(String account, String result,
+      {int alerts = 0, bool background = true}) async {
+    final raw = await _history!.get(_checkLogKey);
+    final entries = raw == null ? <dynamic>[] : jsonDecode(raw) as List;
+    entries.insert(0, {
+      'at': DateTime.now().toUtc().toIso8601String(),
+      'account': account.substring(0, 8),
+      'result': result,
+      'alerts': alerts,
+      'background': background,
+    });
+    if (entries.length > _checkLogLimit) {
+      entries.removeRange(_checkLogLimit, entries.length);
+    }
+    await _history!.put(_checkLogKey, jsonEncode(entries));
+  }
+
   Future<void> reload() async {
     if (!supported || !_initialized) return;
     await _locked(() async {
@@ -605,6 +678,7 @@ class SchoolNotificationService extends ChangeNotifier
           for (final category in SchoolNotificationCategory.values) {
             await _engine.baselineNext(account, category.name);
           }
+          await _resetSnapshot(account);
         }
       }
       await _storage.write(
@@ -639,7 +713,7 @@ class SchoolNotificationService extends ChangeNotifier
           enrolledAccountLabels.add(label);
           final settings = await _readPreferences(account: id);
           enrolledAccountStates[label] =
-              settings.enabled && (settings.grades || settings.messages);
+              settings.enabled && settings.anyCategory;
         }
       }
       backgroundReason = !preferences.enabled
@@ -756,13 +830,12 @@ class SchoolNotificationService extends ChangeNotifier
     if (!supported) return;
     await _locked(() async {
       await _loadPreferences();
-      if (category == SchoolNotificationCategory.grade) {
-        preferences.grades = value;
-      } else {
-        preferences.messages = value;
-      }
+      preferences.setCategory(category, value);
       final account = await _storage.read(key: 'school-notification-active');
-      if (account != null) await _engine.baselineNext(account, category.name);
+      if (account != null) {
+        await _engine.baselineNext(account, category.name);
+        await _resetSnapshot(account);
+      }
       await _storage.write(
           key: account == null
               ? 'school-notification-preferences-v1'
@@ -787,6 +860,7 @@ class SchoolNotificationService extends ChangeNotifier
         for (final category in SchoolNotificationCategory.values) {
           await _engine.baselineNext(account, category.name);
         }
+        await _resetSnapshot(account);
       }
       await _storage.write(
           key: account == null
@@ -840,6 +914,7 @@ class SchoolNotificationService extends ChangeNotifier
       for (final category in SchoolNotificationCategory.values) {
         await _engine.baselineNext(offer.account, category.name);
       }
+      await _resetSnapshot(offer.account);
       await _storage.write(
           key: 'school-notification-preferences-v1-${offer.account}',
           value: jsonEncode(current.toJson()));
@@ -861,6 +936,24 @@ class SchoolNotificationService extends ChangeNotifier
       await refresh?.call();
     }
     return true;
+  }
+
+  /// Subject, grade and description in the text, or the generic text.
+  Future<void> setShowDetails(bool value) async {
+    await _locked(() async {
+      await _loadPreferences();
+      preferences.details = value;
+      final account = await _storage.read(key: 'school-notification-active');
+      if (account != null) await _resetSnapshot(account);
+      await _storage.write(
+          key: account == null
+              ? 'school-notification-preferences-v1'
+              : 'school-notification-preferences-v1-$account',
+          value: jsonEncode(preferences.toJson()));
+      // Alerts already shown with the old setting must not stay visible.
+      await _clearSchoolAlerts();
+    });
+    await reload();
   }
 
   Future<void> setShowEventCount(bool value) async {
@@ -960,6 +1053,7 @@ class SchoolNotificationService extends ChangeNotifier
       await _storage.delete(key: 'school-notification-lease-$account');
       await _history!.delete(_engine.key(account));
       await _history!.delete('school-notification-diagnostics-$account');
+      await _history!.delete(_snapshotKey(account));
       await _history!.flush();
       if (await _storage.read(key: 'school-notification-active') == account) {
         ++_sessionGeneration;
@@ -1022,8 +1116,7 @@ class SchoolNotificationService extends ChangeNotifier
       var anyEnabled = false;
       for (final account in (await _enrolledAccounts()).keys) {
         final preferences = await _readPreferences(account: account);
-        anyEnabled |=
-            preferences.enabled && (preferences.grades || preferences.messages);
+        anyEnabled |= preferences.enabled && preferences.anyCategory;
       }
       if (!granted ||
           !anyEnabled ||
@@ -1071,11 +1164,17 @@ class SchoolNotificationService extends ChangeNotifier
   }
 
   Future<void> _ingest(String account, List data,
-      {required bool background}) async {
-    if (data.any((e) =>
-        e is! Map ||
-        (SchoolNotificationEvent.categoryFor(e['type']) != null &&
-            SchoolNotificationEvent.parse(e) == null))) {
+      {required bool background, SchoolFeedResult? dashboards}) async {
+    // Grades and messages must be complete, or a broken feed could become a
+    // quiet baseline. Absences and observations (#133) are optional extras: a
+    // malformed one is skipped instead of failing the whole check.
+    if (data.any((e) {
+      if (e is! Map) return true;
+      final category = SchoolNotificationEvent.categoryFor(e['type']);
+      return (category == SchoolNotificationCategory.grade ||
+              category == SchoolNotificationCategory.message) &&
+          SchoolNotificationEvent.parse(e) == null;
+    })) {
       throw const FormatException('Incomplete personal notification entry');
     }
     final events = data
@@ -1085,75 +1184,91 @@ class SchoolNotificationService extends ChangeNotifier
     await _loadPreferences(account: account);
     await (await SharedPreferences.getInstance()).reload();
     await appLanguageController.load();
-    final l10n =
-        await AppLocalizations.load(appLanguageController.language.locale);
+    await appSubjectTranslationController.load();
+    final language = appLanguageController.language;
+    final l10n = await AppLocalizations.load(language.locale);
+    final permitted = await _hasPermission();
+    final preferences = this.preferences;
+
+    // Dashboard snapshot: grade values for the feed's new grades, changed and
+    // removed grades, new homework and tests. Notified keys are written before
+    // anything is shown, like the feed claims below (at most once).
+    final snapshot = await _readSnapshot(account);
+    final changes = <SchoolDashboardChange>[];
+    final notified = Set<String>.from(snapshot['notified'] as List? ?? []);
+    final now = DateTime.now().toUtc();
+    var snapshotChanged = false;
+    for (final (view, raw) in [
+      ('past', dashboards?.past),
+      ('future', dashboards?.future)
+    ]) {
+      if (raw == null) continue;
+      final current = parseSchoolDashboard(raw);
+      if (current == null) continue;
+      final stored = snapshot[view] as Map?;
+      final previous = stored == null
+          ? null
+          : {
+              for (final json in (stored['entries'] as Map).values)
+                if (SchoolDashboardEntry.fromJson(json) case final entry?)
+                  entry.key: entry
+            };
+      changes
+          .addAll(diffSchoolDashboard(previous, current, notified: notified));
+      snapshot[view] = {
+        'at': now.toIso8601String(),
+        'entries': {
+          for (final entry in current.entries) entry.key: entry.value.toJson()
+        },
+      };
+      snapshotChanged = true;
+    }
+    final deliverableChanges = [
+      for (final change in changes)
+        if (background &&
+            permitted &&
+            preferences.allows(_categoryOfGroup(change.item.group)))
+          change
+    ];
+    if (deliverableChanges.isNotEmpty) {
+      snapshot['notified'] = rememberNotified(
+          notified, deliverableChanges.map((change) => change.key));
+    }
+    if (snapshotChanged) {
+      await _history!.put(_snapshotKey(account), jsonEncode(snapshot));
+      await _history!.flush();
+    }
+    final grades = <String, Object?>{
+      ...?((snapshot['past'] as Map?)?['entries'] as Map?)
+          ?.cast<String, Object?>()
+    };
+
+    final claimed = <SchoolNotificationEvent>[];
     await _engine.synchronize(
         account: account,
         events: events,
         preferences: preferences,
-        permitted: await _hasPermission(),
+        permitted: permitted,
         foreground: !background,
         now: DateTime.now(),
-        deliverBatch: (batch) async {
-          for (final category in SchoolNotificationCategory.values) {
-            final group =
-                batch.where((event) => event.category == category).toList();
-            if (group.isEmpty) continue;
-            final event = group.first;
-            // Recheck after persisting the claim; never show without OS permission.
-            if (!await _presentationAllowed()) return;
-            final kind = event.category.name;
-            final id = int.parse(
-                notificationDigest([account, kind]).substring(0, 7),
-                radix: 16);
-            final requestedAt = DateTime.now().toUtc().toIso8601String();
-            final rawIds =
-                await _storage.read(key: 'school-notification-alert-ids-v1');
-            final ids = rawIds == null
-                ? <int>{}
-                : (jsonDecode(rawIds) as List).cast<int>().toSet();
-            ids.add(id);
-            await _storage.write(
-                key: 'school-notification-alert-ids-v1',
-                value: jsonEncode(ids.toList()));
-            await _diagnose(
-                account, {'lastNotificationRequestedAt': requestedAt});
-            await _native.show(
-                id: id,
-                title: l10n.text(
-                    'schoolNotifications.$kind.${group.length == 1 ? 'title' : preferences.showEventCount ? 'pluralTitle' : 'multipleTitle'}',
-                    args: {
-                      'count': '${group.length}'
-                    }),
-                body: l10n.text(
-                    'schoolNotifications.$kind.${group.length == 1 ? 'body' : 'pluralBody'}'),
-                notificationDetails: NotificationDetails(
-                    android: AndroidNotificationDetails('school_$kind',
-                        l10n.text('schoolNotifications.$kind.title'),
-                        visibility: NotificationVisibility.private,
-                        groupKey: 'school_$account'),
-                    iOS: DarwinNotificationDetails(
-                        threadIdentifier: 'school_$account',
-                        presentAlert: false,
-                        presentBanner: false,
-                        presentList: false,
-                        presentSound: true),
-                    macOS: const DarwinNotificationDetails(
-                        presentAlert: false, presentSound: false),
-                    linux: LinuxNotificationDetails(
-                        defaultActionName: l10n.text('common.open'))),
-                payload: SchoolNotificationDestination(account, event.category,
-                        group.length == 1 ? event.objectId : null)
-                    .encode());
-            await _diagnose(account, {
-              'lastNotificationAcceptedAt':
-                  DateTime.now().toUtc().toIso8601String()
-            });
-            // If the local UI resumed while show was awaiting its native reply,
-            // remove the alert without marking any school event as read.
-            if (_foreground) await _native.cancel(id: id);
-          }
-        });
+        deliverBatch: (batch) async => claimed.addAll(batch));
+
+    final items = <SchoolNotificationItem>[
+      for (final event in claimed) _itemOf(event, grades),
+      for (final change in deliverableChanges) change.item,
+    ];
+    var alerts = 0;
+    for (final category in SchoolNotificationCategory.values) {
+      final group = [
+        for (final item in items)
+          if (_categoryOfGroup(item.group) == category) item
+      ];
+      if (group.isEmpty) continue;
+      // Recheck after persisting the claim; never show without OS permission.
+      if (!await _presentationAllowed()) break;
+      await _show(account, category, group, l10n, language, preferences);
+      alerts++;
+    }
     final state =
         jsonDecode((await _history!.get(_engine.key(account)))!) as Map;
     await _diagnose(account, {
@@ -1162,10 +1277,169 @@ class SchoolNotificationService extends ChangeNotifier
       if (background)
         'lastBackgroundSuccessAt': DateTime.now().toUtc().toIso8601String(),
       if (background) 'backgroundResult': 'success',
+      if (background) 'consecutiveFailures': 0,
     });
+    if (background) await _logCheck(account, 'success', alerts: alerts);
     await _storage.write(
         key: 'school-notification-last-sync-$account',
         value: DateTime.now().toUtc().toIso8601String());
+  }
+
+  String _snapshotKey(String account) =>
+      'school-notification-snapshot-v1-$account';
+
+  /// The next dashboards become a quiet baseline, like the feed after
+  /// [SchoolNotificationEngine.baselineNext]: a snapshot that aged while a
+  /// category, details or permission was off must not report what changed in
+  /// the meantime. Notified keys stay, so nothing is shown twice.
+  Future<void> _resetSnapshot(String account) async {
+    final snapshot = await _readSnapshot(account);
+    if (snapshot.isEmpty) return;
+    await _history!.put(
+        _snapshotKey(account),
+        jsonEncode({
+          if (snapshot['notified'] != null) 'notified': snapshot['notified']
+        }));
+    await _history!.flush();
+  }
+
+  Future<Map<String, dynamic>> _readSnapshot(String account) async {
+    final raw = await _history!.get(_snapshotKey(account));
+    if (raw == null) return <String, dynamic>{};
+    try {
+      return jsonDecode(raw) as Map<String, dynamic>;
+    } on FormatException {
+      // Only optional details are lost: the next dashboard is a new baseline.
+      return <String, dynamic>{};
+    }
+  }
+
+  /// When each dashboard view was last read for [account], for the hourly
+  /// schedule of [schoolDashboardDue].
+  Future<({DateTime? past, DateTime? future})> _snapshotTimes(
+      String account) async {
+    final snapshot = await _readSnapshot(account);
+    DateTime? at(String view) =>
+        DateTime.tryParse('${(snapshot[view] as Map?)?['at']}');
+    return (past: at('past'), future: at('future'));
+  }
+
+  static SchoolNotificationCategory _categoryOfGroup(
+          SchoolNotificationGroup group) =>
+      switch (group) {
+        SchoolNotificationGroup.grade => SchoolNotificationCategory.grade,
+        SchoolNotificationGroup.message => SchoolNotificationCategory.message,
+        SchoolNotificationGroup.homework => SchoolNotificationCategory.homework,
+        SchoolNotificationGroup.other => SchoolNotificationCategory.other,
+      };
+
+  /// The notification content of one claimed feed event. A grade gets subject
+  /// and value from the dashboard snapshot (the feed's objectId is the
+  /// dashboard's grade id, as in dashboard_events.dart); without a match it
+  /// stays generic.
+  static SchoolNotificationItem _itemOf(
+      SchoolNotificationEvent event, Map<String, Object?> grades) {
+    String? text(String? value) =>
+        value == null || value.trim().isEmpty ? null : value.trim();
+    switch (event.category) {
+      case SchoolNotificationCategory.grade:
+        final entry =
+            SchoolDashboardEntry.fromJson(grades['g:${event.objectId}']);
+        return SchoolNotificationItem(SchoolNotificationKind.gradeNew,
+            subject: entry?.subject,
+            grade: entry?.grade,
+            description: entry?.description,
+            objectId: event.objectId);
+      case SchoolNotificationCategory.message:
+        return SchoolNotificationItem(SchoolNotificationKind.message,
+            sender: text(event.detail),
+            description: text(event.title),
+            objectId: event.objectId);
+      case SchoolNotificationCategory.homework:
+      case SchoolNotificationCategory.other:
+        final description = [text(event.title), text(event.detail)]
+            .whereType<String>()
+            .join(' – ');
+        return SchoolNotificationItem(
+            event.type == 'absence'
+                ? SchoolNotificationKind.absence
+                : SchoolNotificationKind.observation,
+            description: description.isEmpty ? null : description,
+            objectId: event.objectId);
+    }
+  }
+
+  Future<void> _show(
+      String account,
+      SchoolNotificationCategory category,
+      List<SchoolNotificationItem> items,
+      AppLocalizations l10n,
+      AppLanguage language,
+      SchoolNotificationPreferences preferences) async {
+    final kind = category.name;
+    final id = int.parse(notificationDigest([account, kind]).substring(0, 7),
+        radix: 16);
+    final requestedAt = DateTime.now().toUtc().toIso8601String();
+    final rawIds = await _storage.read(key: 'school-notification-alert-ids-v1');
+    final ids = rawIds == null
+        ? <int>{}
+        : (jsonDecode(rawIds) as List).cast<int>().toSet();
+    ids.add(id);
+    await _storage.write(
+        key: 'school-notification-alert-ids-v1',
+        value: jsonEncode(ids.toList()));
+    await _diagnose(account, {'lastNotificationRequestedAt': requestedAt});
+    final content = buildSchoolNotificationText(
+      group: items.first.group,
+      items: items,
+      details: preferences.details,
+      showCount: preferences.showEventCount,
+      language: language,
+      text: (key, {args = const {}}) => l10n.text(key, args: args),
+      subjectName: l10n.translateSubjectName,
+    );
+    await _native.show(
+        id: id,
+        title: content.title,
+        body: content.body,
+        notificationDetails: NotificationDetails(
+            android: AndroidNotificationDetails(
+                'school_$kind', l10n.text('schoolNotifications.channel.$kind'),
+                channelDescription:
+                    l10n.text('schoolNotifications.channel.description'),
+                // Default importance: sound and shade entry, no heads-up for
+                // a school update.
+                category: AndroidNotificationCategory.event,
+                // The lock screen follows the system's "hide sensitive
+                // content" setting; with details off the text is generic.
+                visibility: NotificationVisibility.private,
+                styleInformation: content.lines.isNotEmpty
+                    ? InboxStyleInformation(content.lines,
+                        contentTitle: content.title)
+                    : preferences.details
+                        ? BigTextStyleInformation(content.body)
+                        : null,
+                number: items.length,
+                groupKey: 'school_$account'),
+            iOS: DarwinNotificationDetails(
+                threadIdentifier: 'school_$account',
+                presentAlert: false,
+                presentBanner: false,
+                presentList: false,
+                presentSound: true),
+            macOS: const DarwinNotificationDetails(
+                presentAlert: false, presentSound: false),
+            linux: LinuxNotificationDetails(
+                defaultActionName: l10n.text('common.open'))),
+        payload: SchoolNotificationDestination(account, category,
+                items.length == 1 ? items.single.objectId : null)
+            .encode());
+    await _diagnose(account, {
+      'lastNotificationAcceptedAt': DateTime.now().toUtc().toIso8601String()
+    });
+    // If the local UI resumed while show was awaiting its native reply,
+    // remove the alert without marking any school event as read.
+    if (_foreground) await _native.cancel(id: id);
   }
 
   Future<void> markViewed(
@@ -1287,8 +1561,7 @@ class SchoolNotificationService extends ChangeNotifier
     final request = await _locked<_BackgroundNotificationRequest?>(() async {
       if (!await _hasPermission()) return null;
       await _loadPreferences(account: targetAccount);
-      if (!preferences.enabled ||
-          (!preferences.grades && !preferences.messages)) {
+      if (!preferences.enabled || !preferences.anyCategory) {
         return null;
       }
       final active = await _storage.read(key: 'school-notification-active');
@@ -1312,7 +1585,8 @@ class SchoolNotificationService extends ChangeNotifier
       // Fixed category only. This skip was silent, which hid the iOS Keychain
       // mismatch: settings reported nothing while every check skipped.
       Future<_BackgroundNotificationRequest?> unavailable() async {
-        await _diagnose(account, {'backgroundResult': 'credentialsUnavailable'});
+        await _diagnose(
+            account, {'backgroundResult': 'credentialsUnavailable'});
         return null;
       }
 
@@ -1365,6 +1639,21 @@ class SchoolNotificationService extends ChangeNotifier
           previous['authenticationSession'] == session) {
         return null;
       }
+      // After repeated network or server failures, wait before asking the
+      // school again (#133): every device of a school would otherwise retry
+      // an unreachable server every 15 minutes.
+      final failures = previous['consecutiveFailures'] is int
+          ? previous['consecutiveFailures'] as int
+          : 0;
+      if (!schoolNotificationRetryAllowed(
+          failures,
+          DateTime.tryParse('${previous['lastFailureAt']}'),
+          DateTime.now().toUtc())) {
+        await _logCheck(account, 'backoff');
+        return null;
+      }
+      final snapshotTimes = await _snapshotTimes(account);
+      final now = dashboardClock().toUtc();
       final leaseValue = DateTime.now()
           .toUtc()
           .add(const Duration(seconds: 45))
@@ -1376,6 +1665,13 @@ class SchoolNotificationService extends ChangeNotifier
         'backgroundResult': 'running',
       });
       return _BackgroundNotificationRequest(
+          // Dashboards only serve the detailed text and the extra categories
+          // (#133); accounts without them keep the two requests of before.
+          pastDashboard: preferences.grades && preferences.details,
+          pastDue: schoolDashboardDue(snapshotTimes.past, now),
+          futureDashboard: preferences.homework &&
+              schoolDashboardDue(snapshotTimes.future, now),
+          lastSync: last,
           lease: leaseValue,
           active: active,
           account: account,
@@ -1392,11 +1688,18 @@ class SchoolNotificationService extends ChangeNotifier
     final networkTimer = Stopwatch()..start();
     runtimeTrace('SchoolNotifications', 'background-network-start');
     try {
-      final data = await SchoolNotificationFeedClient(_httpClient).fetch(
+      final result = await SchoolNotificationFeedClient(_httpClient).fetchAll(
           server: request.server,
           user: request.user,
           password: request.password,
-          budget: budget);
+          budget: budget,
+          dashboards: (feed) => (
+                past: request.pastDashboard &&
+                    (request.pastDue ||
+                        schoolFeedHasGradeAfter(feed, request.lastSync)),
+                future: request.futureDashboard,
+              ));
+      final data = result.feed;
       runtimeTrace('SchoolNotifications', 'background-response-received',
           durationMs: networkTimer.elapsedMilliseconds);
       // Everything mutable is checked again while holding the commit lock.
@@ -1429,7 +1732,8 @@ class SchoolNotificationService extends ChangeNotifier
           }
           return;
         }
-        await _ingest(request.account, data, background: true);
+        await _ingest(request.account, data,
+            background: true, dashboards: result);
       }, label: 'background-commit');
     } on SchoolNotificationAuthenticationRequired {
       await _locked(() async {
@@ -1443,6 +1747,7 @@ class SchoolNotificationService extends ChangeNotifier
           'backgroundResult': 'authenticationRequired',
           'authenticationSession': request.session
         });
+        await _logCheck(request.account, 'authenticationRequired');
       });
     } catch (error) {
       await _locked(() async {
@@ -1452,7 +1757,34 @@ class SchoolNotificationService extends ChangeNotifier
             await _storage.read(key: 'login') != request.rawLogin) {
           return;
         }
+        final rawDiagnostics = await _history!
+            .get('school-notification-diagnostics-${request.account}');
+        final previous = rawDiagnostics == null
+            ? const <String, dynamic>{}
+            : jsonDecode(rawDiagnostics) as Map;
+        final failures = previous['consecutiveFailures'] is int
+            ? previous['consecutiveFailures'] as int
+            : 0;
+        final result = error is DioException &&
+                (error.response?.statusCode == 401 ||
+                    error.response?.statusCode == 403)
+            ? 'authenticationRequired'
+            : error is DioException
+                ? (error.type == DioExceptionType.cancel ||
+                        error.type == DioExceptionType.receiveTimeout ||
+                        error.type == DioExceptionType.connectionTimeout ||
+                        error.type == DioExceptionType.sendTimeout
+                    ? 'timeout'
+                    : 'networkError')
+                : error is FormatException
+                    ? 'invalidResponse'
+                    : 'storageOrNotificationError';
+        await _logCheck(request.account, result);
         await _diagnose(request.account, {
+          if (result != 'authenticationRequired') ...{
+            'consecutiveFailures': failures + 1,
+            'lastFailureAt': DateTime.now().toUtc().toIso8601String(),
+          },
           'backgroundResult': error is DioException &&
                   (error.response?.statusCode == 401 ||
                       error.response?.statusCode == 403)
@@ -1489,6 +1821,19 @@ class SchoolNotificationService extends ChangeNotifier
   }
 }
 
+/// Whether the unread feed holds a grade sent after [since] (or any grade
+/// without a previous check), so the dashboard is read for its subject and
+/// value right away instead of at the next hourly snapshot.
+bool schoolFeedHasGradeAfter(List feed, DateTime? since) => feed.any((item) {
+      if (item is! Map ||
+          SchoolNotificationEvent.categoryFor(item['type']) !=
+              SchoolNotificationCategory.grade) {
+        return false;
+      }
+      final sent = DateTime.tryParse('${item['timeSent']}');
+      return since == null || sent == null || sent.isAfter(since);
+    });
+
 class SchoolNotificationOptInOffer {
   const SchoolNotificationOptInOffer(this.account, this.generation, this.label);
   final String account;
@@ -1498,7 +1843,11 @@ class SchoolNotificationOptInOffer {
 
 class _BackgroundNotificationRequest {
   const _BackgroundNotificationRequest(
-      {required this.lease,
+      {required this.pastDashboard,
+      required this.pastDue,
+      required this.futureDashboard,
+      required this.lastSync,
+      required this.lease,
       required this.active,
       required this.account,
       required this.session,
@@ -1506,6 +1855,10 @@ class _BackgroundNotificationRequest {
       required this.server,
       required this.user,
       required this.password});
+  final bool pastDashboard;
+  final bool pastDue;
+  final bool futureDashboard;
+  final DateTime? lastSync;
   final String account;
   final String active;
   final String lease;

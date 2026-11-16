@@ -6,7 +6,10 @@ import 'package:mutex/mutex.dart';
 String notificationDigest(Object value) =>
     sha256.convert(utf8.encode(jsonEncode(value))).toString();
 
-enum SchoolNotificationCategory { grade, message }
+/// Categories with their own setting and their own system notification.
+/// `homework` comes from the dashboard snapshot, `other` collects absences and
+/// observations from the unread feed (#133).
+enum SchoolNotificationCategory { grade, message, homework, other }
 
 /// Personal school events only. General announcements deliberately stay in the bell.
 class SchoolNotificationEvent {
@@ -18,6 +21,9 @@ class SchoolNotificationEvent {
     this.viewed = false,
     this.aliases = const [],
     this.fallbackIdentity,
+    this.title,
+    this.detail,
+    this.type,
   });
 
   final SchoolNotificationCategory category;
@@ -27,6 +33,13 @@ class SchoolNotificationEvent {
   final bool viewed;
   final List<String> aliases;
   final String? fallbackIdentity;
+
+  /// The feed's own texts, kept in memory only and never persisted.
+  final String? title;
+  final String? detail;
+
+  /// The feed type in lower case, such as `absence`.
+  final String? type;
   Iterable<String> get identities => [identity, ...aliases];
 
   // The reference's notification_type.dart identifies messageShared as a
@@ -35,6 +48,7 @@ class SchoolNotificationEvent {
       switch (type is String ? type.toLowerCase() : null) {
         'grade' => SchoolNotificationCategory.grade,
         'message' || 'messageshared' => SchoolNotificationCategory.message,
+        'absence' || 'observation' => SchoolNotificationCategory.other,
         _ => null,
       };
 
@@ -78,6 +92,9 @@ class SchoolNotificationEvent {
         if (id != null) notificationDigest([category.name, 'event:$id'])
       ],
       fallbackIdentity: fallback,
+      title: item['title'] is String ? item['title'] as String : null,
+      detail: item['subTitle'] is String ? item['subTitle'] as String : null,
+      type: (item['type'] as String).toLowerCase(),
     );
   }
 }
@@ -90,21 +107,56 @@ class SchoolNotificationPreferences {
       this.grades = true,
       this.messages = true,
       this.consent = SchoolNotificationConsent.unknown,
-      this.showEventCount = false});
+      this.showEventCount = false,
+      this.homework = true,
+      this.other = true,
+      this.details = true});
   SchoolNotificationConsent consent;
   bool enabled;
   bool showEventCount;
   bool grades;
   bool messages;
+  bool homework;
+  bool other;
+
+  /// Subject, grade and a short description in the notification text (#133).
+  bool details;
+
+  bool category(SchoolNotificationCategory category) => switch (category) {
+        SchoolNotificationCategory.grade => grades,
+        SchoolNotificationCategory.message => messages,
+        SchoolNotificationCategory.homework => homework,
+        SchoolNotificationCategory.other => other,
+      };
+
+  void setCategory(SchoolNotificationCategory category, bool value) {
+    switch (category) {
+      case SchoolNotificationCategory.grade:
+        grades = value;
+      case SchoolNotificationCategory.message:
+        messages = value;
+      case SchoolNotificationCategory.homework:
+        homework = value;
+      case SchoolNotificationCategory.other:
+        other = value;
+    }
+  }
+
+  /// Whether any category is on, so a check is worth its requests.
+  bool get anyCategory => grades || messages || homework || other;
+
   bool allows(SchoolNotificationCategory category) =>
       consent == SchoolNotificationConsent.accepted &&
       enabled &&
-      (category == SchoolNotificationCategory.grade ? grades : messages);
+      this.category(category);
   Map<String, dynamic> toJson() => {
         'decision': consent.name,
         'enabled': enabled,
         'grades': grades,
         'messages': messages,
+        'homework': homework,
+        'other': other,
+        'details': details,
         'showEventCount': showEventCount
       };
 }

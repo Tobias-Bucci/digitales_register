@@ -74,8 +74,12 @@ class _SchoolApi implements HttpClientAdapter {
       {this.authenticated = true,
       this.failureType,
       this.responseGate,
+      this.dashboards,
       this.blockedPath = 'api/notification/unread'});
   final List<Map<String, Object?>> events;
+
+  /// Dashboard responses by `viewFuture`; null answers with [events].
+  Map<bool, Object?>? dashboards;
   final bool authenticated;
   final DioExceptionType? failureType;
   final Completer<void>? responseGate;
@@ -92,10 +96,14 @@ class _SchoolApi implements HttpClientAdapter {
       if (!blocked.isCompleted) blocked.complete();
       await responseGate!.future;
     }
+    final dashboards = this.dashboards;
     return ResponseBody.fromString(
         jsonEncode(options.path == 'api/auth/login'
             ? {'loggedIn': authenticated}
-            : events),
+            : options.path == 'api/student/dashboard/dashboard' &&
+                    dashboards != null
+                ? dashboards[(options.data as Map)['viewFuture']]
+                : events),
         200,
         headers: {
           Headers.contentTypeHeader: ['application/json']
@@ -130,6 +138,8 @@ void main() {
   late Directory directory;
   late SchoolNotificationService service;
   final shown = <String>[];
+  final texts = <(String?, String?)>[];
+  final styles = <StyleInformation?>[];
   DidReceiveNotificationResponseCallback? tapHandler;
   const server = 'https://school.example';
   const user = 'student';
@@ -147,6 +157,8 @@ void main() {
     when(() => native.getNotificationAppLaunchDetails())
         .thenAnswer((_) async => null);
     shown.clear();
+    texts.clear();
+    styles.clear();
     when(() => native.initialize(
             settings: any(named: 'settings'),
             onDidReceiveNotificationResponse:
@@ -166,6 +178,14 @@ void main() {
         notificationDetails: any(named: 'notificationDetails'),
         payload: any(named: 'payload'))).thenAnswer((invocation) async {
       shown.add(invocation.namedArguments[#payload] as String);
+      texts.add((
+        invocation.namedArguments[#title] as String?,
+        invocation.namedArguments[#body] as String?
+      ));
+      styles.add((invocation.namedArguments[#notificationDetails]
+              as NotificationDetails)
+          .android
+          ?.styleInformation);
     });
     service = SchoolNotificationService(
         platformSupported: true,
@@ -219,11 +239,13 @@ void main() {
       DioExceptionType? failureType,
       bool android = false,
       SchoolNotificationScheduler? scheduler,
+      Map<bool, Object?>? dashboards,
       Duration budget = const Duration(seconds: 20)}) async {
     service.dispose();
     final api = _SchoolApi(events ?? [event(1)],
         authenticated: authenticated,
         responseGate: gate,
+        dashboards: dashboards,
         failureType: failureType);
     service = _MobileService(
         native: native,
@@ -1257,5 +1279,348 @@ void main() {
             .encode()));
     await Future<void>.delayed(Duration.zero);
     expect(opened, 99);
+  });
+
+  group('detailed notifications (#133)', () {
+    String account() => service.accountKey(server, user);
+    void preferences({bool details = true}) {
+      for (final url in [server, 'https://other.example']) {
+        storage.storage[
+                'school-notification-preferences-v1-${service.accountKey(url, user)}'] =
+            jsonEncode({
+          'decision': 'accepted',
+          'enabled': true,
+          'grades': true,
+          'messages': true,
+          'homework': true,
+          'other': true,
+          'details': details,
+        });
+      }
+    }
+
+    List<Map<String, Object?>> day(
+            String date, List<Map<String, Object?>> items) =>
+        [
+          {'date': date, 'items': items}
+        ];
+    Map<String, Object?> grade(int id, String value,
+            {String subject = 'Mathematik'}) =>
+        {
+          'id': id,
+          'type': 'grade',
+          'title': 'Bewertung',
+          'subtitle': 'Schularbeit',
+          'label': subject,
+          'grade': value,
+        };
+    Future<void> run() async {
+      storage.storage.remove('school-notification-last-sync-${account()}');
+      await service.backgroundSync();
+    }
+
+    Iterable<String> paths(_SchoolApi api) =>
+        api.requests.map((r) => r.path == 'api/student/dashboard/dashboard'
+            ? 'dashboard:${(r.data as Map)['viewFuture']}'
+            : r.path);
+
+    for (final (language, translate, expected) in [
+      ('en', true, ('New grade', 'Mathematics: 8.5')),
+      ('de', false, ('Neue Note', 'Mathematik: 8,5')),
+      ('it', true, ('Nuovo voto', 'Matematica: 8,5')),
+      ('lld', false, ('Nota nueva', 'Mathematik: 8,5')),
+    ]) {
+      test('a new grade shows subject and grade in the app language $language',
+          () async {
+        SharedPreferences.setMockInitialValues({
+          'appLanguage': language,
+          'subjectTranslationEnabled': translate,
+        });
+        preferences();
+        final api = await mobile(dashboards: {
+          false: day('2026-11-16', [grade(1, '8.5')]),
+          true: day('2026-11-20', []),
+        });
+        await run();
+        expect(paths(api), [
+          'api/auth/login',
+          'api/notification/unread',
+          'dashboard:false',
+          'dashboard:true',
+        ]);
+        expect(texts, [expected]);
+        expect(styles.single, isA<BigTextStyleInformation>());
+        expect(SchoolNotificationDestination.decode(shown.single)?.category,
+            SchoolNotificationCategory.grade);
+      });
+    }
+
+    test('details off keeps the generic text and the two requests of before',
+        () async {
+      preferences(details: false);
+      final api = await mobile(dashboards: {
+        false: day('2026-11-16', [grade(1, '8.5')]),
+        true: day('2026-11-20', []),
+      });
+      await run();
+      expect(texts, [('New grade', 'A new assessment has been published.')]);
+      expect(styles.single, isNull);
+      // Homework is on, so only the hourly future dashboard is added.
+      expect(paths(api), [
+        'api/auth/login',
+        'api/notification/unread',
+        'dashboard:true',
+      ]);
+    });
+
+    test('accounts that accepted before #133 keep exactly the old behaviour',
+        () async {
+      // The setUp record has no details/homework/other keys.
+      final api = await mobile(dashboards: {
+        false: day('2026-11-16', [grade(1, '8.5')]),
+        true: day('2026-11-20', []),
+      });
+      await run();
+      expect(texts, [('New grade', 'A new assessment has been published.')]);
+      expect(paths(api), ['api/auth/login', 'api/notification/unread']);
+      expect(service.preferences.details, isFalse);
+      expect(service.preferences.homework, isFalse);
+      expect(service.preferences.other, isFalse);
+    });
+
+    test('a grade without dashboard data falls back to the generic text',
+        () async {
+      preferences();
+      await mobile(dashboards: {false: 'not a dashboard', true: null});
+      await run();
+      expect(texts, [('New grade', 'A new assessment has been published.')]);
+      expect(service.diagnostics['backgroundResult'], 'success');
+    });
+
+    test('several new grades are grouped into one inbox notification',
+        () async {
+      SharedPreferences.setMockInitialValues({'appLanguage': 'de'});
+      preferences();
+      await mobile(events: [
+        event(1),
+        event(2),
+        event(3),
+      ], dashboards: {
+        false: day('2026-11-16', [
+          grade(1, '8.5'),
+          grade(2, '7', subject: 'Deutsch'),
+          grade(3, '6.25', subject: 'Englisch'),
+        ]),
+        true: day('2026-11-20', []),
+      });
+      await run();
+      expect(texts,
+          [('3 neue Noten', 'Mathematik: 8,5\nDeutsch: 7\nEnglisch: 6+')]);
+      expect(styles.single, isA<InboxStyleInformation>());
+      expect((styles.single! as InboxStyleInformation).lines,
+          ['Mathematik: 8,5', 'Deutsch: 7', 'Englisch: 6+']);
+      expect(
+          SchoolNotificationDestination.decode(shown.single)?.objectId, isNull);
+    });
+
+    test('a changed grade is shown once, also over repeated checks', () async {
+      SharedPreferences.setMockInitialValues({'appLanguage': 'de'});
+      preferences();
+      final api = await mobile(dashboards: {
+        false: day('2026-11-16', [grade(1, '8.5')]),
+        true: day('2026-11-20', []),
+      });
+      await run();
+      expect(texts, [('Neue Note', 'Mathematik: 8,5')]);
+      api.dashboards = {
+        false: day('2026-11-16', [grade(1, '7')]),
+        true: day('2026-11-20', []),
+      };
+      // The unread grade in the feed keeps the past dashboard fresh.
+      await run();
+      await run();
+      expect(texts, [
+        ('Neue Note', 'Mathematik: 8,5'),
+        ('Note geändert', 'Mathematik: 8,5 → 7'),
+      ]);
+    });
+
+    test('a removed grade is reported while its day is still listed', () async {
+      preferences();
+      final api = await mobile(dashboards: {
+        false: day('2026-11-16', [grade(1, '8'), grade(2, '5')]),
+        true: day('2026-11-20', []),
+      });
+      await run();
+      api.dashboards = {
+        false: day('2026-11-16', [grade(1, '8')]),
+        true: day('2026-11-20', []),
+      };
+      await run();
+      expect(texts.last, ('Grade removed', 'Mathematik: 5 removed'));
+    });
+
+    test('new homework and tests are notified once after the hourly snapshot',
+        () async {
+      preferences();
+      final api = await mobile(events: [], dashboards: {
+        false: day('2026-11-16', []),
+        true: day('2026-11-20', [
+          {
+            'id': 5,
+            'type': 'lessonHomework',
+            'title': 'S. 3',
+            'label': 'Deutsch'
+          }
+        ]),
+      });
+      await run();
+      expect(texts, isEmpty, reason: 'the first snapshot is a baseline');
+      api.dashboards = {
+        false: day('2026-11-16', []),
+        true: day('2026-11-20', [
+          {
+            'id': 5,
+            'type': 'lessonHomework',
+            'title': 'S. 3',
+            'label': 'Deutsch'
+          },
+          {
+            'id': 6,
+            'type': 'lessonHomework',
+            'title': 'S. 9',
+            'label': 'Deutsch'
+          },
+          {
+            'id': 7,
+            'type': 'gradeGroup',
+            'title': 'Schularbeit',
+            'label': 'Physik'
+          },
+        ]),
+      };
+      final requestsBefore = api.requests.length;
+      await run();
+      expect(api.requests.length - requestsBefore, 2,
+          reason: 'no dashboard within the hour');
+      expect(texts, isEmpty);
+      service.dashboardClock =
+          () => DateTime.now().add(const Duration(minutes: 61));
+      await run();
+      expect(texts,
+          [('2 new homework and tests', 'Deutsch: S. 9\nPhysik: Schularbeit')]);
+      service.dashboardClock =
+          () => DateTime.now().add(const Duration(minutes: 200));
+      await run();
+      expect(texts, hasLength(1), reason: 'never notified twice');
+    });
+
+    test('turning a category off and on again does not replay the gap',
+        () async {
+      preferences();
+      final api = await mobile(events: [], dashboards: {
+        false: day('2026-11-16', []),
+        true: day('2026-11-20', []),
+      });
+      await run();
+      await service.setCategory(SchoolNotificationCategory.homework, false);
+      api.dashboards = {
+        false: day('2026-11-16', []),
+        true: day('2026-11-20', [
+          {
+            'id': 6,
+            'type': 'lessonHomework',
+            'title': 'S. 9',
+            'label': 'Deutsch'
+          },
+        ]),
+      };
+      service.dashboardClock =
+          () => DateTime.now().add(const Duration(minutes: 61));
+      await service.setCategory(SchoolNotificationCategory.homework, true);
+      await run();
+      expect(texts, isEmpty);
+    });
+
+    test('absences from the feed are shown; a malformed one is skipped',
+        () async {
+      preferences();
+      await mobile(events: [
+        {
+          'id': 30,
+          'type': 'absence',
+          'title': 'Absenz',
+          'subTitle': '2 Stunden',
+          'timeSent':
+              DateTime.now().add(const Duration(minutes: 1)).toIso8601String(),
+        },
+        {'id': 31, 'type': 'observation'},
+      ], dashboards: {
+        false: day('2026-11-16', []),
+        true: day('2026-11-20', []),
+      });
+      await run();
+      expect(texts, [('New absence', 'Absenz – 2 Stunden')]);
+      expect(SchoolNotificationDestination.decode(shown.single)?.category,
+          SchoolNotificationCategory.other);
+    });
+
+    test('details turned off show the generic text from the next alert',
+        () async {
+      preferences();
+      await mobile(events: [
+        event(1)
+      ], dashboards: {
+        false: day('2026-11-16', [grade(1, '8'), grade(2, '9')]),
+        true: day('2026-11-20', []),
+      });
+      await service.setShowDetails(false);
+      await run();
+      expect(texts, [('New grade', 'A new assessment has been published.')]);
+    });
+
+    test('repeated network failures back off instead of retrying every run',
+        () async {
+      preferences();
+      final api = await mobile(failureType: DioExceptionType.connectionError);
+      await expectLater(run(), throwsA(isA<DioException>()));
+      await expectLater(run(), throwsA(isA<DioException>()));
+      expect(service.diagnostics['consecutiveFailures'], 2);
+      final before = api.requests.length;
+      await run();
+      expect(api.requests.length, before, reason: 'paused for 15 minutes');
+      final log = await service.checkLog();
+      expect(log.map((entry) => entry['result']),
+          ['backoff', 'networkError', 'networkError']);
+      expect(log.first['account'], account().substring(0, 8));
+    });
+
+    test('a successful check resets the failures and is logged', () async {
+      preferences();
+      await mobile(dashboards: {
+        false: day('2026-11-16', [grade(1, '8')]),
+        true: day('2026-11-20', []),
+      });
+      await run();
+      expect(service.diagnostics['consecutiveFailures'], 0);
+      final log = await service.checkLog();
+      expect(log.single['result'], 'success');
+      expect(log.single['alerts'], 1);
+      expect(jsonEncode(log), isNot(contains('Mathematik')));
+    });
+
+    test('removing an account deletes its dashboard snapshot', () async {
+      preferences();
+      await mobile(dashboards: {
+        false: day('2026-11-16', [grade(1, '8')]),
+        true: day('2026-11-20', []),
+      });
+      await run();
+      await service.forgetAccount(server, user);
+      final file =
+          File('${directory.path}/school_notification_history_v1.hive');
+      expect(String.fromCharCodes(await file.readAsBytes()),
+          isNot(contains('Mathematik')));
+    });
   });
 }

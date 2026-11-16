@@ -43,13 +43,15 @@ class _SettingsService extends SchoolNotificationService {
   }
 
   @override
+  Future<void> setShowDetails(bool value) async {
+    preferences.details = value;
+    notifyListeners();
+  }
+
+  @override
   Future<void> setCategory(
       SchoolNotificationCategory category, bool value) async {
-    if (category == SchoolNotificationCategory.grade) {
-      preferences.grades = value;
-    } else {
-      preferences.messages = value;
-    }
+    preferences.setCategory(category, value);
     notifyListeners();
   }
 }
@@ -95,7 +97,8 @@ void main() {
                         child: SchoolNotificationSettings(service: service)))));
         await tester.pumpAndSettle();
         expect(tester.takeException(), isNull);
-        expect(find.byType(SwitchListTile), findsNWidgets(4));
+        // Master, grades, messages, homework, other events, details, count.
+        expect(find.byType(SwitchListTile), findsNWidgets(7));
         await tester.runAsync(() async {
           final image = await (boundary.currentContext!.findRenderObject()!
                   as RenderRepaintBoundary)
@@ -118,6 +121,12 @@ void main() {
         await tester.pumpAndSettle();
         expect(service.preferences.grades, isFalse);
         expect(service.preferences.messages, isTrue);
+        final details = service.preferences.details;
+        await tester.ensureVisible(find.byType(SwitchListTile).at(5));
+        await tester.tap(find.byType(SwitchListTile).at(5));
+        await tester.pumpAndSettle();
+        expect(service.preferences.details, !details);
+        await tester.ensureVisible(find.byType(SwitchListTile).first);
         await tester.tap(find.byType(SwitchListTile).first);
         await tester.pumpAndSettle();
         expect(service.preferences.enabled, isFalse);

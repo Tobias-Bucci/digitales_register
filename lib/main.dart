@@ -299,12 +299,21 @@ Future<void> _initializeAfterFirstFrame({
       }
       schoolNotifications.pendingDestination = null;
       navigatorKey?.currentState?.popUntil((route) => route.isFirst);
-      if (destination.category == SchoolNotificationCategory.grade) {
-        await store.actions.routingActions.showGrades();
-      } else if (destination.objectId != null) {
-        await store.actions.routingActions.showMessage(destination.objectId!);
-      } else {
-        await store.actions.routingActions.showMessages();
+      switch (destination.category) {
+        case SchoolNotificationCategory.grade:
+          await store.actions.routingActions.showGrades();
+        case SchoolNotificationCategory.message:
+          if (destination.objectId != null) {
+            await store.actions.routingActions
+                .showMessage(destination.objectId!);
+          } else {
+            await store.actions.routingActions.showMessages();
+          }
+        // Homework, tests, absences and observations are on the dashboard,
+        // the first route.
+        case SchoolNotificationCategory.homework:
+        case SchoolNotificationCategory.other:
+          break;
       }
     } finally {
       handlingSchoolNotificationTap = false;

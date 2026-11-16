@@ -58,7 +58,7 @@ class MainActivity: FlutterFragmentActivity() {
                             "backgroundRestricted" to (Build.VERSION.SDK_INT >= 28 && activity.isBackgroundRestricted)
                         )
                         if (Build.VERSION.SDK_INT >= 26) {
-                            status["channelsBlocked"] = listOf("school_grade", "school_message")
+                            status["channelsBlocked"] = SchoolNotificationVisibility.channels
                                 .any { manager.getNotificationChannel(it)?.importance == NotificationManager.IMPORTANCE_NONE }
                         }
                         val work = WorkManager.getInstance(applicationContext)
@@ -71,6 +71,17 @@ class MainActivity: FlutterFragmentActivity() {
                                 result.error("scheduler_unavailable", "Background schedule could not be checked", null)
                             }
                         }, ContextCompat.getMainExecutor(this))
+                    }
+                    "openBatterySettings" -> {
+                        // The system list of battery optimizations. Asking for an
+                        // exemption directly needs a permission Play restricts.
+                        try {
+                            startActivity(Intent(Settings.ACTION_IGNORE_BATTERY_OPTIMIZATION_SETTINGS))
+                        } catch (_: Exception) {
+                            startActivity(Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS,
+                                android.net.Uri.parse("package:$packageName")))
+                        }
+                        result.success(null)
                     }
                     "openSettings" -> {
                         startActivity(Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS,
@@ -151,7 +162,7 @@ class MainActivity: FlutterFragmentActivity() {
         for (alert in manager.activeNotifications) {
             val channel = if (Build.VERSION.SDK_INT >= 26) alert.notification.channelId else null
             val group = alert.notification.group
-            if (channel == "school_grade" || channel == "school_message" ||
+            if (channel in SchoolNotificationVisibility.channels ||
                 group?.matches(Regex("^school_[a-f0-9]{64}$")) == true) {
                 manager.cancel(alert.tag, alert.id)
             }

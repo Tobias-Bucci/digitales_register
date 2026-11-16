@@ -78,7 +78,9 @@ permission-status handling still needs Xcode/device qualification.
   Host casing and trailing slashes normalize. Old global grade/message choices
   remain migration defaults, not reset values.
 - Each account has a master switch, grade/message switches, and optional event
-  count. Values, subjects, senders and message text remain hidden in every mode.
+  count. Since #133 an account can show subject, grade and a short description
+  ("Show details"); see `NOTIFICATION_DETAILS.md`. With details off, values,
+  subjects, senders and message text stay hidden.
   Event counts are hidden by default. Account/school labels appear only in
   settings, with the configured accounts' on/off state.
 - Global notification permission and the existing password-saving setting gate

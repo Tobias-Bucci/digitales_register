@@ -45,7 +45,7 @@ class SchoolLocalNotificationsPlugin private constructor(
     override fun onMethodCall(call: MethodCall, result: MethodChannel.Result) {
         if (call.method == "show") {
             val channel = call.argument<Map<String, Any?>>("platformSpecifics")?.get("channelId")
-            if (channel == "school_grade" || channel == "school_message") {
+            if (channel in SchoolNotificationVisibility.channels) {
                 if (SchoolNotificationVisibility.isForeground) {
                     result.success(null)
                     return

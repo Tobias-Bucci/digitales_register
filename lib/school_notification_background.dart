@@ -38,10 +38,11 @@ void initializeSchoolNotificationBackground() {
 /// accounts and the credential upgrade wrote nothing. Read across classes;
 /// create or upgrade items as after-first-unlock, device-only.
 class SchoolNotificationKeychain extends FlutterSecureStorage {
-  const SchoolNotificationKeychain() : super(iOptions: keychainAnyAccessibility);
+  const SchoolNotificationKeychain()
+      : super(iOptions: keychainAnyAccessibility);
 
-  static const background = IOSOptions(
-      accessibility: KeychainAccessibility.first_unlock_this_device);
+  static const background =
+      IOSOptions(accessibility: KeychainAccessibility.first_unlock_this_device);
 
   @override
   Future<void> write({
@@ -127,6 +128,19 @@ bool schoolNotificationHasForegroundMark(
   }
 }
 
+/// Dashboard requests start only with at least this much budget left.
+const schoolDashboardMinimumBudget = Duration(seconds: 8);
+
+/// One background read: the unread feed and the optional dashboards.
+class SchoolFeedResult {
+  const SchoolFeedResult(this.feed, {this.past, this.future});
+  final List feed;
+
+  /// Raw dashboard responses, or null when not read or not readable.
+  final Object? past;
+  final Object? future;
+}
+
 class SchoolNotificationAuthenticationRequired implements Exception {
   const SchoolNotificationAuthenticationRequired();
 }
@@ -142,7 +156,23 @@ class SchoolNotificationFeedClient {
     required String user,
     required String password,
     required Duration budget,
+  }) async =>
+      (await fetchAll(
+              server: server, user: user, password: password, budget: budget))
+          .feed;
+
+  /// Signs in, reads the unread feed and, when [dashboards] asks for them
+  /// after seeing the feed, the past and future dashboards in the same
+  /// session. Dashboards are optional: a failure, a malformed response or a
+  /// nearly used-up [budget] leaves them null and keeps the feed.
+  Future<SchoolFeedResult> fetchAll({
+    required String server,
+    required String user,
+    required String password,
+    required Duration budget,
+    ({bool past, bool future}) Function(List feed)? dashboards,
   }) async {
+    final elapsed = Stopwatch()..start();
     final dio = createClient(BaseOptions(
         baseUrl: schoolApiBase(server),
         connectTimeout: const Duration(seconds: 8),
@@ -173,7 +203,30 @@ class SchoolNotificationFeedClient {
       if (data is! List) {
         throw const FormatException('Invalid school notification feed');
       }
-      return data;
+      final wanted = dashboards?.call(data) ?? (past: false, future: false);
+      Future<Object?> dashboard(bool future) async {
+        // Each request may take up to 8 s; never let an optional one cost the
+        // feed that is already here (iOS grants about 20 s in total).
+        if (budget - elapsed.elapsed < schoolDashboardMinimumBudget) {
+          return null;
+        }
+        try {
+          final response = (await dio.post<dynamic>(schoolDashboardEndpoint,
+                  data: {'viewFuture': future}, cancelToken: cancellation))
+              .data;
+          return response is String ? jsonDecode(response) : response;
+        } on DioException {
+          return null;
+        } on FormatException {
+          return null;
+        }
+      }
+
+      return SchoolFeedResult(
+        data,
+        past: wanted.past ? await dashboard(false) : null,
+        future: wanted.future ? await dashboard(true) : null,
+      );
     } finally {
       deadline.cancel();
       dio.close(force: true);
