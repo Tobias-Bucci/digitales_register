@@ -1,3 +1,4 @@
+import 'package:dr/polls/poll_models.dart';
 import 'package:dr/server_notifications/server_notification_links.dart';
 import 'package:flutter/foundation.dart';
 
@@ -123,6 +124,7 @@ class ServerNotification {
     required this.publishedAt,
     required this.expiresAt,
     required this.link,
+    this.poll,
   });
 
   /// Lower-case UUID, stable across edits.
@@ -141,6 +143,11 @@ class ServerNotification {
 
   /// Null if there is no link, or if it did not pass validation.
   final ServerNotificationLink? link;
+
+  /// The poll this announcement carries (#131), if its type is one this app
+  /// can show. Null otherwise: the announcement then stays a plain one, and
+  /// its external [link] leads to the web voting page.
+  final ServerPoll? poll;
 
   bool isExpiredAt(DateTime now) =>
       expiresAt != null && !expiresAt!.isAfter(now);
@@ -185,6 +192,7 @@ class ServerNotification {
       publishedAt: publishedAt,
       expiresAt: expiresAt,
       link: ServerNotificationLink.tryParse(json['link']),
+      poll: ServerPoll.tryParse(json['poll']),
     );
   }
 
@@ -198,6 +206,7 @@ class ServerNotification {
         'published_at': _formatTimestamp(publishedAt),
         'expires_at': expiresAt == null ? null : _formatTimestamp(expiresAt!),
         'link': link?.toJson(),
+        if (poll != null) 'poll': poll!.toJson(),
       };
 }
 

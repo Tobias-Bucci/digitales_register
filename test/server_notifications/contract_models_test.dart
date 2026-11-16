@@ -79,7 +79,7 @@ void main() {
           .allMatches(section.substring(0, section.indexOf('New')))
           .map((match) => match[1]!)
           .toSet();
-      expect(names, hasLength(9));
+      expect(names, hasLength(10));
       expect(serverNotificationIcons.keys.toSet(), names);
     });
 

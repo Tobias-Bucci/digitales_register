@@ -832,7 +832,10 @@ extension _NewAppDetail on _ServerNotificationDetailViewState {
           final scheme = theme.colorScheme;
           final muted = theme.textTheme.bodySmall
               ?.copyWith(color: scheme.onSurfaceVariant);
-          final link = item.link;
+          // A poll opens in the app; its link is the same poll in the
+          // browser, for apps that cannot show it.
+          final poll = item.poll;
+          final link = poll == null ? item.link : null;
           return _NewDetailFrame(
             icon: ServerNotificationTypeIcon(type: item.type, size: 36),
             source: serverNotificationTypeLabel(l10n, item.type),
@@ -864,6 +867,14 @@ extension _NewAppDetail on _ServerNotificationDetailViewState {
                 spacing: 8,
                 runSpacing: 8,
                 children: [
+                  if (poll != null)
+                    FilledButton.icon(
+                      key: const Key('notification-open-poll'),
+                      style: glassControlStyle(scheme),
+                      onPressed: () => unawaited(openServerPoll(context, poll)),
+                      icon: const Icon(Icons.how_to_vote_outlined),
+                      label: Text(l10n.text('polls.open')),
+                    ),
                   if (link != null)
                     FilledButton.icon(
                       style: glassControlStyle(scheme),

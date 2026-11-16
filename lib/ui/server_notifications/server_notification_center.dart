@@ -15,6 +15,7 @@ import 'package:dr/ui/glass_segmented_control.dart';
 import 'package:dr/ui/glass_surface.dart';
 import 'package:dr/ui/last_fetched_overlay.dart';
 import 'package:dr/ui/linkified_text.dart';
+import 'package:dr/ui/polls/server_poll_page.dart';
 import 'package:dr/ui/readable_content.dart';
 import 'package:dr/ui/server_notifications/server_notification_routes.dart';
 import 'package:dr/ui/server_notifications/server_notification_visuals.dart';
@@ -989,7 +990,10 @@ class _ServerNotificationDetailViewState
         final l10n = context.l10n;
         final muted = theme.textTheme.bodySmall
             ?.copyWith(color: theme.colorScheme.onSurfaceVariant);
-        final link = item.link;
+        // A poll opens in the app; its link is the same poll in the browser,
+        // for apps that cannot show it, so it is not offered here as well.
+        final poll = item.poll;
+        final link = poll == null ? item.link : null;
         return Align(
           alignment: Alignment.topCenter,
           child: ConstrainedBox(
@@ -1043,6 +1047,14 @@ class _ServerNotificationDetailViewState
                   spacing: 8,
                   runSpacing: 8,
                   children: [
+                    if (poll != null)
+                      FilledButton.icon(
+                        key: const Key('notification-open-poll'),
+                        onPressed: () =>
+                            unawaited(openServerPoll(context, poll)),
+                        icon: const Icon(Icons.how_to_vote_outlined),
+                        label: Text(l10n.text('polls.open')),
+                      ),
                     if (link != null) _linkButton(context, link),
                     TextButton.icon(
                       onPressed: () => unawaited(_dismiss()),

@@ -20,6 +20,7 @@ const serverNotificationIcons = <String, IconData>{
   'megaphone': Icons.campaign_outlined,
   'shield': Icons.shield_outlined,
   'star': Icons.star_outline_rounded,
+  'poll': Icons.poll_outlined,
 };
 
 IconData serverNotificationIcon(String name) =>
@@ -31,6 +32,7 @@ const serverNotificationTranslatedTypeKeys = {
   'update',
   'maintenance',
   'critical',
+  'poll',
 };
 
 /// The name of [type] to show and to speak. The server writes its label in

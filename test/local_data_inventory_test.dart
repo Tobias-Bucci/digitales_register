@@ -471,6 +471,10 @@ void main() {
       // account: login and logout must not touch them. The cached content
       // follows localDataPolicy.
       'lib/server_notifications/server_notification_store.dart': {'key'},
+      // Polls (#131): the random installation ID, created when the user first
+      // votes, and poll and option ids of this installation's votes. Of the
+      // installation, not of an account; logout must not let it vote again.
+      'lib/polls/poll_storage.dart': {'key'},
       // Ids, hashes and times only; emptied on logout.
       'lib/reminder_notifications.dart': {'reminderStoragePreferenceKey'},
       'lib/theme_controller.dart': {
