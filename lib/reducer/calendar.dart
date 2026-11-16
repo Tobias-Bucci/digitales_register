@@ -48,7 +48,7 @@ void _loaded(CalendarState state, Action<CalendarLoadedPayload> action,
         tryParse<CalendarDayBuilder, dynamic>(
           e,
           (dynamic e) => _parseCalendarDay(
-            getMap(getMap(e)!.values.first.values.first)!,
+            calendarDayEntries(e),
             date,
             state.days[date],
           ),
@@ -85,22 +85,84 @@ void _recalculateSubstitutes(CalendarState state,
   );
 }
 
+/// All lesson entries of one day of the calendar response.
+///
+/// The register nests every day as `group → column → hour → entry`. A plain
+/// day has a single group with a single column, but when two lessons run in
+/// parallel the register splits the day into several groups and columns, for
+/// example the first lesson in one group and the parallel lessons, together
+/// with everything after them, in another. Every group and column is read, so
+/// no lesson of the day gets lost (issue #134).
+List<Map> calendarDayEntries(dynamic day) {
+  final entries = <Map>[];
+  void collect(dynamic node, int depth) {
+    if (node == null) return;
+    // An empty group or column arrives as an empty JSON array.
+    if (node is List) {
+      if (depth >= 3) return;
+      for (final dynamic value in node) {
+        collect(value, depth + 1);
+      }
+      return;
+    }
+    final map = getMap(node)!;
+    if (map.containsKey('isLesson') || depth == 3) {
+      entries.add(map);
+      return;
+    }
+    if (depth >= 3) return;
+    for (final dynamic value in map.values) {
+      collect(value, depth + 1);
+    }
+  }
+
+  collect(day, 0);
+  return entries;
+}
+
+String _lessonIdentity(Map entry) {
+  final lesson = getMap(entry["lesson"]) ?? const <dynamic, dynamic>{};
+  final id = lesson["id"];
+  if (id != null) return 'id:$id|${entry["hour"]}';
+  String names(dynamic list, String key) => [
+        for (final dynamic item in getList(list) ?? const <dynamic>[])
+          '${getMap(item)?[key] ?? item}',
+      ].join(',');
+  return [
+    entry["hour"],
+    lesson["toHour"],
+    lesson["classId"] ?? lesson["className"],
+    getMap(lesson["subject"])?["id"] ?? getMap(lesson["subject"])?["name"],
+    names(lesson["teachers"], 'lastName'),
+    names(lesson["rooms"], 'name'),
+  ].join('|');
+}
+
 CalendarDayBuilder _parseCalendarDay(
-  Map day,
+  List<Map> entries,
   UtcDateTime date,
   CalendarDay? oldDay,
 ) {
+  final seen = <String>{};
   return CalendarDayBuilder()
     ..lastFetched = UtcDateTime.now()
     ..date = date
     ..hours = ListBuilder(
-      (day.values.toList()
-            ..removeWhere((dynamic e) => e == null || e["isLesson"] == 0)
-            ..sort(
-              (dynamic a, dynamic b) => getInt(a["hour"])!.compareTo(
-                getInt(b["hour"])!,
-              ),
-            ))
+      (entries.toList()
+            ..removeWhere((Map e) =>
+                e["isLesson"] == 0 ||
+                e["lesson"] == null ||
+                // The same lesson can be listed in more than one column.
+                !seen.add(_lessonIdentity(e)))
+            ..sort((Map a, Map b) {
+              final byHour = (getInt(a["hour"]) ?? 0).compareTo(
+                getInt(b["hour"]) ?? 0,
+              );
+              if (byHour != 0) return byHour;
+              return (getInt(a["lesson"]?["toHour"]) ?? 0).compareTo(
+                getInt(b["lesson"]?["toHour"]) ?? 0,
+              );
+            }))
           .map<CalendarHour>(
         (dynamic h) => tryParse(
           getMap(h)!,

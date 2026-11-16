@@ -17,6 +17,7 @@
 // along with digitales_register.  If not, see <http://www.gnu.org/licenses/>.
 
 import 'package:built_collection/built_collection.dart';
+import 'package:collection/collection.dart';
 import 'package:dr/app_state.dart';
 import 'package:dr/container/calendar_week_container.dart';
 import 'package:dr/data.dart';
@@ -196,50 +197,31 @@ class _HoursChunk extends StatelessWidget {
             borderRadius: BorderRadius.circular(8),
           ),
           child: Column(
-            children: List.generate(
-              displayHours.length * 2 - 1,
-              (n) => n.isEven
-                  ? HourWidget(
-                      hour: displayHours[n ~/ 2],
-                      subjectNicks: subjectNicks,
-                      day: day,
-                      isSelected: selectedHour != null &&
-                          displayHours[n ~/ 2].fromHour <= selectedHour! &&
-                          displayHours[n ~/ 2].toHour >= selectedHour!,
-                      backgroundColor: colorBackground
-                          ? (subjectThemes[displayHours[n ~/ 2].subject] != null
-                              ? AppPalette.subjectTint(
-                                  Color(
-                                    subjectThemes[displayHours[n ~/ 2].subject]!
-                                        .color,
-                                  ),
-                                  Theme.of(context).colorScheme,
-                                  0.25,
-                                )
-                              : Colors.transparent)
-                          : Colors.transparent,
-                      selectedBackgroundColor: colorBackground
-                          ? (subjectThemes[displayHours[n ~/ 2].subject] != null
-                              ? AppPalette.subjectTint(
-                                  Color(
-                                    subjectThemes[displayHours[n ~/ 2].subject]!
-                                        .color,
-                                  ),
-                                  Theme.of(context).colorScheme,
-                                  0.5,
-                                )
-                              : Theme.of(context)
-                                  .colorScheme
-                                  .secondary
-                                  .withAlpha(35))
-                          : Theme.of(context)
-                              .colorScheme
-                              .secondary
-                              .withAlpha(35),
-                    )
-                  : const Divider(
-                      height: 0,
-                    ),
+            children: _layoutDisplayHours(
+              displayHours,
+              divider: () => const Divider(height: 0),
+              laneDivider: () => const VerticalDivider(width: 0),
+              buildHour: (hour) {
+                final theme = subjectThemes[hour.subject];
+                Color? tint(double amount) => colorBackground && theme != null
+                    ? AppPalette.subjectTint(
+                        Color(theme.color),
+                        Theme.of(context).colorScheme,
+                        amount,
+                      )
+                    : null;
+                return HourWidget(
+                  hour: hour,
+                  subjectNicks: subjectNicks,
+                  day: day,
+                  isSelected: selectedHour != null &&
+                      hour.fromHour <= selectedHour! &&
+                      hour.toHour >= selectedHour!,
+                  backgroundColor: tint(0.25) ?? Colors.transparent,
+                  selectedBackgroundColor: tint(0.5) ??
+                      Theme.of(context).colorScheme.secondary.withAlpha(35),
+                );
+              },
             ),
           ),
         ),
@@ -287,6 +269,116 @@ List<CalendarHour> _mergeDisplayHours(List<CalendarHour> hours) {
     );
   }
   return merged;
+}
+
+/// The last lesson hour any of [hours] reaches.
+int _lastHourOf(Iterable<CalendarHour> hours) =>
+    hours.fold<int>(0, (end, hour) => hour.toHour > end ? hour.toHour : end);
+
+/// Splits a day into runs of lessons without a free hour in between. Each
+/// run becomes one card of the week view.
+List<List<CalendarHour>> _hourChunks(Iterable<CalendarHour> hours) {
+  final chunks = <List<CalendarHour>>[];
+  for (final hour in hours) {
+    if (chunks.isEmpty || _lastHourOf(chunks.last) + 1 < hour.fromHour) {
+      chunks.add([hour]);
+    } else {
+      chunks.last.add(hour);
+    }
+  }
+  return chunks;
+}
+
+/// Lays out the lessons of one card from top to bottom.
+///
+/// Lessons that run at the same time, like two groups of a class in hours
+/// 2–3, are placed side by side, each in its own lane, so that every lesson
+/// keeps its height and the lessons after them stay in their rows
+/// (issue #134). [buildHour] must return a [Flexible] sized by the lesson's
+/// length, as [HourWidget] does.
+List<Widget> _layoutDisplayHours(
+  List<CalendarHour> hours, {
+  required Widget Function(CalendarHour hour) buildHour,
+  required Widget Function() divider,
+  required Widget Function() laneDivider,
+}) {
+  final groups = <List<CalendarHour>>[];
+  for (final hour in hours) {
+    if (groups.isEmpty || _lastHourOf(groups.last) < hour.fromHour) {
+      groups.add([hour]);
+    } else {
+      groups.last.add(hour);
+    }
+  }
+  final children = <Widget>[];
+  for (final group in groups) {
+    if (children.isNotEmpty) children.add(divider());
+    if (group.length == 1) {
+      children.add(buildHour(group.single));
+      continue;
+    }
+    final from = group.first.fromHour;
+    final to = _lastHourOf(group);
+    final lanes = <List<CalendarHour>>[];
+    for (final hour in group) {
+      final lane = lanes.firstWhereOrNull(
+        (lane) => lane.last.toHour < hour.fromHour,
+      );
+      if (lane == null) {
+        lanes.add([hour]);
+      } else {
+        lane.add(hour);
+      }
+    }
+    children.add(
+      Flexible(
+        flex: to - from + 1,
+        child: Row(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            for (var i = 0; i < lanes.length; i++) ...[
+              if (i > 0) laneDivider(),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: _laneChildren(
+                    lanes[i],
+                    from: from,
+                    to: to,
+                    buildHour: buildHour,
+                    divider: divider,
+                  ),
+                ),
+              ),
+            ],
+          ],
+        ),
+      ),
+    );
+  }
+  return children;
+}
+
+List<Widget> _laneChildren(
+  List<CalendarHour> lane, {
+  required int from,
+  required int to,
+  required Widget Function(CalendarHour hour) buildHour,
+  required Widget Function() divider,
+}) {
+  final children = <Widget>[];
+  var next = from;
+  for (final hour in lane) {
+    if (hour.fromHour > next) {
+      children.add(Spacer(flex: hour.fromHour - next));
+    } else if (children.isNotEmpty) {
+      children.add(divider());
+    }
+    children.add(buildHour(hour));
+    next = hour.toHour + 1;
+  }
+  if (next <= to) children.add(Spacer(flex: to - next + 1));
+  return children;
 }
 
 bool _canMergeDisplayHour(CalendarHour previous, CalendarHour next) {
@@ -350,19 +442,7 @@ class CalendarDayWidget extends StatelessWidget {
     final today = Day.dateToday();
     final isToday = calendarDay.date == today;
     final colorScheme = Theme.of(context).colorScheme;
-    final chunks = <List<CalendarHour>>[];
-    for (final hour in calendarDay.hours) {
-      if (chunks.isEmpty) {
-        chunks.add([hour]);
-      } else {
-        final last = chunks.last;
-        if (last.last.toHour + 1 < hour.fromHour) {
-          chunks.add([hour]);
-        } else {
-          last.add(hour);
-        }
-      }
-    }
+    final chunks = _hourChunks(calendarDay.hours);
     return Column(
       children: <Widget>[
         Container(
@@ -401,12 +481,12 @@ class CalendarDayWidget extends StatelessWidget {
           for (var i = 0; i < chunks.length; i++) ...[
             Expanded(
               flex: chunks[i].first.fromHour -
-                  (i == 0 ? 0 : chunks[i - 1].last.toHour) -
+                  (i == 0 ? 0 : _lastHourOf(chunks[i - 1])) -
                   1,
               child: Container(),
             ),
             Expanded(
-              flex: chunks[i].last.toHour - chunks[i].first.fromHour + 1,
+              flex: _lastHourOf(chunks[i]) - chunks[i].first.fromHour + 1,
               child: _HoursChunk(
                 hours: chunks[i],
                 subjectNicks: subjectNicks,
@@ -779,14 +859,7 @@ class _GlassDay extends StatelessWidget {
     final scheme = theme.colorScheme;
     final localeTag = Localizations.localeOf(context).toLanguageTag();
     final isToday = calendarDay.date == Day.dateToday();
-    final chunks = <List<CalendarHour>>[];
-    for (final hour in calendarDay.hours) {
-      if (chunks.isEmpty || chunks.last.last.toHour + 1 < hour.fromHour) {
-        chunks.add([hour]);
-      } else {
-        chunks.last.add(hour);
-      }
-    }
+    final chunks = _hourChunks(calendarDay.hours);
     final headerColor =
         isToday ? scheme.onPrimaryContainer : scheme.onSurfaceVariant;
     return Column(
@@ -842,12 +915,12 @@ class _GlassDay extends StatelessWidget {
                     for (var i = 0; i < chunks.length; i++) ...[
                       Expanded(
                         flex: chunks[i].first.fromHour -
-                            (i == 0 ? 0 : chunks[i - 1].last.toHour) -
+                            (i == 0 ? 0 : _lastHourOf(chunks[i - 1])) -
                             1,
                         child: const SizedBox.shrink(),
                       ),
                       Expanded(
-                        flex: chunks[i].last.toHour -
+                        flex: _lastHourOf(chunks[i]) -
                             chunks[i].first.fromHour +
                             1,
                         child: _GlassHoursChunk(
@@ -972,26 +1045,29 @@ class _GlassHoursChunk extends StatelessWidget {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
-              for (var i = 0; i < displayHours.length; i++) ...[
-                if (i > 0)
-                  Divider(
-                    height: 1,
-                    thickness: 1,
-                    color: scheme.outlineVariant.withValues(alpha: 0.6),
-                  ),
-                _GlassHour(
-                  hour: displayHours[i],
+              ..._layoutDisplayHours(
+                displayHours,
+                divider: () => Divider(
+                  height: 1,
+                  thickness: 1,
+                  color: scheme.outlineVariant.withValues(alpha: 0.6),
+                ),
+                laneDivider: () => VerticalDivider(
+                  width: 1,
+                  thickness: 1,
+                  color: scheme.outlineVariant.withValues(alpha: 0.6),
+                ),
+                buildHour: (hour) => _GlassHour(
+                  hour: hour,
                   subjectNicks: subjectNicks,
                   day: day,
                   isSelected: selectedHour != null &&
-                      displayHours[i].fromHour <= selectedHour! &&
-                      displayHours[i].toHour >= selectedHour!,
-                  backgroundColor:
-                      tint(displayHours[i], 0.25) ?? Colors.transparent,
-                  selectedBackgroundColor:
-                      tint(displayHours[i], 0.5) ?? selectedFallback,
+                      hour.fromHour <= selectedHour! &&
+                      hour.toHour >= selectedHour!,
+                  backgroundColor: tint(hour, 0.25) ?? Colors.transparent,
+                  selectedBackgroundColor: tint(hour, 0.5) ?? selectedFallback,
                 ),
-              ],
+              ),
             ],
           ),
         ),

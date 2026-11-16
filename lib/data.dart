@@ -683,7 +683,9 @@ abstract class CalendarDay implements Built<CalendarDay, CalendarDayBuilder> {
   UtcDateTime get date;
   BuiltList<CalendarHour> get hours;
   int get fromHour => hours.firstOrNull?.fromHour ?? 0;
-  int get toHour => hours.lastOrNull?.toHour ?? 0;
+  // Parallel lessons can end later than the lesson listed last.
+  int get toHour =>
+      hours.fold<int>(0, (end, h) => h.toHour > end ? h.toHour : end);
 
   UtcDateTime? get lastFetched;
 
