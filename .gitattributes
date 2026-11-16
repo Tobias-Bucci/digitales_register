@@ -5,3 +5,4 @@ linux/icon.png binary
 tool/*.sh text eol=lf
 tool/*.py text eol=lf
 .github/workflows/*.yaml text eol=lf
+graphify-out/graph.json merge=graphify

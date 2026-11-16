@@ -254,6 +254,12 @@ packages/charts_repo/charts_flutter/example/ios/Flutter/flutter_export_environme
 # graphify-out/graph.json
 # graphify-out/graph.html
 
+# Graphify temporary files and dated snapshots
+graphify-out/.graphify_build_state.json
+graphify-out/.graphify_labels.json.sig
+graphify-out/.graphify_labels.pending.json
+graphify-out/20*/
+
 # ============================================================
 # Claude Code
 # ============================================================
