@@ -1,0 +1,44 @@
+{
+  "schema_version": 1,
+  "server_time": "2026-11-20T10:00:00Z",
+  "poll": {
+    "id": "3d6f0c2e-9b1a-4c55-8e2f-6a7b8c9d0e1f",
+    "type": "single_choice",
+    "question": "Welche Funktion wünschst du dir als Nächstes?",
+    "options": [
+      {
+        "id": "b1f4c2d6-0a3e-4f57-8c19-2d6e7f8a9b0c",
+        "label": "Stundenplan-Widget"
+      },
+      {
+        "id": "c8e2a4f6-1b3d-4a5c-9e7f-0a1b2c3d4e5f",
+        "label": "Notenrechner"
+      },
+      {
+        "id": "d2a6b8c0-3e5f-4b71-8d9e-1f2a3b4c5d6e",
+        "label": "Dunkles App-Symbol"
+      }
+    ],
+    "opens_at": "2026-11-16T08:00:00Z",
+    "closes_at": "2026-11-20T09:30:00Z",
+    "show_results": true
+  },
+  "status": "closed",
+  "results": {
+    "total_votes": 12,
+    "options": [
+      {
+        "id": "b1f4c2d6-0a3e-4f57-8c19-2d6e7f8a9b0c",
+        "votes": 7
+      },
+      {
+        "id": "c8e2a4f6-1b3d-4a5c-9e7f-0a1b2c3d4e5f",
+        "votes": 4
+      },
+      {
+        "id": "d2a6b8c0-3e5f-4b71-8d9e-1f2a3b4c5d6e",
+        "votes": 1
+      }
+    ]
+  }
+}

@@ -9,6 +9,20 @@
 > consent version stays **5**: no optional purpose changed, only the description
 > of required processing and recipients.
 
+> 2026-11-16 addition: polls (issue #131). **This adds a persistent
+> identifier.** When the user votes for the first time, the app creates a random
+> installation ID (UUIDv4 from `Random.secure`, no device property) and keeps it
+> in SharedPreferences (`polls.installationId`), with poll and option ids of its
+> votes (`polls.votes`). The ID is sent only in the body of
+> `POST /api/v1/polls/{id}/vote`, never when a poll or the announcements are read.
+> The server keeps `HMAC-SHA256(key, poll_id ":" id)` per poll, not the ID, and
+> deletes those hashes a configurable number of days (default 14) after the poll
+> closed; the counts stay. See the row "Polls". The consent version stays **5**:
+> voting is a required part of a feature the user starts, not an optional
+> purpose. Limits: reinstalling or deleting app data creates a new ID, and the
+> web voting page has its own ID in `localStorage`, so one person can vote once
+> in the app and once per browser.
+
 > 2026-11-07 addition: first-sync baseline for announcements (issue #103). One
 > boolean inside the existing device-scoped record, see the row "App
 > announcements". Nothing is sent to the server and no new key is stored.
@@ -52,6 +66,7 @@ The app uses the selected school's existing API, not a newly introduced first-pa
 | Register notifications and email preference / register API | In-app notifications and provider email setting; `notifications_enabled` reflects known email preference, not push permission | Message content/account preference | Provider retention unknown; cache/account controls | Necessary communication; usage consent only for coarse optional property | Same |
 | Personal school notifications (#82, #133), register API | Background checks on the device sign in with the saved login and read the unread feed and, for detailed text or new homework, the dashboard (at most hourly, or right after a new grade). Local system notifications only; nothing is sent to an app-owned server | Grades, subjects, absences and message subjects; personal education data, visible in notifications and on the lock screen when "Show details" is on | Per account in the AES-encrypted notification history: event identities, the last dashboard entries (id, day, subject, grade, short text) and notified keys (at most 1000), plus a check log without school data (last 30). Removing the account deletes them; switching details, a category or permission off and on starts a new baseline | Explicit opt-in per account; details are off for accounts that accepted before #133. Legal review required | Android, iOS (background); macOS foreground only |
 | External links, manual support form, GitHub update queries | Browser/OS links and direct HTTP to external providers; network metadata processed there. Error form has no prefilled raw exception/URL/payload | IP/network context, user-supplied support text | External provider rules; no app-established TTL | Requested support/links/update functionality; Legal review required | Same |
+| Polls, public API (#131) | Only when the user votes: `option_id` and the random installation ID (`voter`) in a POST body to `api.digitalesregister.com`, plus connection data (IP address, user agent). Reading a poll (`GET /api/v1/polls/{id}?lang=`) sends no identifier. Recipients: the notification server, Cloudflare as a proxy | Persistent pseudonymous installation identifier linked to a poll answer. Server side only a keyed hash per poll (not linkable across polls, not reversible without the server key), the answer, aggregated counts and votes per hour; no time, IP address, account, school or device data | Installation ID and poll/option ids of own votes in SharedPreferences, installation scoped, kept across logout, removed with the app data. Server: hashes and individual votes deleted `POLL_RETENTION_DAYS` (default 14) after the poll closed; counts kept until the poll is deleted | Required for the feature the user starts by voting; no optional consent, no events. Legal basis to be reviewed (legitimate interest is the current assumption) | All platforms including web; the web voting page outside the app uses its own ID in `localStorage` |
 | App announcements, public API | Polling `api.digitalesregister.com` while the app is in the foreground, with `platform`, `app_version` (no build number) and `lang`, plus connection data of any HTTPS request (IP address, user agent). Recipients: the notification server, and Cloudflare as a proxy | Announcements are public and hold no user data. The request is anonymous, but IP addresses are personal data at Cloudflare | Read state, alert state and dismissals in SharedPreferences, device scoped, kept across logout. The same record holds a flag that the first complete list was received; that list is recorded as read and announced so a new installation is not flooded (issue #103). No new key, no content, no identifier. Unread content in a separate cache entry that follows `localDataPolicy`. Read records are removed 180 days after the last listing; dismissal tombstones until app data is deleted | Required for the feature; does not depend on any optional consent and sends no events. Legal basis to be reviewed | Android, iOS, Windows, Linux, macOS; web once a web build exists |
 
 ## Notification server and Cloudflare

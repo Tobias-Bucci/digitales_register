@@ -1,0 +1,6 @@
+{
+  "error": {
+    "code": "poll_closed",
+    "message": "this poll is closed"
+  }
+}

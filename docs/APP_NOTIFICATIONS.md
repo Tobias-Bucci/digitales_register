@@ -85,6 +85,22 @@ from the local reminders, which is why the app calls them "App-Mitteilungen".
   `appNotifications.type.*` text (`serverNotificationTypeLabel`), and any other
   key keeps the server's `label`.
 
+## Polls (#131)
+
+An announcement may carry a `poll` object. `ServerNotification.poll` is set only
+for a type the app knows (`knownServerPollTypes` in `lib/polls/poll_models.dart`)
+and a payload that parses completely; otherwise the announcement stays a plain
+one, and its external link opens the web voting page. With a poll, both detail
+views show "Zur Umfrage" instead of that link, because the link is the same poll
+in the browser. The poll screen (`lib/ui/polls/server_poll_page.dart`) reads the
+poll without any identifier, and only a vote sends the random installation ID
+(`lib/polls/poll_storage.dart`). A `409` is success with the first choice; any
+other failure shows "voting is not possible right now" and blocks nothing. The
+result shows after this device voted or once the poll closed, and only if the
+poll shows results. Polls live in `lib/polls/` and `lib/ui/polls/`, apart from
+this feature's code, whose boundary test forbids requests other than `GET`.
+Design and version rules: [POLLS.md](POLLS.md).
+
 ## Timing
 
 Foreground only. The suggested `poll_after_seconds` is bounded to 60 s to 1 h, the

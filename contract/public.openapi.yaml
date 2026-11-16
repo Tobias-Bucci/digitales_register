@@ -1,11 +1,12 @@
 openapi: 3.1.0
 info:
   title: Digitales Register Notifications API
-  version: 1.1.0
-  summary: Public, anonymous read API for in-app notifications.
+  version: 1.2.0
+  summary: Public, anonymous API for in-app notifications and polls.
   description: |
     Polling API consumed by the Digitales Register app on web, Android, iOS,
-    Windows, Linux and macOS. No login, no device identifiers.
+    Windows, Linux and macOS. No login. Reading sends no device identifier;
+    only a vote carries the voter's random installation ID (see Polls).
 
     **Not confidential.** `platform` and `app_version` are supplied by the
     client and are not authenticated. Audience targeting decides what is
@@ -28,6 +29,20 @@ info:
     **Compatibility.** Ignore unknown fields. `schema_version` increases only
     for breaking changes. Map unknown `type.icon` values to a safe fallback and
     treat an unknown internal `link.target` as no link.
+
+    **Polls (1.2.0, additive).** A notification may carry a `poll` object.
+    Clients that do not know `poll`, or its `type`, show the notification as
+    usual: every poll notification also has an external `link` to a web page
+    where anyone can vote, and its text makes sense without a poll screen.
+    Polls never use an internal link.
+
+    One vote per installation: the client sends a random UUID it created for
+    itself (`voter`) with the vote and nothing else. The server keeps only a
+    keyed hash of it per poll, so votes of different polls cannot be linked,
+    and answers a second vote with `409` and the first choice. Results are
+    aggregated counts; no per-voter data is ever returned. Reinstalling or
+    clearing storage creates a new ID, so counts are votes per device, not
+    persons.
   license:
     name: GNU General Public License v3.0 or later
     identifier: GPL-3.0-or-later
@@ -36,6 +51,7 @@ servers:
     description: Production. Clients must take the base URL from configuration.
 tags:
   - name: notifications
+  - name: polls
   - name: health
 paths:
   /api/v1/notifications:
@@ -140,6 +156,133 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Error'
+  /api/v1/polls/{id}:
+    get:
+      operationId: getPoll
+      tags: [polls]
+      summary: State of one poll, and its result if voters may see it.
+      description: |
+        Sends no identifier. `results` is present when the poll shows results
+        to voters (while open, and after closing unless the poll disappears
+        when it closes); it is the same for every caller. Revalidate with
+        `If-None-Match` like the notifications list.
+
+        `404` means the poll does not exist, has not started yet or was
+        deleted. Treat it like a revoked notification: nothing can be voted.
+      parameters:
+        - $ref: '#/components/parameters/PollId'
+        - name: lang
+          in: query
+          required: false
+          description: Same rules as for the notifications list.
+          schema:
+            type: string
+            maxLength: 35
+            default: de
+        - name: If-None-Match
+          in: header
+          required: false
+          schema:
+            type: string
+      responses:
+        '200':
+          description: The poll.
+          headers:
+            ETag:
+              $ref: '#/components/headers/ETag'
+            Cache-Control:
+              $ref: '#/components/headers/CacheControl'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PollState'
+        '304':
+          description: Unchanged since the supplied `ETag`. No body.
+          headers:
+            ETag:
+              $ref: '#/components/headers/ETag'
+            Cache-Control:
+              $ref: '#/components/headers/CacheControl'
+        '400':
+          description: A parameter is invalid.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '404':
+          description: No such poll, or it has not started.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '429':
+          $ref: '#/components/responses/RateLimited'
+        '500':
+          $ref: '#/components/responses/ServerError'
+  /api/v1/polls/{id}/vote:
+    post:
+      operationId: votePoll
+      tags: [polls]
+      summary: Casts the one vote of this installation.
+      description: |
+        Idempotent per installation and poll: repeating a vote, also after a
+        timeout, returns `409 already_voted` with the choice that was stored
+        first. Clients treat that as success and show the stored choice.
+
+        Map any status not listed here, and any error code they do not know,
+        to a neutral "voting is not possible right now".
+      parameters:
+        - $ref: '#/components/parameters/PollId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/VoteRequest'
+      responses:
+        '200':
+          description: The vote was stored.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/VoteReceipt'
+        '400':
+          description: |
+            `invalid_body`, `invalid_parameter` (`field` is `option_id` or
+            `voter`), or `unsupported_client` for a request `schema_version`
+            this server does not support.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '404':
+          description: No such poll, or it has not started.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '409':
+          description: This installation has already voted. Carries the first choice.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AlreadyVoted'
+        '410':
+          description: The poll is closed (`poll_closed`).
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '413':
+          description: The body is too large.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '429':
+          $ref: '#/components/responses/RateLimited'
+        '500':
+          $ref: '#/components/responses/ServerError'
   /health/live:
     get:
       operationId: healthLive
@@ -171,6 +314,33 @@ paths:
               schema:
                 $ref: '#/components/schemas/Error'
 components:
+  parameters:
+    PollId:
+      name: id
+      in: path
+      required: true
+      schema:
+        type: string
+        format: uuid
+  responses:
+    RateLimited:
+      description: Too many requests. Wait for `Retry-After` seconds.
+      headers:
+        Retry-After:
+          description: Seconds to wait before retrying.
+          schema:
+            type: integer
+            minimum: 1
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+    ServerError:
+      description: Unexpected server error.
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
   headers:
     ETag:
       description: Weak validator of the complete applicable collection. Opaque; send it back unchanged.
@@ -246,6 +416,8 @@ components:
           oneOf:
             - $ref: '#/components/schemas/Link'
             - type: 'null'
+        poll:
+          $ref: '#/components/schemas/Poll'
     NotificationType:
       type: object
       additionalProperties: false
@@ -265,8 +437,8 @@ components:
           type: string
           description: |
             One of the allowlisted icon names `info`, `update`, `wrench`,
-            `warning`, `bell`, `calendar`, `megaphone`, `shield`, `star`. New
-            names can appear; map unknown names to a fallback.
+            `warning`, `bell`, `calendar`, `megaphone`, `shield`, `star`,
+            `poll`. New names can appear; map unknown names to a fallback.
         critical:
           type: boolean
           description: If true the popup must be closed manually.
@@ -298,6 +470,172 @@ components:
               format: uri
               pattern: '^https://'
               maxLength: 2048
+    Poll:
+      type: object
+      additionalProperties: false
+      description: |
+        Present only on poll notifications (1.2.0). Render a poll screen only
+        for a `type` this client knows; otherwise show the notification and its
+        `link`. A notification with a broken `poll` object is a plain
+        notification too.
+      required: [id, type, question, options, opens_at, closes_at, show_results]
+      properties:
+        id:
+          type: string
+          format: uuid
+          description: Poll id, used by the poll endpoints. Not the notification id.
+        type:
+          type: string
+          pattern: '^[a-z][a-z0-9_]{1,31}$'
+          description: |
+            `single_choice`: exactly one option per vote. New types can appear;
+            clients that do not know a type fall back to the notification.
+        question:
+          type: string
+          minLength: 1
+          maxLength: 120
+          description: Plain text, in the requested language or German.
+        options:
+          type: array
+          minItems: 2
+          maxItems: 10
+          items:
+            $ref: '#/components/schemas/PollOption'
+        opens_at:
+          $ref: '#/components/schemas/Timestamp'
+        closes_at:
+          $ref: '#/components/schemas/Timestamp'
+        show_results:
+          type: boolean
+          description: Whether voters may see the aggregated result.
+    PollOption:
+      type: object
+      additionalProperties: false
+      required: [id, label]
+      properties:
+        id:
+          type: string
+          pattern: '^[A-Za-z0-9_-]{1,36}$'
+          description: Stable for the life of the poll. Send it back as `option_id`.
+        label:
+          type: string
+          minLength: 1
+          maxLength: 200
+          description: Plain text.
+    PollResults:
+      type: object
+      additionalProperties: false
+      description: Aggregated counts. Votes per installation, not per person.
+      required: [total_votes, options]
+      properties:
+        total_votes:
+          type: integer
+          minimum: 0
+        options:
+          type: array
+          items:
+            type: object
+            additionalProperties: false
+            required: [id, votes]
+            properties:
+              id:
+                type: string
+                pattern: '^[A-Za-z0-9_-]{1,36}$'
+              votes:
+                type: integer
+                minimum: 0
+    PollState:
+      type: object
+      additionalProperties: false
+      required: [schema_version, server_time, poll, status, results]
+      properties:
+        schema_version:
+          type: integer
+          const: 1
+        server_time:
+          $ref: '#/components/schemas/Timestamp'
+        poll:
+          $ref: '#/components/schemas/Poll'
+        status:
+          type: string
+          description: |
+            `open` accepts votes, `closed` does not (`closes_at` has passed).
+            Treat any other value as "cannot vote".
+          examples: [open, closed]
+        results:
+          oneOf:
+            - $ref: '#/components/schemas/PollResults'
+            - type: 'null'
+    VoteRequest:
+      type: object
+      additionalProperties: true
+      description: |
+        Unknown fields are accepted and ignored, so newer clients can send more
+        without breaking older servers.
+      required: [option_id, voter]
+      properties:
+        option_id:
+          type: string
+          maxLength: 36
+        voter:
+          type: string
+          format: uuid
+          description: |
+            Random UUID (version 4) the client created for itself and keeps
+            locally. Not derived from any device property. Sent only with a
+            vote.
+        schema_version:
+          type: integer
+          default: 1
+          description: Request format. A value the server does not support gets `400 unsupported_client`.
+        attestation:
+          type: object
+          description: |
+            Reserved for a later platform attestation (Play Integrity, App
+            Attest). Ignored today; do not send it yet.
+    VoteReceipt:
+      type: object
+      additionalProperties: false
+      required: [schema_version, poll_id, option_id, results]
+      properties:
+        schema_version:
+          type: integer
+          const: 1
+        poll_id:
+          type: string
+          format: uuid
+        option_id:
+          type: string
+          description: The stored choice.
+        results:
+          oneOf:
+            - $ref: '#/components/schemas/PollResults'
+            - type: 'null'
+    AlreadyVoted:
+      type: object
+      additionalProperties: false
+      required: [error, poll_id, option_id, results]
+      properties:
+        error:
+          type: object
+          additionalProperties: false
+          required: [code, message]
+          properties:
+            code:
+              type: string
+              const: already_voted
+            message:
+              type: string
+        poll_id:
+          type: string
+          format: uuid
+        option_id:
+          type: string
+          description: The choice stored with the first vote.
+        results:
+          oneOf:
+            - $ref: '#/components/schemas/PollResults'
+            - type: 'null'
     Timestamp:
       type: string
       format: date-time
@@ -324,7 +662,7 @@ components:
             code:
               type: string
               description: Stable machine-readable code.
-              examples: [invalid_parameter, invalid_cursor, rate_limited, not_found, internal_error]
+              examples: [invalid_parameter, invalid_cursor, invalid_body, rate_limited, not_found, poll_closed, unsupported_client, internal_error]
             message:
               type: string
               description: Human-readable English message. Do not parse it.

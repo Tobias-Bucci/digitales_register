@@ -1,0 +1,50 @@
+{
+  "schema_version": 1,
+  "server_time": "2026-11-16T09:00:00Z",
+  "poll_after_seconds": 300,
+  "next_cursor": null,
+  "notifications": [
+    {
+      "id": "7c1e5b9a-2d4f-4e8b-9a6c-1f2e3d4c5b6a",
+      "revision": 1,
+      "attention_revision": 1,
+      "title": "Welche Funktion wünschst du dir als Nächstes?",
+      "body": "Stimm in der App oder im Browser ab: eine Stimme pro Gerät, anonym. Die Umfrage läuft bis 30. November.",
+      "type": {
+        "key": "poll",
+        "label": "Umfrage",
+        "color": "#6B4FA3",
+        "icon": "poll",
+        "critical": false
+      },
+      "published_at": "2026-11-16T08:00:00Z",
+      "expires_at": "2026-12-07T22:00:00Z",
+      "link": {
+        "kind": "external",
+        "target": "https://www.digitalesregister.com/umfrage/3d6f0c2e-9b1a-4c55-8e2f-6a7b8c9d0e1f"
+      },
+      "poll": {
+        "id": "3d6f0c2e-9b1a-4c55-8e2f-6a7b8c9d0e1f",
+        "type": "single_choice",
+        "question": "Welche Funktion wünschst du dir als Nächstes?",
+        "options": [
+          {
+            "id": "b1f4c2d6-0a3e-4f57-8c19-2d6e7f8a9b0c",
+            "label": "Stundenplan-Widget"
+          },
+          {
+            "id": "c8e2a4f6-1b3d-4a5c-9e7f-0a1b2c3d4e5f",
+            "label": "Notenrechner"
+          },
+          {
+            "id": "d2a6b8c0-3e5f-4b71-8d9e-1f2a3b4c5d6e",
+            "label": "Dunkles App-Symbol"
+          }
+        ],
+        "opens_at": "2026-11-16T08:00:00Z",
+        "closes_at": "2026-11-30T22:00:00Z",
+        "show_results": true
+      }
+    }
+  ]
+}
