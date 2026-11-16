@@ -1,10 +1,13 @@
 # ============================================================
 # Digitales Register - Git Ignore
 # Flutter / Dart / Android / iOS / macOS / Windows / Linux
-# Firebase / CI / Signing / Local Development
+# Firebase / CI / Signing / Local Development / Graphify
 # ============================================================
 
+# ============================================================
 # General temporary and system files
+# ============================================================
+
 *.class
 *.log
 *.pyc
@@ -15,20 +18,26 @@
 *.orig
 *.rej
 *~
+
 .DS_Store
 Thumbs.db
 Desktop.ini
+
 .atom/
 .buildlog/
 .history/
 .svn/
 
+# ============================================================
 # IDEs and editors
+# ============================================================
+
 *.iml
 *.ipr
 *.iws
 .idea/
 .vscode/
+
 *.suo
 *.user
 *.userosscache
@@ -37,20 +46,28 @@ Desktop.ini
 # Eclipse / Buildship settings in local packages
 packages/uni_links/**/**/.settings/
 
+# ============================================================
 # Flutter / Dart / Pub
+# ============================================================
+
 **/doc/api/
 **/ios/Flutter/.last_build_id
+
 **/.gradle/
 **/.kotlin/
 **/.dart_tool/
+
 .flutter-plugins
 .flutter-plugins-dependencies
 .packages
+
 .pub-cache/
 .pub/
+
 **/build/
 
-# Web
+# Generated Dart files
+*.g.dart
 
 # Debug symbols and obfuscation
 app.*.symbols
@@ -59,19 +76,29 @@ app.*.map.json
 # Exceptions
 !/packages/flutter_tools/test/data/dart_dependencies_test/**/.packages
 
-# Generated Dart files
-**.g.dart
+# ============================================================
+# Web
+# ============================================================
 
+# Add project-specific web build artifacts here if necessary.
+
+# ============================================================
 # Temporary tests and reports
+# ============================================================
+
 **/test/linux
 /test/**/failures/
+
 /flutter_*.log
 /AUDIT_REPORT/
 
 # Private requests and answers
 **/lib/requests/
 
+# ============================================================
 # Vendored plugin examples
+# ============================================================
+
 packages/firebase_analytics/example/
 packages/package_info_plus/example/
 packages/flutterfire/**/example/
@@ -106,17 +133,26 @@ packages/flutterfire/**/example/
 *.cer
 *.mobileprovision
 *.provisionprofile
+
 *.p8.bak
 *.p12.bak
 
-# Android signing
+# ============================================================
+# Android signing and local configuration
+# ============================================================
+
 android/key.properties
 android/*.jks
+
 **/key.properties
 **/local.properties
 
+# ============================================================
 # Microsoft Store signing
+# ============================================================
+
 tool/microsoft_store.local.psd1
+
 *.msix
 *.msixbundle
 
@@ -139,6 +175,7 @@ firebase-debug.*.log
 firestore-debug.log
 database-debug.log
 ui-debug.log
+
 .firebase/
 firebase-export/
 firebase-emulator-data/
@@ -173,8 +210,10 @@ macos/Flutter/GeneratedPluginRegistrant.swift
 *.pbxuser
 *.perspectivev3
 *.xcuserstate
+
 *.xcworkspace/xcuserdata/
 *.xcodeproj/xcuserdata/
+
 *.xcscmblueprint
 *.xccheckout
 
@@ -182,6 +221,7 @@ macos/Flutter/GeneratedPluginRegistrant.swift
 *.xcarchive
 *.ipa
 *.dSYM/
+
 DerivedData/
 
 # Local Xcode project backups
@@ -192,12 +232,46 @@ DerivedData/
 # ============================================================
 
 .flatpak-builder/
-build-dir/
-repo/
+
+# Only ignore root-level Flatpak build directories
+/build-dir/
+/repo/
+
 # Local Flutter export environment (contains local paths)
 packages/charts_repo/charts_flutter/example/ios/Flutter/flutter_export_environment.sh
 
+# ============================================================
+# Graphify
+# ============================================================
 
+# IMPORTANT:
+# graphify-out/ is intentionally NOT ignored.
+# The knowledge graph, report and HTML visualization
+# should be version-controlled and can be published on GitHub.
 
-CLAUDE.md
-.claude
+# Do not ignore:
+# graphify-out/GRAPH_REPORT.md
+# graphify-out/graph.json
+# graphify-out/graph.html
+
+# ============================================================
+# Claude Code
+# ============================================================
+
+# IMPORTANT:
+# CLAUDE.md and .claude/ are intentionally NOT ignored.
+# Project instructions, Graphify skill and project settings
+# should be version-controlled.
+
+# Ignore only local Claude settings and private data.
+.claude/settings.local.json
+.claude/*.local.json
+
+# ============================================================
+# End
+# ============================================================
+graphify-out/cache/
+
+graphify-out/.graphify_python
+graphify-out/.graphify_root
+.claude/launch.json
