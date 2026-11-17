@@ -60,13 +60,21 @@ Feature folders group the non-UI code of one feature:
 | `theme/` | Palette and design tokens |
 | `web_app/` | Web-only entry points and routing |
 
-Cross-cutting services (network `wrapper.dart`, analytics and diagnostics,
-persistence, calendar sync, school notifications) are still files in `lib/`.
+Cross-cutting services (network `wrapper.dart` with the register-page parser
+`school_config_parser.dart`, analytics and diagnostics, persistence, calendar
+sync, school notifications) are still files in `lib/`. All requests go through
+`Wrapper.send`/`sendBytes`, which share one pipeline (`_sendInSession`):
+sign-in, the request, the network protocol and the retries after an expired
+session.
 
 Most pages exist in two designs that users choose between in the settings:
 `x.dart` (Legacy) and `x_new.dart` (new design), often as a `part` of the
-Legacy file. Both stay; share logic between them instead of copying it. The
-settings sub-pages are parts in `ui/settings/`.
+Legacy file. Both stay; share logic between them instead of copying it.
+
+Large pages keep their state in the library file and their sub-widgets in
+`part`s in a folder of the same name: `ui/settings/` (settings sub-pages),
+`ui/days/` (dashboard header, reminder dialog, day entries) and
+`ui/absences/` (future-absence dialog, statistics).
 
 ## Rules that are easy to break
 

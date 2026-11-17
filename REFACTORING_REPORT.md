@@ -35,7 +35,9 @@ any more, measured with the graph); two bugs were fixed with a regression
 test; duplicated logic was consolidated into shared helpers; dead code and
 no-op logging were removed; four self-contained groups of files moved into
 feature folders; an architecture map was added; the knowledge graph was
-updated.
+updated. A second pass (section J, 8 more commits) took the register-page
+parser and the duplicated request pipeline out of the network wrapper,
+split `days.dart` and `absences_page.dart`, and closed smaller items.
 
 **Final state.** Analyzer clean, all 3,532 tests pass (the 3,531 existing
 ones plus one new regression test), formatting unchanged apart from files
@@ -51,23 +53,24 @@ network wrapper still reports offline state through the global store.
 
 | Measure | Value |
 |---|---|
-| Dart files in `lib/` (without generated) | 287 → 305 (measured) |
-| Lines in `lib/` (without generated) | 99,628 → 99,620 (measured) |
-| Dart files directly in `lib/` | 70 → 57 (measured) |
-| Files changed vs `main` (without `graphify-out/`) | 146: 102 modified, 20 created, 10 deleted, 14 renamed (measured, `git diff -M`) |
-| Lines changed vs `main` (without `graphify-out/`) | +5,796 / −5,791 (measured; most are moves) |
+| Dart files in `lib/` (without generated) | 287 → 311 (measured) |
+| Lines in `lib/` (without generated) | 99,628 → 99,738 (measured) |
+| Dart files directly in `lib/` | 70 → 58 (measured) |
+| Files changed vs `main` (without `graphify-out/` and this report) | 156: 106 modified, 26 created, 10 deleted, 14 renamed (measured, `git diff -M`) |
+| Lines changed vs `main` (without `graphify-out/` and this report) | +8,779 / −8,648 (measured; most are moves) |
 | Files analyzed by the four audit agents | about 290 `lib/` files plus tests and platform folders (estimate) |
-| God files split | 2 (`middleware.dart` 3,160 → 919 lines, `settings_page_widget.dart` 3,606 → 1,699 lines) |
+| Large files split | `middleware.dart` 3,160 → 919, `settings_page_widget.dart` 3,606 → 1,699, `days.dart` 2,100 → 947, `absences_page.dart` 1,609 → 262, `wrapper.dart` 1,216 → 971 lines (measured with `wc -l`) |
 | Layering leaks removed | 4 service files no longer import UI or show dialogs (graph: non-UI → UI import edges from service files 3 → 0) |
-| Duplicate implementations consolidated | 9 groups (21 copies) — see D |
+| Duplicate implementations consolidated | 11 groups (25 copies) — see D and J |
 | Dead code removed | 1 page, 9 images (≈94 KB), 33 texts × 4 languages, 9 unused declarations, 1 commented-out function, 1 no-op logging function with 20 call sites |
-| Bugs fixed | 1 crash-prone dialog, 8 unguarded state updates after an await, 1 leaked controller, 1 possible queue deadlock |
+| Bugs fixed | 1 crash-prone dialog, 8 unguarded state updates after an await, 1 leaked controller, 1 possible queue deadlock, 1 lost stack trace |
 | Tests | 3,531 → 3,532 (1 regression test added, 0 removed or weakened) |
 
-The total size of `lib/` barely changed: the cleanup commits removed about
-455 lines net (measured per commit), which is offset by the licence headers,
-`part of`/import preambles and file comments of the 19 new files (about 410
-lines, measured) and the new dialog widget. The value of this work is in
+The total size of `lib/` barely changed (+110 lines): the cleanup commits of
+the first pass removed about 455 lines net (measured per commit), which is
+offset by the licence headers, `part of`/import preambles and file comments
+of the new files (about 410 lines for the 19 files of the first pass,
+measured) and the new dialog widget. The value of this work is in
 structure, not in line count.
 
 ## C. Architecture
@@ -185,12 +188,20 @@ were kept.
 
 ## E. Graphify analysis
 
-| | Before (`cc469e70`) | After (`98253a8a`) |
-|---|---|---|
-| Nodes | 11,695 | 11,800 |
-| Edges | 18,994 | 19,422 |
-| Communities | 339 | 344 |
-| Scope | `lib/`, `test/`, `CLAUDE.md` | same |
+| | Before (`cc469e70`) | After pass 1 (`98253a8a`) | After pass 2 |
+|---|---|---|---|
+| Nodes | 11,695 | 11,800 | 11,853 |
+| Edges | 18,994 | 19,422 | 19,616 |
+| Communities | 339 | 344 | 351 |
+| Import cycles | none | none | none |
+| Scope | `lib/`, `test/`, `CLAUDE.md` | same | same |
+
+Degree of a library node is not a measure of these splits: Graphify
+attributes the symbols of `part` files to their library and adds an
+`includes` edge per part, so `days.dart` went from 183 to 206 and
+`settings_page_widget.dart` from 248 to 305 although each file shrank by
+more than half. Real extractions do show: `wrapper.dart` fell from 119 to
+104 once the parser became its own library (degree 30).
 
 The counts grew slightly because the splits created more files (each file is
 a node with its own import edges). That is expected and is not, by itself,
@@ -228,7 +239,7 @@ normalized from the worktree path to the repository path.
 |---|---|---|
 | `dart format` | 30 files differ, all pre-existing (baseline 31) | Baseline: 31 files (15 lib, 16 test) already differed from `dart format`. Only touched files were formatted; the pure moves kept their original formatting. |
 | `flutter analyze` | No issues found | Baseline: No issues found. Run after every group of changes. `analysis_options.yaml` was not changed; no lint was disabled. |
-| `flutter test` | 3,532 passed, 12 skipped, 0 failed (final run) | Baseline: 3,531 passed, 12 skipped, 0 failed. Full suite run after each major group (7 full runs including baseline and final), targeted tests after each change. One run had an intermittent hang, see below. |
+| `flutter test` | 3,532 passed, 12 skipped, 0 failed (final run) | Baseline: 3,531 passed, 12 skipped, 0 failed. Full suite run after each major group (9 full runs including baseline and the final run after the second pass), targeted tests after each change. One run had an intermittent hang, see below. |
 | Regression test | added | `test/ui/target_grade_calculator_test.dart`: fails on the old code, passes now |
 | Additional checks | done | `dart analyze test tool`: 0 errors after the moves; repository-wide reference searches before each deletion; line-for-line verification scripts for both splits |
 
@@ -275,7 +286,24 @@ advisable.
 | `98253a8a` | docs: add an architecture map and guard the background entry point |
 | `c0805eea` | chore(graphify): update the knowledge graph after the refactoring |
 
-This report is the next commit. The branch is pushed to `origin/refactor/full-codebase-cleanup` as a new remote branch (no force push, no history rewrite); `main` is untouched.
+| `83c34ed6` | docs: add the refactoring report |
+
+Second pass:
+
+| Commit | Message |
+|---|---|
+| `8bfe18cf` | refactor(network): move the register-page parser out of the wrapper |
+| `ce6a2a4a` | refactor(network): one request pipeline for send and sendBytes |
+| `6a4ffe00` | refactor(notifications): name the secure-storage keys of the service |
+| `1d748df0` | fix(reminders): keep the stack trace when plugin start-up fails |
+| `51f427a1` | refactor(exams): one place for the rules of a study phase form |
+| `a427e247` | refactor(dashboard): move the parts of the day list out of days.dart |
+| `985a8ea4` | refactor(absences): move the dialog and statistics out of the page file |
+| `b367d0d2` | refactor: name the account analytics properties, trace scheduler failures |
+
+The last commit updates the architecture map, the knowledge graph and this
+report. The branch is pushed to `origin/refactor/full-codebase-cleanup`
+(no force push, no rewrite of pushed history); `main` is untouched.
 
 Final working tree: clean apart from three generated Windows plugin files
 that every `flutter pub get` rewrites with different line endings (no content
@@ -291,19 +319,15 @@ High priority:
   split into a store, a background sync and a preferences controller is
   possible but its shared mutable state and static mutexes make it a design
   task for the owner. The file must not move (background entry point).
-- **Copy-pasted loading state machine** in `class_register_page.dart`,
-  `homework_summary_page.dart` and `course_materials_page.dart` (about 300
-  lines each share fields, `_initialize`, `_refresh`, `_applySnapshot`). The
-  copies differ in error handling, so a shared loader needs careful tests
-  first.
 
 Medium priority:
 
 - `test/logout_persistence_test.dart` hung once in seven full runs (section
   F); worth investigating with repeated full runs on `main` and on this branch.
-- `wrapper.dart`: `send` and `sendBytes` are about 80 % alike; the HTML
-  config parser could move to its own file; the wrapper still reports offline
-  state through the global `actions` of `main.dart`.
+- `wrapper.dart` still reports offline state through the global `actions`
+  of `main.dart` (a callback like `onRequestTwoFactorCode` would remove it).
+- Three pages (class register, homework summary, course materials) share a
+  copied loading state machine; see section J for why it was kept.
 - `android_widget/android_widget_service.dart` pops to the dashboard through
   the navigator keys (routing glue outside the routing middleware).
 - `GradesChart` creates a `ValueNotifier` in a `StatelessWidget`, so a rebuild
@@ -363,3 +387,48 @@ Most significant:
 - Docs: new `docs/ARCHITECTURE.md`, `docs/STORE_PRIVACY_CHECKLIST.md` (no
   donation links any more), this report.
 - `graphify-out/`: updated graph, report, HTML, labels and manifest.
+- Second pass: `lib/school_config_parser.dart` (new), `lib/wrapper.dart`,
+  `lib/school_notification_service.dart`, `lib/exam_study_plan.dart`, new parts
+  in `lib/ui/days/` and `lib/ui/absences/`; see section J.
+
+## J. Second pass
+
+A second pass over the remaining debt of section H, again guided by the
+updated graph (the network wrapper and the largest UI files were the
+remaining hotspots) and verified after each step.
+
+**Implemented**
+
+| Commit | Change |
+|---|---|
+| `8bfe18cf` | The register-page HTML parser (145 lines of static scraping) moved from `wrapper.dart` to `school_config_parser.dart` (`parseSchoolConfig`, `isSchoolLoginPage`). |
+| `ce6a2a4a` | `Wrapper.send` and `sendBytes` share one request pipeline (`_sendInSession`) instead of two 70-line copies that had already drifted. Retries still re-enter the public methods. |
+| `6a4ffe00` | The six secure-storage keys of the school notification service are named constants instead of 42 string literals (values unchanged; tests keep the literals as a format check). |
+| `1d748df0` | Fix: the reminder plugin start-up rethrew its error without the original stack trace. |
+| `51f427a1` | The study-phase form rules (id, default effort, insert and sort) are shared by both exam-calendar designs (`StudyPhase.fromForm`, `putStudyPhase`). |
+| `a427e247` | `days.dart` 2,096 → 948 lines: reminder dialog, dashboard header and day entries are parts in `ui/days/`. |
+| `985a8ea4` | `absences_page.dart` 1,570 → 263 lines: future-absence dialog and statistics are parts in `ui/absences/`. |
+| `b367d0d2` | One list of the account analytics properties; two silent scheduler catches leave the same debug trace as their sibling. |
+
+`wrapper.dart` is now 971 lines (1,216 at the start).
+
+**Investigated and deliberately not changed**
+
+- The copied loading state machine of the class register, homework summary
+  and course materials pages: course materials handles a failed refresh
+  differently (a separate banner while saved data stays visible), and the
+  snapshot types share no interface. A shared mixin would need about eight
+  hooks, which would make the pages harder to read than the copies.
+- Hand-written "date only" truncations (15 places): they truncate both
+  `UtcDateTime` and local `DateTime` values, so one `stripTime()` does not fit
+  all; a new helper for a one-line expression is not worth the churn.
+- The five private reduced-motion helpers: tiny, file-local, and a shared one
+  would make 13 call sites longer.
+- `login_page_content.dart` could be split like `days.dart`, but it is one of
+  the files that were already unformatted; a move would either add new
+  unformatted files or mix reformatting into the move.
+- The intermittent hang of `test/logout_persistence_test.dart`: on Windows
+  the first awaited call returns at once (school notifications are not
+  supported there), and every path of the persistence queue it waits on
+  ends; the hung test also never reached its 30 s timeout, so the whole
+  test process stopped making progress. The cause is still unknown.
