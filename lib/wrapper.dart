@@ -667,120 +667,46 @@ class Wrapper {
     bool forceRelogin = false,
     int unexpectedLogoutRetryCount = 0,
     bool acceptEmptyResponse = false,
-  }) async {
-    if (!_appInForeground) {
-      return null;
-    }
-    if (demoMode) {
-      diagnostics.resetRequest();
-      diagnostics.update('data_source', 'local');
-      return await getDemoResponse(url, args);
-    }
-    assert(!url.startsWith("/"));
-
-    if (!await ensureLoggedIn(
-      isRetryAfterUnexpectedLogout: isRetryAfterUnexpectedLogout,
-      forceRelogin: forceRelogin,
-    )) {
-      privacyLog('technical_operation');
-      return null;
-    }
-    if (!_appInForeground) {
-      return null;
-    }
-
-    dynamic responseData;
-    var sessionRejected = false;
-    try {
-      final response = await _runRequest(
-        "$method $url",
-        () => method == "POST"
-            ? dio.post<dynamic>(
-                baseAddress + url,
-                data: args,
-              )
-            : method == "GET"
-                ? dio.get<dynamic>(
-                    baseAddress + url,
-                  )
-                : throw Exception(
-                    "invalid method: $method; expected POST or GET",
-                  ),
-        allowSingleRetry: method == "GET",
-        retryLostConnection: true,
-      );
-      responseData = response.data;
+  }) {
+    return _sendInSession(
+      url,
+      operation: "$method $url",
+      demoResponse: () {
+        diagnostics.resetRequest();
+        diagnostics.update('data_source', 'local');
+        return getDemoResponse(url, args);
+      },
+      request: () => method == "POST"
+          ? dio.post<dynamic>(
+              baseAddress + url,
+              data: args,
+            )
+          : method == "GET"
+              ? dio.get<dynamic>(
+                  baseAddress + url,
+                )
+              : throw Exception(
+                  "invalid method: $method; expected POST or GET",
+                ),
+      allowSingleRetry: method == "GET",
+      retryLostConnection: true,
       // Some mutation endpoints acknowledge success with an empty HTTP body.
       // Keep null reserved for failures for callers that opt into this behavior.
-      if (acceptEmptyResponse &&
-          responseData == null &&
-          (response.statusCode ?? 0) >= 200 &&
-          (response.statusCode ?? 0) < 300) {
-        responseData = true;
-      }
-    } on Exception catch (e) {
-      sessionRejected = e is AppRequestException && e.isSessionRejected;
-      if (!sessionRejected) {
-        await _handleError(e);
-        onAddProtocolItem?.call(NetworkProtocolItem((b) => b
-          ..address = DiagnosticSanitizer.endpoint(url)
-          ..response = responseData == null ? 'failed' : 'completed'
-          ..parameters = '[redacted]'));
-        return null;
-      }
-    }
-    onAddProtocolItem?.call(NetworkProtocolItem((b) => b
-      ..address = DiagnosticSanitizer.endpoint(url)
-      ..response = responseData == null ? 'failed' : 'completed'
-      ..parameters = '[redacted]'));
-
-    // A refused request may also just be one this account may not make, so it
-    // gets a single new session, at most once a minute.
-    if (sessionRejected) {
-      if (unexpectedLogoutRetryCount >= 1) {
-        return null;
-      }
-      return send(
+      acceptEmptyResponse: acceptEmptyResponse,
+      isRetryAfterUnexpectedLogout: isRetryAfterUnexpectedLogout,
+      forceRelogin: forceRelogin,
+      unexpectedLogoutRetryCount: unexpectedLogoutRetryCount,
+      retry: ({required forceRelogin, required unexpectedLogoutRetryCount}) =>
+          send(
         url,
         args: args,
         method: method,
         isRetryAfterUnexpectedLogout: true,
-        unexpectedLogoutRetryCount: 1,
+        forceRelogin: forceRelogin,
+        unexpectedLogoutRetryCount: unexpectedLogoutRetryCount,
         acceptEmptyResponse: acceptEmptyResponse,
-      );
-    }
-
-    // returned if we were logged out (there should be whitespace at both ends, but the editor is removing it):
-    //	<script type="text/javascript">
-    //window.location = "https://vinzentinum.digitalesregister.it/v2/login";
-    //</script>
-
-    if (responseData is String && isSchoolLoginPage(responseData)) {
-      // This is a very frequently reported bug, but I don't have an idea as to why this is happening.
-      // Possible causes might be that the user's time is off, or the user might be trying to log in from a different device at the same time.
-
-      // First try a normal background relogin, then one forced relogin.
-      // If the server still keeps redirecting us to login, fail this request quietly
-      // instead of surfacing an exception in the UI.
-      if (unexpectedLogoutRetryCount >= 2) {
-        privacyLog('technical_operation');
-        error = "Die Sitzung konnte nicht automatisch erneuert werden.";
-        _loggedIn = Future.value(false);
-        return null;
-      }
-
-      // Retry the request.
-      return send(
-        url,
-        args: args,
-        method: method,
-        isRetryAfterUnexpectedLogout: true,
-        forceRelogin: unexpectedLogoutRetryCount >= 1,
-        unexpectedLogoutRetryCount: unexpectedLogoutRetryCount + 1,
-        acceptEmptyResponse: acceptEmptyResponse,
-      );
-    }
-    return responseData;
+      ),
+    );
   }
 
   Future<dynamic> sendBytes(
@@ -791,15 +717,69 @@ class Wrapper {
     bool isRetryAfterUnexpectedLogout = false,
     bool forceRelogin = false,
     int unexpectedLogoutRetryCount = 0,
-  }) async {
-    if (!_appInForeground) return null;
-    if (demoMode) {
-      return await getDemoBytesResponse(
+  }) {
+    return _sendInSession(
+      url,
+      operation: "POST $url",
+      demoResponse: () => getDemoBytesResponse(
         url,
         bytes: bytes,
         contentType: contentType,
         fileName: fileName,
-      );
+      ),
+      request: () => dio.post<dynamic>(
+        baseAddress + url,
+        data: FormData.fromMap(
+          <String, Object>{
+            "file": MultipartFile.fromBytes(
+              bytes,
+              filename: fileName,
+              contentType: DioMediaType.parse(contentType),
+            ),
+          },
+        ),
+      ),
+      isRetryAfterUnexpectedLogout: isRetryAfterUnexpectedLogout,
+      forceRelogin: forceRelogin,
+      unexpectedLogoutRetryCount: unexpectedLogoutRetryCount,
+      retry: ({required forceRelogin, required unexpectedLogoutRetryCount}) =>
+          sendBytes(
+        url,
+        bytes: bytes,
+        contentType: contentType,
+        fileName: fileName,
+        isRetryAfterUnexpectedLogout: true,
+        forceRelogin: forceRelogin,
+        unexpectedLogoutRetryCount: unexpectedLogoutRetryCount,
+      ),
+    );
+  }
+
+  /// The request pipeline of [send] and [sendBytes]: signs in when needed,
+  /// runs [request], records it in the network protocol and, through [retry],
+  /// repeats it once after the server refused the session, or twice when it
+  /// answered with its login page (the second time with a forced sign-in).
+  Future<dynamic> _sendInSession(
+    String url, {
+    required String operation,
+    required Future<dynamic> Function() demoResponse,
+    required Future<Response<dynamic>> Function() request,
+    required Future<dynamic> Function({
+      required bool forceRelogin,
+      required int unexpectedLogoutRetryCount,
+    }) retry,
+    required bool isRetryAfterUnexpectedLogout,
+    required bool forceRelogin,
+    required int unexpectedLogoutRetryCount,
+    bool allowSingleRetry = false,
+    bool retryLostConnection = false,
+    bool acceptEmptyResponse = false,
+  }) async {
+    if (!_appInForeground) {
+      return null;
+    }
+    if (demoMode) {
+      return await demoResponse();
     }
     assert(!url.startsWith("/"));
 
@@ -810,56 +790,49 @@ class Wrapper {
       privacyLog('technical_operation');
       return null;
     }
-    if (!_appInForeground) return null;
+    if (!_appInForeground) {
+      return null;
+    }
 
     dynamic responseData;
     var sessionRejected = false;
     try {
-      final formData = FormData.fromMap(
-        <String, Object>{
-          "file": MultipartFile.fromBytes(
-            bytes,
-            filename: fileName,
-            contentType: DioMediaType.parse(contentType),
-          ),
-        },
-      );
       final response = await _runRequest(
-        "POST $url",
-        () => dio.post<dynamic>(
-          baseAddress + url,
-          data: formData,
-        ),
+        operation,
+        request,
+        allowSingleRetry: allowSingleRetry,
+        retryLostConnection: retryLostConnection,
       );
       responseData = response.data;
+      if (acceptEmptyResponse &&
+          responseData == null &&
+          (response.statusCode ?? 0) >= 200 &&
+          (response.statusCode ?? 0) < 300) {
+        responseData = true;
+      }
     } on Exception catch (e) {
       sessionRejected = e is AppRequestException && e.isSessionRejected;
       if (!sessionRejected) {
         await _handleError(e);
-        onAddProtocolItem?.call(NetworkProtocolItem((b) => b
-          ..address = DiagnosticSanitizer.endpoint(url)
-          ..response = responseData == null ? 'failed' : 'completed'
-          ..parameters = '[redacted]'));
+        _addProtocolItem(url, responseData);
         return null;
       }
     }
-    onAddProtocolItem?.call(NetworkProtocolItem((b) => b
-      ..address = DiagnosticSanitizer.endpoint(url)
-      ..response = responseData == null ? 'failed' : 'completed'
-      ..parameters = '[redacted]'));
+    _addProtocolItem(url, responseData);
 
+    // A refused request may also just be one this account may not make, so it
+    // gets a single new session, at most once a minute.
     if (sessionRejected) {
-      if (unexpectedLogoutRetryCount >= 1) return null;
-      return sendBytes(
-        url,
-        bytes: bytes,
-        contentType: contentType,
-        fileName: fileName,
-        isRetryAfterUnexpectedLogout: true,
-        unexpectedLogoutRetryCount: 1,
-      );
+      if (unexpectedLogoutRetryCount >= 1) {
+        return null;
+      }
+      return retry(forceRelogin: false, unexpectedLogoutRetryCount: 1);
     }
 
+    // The login page instead of data: the session ended on the server
+    // (reported often, cause unknown; possibly a wrong device clock or a
+    // sign-in on another device). Try a normal background relogin, then one
+    // forced relogin, then fail quietly instead of surfacing an exception.
     if (responseData is String && isSchoolLoginPage(responseData)) {
       if (unexpectedLogoutRetryCount >= 2) {
         privacyLog('technical_operation');
@@ -867,17 +840,19 @@ class Wrapper {
         _loggedIn = Future.value(false);
         return null;
       }
-      return sendBytes(
-        url,
-        bytes: bytes,
-        contentType: contentType,
-        fileName: fileName,
-        isRetryAfterUnexpectedLogout: true,
+      return retry(
         forceRelogin: unexpectedLogoutRetryCount >= 1,
         unexpectedLogoutRetryCount: unexpectedLogoutRetryCount + 1,
       );
     }
     return responseData;
+  }
+
+  void _addProtocolItem(String url, dynamic responseData) {
+    onAddProtocolItem?.call(NetworkProtocolItem((b) => b
+      ..address = DiagnosticSanitizer.endpoint(url)
+      ..response = responseData == null ? 'failed' : 'completed'
+      ..parameters = '[redacted]'));
   }
 
   Future<void> _handleError(Exception e) async {
