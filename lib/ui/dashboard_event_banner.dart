@@ -16,10 +16,10 @@
 // along with digitales_register.  If not, see <http://www.gnu.org/licenses/>.
 
 import 'package:dr/dashboard_events.dart';
+import 'package:dr/grade_category.dart';
 import 'package:dr/i18n/app_localizations.dart';
 import 'package:dr/theme/app_palette.dart';
 import 'package:dr/ui/glass_surface.dart';
-import 'package:dr/ui/grade_colors.dart';
 import 'package:dr/util.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/semantics.dart';

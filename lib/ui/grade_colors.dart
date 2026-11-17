@@ -1,16 +1,6 @@
+import 'package:dr/grade_category.dart';
 import 'package:dr/theme/app_palette.dart';
 import 'package:flutter/material.dart';
-
-/// Orange covers 5.50 through 5.75 inclusive, in hundredths.
-/// They do not change the passing threshold (6) or any grade calculations.
-enum GradeCategory { failing, satisfactory, good }
-
-GradeCategory? gradeCategory(num? hundredths) {
-  if (hundredths == null || !hundredths.isFinite || hundredths < 0) return null;
-  if (hundredths < 550) return GradeCategory.failing;
-  if (hundredths <= 575) return GradeCategory.satisfactory;
-  return GradeCategory.good;
-}
 
 Color? gradeColor(num? hundredths) => switch (gradeCategory(hundredths)) {
       GradeCategory.failing => AppPalette.markerNegative,
