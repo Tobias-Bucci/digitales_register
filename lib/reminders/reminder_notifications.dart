@@ -19,7 +19,7 @@ import 'dart:async';
 import 'dart:convert';
 
 import 'package:dr/host_platform.dart';
-import 'package:dr/reminder_schedule.dart';
+import 'package:dr/reminders/reminder_schedule.dart';
 import 'package:dr/runtime_trace.dart';
 import 'package:dr/school_notification_service.dart';
 import 'package:flutter/foundation.dart';
@@ -116,10 +116,11 @@ class ReminderNotificationService {
           .invokeMethod<String>('timeZone');
 
   Future<void> _initialize() =>
-      _initialized ??= _initializePlugin().catchError((Object error) {
+      _initialized ??=
+          _initializePlugin().catchError((Object error, StackTrace stack) {
         // Optional functionality: the next sync may try again.
         _initialized = null;
-        throw error;
+        Error.throwWithStackTrace(error, stack);
       });
 
   Future<void> _initializePlugin() async {

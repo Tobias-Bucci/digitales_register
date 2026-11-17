@@ -24,7 +24,6 @@ import 'package:dr/app_selectors.dart';
 import 'package:dr/app_state.dart';
 import 'package:dr/config.dart';
 import 'package:dr/data.dart';
-import 'package:dr/local_reminder_assessments.dart';
 import 'package:dr/ui/days.dart';
 import 'package:dr/utc_date_time.dart';
 import 'package:flutter/material.dart' hide Builder;
@@ -181,28 +180,3 @@ String? _hostOf(String? url) {
 
 // Map all (previously by the server used) homework types to the titles they
 // would have been used with. Probably incomplete.
-const typesToTitles = {
-  HomeworkType.grade: ["Bewertung"],
-  HomeworkType.gradeGroup: ["Testarbeit", "Schularbeit", "Prüfung", "Test"],
-  HomeworkType.homework: ["Erinnerung"],
-  HomeworkType.lessonHomework: ["Hausaufgabe"],
-  HomeworkType.observation: ["Beobachtung"],
-};
-
-bool isBlacklisted(Homework homework, BuiltList<HomeworkType> blacklist) {
-  // Primary rule: rely on explicit server-provided item type.
-  final effectiveType = effectiveHomeworkType(homework, const <String>[]);
-  if (blacklist.contains(effectiveType)) {
-    return true;
-  }
-
-  if (effectiveType != HomeworkType.unknown) {
-    return false;
-  }
-
-  // Fallback for legacy/misclassified items where title text is the only clue.
-  return blacklist.any((blacklisted) {
-    return typesToTitles[blacklisted]!
-        .any((blacklistedTitle) => homework.title.contains(blacklistedTitle));
-  });
-}

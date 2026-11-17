@@ -215,7 +215,10 @@ Future<void> _login(
       appLaunchGate.open();
     }
 
-    final loginWrapper = wrapper;
+    final loginWrapper = wrapper
+      ..onRequestTwoFactorCode = ({required wasWrong}) =>
+          showTwoFactorCodeDialog(navigatorKey!.currentContext!,
+              wasWrong: wasWrong);
     dynamic result;
     final signedIn =
         await startupTimeline.step<bool>('p4_online_sign_in', () async {

@@ -166,13 +166,6 @@ class _GradesSubjectListState extends State<GradesSubjectList> {
 
   void _setExpanded(Subject subject, bool expanded) {
     if (expanded) {
-      logPerformanceEvent(
-        "grades_subject_expanded",
-        <String, Object?>{
-          "subjectId": subject.id,
-          "semester": _vm.semester.name,
-        },
-      );
       widget.viewSubjectDetail(subject);
     }
     setState(

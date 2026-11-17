@@ -380,9 +380,7 @@ class _ClassRegisterHeader extends StatelessWidget {
                         l10n.text(
                           'classRegister.lastFetched',
                           args: {
-                            'time': DateFormat.Hm(
-                              l10n.locale.toLanguageTag(),
-                            ).format(lastFetched!),
+                            'time': l10n.formatHourMinute(lastFetched!),
                           },
                         ),
                         style: theme.textTheme.bodySmall?.copyWith(

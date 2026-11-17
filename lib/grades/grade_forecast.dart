@@ -4,7 +4,7 @@ import 'package:dr/app_clock.dart';
 import 'package:dr/app_state.dart';
 import 'package:dr/calendar_date.dart';
 import 'package:dr/data.dart';
-import 'package:dr/grade_average.dart';
+import 'package:dr/grades/grade_average.dart';
 
 enum GradeForecastTrend { rising, falling, stable }
 

@@ -15,8 +15,8 @@
 // You should have received a copy of the GNU General Public License
 // along with digitales_register.  If not, see <http://www.gnu.org/licenses/>.
 
+import 'package:dr/grades/grade_category.dart';
 import 'package:dr/i18n/app_localizations.dart';
-import 'package:dr/ui/grade_colors.dart';
 import 'package:flutter/widgets.dart';
 import 'package:intl/intl.dart';
 

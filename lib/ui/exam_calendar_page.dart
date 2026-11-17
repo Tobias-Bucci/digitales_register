@@ -499,7 +499,7 @@ class _ExamDetailPageState extends State<_ExamDetailPage> {
             context: context,
             builder: (_) => _StudyPhaseEditor(initial: current),
           );
-    if (editedPhases == null) return;
+    if (!mounted || editedPhases == null) return;
     final completedIds = editedPhases.map((phase) => phase.id).toSet();
     setState(() {
       _phases = editedPhases;
@@ -890,18 +890,14 @@ class _StudyPhaseEditorState extends State<_StudyPhaseEditor> {
                 child: Text(context.l10n.text('privacyConsent.cancel'))),
             FilledButton(
               onPressed: () {
-                final value = title.trim();
-                if (value.isEmpty) return;
-                Navigator.pop(
-                  dialogContext,
-                  StudyPhase(
-                      existing?.id ??
-                          'custom-${DateTime.now().microsecondsSinceEpoch}',
-                      value,
-                      date,
-                      effort: existing?.effort ?? 'Mittel',
-                      durationDays: durationDays),
+                final phase = StudyPhase.fromForm(
+                  existing: existing,
+                  title: title,
+                  date: date,
+                  durationDays: durationDays,
                 );
+                if (phase == null) return;
+                Navigator.pop(dialogContext, phase);
               },
               child: Text(context.l10n.text('exam.done')),
             ),
@@ -910,14 +906,7 @@ class _StudyPhaseEditorState extends State<_StudyPhaseEditor> {
       ),
     );
     if (result == null) return;
-    setState(() {
-      if (index == null) {
-        _phases.add(result);
-      } else {
-        _phases[index] = result;
-      }
-      _phases.sort((a, b) => a.date.compareTo(b.date));
-    });
+    setState(() => putStudyPhase(_phases, result, index: index));
   }
 }
 

@@ -1,6 +1,5 @@
 import 'dart:async';
 import 'dart:convert';
-import 'dart:math';
 
 import 'package:dr/analytics_schema.dart';
 import 'package:dr/analytics_school_ids.dart';
@@ -8,6 +7,7 @@ import 'package:dr/desktop.dart';
 import 'package:dr/diagnostics_service.dart';
 import 'package:dr/privacy_consent.dart';
 import 'package:dr/privacy_log.dart';
+import 'package:dr/random_uuid.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -66,6 +66,16 @@ class SecureAnalyticsStore implements AnalyticsLocalStore {
 
 /// The only application event boundary. Invalid input is rejected, not truncated.
 /// Queued work is fenced by an epoch, so revocation/switch invalidates old work.
+/// The user properties that describe the open account. They are cleared with
+/// its identity; language, theme and build stay.
+const _accountProperties = [
+  'school_id',
+  'school_api_type',
+  'academic_year',
+  'demo_mode',
+  'notifications_enabled',
+];
+
 class ProductAnalytics {
   ProductAnalytics(
       {required this.sink, required this.store, required this.decision});
@@ -88,7 +98,6 @@ class ProductAnalytics {
   Future<void> _tail = Future.value();
   bool get enabled => _enabled && decision().analyticsAllowed;
   bool get identityReady => enabled && _accountOpen && _identity != null;
-  String get identitySource => 'installation_uuid'; // Local only.
   int get sessionEpoch => _epoch;
   bool isSession(int epoch) => enabled && epoch == _epoch;
   void gate(bool allowed) {
@@ -145,14 +154,7 @@ class ProductAnalytics {
     }
   }
 
-  static String newUuid() {
-    final random = Random.secure();
-    final bytes = List<int>.generate(16, (_) => random.nextInt(256));
-    bytes[6] = (bytes[6] & 15) | 64;
-    bytes[8] = (bytes[8] & 63) | 128;
-    final hex = bytes.map((b) => b.toRadixString(16).padLeft(2, '0')).join();
-    return '${hex.substring(0, 8)}-${hex.substring(8, 12)}-${hex.substring(12, 16)}-${hex.substring(16, 20)}-${hex.substring(20)}';
-  }
+  static String newUuid() => randomUuidV4();
 
   // localAccountKey is never passed to the sink, log output or event schemas.
   // It is used solely inside encrypted local storage to separate saved accounts.
@@ -257,13 +259,7 @@ class ProductAnalytics {
     _school = null;
     _desiredSchool = null;
     _snapshots.clear();
-    for (final key in [
-      'school_id',
-      'school_api_type',
-      'academic_year',
-      'demo_mode',
-      'notifications_enabled'
-    ]) {
+    for (final key in _accountProperties) {
       _properties.remove(key);
     }
     if (!enabled) return Future.value();
@@ -271,13 +267,7 @@ class ProductAnalytics {
       try {
         await sink.userId(null);
       } catch (_) {}
-      for (final key in [
-        'school_id',
-        'school_api_type',
-        'academic_year',
-        'demo_mode',
-        'notifications_enabled'
-      ]) {
+      for (final key in _accountProperties) {
         try {
           await sink.property(key, null);
         } catch (_) {}

@@ -1,4 +1,5 @@
 import 'package:dr/analytics_service.dart';
+import 'package:dr/ui/privacy_consent_dialog.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:package_info_plus/package_info_plus.dart';
@@ -47,8 +48,7 @@ void main() {
                         builder: (context) => Scaffold(
                             body: TextButton(
                                 onPressed: () =>
-                                    AnalyticsService.showPrivacyConsentDialog(
-                                        context),
+                                    showPrivacyConsentDialog(context),
                                 child: const Text('open')))),
                     brightness: brightness,
                     locale: locale)));

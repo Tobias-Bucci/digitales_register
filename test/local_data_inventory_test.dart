@@ -30,7 +30,7 @@ import 'package:dr/class_register_cache.dart';
 import 'package:dr/local_data_inventory.dart';
 import 'package:dr/middleware/middleware.dart';
 import 'package:dr/page_payload_cache.dart';
-import 'package:dr/study_data_service.dart';
+import 'package:dr/study_data/study_data_service.dart';
 import 'package:dr/wrapper.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -442,25 +442,27 @@ void main() {
       'lib/page_payload_cache.dart': {'key'},
       'lib/class_register_cache.dart': {'key'},
       'lib/calendar_sync_service.dart': {'_calendarSyncRecordsKey'},
-      'lib/middleware/middleware.dart': {
+      'lib/middleware/course_materials.dart': {
         '_courseMaterialVersionsKeyFor(scope)',
       },
       'lib/ui/days.dart': {'_gradeDeadlinePreferenceStorageKey()'},
     };
     const globalWrites = <String, Set<String>>{
       'lib/analytics_service.dart': {"'lastObservedAppVersion'"},
-      'lib/android_widget_service.dart': {'androidWidgetSnapshotStorageKey'},
+      'lib/android_widget/android_widget_service.dart': {
+        'androidWidgetSnapshotStorageKey'
+      },
       'lib/app_clock.dart': {'_preferenceKey'},
       'lib/app_language_controller.dart': {'_appLanguagePreferenceKey'},
       'lib/app_subject_translation_controller.dart': {
         '_subjectTranslationEnabledPreferenceKey',
       },
       'lib/middleware/middleware.dart': {
-        '_legacyStudyPromptedKey',
         // Web only: the welcome dialog was shown in this browser (the native
         // app keeps this marker as a file in its folder).
         '_welcomeShownPreference',
       },
+      'lib/middleware/study_data.dart': {'_legacyStudyPromptedKey'},
       // How the notification center is filtered on this device, like the
       // theme. Holds no content and no account.
       'lib/notification_feed.dart': {'notificationFilterPreferenceKey'},
@@ -476,7 +478,9 @@ void main() {
       // installation, not of an account; logout must not let it vote again.
       'lib/polls/poll_storage.dart': {'key'},
       // Ids, hashes and times only; emptied on logout.
-      'lib/reminder_notifications.dart': {'reminderStoragePreferenceKey'},
+      'lib/reminders/reminder_notifications.dart': {
+        'reminderStoragePreferenceKey'
+      },
       'lib/theme_controller.dart': {
         'accentPreferenceKey',
         'platformOverridePreferenceKey',
@@ -486,7 +490,7 @@ void main() {
       // Whether the intro was seen and a design was chosen (#108), for the
       // installation and kept across logout and updates.
       'lib/tutorial/tutorial_service.dart': {'seenKey', 'designChoiceKey'},
-      'lib/ui/days.dart': {'_localReminderAssessmentHintKey'},
+      'lib/ui/days/reminder_entry.dart': {'_localReminderAssessmentHintKey'},
     };
 
     Map<String, Set<String>> writesInLib() {
@@ -544,7 +548,8 @@ void main() {
 
     test('the namespaces the inventory deletes are the ones that are written',
         () {
-      final source = File('lib/middleware/middleware.dart').readAsStringSync();
+      final source =
+          File('lib/middleware/page_payloads.dart').readAsStringSync();
       for (final namespace in [
         "'homeworkSummary:",
         "'classRegisterLessons:",

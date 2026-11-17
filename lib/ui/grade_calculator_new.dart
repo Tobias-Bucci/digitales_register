@@ -20,18 +20,6 @@
 // checks with Legacy; only what is drawn differs.
 part of 'grade_calculator.dart';
 
-/// The weighted average of [grades] in hundredths, rounded as everywhere else,
-/// or null without any weight. The same as `_calculateAverage`, as a number.
-int? _averageHundredths(List<_Grade> grades) {
-  var weights = 0;
-  var sum = 0;
-  for (final grade in grades) {
-    weights += grade.weightPercentage;
-    sum += grade.grade * grade.weightPercentage;
-  }
-  return roundedGradeAverage(sum, weights);
-}
-
 /// Asks for a new grade in a sheet of glass: the fields and checks of the
 /// dialog of Legacy.
 Future<Tuple2<int, int>?> _showNewGradeSheet(BuildContext context) =>

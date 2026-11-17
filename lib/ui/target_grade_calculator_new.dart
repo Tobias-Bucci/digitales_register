@@ -48,21 +48,14 @@ class _ExistingGradePanelState extends State<_ExistingGradePanel> {
   }
 
   void _add() {
-    final grade = tryParseFormattedGrade(_gradeController.text);
-    final weight = int.tryParse(_weightController.text);
-    if (grade == null ||
-        grade < minimumGrade ||
-        grade > maximumGrade ||
-        weight == null ||
-        weight < 0) {
+    final entry =
+        _parseExistingGrade(_gradeController.text, _weightController.text);
+    if (entry == null) {
       setState(() =>
           _error = context.l10n.text('targetCalculator.error.invalidExisting'));
       return;
     }
-    Navigator.pop(
-      context,
-      TargetGradeEntry(grade: grade, weightPercentage: weight),
-    );
+    Navigator.pop(context, entry);
   }
 
   @override

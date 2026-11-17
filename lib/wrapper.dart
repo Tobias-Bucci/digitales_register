@@ -28,19 +28,22 @@ import 'package:dr/app_state.dart';
 import 'package:dr/demo.dart';
 import 'package:dr/diagnostics_network.dart';
 import 'package:dr/diagnostics_service.dart';
-import 'package:dr/i18n/app_localizations.dart';
 import 'package:dr/main.dart';
 import 'package:dr/privacy_log.dart';
 import 'package:dr/school_api_endpoints.dart';
+import 'package:dr/school_config_parser.dart';
 import 'package:dr/school_proxy.dart';
-import 'package:dr/star_rating.dart';
-import 'package:dr/ui/controlled_text_builder.dart';
-import 'package:dr/ui/dialog.dart';
 import 'package:dr/util.dart';
-import 'package:flutter/material.dart';
+import 'package:flutter/foundation.dart';
 import 'package:mutex/mutex.dart';
 
 typedef AddNetworkProtocolItem = void Function(NetworkProtocolItem item);
+
+/// Asks the user for the code of the two-factor authentication, again with a
+/// hint when [wasWrong]. Completes with null when the user cancels.
+typedef RequestTwoFactorCode = Future<String?> Function({
+  required bool wasWrong,
+});
 
 class UnexpectedLogoutException implements Exception {}
 
@@ -153,6 +156,7 @@ class Wrapper {
     _url = user = pass = null;
     _serverLogoutTime = null;
     onLogout = onRelogin = onConfigLoaded = onAddProtocolItem = null;
+    onRequestTwoFactorCode = null;
     // The logout request still needs the session cookie.
     unawaited(serverLogout.whenComplete(() {
       _clearCookies();
@@ -251,6 +255,9 @@ class Wrapper {
   VoidCallback? onLogout, onRelogin;
   Future<void>? Function()? onConfigLoaded;
   AddNetworkProtocolItem? onAddProtocolItem;
+
+  /// Set by whoever signs in before [login]; the network layer shows no UI.
+  RequestTwoFactorCode? onRequestTwoFactorCode;
   late bool safeMode;
 
   bool noInternet = false;
@@ -440,35 +447,10 @@ class Wrapper {
     return response;
   }
 
-  Future<String?> _request2FA({bool wasWrong = false}) {
-    return showDialog(
-      context: navigatorKey!.currentContext!,
-      builder: (context) {
-        return ControlledTextBuilder(
-          builder: (context, textInputController) => InfoDialog(
-            title: Text(context.l10n
-                .text(wasWrong ? 'login.invalid2FA' : 'login.require2FA')),
-            content: TextField(
-              controller: textInputController,
-            ),
-            actions: [
-              TextButton(
-                onPressed: () => Navigator.pop(context),
-                child: Text(context.l10n.text('privacyConsent.cancel')),
-              ),
-              ElevatedButton(
-                onPressed: () => Navigator.pop(
-                  context,
-                  textInputController.value.text,
-                ),
-                child: Text(context.l10n.text('login.confirm2FA')),
-              ),
-            ],
-          ),
-        );
-      },
-    );
-  }
+  /// Without a way to ask (a wrapper that was retired), the sign-in stops as
+  /// if the user had cancelled.
+  Future<String?> _request2FA({bool wasWrong = false}) async =>
+      await onRequestTwoFactorCode?.call(wasWrong: wasWrong);
 
   AppRequestException _mapRequestError(Object error) {
     if (error is AppRequestException) {
@@ -515,21 +497,12 @@ class Wrapper {
     return mapped.isConnectionIssue;
   }
 
-  /// Leaves a trace of a request that was never answered, without any data.
-  void _logDropped(String reason, String url) {
-    logPerformanceEvent("request_dropped", <String, Object?>{
-      "reason": reason,
-      "endpoint": DiagnosticSanitizer.endpoint(url),
-    });
-  }
-
   Future<T> _runRequest<T>(
     String operation,
     Future<T> Function() request, {
     bool allowSingleRetry = false,
     bool retryLostConnection = false,
   }) async {
-    final stopwatch = Stopwatch()..start();
     var didRetry = false;
     while (true) {
       if (!_appInForeground) {
@@ -538,15 +511,6 @@ class Wrapper {
       try {
         final result = await runZoned(request,
             zoneValues: {#diagnosticRetry: didRetry ? 1 : 0});
-        stopwatch.stop();
-        logPerformanceEvent(
-          "network_request",
-          <String, Object?>{
-            "operation": operation,
-            "elapsedMs": stopwatch.elapsedMilliseconds,
-            "retried": didRetry,
-          },
-        );
         return result;
       } catch (error) {
         final mayRetry = allowSingleRetry
@@ -556,25 +520,9 @@ class Wrapper {
           didRetry = true;
           diagnostics.update('request_retry_count', 1);
           diagnostics.safeLog('request_retry');
-          logPerformanceEvent(
-            "network_retry",
-            <String, Object?>{
-              "operation": operation,
-              "reason": _mapRequestError(error).message,
-            },
-          );
           await Future<void>.delayed(requestRetryDelay);
           continue;
         }
-        stopwatch.stop();
-        logPerformanceEvent(
-          "network_failure",
-          <String, Object?>{
-            "operation": operation,
-            "elapsedMs": stopwatch.elapsedMilliseconds,
-            "error": _mapRequestError(error).message,
-          },
-        );
         throw _mapRequestError(error);
       }
     }
@@ -635,12 +583,7 @@ class Wrapper {
         message: "Die Konfigurationsseite konnte nicht geladen werden.",
       );
     }
-    if (_isLoginPage(source)) {
-      logPerformanceEvent("config_login_page", <String, Object?>{
-        "statusCode": response.statusCode,
-        "contentType": response.headers.value(Headers.contentTypeHeader),
-        "path": response.realUri.path,
-      });
+    if (isSchoolLoginPage(source)) {
       throw UnexpectedLogoutException();
     }
     diagnostics.values({
@@ -649,152 +592,7 @@ class Wrapper {
       'operation': 'parse',
       'response_format': 'html'
     });
-    config = tryParse(source, parseConfig);
-  }
-
-  static Config parseConfig(String source) {
-    return tryParse(source, (source) {
-      if (_isLoginPage(source)) {
-        throw const FormatException(
-          "Received login redirect page instead of the expected config page.",
-        );
-      }
-
-      final id = _readUserId(source);
-      final fullName = _readFullName(source);
-      final imgSource = _readImgSource(source);
-      final autoLogout = _readAutoLogoutSeconds(source);
-      final currentSemesterMaybe = _readCurrentSemester(source);
-      final isStudentOrParent = _readIsStudentOrParent(source);
-      return Config(
-        (b) => b
-          ..userId = id
-          ..autoLogoutSeconds = autoLogout
-          ..fullName = fullName
-          ..imgSource = imgSource
-          ..competenceStarsScale = _readCompetenceStarsScale(source)
-          ..currentSemesterMaybe = currentSemesterMaybe
-          ..isStudentOrParent = isStudentOrParent,
-      );
-    });
-  }
-
-  static int? _readCompetenceStarsScale(String source) {
-    // This key is present in the existing register webpage fixture. Do not
-    // infer a maximum from observed grades or carry a previous school's scale.
-    final matches = RegExp(
-      r'''(?:["']?competence_stars_scale["']?)\s*:\s*([^,}\r\n]+)''',
-    ).allMatches(source).toList();
-    if (matches.length != 1) return null;
-    var raw = matches.single.group(1)!.trim();
-    if (raw.length >= 2 &&
-        ((raw.startsWith('"') && raw.endsWith('"')) ||
-            (raw.startsWith("'") && raw.endsWith("'")))) {
-      raw = raw.substring(1, raw.length - 1);
-    }
-    return parseStarScale(raw);
-  }
-
-  static bool _isLoginRedirectPage(String source) {
-    return RegExp(
-      r'^[\s\n]*<script type="text/javascript">\n?\s*window\.location = "https://.+\.digitalesregister.it/v2/login";\n?\s*</script>[\s\n]*$',
-    ).hasMatch(source);
-  }
-
-  /// Whether [source] is the school's login page or login redirect script,
-  /// which the server returns with HTTP 200 once the session has expired.
-  static bool isLoginPage(String source) => _isLoginPage(source);
-
-  static bool _isLoginPage(String source) {
-    return _isLoginRedirectPage(source) ||
-        (RegExp(r'<html\b', caseSensitive: false).hasMatch(source) &&
-            RegExp(r'<title\b[^>]*>\s*Login\s*</title>', caseSensitive: false)
-                .hasMatch(source));
-  }
-
-  static String _readAssignmentValue(String source, String key) {
-    final marker = "$key=";
-    final start = source.indexOf(marker);
-    if (start < 0) {
-      throw FormatException("Missing '$marker' in config page.");
-    }
-    final valueStart = start + marker.length;
-    final end = source.indexOf(";", valueStart);
-    if (end < 0) {
-      throw FormatException("Missing ';' after '$marker' in config page.");
-    }
-    return source.substring(valueStart, end).trim();
-  }
-
-  static String _readConfigValue(String source, String key) {
-    final marker = "$key: ";
-    final start = source.indexOf(marker);
-    if (start < 0) {
-      throw FormatException("Missing '$marker' in config page.");
-    }
-    final valueStart = start + marker.length;
-    final end = source.indexOf(",", valueStart);
-    if (end < 0) {
-      throw FormatException("Missing ',' after '$marker' in config page.");
-    }
-    return source.substring(valueStart, end).trim();
-  }
-
-  static String _readRequiredSubstring(
-    String source,
-    String startMarker,
-    String endMarker,
-  ) {
-    final start = source.indexOf(startMarker);
-    if (start < 0) {
-      throw FormatException("Missing '$startMarker' in config page.");
-    }
-    final valueStart = start + startMarker.length;
-    final end = source.indexOf(endMarker, valueStart);
-    if (end < 0) {
-      throw FormatException(
-        "Missing '$endMarker' after '$startMarker' in config page.",
-      );
-    }
-    return source.substring(valueStart, end).trim();
-  }
-
-  static bool _readIsStudentOrParent(String source) {
-    return !source.contains("var isStudentOrParent=0;");
-  }
-
-  static int? _readCurrentSemester(String source) {
-    if (source.contains("semesterWechsel=1")) return 2;
-    if (source.contains("semesterWechsel=2")) {
-      return 1;
-    } else {
-      return null;
-    }
-  }
-
-  static int _readAutoLogoutSeconds(String source) {
-    return int.parse(_readConfigValue(source, "auto_logout_seconds"));
-  }
-
-  static int _readUserId(String source) {
-    return int.parse(_readAssignmentValue(source, "currentUserId"));
-  }
-
-  static String _readAfterImgId(String source) {
-    return source
-        .substring(source.indexOf("navigationProfilePicture") +
-            "navigationProfilePicture".length)
-        .trim();
-  }
-
-  static String _readFullName(String source) {
-    final afterImgId = _readAfterImgId(source);
-    return _readRequiredSubstring(afterImgId, ">", "<");
-  }
-
-  static String _readImgSource(String source) {
-    final afterImgId = _readAfterImgId(source);
-    return _readRequiredSubstring(afterImgId, 'src="', '"');
+    config = tryParse(source, parseSchoolConfig);
   }
 
   final _loginMutex = Mutex();
@@ -869,126 +667,46 @@ class Wrapper {
     bool forceRelogin = false,
     int unexpectedLogoutRetryCount = 0,
     bool acceptEmptyResponse = false,
-  }) async {
-    if (!_appInForeground) {
-      _logDropped('background', url);
-      return null;
-    }
-    if (demoMode) {
-      diagnostics.resetRequest();
-      diagnostics.update('data_source', 'local');
-      return await getDemoResponse(url, args);
-    }
-    assert(!url.startsWith("/"));
-
-    if (!await ensureLoggedIn(
-      isRetryAfterUnexpectedLogout: isRetryAfterUnexpectedLogout,
-      forceRelogin: forceRelogin,
-    )) {
-      privacyLog('technical_operation');
-      _logDropped('no_session', url);
-      return null;
-    }
-    if (!_appInForeground) {
-      _logDropped('background', url);
-      return null;
-    }
-
-    dynamic responseData;
-    var sessionRejected = false;
-    try {
-      final response = await _runRequest(
-        "$method $url",
-        () => method == "POST"
-            ? dio.post<dynamic>(
-                baseAddress + url,
-                data: args,
-              )
-            : method == "GET"
-                ? dio.get<dynamic>(
-                    baseAddress + url,
-                  )
-                : throw Exception(
-                    "invalid method: $method; expected POST or GET",
-                  ),
-        allowSingleRetry: method == "GET",
-        retryLostConnection: true,
-      );
-      responseData = response.data;
+  }) {
+    return _sendInSession(
+      url,
+      operation: "$method $url",
+      demoResponse: () {
+        diagnostics.resetRequest();
+        diagnostics.update('data_source', 'local');
+        return getDemoResponse(url, args);
+      },
+      request: () => method == "POST"
+          ? dio.post<dynamic>(
+              baseAddress + url,
+              data: args,
+            )
+          : method == "GET"
+              ? dio.get<dynamic>(
+                  baseAddress + url,
+                )
+              : throw Exception(
+                  "invalid method: $method; expected POST or GET",
+                ),
+      allowSingleRetry: method == "GET",
+      retryLostConnection: true,
       // Some mutation endpoints acknowledge success with an empty HTTP body.
       // Keep null reserved for failures for callers that opt into this behavior.
-      if (acceptEmptyResponse &&
-          responseData == null &&
-          (response.statusCode ?? 0) >= 200 &&
-          (response.statusCode ?? 0) < 300) {
-        responseData = true;
-      }
-    } on Exception catch (e) {
-      sessionRejected = e is AppRequestException && e.isSessionRejected;
-      if (!sessionRejected) {
-        await _handleError(e);
-        onAddProtocolItem?.call(NetworkProtocolItem((b) => b
-          ..address = DiagnosticSanitizer.endpoint(url)
-          ..response = responseData == null ? 'failed' : 'completed'
-          ..parameters = '[redacted]'));
-        _logDropped('request_failed', url);
-        return null;
-      }
-    }
-    onAddProtocolItem?.call(NetworkProtocolItem((b) => b
-      ..address = DiagnosticSanitizer.endpoint(url)
-      ..response = responseData == null ? 'failed' : 'completed'
-      ..parameters = '[redacted]'));
-
-    // A refused request may also just be one this account may not make, so it
-    // gets a single new session, at most once a minute.
-    if (sessionRejected) {
-      if (unexpectedLogoutRetryCount >= 1) {
-        _logDropped('refused', url);
-        return null;
-      }
-      return send(
+      acceptEmptyResponse: acceptEmptyResponse,
+      isRetryAfterUnexpectedLogout: isRetryAfterUnexpectedLogout,
+      forceRelogin: forceRelogin,
+      unexpectedLogoutRetryCount: unexpectedLogoutRetryCount,
+      retry: ({required forceRelogin, required unexpectedLogoutRetryCount}) =>
+          send(
         url,
         args: args,
         method: method,
         isRetryAfterUnexpectedLogout: true,
-        unexpectedLogoutRetryCount: 1,
+        forceRelogin: forceRelogin,
+        unexpectedLogoutRetryCount: unexpectedLogoutRetryCount,
         acceptEmptyResponse: acceptEmptyResponse,
-      );
-    }
-
-    // returned if we were logged out (there should be whitespace at both ends, but the editor is removing it):
-    //	<script type="text/javascript">
-    //window.location = "https://vinzentinum.digitalesregister.it/v2/login";
-    //</script>
-
-    if (responseData is String && _isLoginPage(responseData)) {
-      // This is a very frequently reported bug, but I don't have an idea as to why this is happening.
-      // Possible causes might be that the user's time is off, or the user might be trying to log in from a different device at the same time.
-
-      // First try a normal background relogin, then one forced relogin.
-      // If the server still keeps redirecting us to login, fail this request quietly
-      // instead of surfacing an exception in the UI.
-      if (unexpectedLogoutRetryCount >= 2) {
-        privacyLog('technical_operation');
-        error = "Die Sitzung konnte nicht automatisch erneuert werden.";
-        _loggedIn = Future.value(false);
-        _logDropped('session_not_renewed', url);
-        return null;
-      }
-
-      // Retry the request.
-      return send(
-        url,
-        args: args,
-        method: method,
-        isRetryAfterUnexpectedLogout: true,
-        forceRelogin: unexpectedLogoutRetryCount >= 1,
-        unexpectedLogoutRetryCount: unexpectedLogoutRetryCount + 1,
-        acceptEmptyResponse: acceptEmptyResponse,
-      );
-    }
-    return responseData;
+      ),
+    );
   }
 
   Future<dynamic> sendBytes(
@@ -999,15 +717,69 @@ class Wrapper {
     bool isRetryAfterUnexpectedLogout = false,
     bool forceRelogin = false,
     int unexpectedLogoutRetryCount = 0,
-  }) async {
-    if (!_appInForeground) return null;
-    if (demoMode) {
-      return await getDemoBytesResponse(
+  }) {
+    return _sendInSession(
+      url,
+      operation: "POST $url",
+      demoResponse: () => getDemoBytesResponse(
         url,
         bytes: bytes,
         contentType: contentType,
         fileName: fileName,
-      );
+      ),
+      request: () => dio.post<dynamic>(
+        baseAddress + url,
+        data: FormData.fromMap(
+          <String, Object>{
+            "file": MultipartFile.fromBytes(
+              bytes,
+              filename: fileName,
+              contentType: DioMediaType.parse(contentType),
+            ),
+          },
+        ),
+      ),
+      isRetryAfterUnexpectedLogout: isRetryAfterUnexpectedLogout,
+      forceRelogin: forceRelogin,
+      unexpectedLogoutRetryCount: unexpectedLogoutRetryCount,
+      retry: ({required forceRelogin, required unexpectedLogoutRetryCount}) =>
+          sendBytes(
+        url,
+        bytes: bytes,
+        contentType: contentType,
+        fileName: fileName,
+        isRetryAfterUnexpectedLogout: true,
+        forceRelogin: forceRelogin,
+        unexpectedLogoutRetryCount: unexpectedLogoutRetryCount,
+      ),
+    );
+  }
+
+  /// The request pipeline of [send] and [sendBytes]: signs in when needed,
+  /// runs [request], records it in the network protocol and, through [retry],
+  /// repeats it once after the server refused the session, or twice when it
+  /// answered with its login page (the second time with a forced sign-in).
+  Future<dynamic> _sendInSession(
+    String url, {
+    required String operation,
+    required Future<dynamic> Function() demoResponse,
+    required Future<Response<dynamic>> Function() request,
+    required Future<dynamic> Function({
+      required bool forceRelogin,
+      required int unexpectedLogoutRetryCount,
+    }) retry,
+    required bool isRetryAfterUnexpectedLogout,
+    required bool forceRelogin,
+    required int unexpectedLogoutRetryCount,
+    bool allowSingleRetry = false,
+    bool retryLostConnection = false,
+    bool acceptEmptyResponse = false,
+  }) async {
+    if (!_appInForeground) {
+      return null;
+    }
+    if (demoMode) {
+      return await demoResponse();
     }
     assert(!url.startsWith("/"));
 
@@ -1018,74 +790,69 @@ class Wrapper {
       privacyLog('technical_operation');
       return null;
     }
-    if (!_appInForeground) return null;
+    if (!_appInForeground) {
+      return null;
+    }
 
     dynamic responseData;
     var sessionRejected = false;
     try {
-      final formData = FormData.fromMap(
-        <String, Object>{
-          "file": MultipartFile.fromBytes(
-            bytes,
-            filename: fileName,
-            contentType: DioMediaType.parse(contentType),
-          ),
-        },
-      );
       final response = await _runRequest(
-        "POST $url",
-        () => dio.post<dynamic>(
-          baseAddress + url,
-          data: formData,
-        ),
+        operation,
+        request,
+        allowSingleRetry: allowSingleRetry,
+        retryLostConnection: retryLostConnection,
       );
       responseData = response.data;
+      if (acceptEmptyResponse &&
+          responseData == null &&
+          (response.statusCode ?? 0) >= 200 &&
+          (response.statusCode ?? 0) < 300) {
+        responseData = true;
+      }
     } on Exception catch (e) {
       sessionRejected = e is AppRequestException && e.isSessionRejected;
       if (!sessionRejected) {
         await _handleError(e);
-        onAddProtocolItem?.call(NetworkProtocolItem((b) => b
-          ..address = DiagnosticSanitizer.endpoint(url)
-          ..response = responseData == null ? 'failed' : 'completed'
-          ..parameters = '[redacted]'));
+        _addProtocolItem(url, responseData);
         return null;
       }
     }
-    onAddProtocolItem?.call(NetworkProtocolItem((b) => b
-      ..address = DiagnosticSanitizer.endpoint(url)
-      ..response = responseData == null ? 'failed' : 'completed'
-      ..parameters = '[redacted]'));
+    _addProtocolItem(url, responseData);
 
+    // A refused request may also just be one this account may not make, so it
+    // gets a single new session, at most once a minute.
     if (sessionRejected) {
-      if (unexpectedLogoutRetryCount >= 1) return null;
-      return sendBytes(
-        url,
-        bytes: bytes,
-        contentType: contentType,
-        fileName: fileName,
-        isRetryAfterUnexpectedLogout: true,
-        unexpectedLogoutRetryCount: 1,
-      );
+      if (unexpectedLogoutRetryCount >= 1) {
+        return null;
+      }
+      return retry(forceRelogin: false, unexpectedLogoutRetryCount: 1);
     }
 
-    if (responseData is String && _isLoginPage(responseData)) {
+    // The login page instead of data: the session ended on the server
+    // (reported often, cause unknown; possibly a wrong device clock or a
+    // sign-in on another device). Try a normal background relogin, then one
+    // forced relogin, then fail quietly instead of surfacing an exception.
+    if (responseData is String && isSchoolLoginPage(responseData)) {
       if (unexpectedLogoutRetryCount >= 2) {
         privacyLog('technical_operation');
         error = "Die Sitzung konnte nicht automatisch erneuert werden.";
         _loggedIn = Future.value(false);
         return null;
       }
-      return sendBytes(
-        url,
-        bytes: bytes,
-        contentType: contentType,
-        fileName: fileName,
-        isRetryAfterUnexpectedLogout: true,
+      return retry(
         forceRelogin: unexpectedLogoutRetryCount >= 1,
         unexpectedLogoutRetryCount: unexpectedLogoutRetryCount + 1,
       );
     }
     return responseData;
+  }
+
+  void _addProtocolItem(String url, dynamic responseData) {
+    onAddProtocolItem?.call(NetworkProtocolItem((b) => b
+      ..address = DiagnosticSanitizer.endpoint(url)
+      ..response = responseData == null ? 'failed' : 'completed'
+      ..parameters = '[redacted]'));
   }
 
   Future<void> _handleError(Exception e) async {
@@ -1143,7 +910,6 @@ class Wrapper {
         throw const FormatException('Missing session refresh response');
       }
       if (result['forceLogout'] == true) {
-        logPerformanceEvent('session_refresh_forced_logout');
         logout(hard: safeMode, logoutForcedByServer: true);
         return;
       }
@@ -1153,10 +919,6 @@ class Wrapper {
     } catch (error, stack) {
       diagnostics.report(error, stack, DiagnosticError.login);
       privacyLog('technical_operation');
-      logPerformanceEvent("session_refresh_failed", <String, Object?>{
-        "reason": error.runtimeType.toString(),
-        "forcedLogout": true,
-      });
       logout(hard: safeMode, logoutForcedByServer: true);
       return;
     }
@@ -1182,13 +944,6 @@ class Wrapper {
       _url = user = pass = null;
       _serverLogoutTime = null;
     }
-    logPerformanceEvent(
-      "logout",
-      <String, Object?>{
-        "hard": hard,
-        "forcedByServer": logoutForcedByServer,
-      },
-    );
     _loggedIn = Future.value(false);
     _clearCookies();
   }

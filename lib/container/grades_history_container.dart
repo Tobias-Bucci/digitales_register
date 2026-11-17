@@ -2,9 +2,10 @@ import 'package:dr/actions/app_actions.dart';
 import 'package:dr/analytics_service.dart';
 import 'package:dr/app_clock.dart';
 import 'package:dr/app_state.dart';
-import 'package:dr/grade_history.dart';
+import 'package:dr/grades/grade_history.dart';
 import 'package:dr/i18n/app_localizations.dart';
 import 'package:dr/theme/app_palette.dart';
+import 'package:dr/util.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_built_redux/flutter_built_redux.dart';
 
@@ -85,12 +86,13 @@ class _HistoryDialog extends StatelessWidget {
                             title: Text(subject.subject),
                             subtitle: Text(
                               context.l10n.text('grades.history.values', args: {
-                                'previous': _format(subject.previous),
-                                'current': _format(subject.current)
+                                'previous':
+                                    formatGradeEstimate(subject.previous),
+                                'current': formatGradeEstimate(subject.current)
                               }),
                             ),
                             trailing: Text(
-                              '${subject.change >= 0 ? '+' : ''}${_format(subject.change)}',
+                              '${subject.change >= 0 ? '+' : ''}${formatGradeEstimate(subject.change)}',
                               style: TextStyle(
                                 color: subject.change >= 0
                                     ? Theme.of(context).colorScheme.success
@@ -118,9 +120,6 @@ class _HistoryDialog extends StatelessWidget {
     }
     return context.l10n.text(
         change > 0 ? 'grades.history.better' : 'grades.history.worse',
-        args: {'value': _format(change.abs())});
+        args: {'value': formatGradeEstimate(change.abs())});
   }
-
-  static String _format(double value) =>
-      (value / 100).toStringAsFixed(1).replaceAll('.', ',');
 }

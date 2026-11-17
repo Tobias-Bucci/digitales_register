@@ -1,8 +1,9 @@
 import 'package:dr/actions/app_actions.dart';
 import 'package:dr/app_clock.dart';
 import 'package:dr/app_state.dart';
-import 'package:dr/grade_forecast.dart';
+import 'package:dr/grades/grade_forecast.dart';
 import 'package:dr/i18n/app_localizations.dart';
+import 'package:dr/util.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_built_redux/flutter_built_redux.dart';
 
@@ -36,7 +37,7 @@ class _GradesForecastRow extends StatelessWidget {
     final value = forecast == null
         ? '—'
         : context.l10n.text('grades.forecast.value',
-            args: {'value': _format(forecast!.predictedAverage)});
+            args: {'value': formatGradeEstimate(forecast!.predictedAverage)});
     return Padding(
       padding: const EdgeInsetsDirectional.fromSTEB(16, 2, 16, 2),
       child: SizedBox(
@@ -81,7 +82,4 @@ class _GradesForecastRow extends StatelessWidget {
       ),
     );
   }
-
-  static String _format(double value) =>
-      (value / 100).toStringAsFixed(1).replaceAll('.', ',');
 }

@@ -25,11 +25,10 @@ import 'package:dr/host_platform.dart';
 import 'package:dr/privacy_log.dart';
 import 'package:dr/school_proxy.dart';
 import 'package:dr/utc_date_time.dart';
-import 'package:flutter/material.dart';
+import 'package:flutter/foundation.dart';
 import 'package:http/http.dart' as http;
 import 'package:intl/intl.dart';
 import 'package:package_info_plus/package_info_plus.dart';
-import 'package:tuple/tuple.dart';
 
 PackageInfo packageInfo = PackageInfo(
   appName: "Unknown",
@@ -47,29 +46,6 @@ String get appVersion {
 
 void setPackageInfo(PackageInfo info) {
   packageInfo = info;
-  logPerformanceEvent(
-    "package_info_loaded",
-    <String, Object?>{
-      "version": info.version,
-      "buildNumber": info.buildNumber,
-    },
-  );
-}
-
-void logPerformanceEvent(
-  String event, [
-  Map<String, Object?> details = const <String, Object?>{},
-]) {
-  privacyLog('technical_operation');
-}
-
-Widget maybeWrap(Widget widget, Widget Function(Widget w) wrapWidget,
-    {required bool wrap}) {
-  if (wrap) {
-    return wrapWidget(widget);
-  } else {
-    return widget;
-  }
 }
 
 extension ListIntersperse<T> on List<List<T>> {
@@ -170,13 +146,19 @@ String stringifyMaybeJson(dynamic param) {
   return encoder.convert(param);
 }
 
-extension MapEntryToTuple<K, V> on MapEntry<K, V> {
-  Tuple2<K, V> toTuple() {
-    return Tuple2(key, value);
-  }
-}
-
 NumberFormat gradeAverageFormat = NumberFormat("0.00", "de");
+
+/// [hundredths] as a grade with one decimal and a decimal comma ("7,5"), as
+/// the grade forecast, history and statistics show their estimates.
+String formatGradeEstimate(double hundredths) =>
+    (hundredths / 100).toStringAsFixed(1).replaceAll('.', ',');
+
+/// The time of day of [time] as HH:mm in 24 hours, whatever the language.
+String formatClockTime(DateTime time) {
+  final hour = time.hour.toString().padLeft(2, '0');
+  final minute = time.minute.toString().padLeft(2, '0');
+  return '$hour:$minute';
+}
 
 class ParseException implements Exception {
   final String payload;

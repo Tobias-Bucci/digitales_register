@@ -23,7 +23,7 @@ import 'dart:async';
 import 'package:built_redux/built_redux.dart';
 import 'package:dr/actions/app_actions.dart';
 import 'package:dr/analytics_service.dart';
-import 'package:dr/android_widget_service.dart';
+import 'package:dr/android_widget/android_widget_service.dart';
 import 'package:dr/app_clock.dart';
 import 'package:dr/app_language_controller.dart';
 import 'package:dr/app_state.dart';
@@ -45,8 +45,8 @@ import 'package:dr/i18n/app_localizations.dart';
 import 'package:dr/middleware/middleware.dart';
 import 'package:dr/notification_feed.dart';
 import 'package:dr/reducer/reducer.dart';
-import 'package:dr/reminder_notifications.dart';
-import 'package:dr/reminder_sync.dart';
+import 'package:dr/reminders/reminder_notifications.dart';
+import 'package:dr/reminders/reminder_sync.dart';
 import 'package:dr/runtime_trace.dart';
 import 'package:dr/school_notification_engine.dart';
 import 'package:dr/school_notification_service.dart';
@@ -55,6 +55,7 @@ import 'package:dr/server_notifications/server_notification_service.dart';
 import 'package:dr/settings_persistence_service.dart';
 import 'package:dr/startup_timeline.dart';
 import 'package:dr/theme_controller.dart';
+import 'package:dr/ui/biometric_app_lock_overlay.dart';
 import 'package:dr/ui/grade_calculator.dart';
 import 'package:dr/ui/grades_chart_page.dart';
 import 'package:dr/ui/launch/app_launch_animation.dart';
@@ -80,8 +81,6 @@ GlobalKey<ResponsiveScaffoldState<Pages>>? scaffoldKey;
 GlobalKey<ScaffoldMessengerState>? scaffoldMessengerKey;
 StreamSubscription<Uri?>? _uriLinkSubscription;
 SettingsState _startupSettingsState = SettingsState();
-
-typedef SingleArgumentVoidCallback<T> = void Function(T arg);
 
 // Actions are now global (although this doesn't seem to be the case in the official example).
 // This way it is easier for ui code to dispatch actions.
@@ -714,37 +713,3 @@ void showSnackBar(
         : SnackBarAction(label: actionLabel, onPressed: onAction),
   ));
 }
-
-/*
-ThemeData _getDarkTheme(MaterialColor primarySwatch) {
-  final colorScheme = ColorScheme(
-    primary: primarySwatch,
-    primaryVariant: primarySwatch[700],
-    secondary: primarySwatch,
-    secondaryVariant: primarySwatch[700],
-    surface: Colors.grey[800],
-    background: Colors.grey[700],
-    error: Colors.red[700],
-    onPrimary: Colors.white,
-    onSecondary: Colors.white,
-    onSurface: Colors.white,
-    onBackground: Colors.white,
-    onError: Colors.black,
-    brightness: Brightness.dark,
-  );
-  return ThemeData(
-    brightness: Brightness.dark,
-    primarySwatch: primarySwatch,
-    primaryColor: primarySwatch,
-    primaryColorLight: primarySwatch[100],
-    primaryColorDark: primarySwatch[700],
-    toggleableActiveColor: primarySwatch[600],
-    accentColor: primarySwatch[500],
-    secondaryHeaderColor: primarySwatch[200],
-    backgroundColor: primarySwatch[200],
-    indicatorColor: primarySwatch[500],
-    buttonColor: primarySwatch[600],
-    colorScheme: colorScheme,
-  );
-}
-*/

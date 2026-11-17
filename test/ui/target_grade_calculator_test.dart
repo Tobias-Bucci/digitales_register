@@ -70,8 +70,8 @@ void main() {
     await tester.tap(find.text('Mathematik').last);
     await tester.pumpAndSettle();
 
-    expect(store.state.gradesState.subjects.single.average(Semester.first),
-        750);
+    expect(
+        store.state.gradesState.subjects.single.average(Semester.first), 750);
     expect(find.textContaining('Aktueller Durchschnitt: 7,50'), findsOneWidget);
     expect(find.textContaining('· -50%'), findsNothing);
   });
@@ -126,15 +126,15 @@ void main() {
         .evaluate()
         .length;
 
-    testWidgets('many calendar assessments are cut to the nearest ones and '
+    testWidgets(
+        'many calendar assessments are cut to the nearest ones and '
         'the user is told', (tester) async {
       await openWith(tester, stateWithAssessments(60));
 
       expect(find.byKey(const Key('target-calculator-calendar-limited')),
           findsOneWidget);
       expect(
-          find.textContaining(
-              'nur die nächsten 20 von 60 kommenden Prüfungen'),
+          find.textContaining('nur die nächsten 20 von 60 kommenden Prüfungen'),
           findsOneWidget);
       expect(find.textContaining('20 kommende Prüfungen'), findsOneWidget);
       // The nearest ones are kept, the latest are left out.
@@ -157,8 +157,7 @@ void main() {
       }
 
       expect(
-          find.textContaining(
-              'nur die nächsten 17 von 60 kommenden Prüfungen'),
+          find.textContaining('nur die nächsten 17 von 60 kommenden Prüfungen'),
           findsOneWidget);
       expect(shownAssessments(), 17);
     });
@@ -238,5 +237,53 @@ void main() {
       expect(selectedSubject(tester), isNull);
       expect(find.textContaining('Aktueller Durchschnitt'), findsNothing);
     });
+  });
+
+  testWidgets(
+      'the dialog for an earlier grade closes cleanly while its fields '
+      'still animate out', (tester) async {
+    tester.view.physicalSize = const Size(800, 2000);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.resetPhysicalSize);
+    addTearDown(tester.view.resetDevicePixelRatio);
+    final store = createStore(
+        initialState: AppState((b) => b
+          ..gradesState.semester = Semester.first.toBuilder()
+          ..gradesState.subjects = ListBuilder<Subject>([
+            buildSubject(id: 7, name: 'Mathematik', gradesAll: {
+              Semester.first: BuiltList<GradeAll>([
+                buildGradeAll(date: UtcDateTime(2026, 10, 5), grade: 800),
+              ]),
+            }),
+          ])));
+    addTearDown(store.dispose);
+    await pumpApp(tester, store: store, home: const TargetGradeCalculator());
+    await tester.tap(find.byKey(const Key('target-calculator-subject')));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Mathematik').last);
+    await tester.pumpAndSettle();
+
+    for (final confirm in [false, true]) {
+      await tester.tap(find.text('Bisherige Note hinzufügen').last);
+      await tester.pumpAndSettle();
+      final dialog = find.byType(AlertDialog);
+      final fields =
+          find.descendant(of: dialog, matching: find.byType(TextField));
+      await tester.enterText(fields.first, '6');
+      await tester.enterText(fields.last, '50');
+      await tester.tap(find.descendant(
+          of: dialog,
+          matching:
+              confirm ? find.byType(ElevatedButton) : find.byType(TextButton)));
+      // Every frame of the exit animation, while the fields are still built.
+      for (var i = 0; i < 20; i++) {
+        await tester.pump(const Duration(milliseconds: 16));
+        expect(tester.takeException(), isNull);
+      }
+      await tester.pumpAndSettle();
+      expect(tester.takeException(), isNull);
+      expect(dialog, findsNothing);
+    }
+    expect(find.textContaining('6 · 50%'), findsOneWidget);
   });
 }

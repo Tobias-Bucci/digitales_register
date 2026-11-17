@@ -18,7 +18,7 @@
 import 'package:dr/actions/app_actions.dart';
 import 'package:dr/i18n/app_localizations.dart';
 import 'package:dr/middleware/middleware.dart';
-import 'package:dr/study_data_migration.dart';
+import 'package:dr/study_data/study_data_migration.dart';
 import 'package:flutter/material.dart';
 
 /// A line in the settings for as long as older learning notes that belong to

@@ -166,6 +166,8 @@ class _CalendarDetailPageState extends State<CalendarDetailPage> {
     }
     final pageViewIndex = _pageViewIndex(widget.selectedDay!);
     if (!_controller.hasClients) {
+      // Not attached to the page view, so it can go right away.
+      _controller.dispose();
       _controller = PageController(
         initialPage: pageViewIndex,
       );
@@ -319,7 +321,7 @@ class _CalendarDetailPageState extends State<CalendarDetailPage> {
       return _buildNew(context);
     }
     final l10n = context.l10n;
-    return maybeWrap(
+    return _maybeWrap(
       Scaffold(
         appBar: AppBar(
           leading: widget.isSidebar
@@ -426,10 +428,7 @@ class CalendarDetailWrapper extends StatelessWidget {
                 key: const Key('calendar-detail-last-fetched'),
                 message: lastFetched == null
                     ? l10n.text('offline.title')
-                    : l10n.text(
-                        'grades.offlineMode',
-                        args: {'time': l10n.formatTimeAgo(lastFetched)},
-                      ),
+                    : l10n.offlineSince(lastFetched),
                 onRetry: () => actions.calendarActions.load(toMonday(day.date)),
               )
             : null,
@@ -630,5 +629,14 @@ class _NoSchool extends StatelessWidget {
         ),
       ],
     );
+  }
+}
+
+Widget _maybeWrap(Widget widget, Widget Function(Widget w) wrapWidget,
+    {required bool wrap}) {
+  if (wrap) {
+    return wrapWidget(widget);
+  } else {
+    return widget;
   }
 }

@@ -202,7 +202,7 @@ class _ProfileState extends State<Profile> {
         _showMessage(context.t('profile.biometricDisabled'));
       }
     } on BiometricAppLockSetupException catch (error) {
-      _showMessage(error.message);
+      if (mounted) _showMessage(error.message);
     } finally {
       await _loadBiometricAvailability();
       if (mounted) {

@@ -165,10 +165,7 @@ class _CertificateNewState extends State<CertificateNew> {
     final hint = vm.noInternet && lastFetched != null
         ? GlassOfflineHint(
             key: const Key('certificate-last-fetched'),
-            message: l10n.text(
-              'grades.offlineMode',
-              args: {'time': l10n.formatTimeAgo(lastFetched)},
-            ),
+            message: l10n.offlineSince(lastFetched),
             onRetry: _retry,
           )
         : null;

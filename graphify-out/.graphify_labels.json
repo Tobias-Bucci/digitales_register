@@ -1,5 +1,4 @@
 {
-  "0": "App Middleware & Actions",
   "1": "Domain Models (Absences, Homework)",
   "2": "Settings Page Logic",
   "3": "Auth Layout & Tokens",
@@ -8,7 +7,6 @@
   "6": "Notification Settings Actions",
   "7": "School Notification Service",
   "8": "Login & Accounts UI",
-  "9": "Days & Reminders UI",
   "10": "Dashboard Cards",
   "12": "Design Tokens (Glass)",
   "13": "Email & Password Containers",
@@ -17,22 +15,15 @@
   "16": "Class Register Page",
   "17": "Theme & Design Choice",
   "19": "Grades Statistics",
-  "20": "Absences Page UI",
-  "21": "Android Widget Snapshots",
   "22": "Network Wrapper",
   "23": "Calendar Week View",
   "24": "Launch Splash Tokens",
-  "25": "Extras Page",
   "26": "Calendar Sync Service",
   "27": "Homework & Grade Payloads",
   "28": "Server Notification Center",
-  "29": "Messages Page",
   "31": "Certificate Page",
   "32": "Glass Page Layout",
-  "33": "Routing & Navigation",
   "34": "Compact Day List",
   "35": "Grades Subject List",
-  "36": "Absences Middleware",
-  "37": "Absence Group Container",
-  "38": "Calendar View Switcher"
+  "37": "Absence Group Container"
 }

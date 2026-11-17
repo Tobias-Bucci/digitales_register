@@ -1,4 +1,4 @@
-import 'package:dr/target_grade_calculation.dart';
+import 'package:dr/grades/target_grade_calculation.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 void main() {

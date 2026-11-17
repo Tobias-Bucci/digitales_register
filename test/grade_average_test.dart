@@ -1,6 +1,6 @@
 import 'package:built_collection/built_collection.dart';
 import 'package:dr/app_state.dart';
-import 'package:dr/grade_average.dart';
+import 'package:dr/grades/grade_average.dart';
 import 'package:dr/utc_date_time.dart';
 import 'package:flutter_test/flutter_test.dart';
 

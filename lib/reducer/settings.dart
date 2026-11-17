@@ -22,7 +22,7 @@ import 'package:dr/actions/routing_actions.dart';
 import 'package:dr/actions/settings_actions.dart';
 import 'package:dr/app_state.dart';
 import 'package:dr/dashboard_items.dart';
-import 'package:dr/reminder_schedule.dart';
+import 'package:dr/reminders/reminder_schedule.dart';
 import 'package:dr/theme/app_palette.dart';
 import 'package:flutter/foundation.dart';
 

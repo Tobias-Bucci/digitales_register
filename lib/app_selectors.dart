@@ -20,7 +20,7 @@ import 'package:collection/collection.dart' show mergeSort;
 import 'package:dr/app_clock.dart';
 import 'package:dr/app_state.dart';
 import 'package:dr/data.dart';
-import 'package:dr/local_reminder_assessments.dart';
+import 'package:dr/reminders/local_reminder_assessments.dart';
 import 'package:dr/utc_date_time.dart';
 import 'package:dr/util.dart';
 import 'package:tuple/tuple.dart';
@@ -72,9 +72,6 @@ class AbsenceStatsViewModel {
   });
 
   bool get hasHistoricalData => monthlyHistory.isNotEmpty;
-
-  bool get spansMultipleYears =>
-      monthlyHistory.map((entry) => entry.month.year).toSet().length > 1;
 }
 
 class AbsenceMonthlyHistoryValue {

@@ -1,6 +1,6 @@
 import 'package:dr/analytics_service.dart';
-import 'package:dr/privacy_consent.dart';
 import 'package:dr/telemetry_capabilities.dart';
+import 'package:dr/ui/privacy_consent_dialog.dart';
 import 'package:firebase_crashlytics/firebase_crashlytics.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -47,8 +47,7 @@ void main() {
     await tester.pumpWidget(app(Builder(
         builder: (context) => Scaffold(
             body: TextButton(
-                onPressed: () =>
-                    AnalyticsService.showPrivacyConsentDialog(context),
+                onPressed: () => showPrivacyConsentDialog(context),
                 child: const Text('open'))))));
     await tester.pumpAndSettle();
     await tester.tap(find.text('open'));

@@ -20,7 +20,7 @@ import 'package:dr/actions/app_actions.dart';
 import 'package:dr/app_selectors.dart';
 import 'package:dr/app_state.dart';
 import 'package:dr/container/grades_chart_container.dart';
-import 'package:dr/grade_forecast.dart';
+import 'package:dr/grades/grade_forecast.dart';
 import 'package:dr/i18n/app_localizations.dart';
 import 'package:dr/theme/app_palette.dart';
 import 'package:dr/ui/glass_page.dart';

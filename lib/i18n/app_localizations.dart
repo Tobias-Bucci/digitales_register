@@ -824,6 +824,15 @@ class AppLocalizations {
     );
   }
 
+  /// The hint, shown while offline, that a page shows what was loaded
+  /// [lastFetched].
+  String offlineSince(UtcDateTime lastFetched) =>
+      text('grades.offlineMode', args: {'time': formatTimeAgo(lastFetched)});
+
+  /// [time] as hours and minutes in the notation of the app language.
+  String formatHourMinute(DateTime time) =>
+      DateFormat.Hm(locale.toLanguageTag()).format(time);
+
   String formatTimeAgo(UtcDateTime dateTime) {
     final diff = UtcDateTime.now().difference(dateTime);
     if (diff.inDays >= 1) {

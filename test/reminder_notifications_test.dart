@@ -1,5 +1,5 @@
-import 'package:dr/reminder_notifications.dart';
-import 'package:dr/reminder_schedule.dart';
+import 'package:dr/reminders/reminder_notifications.dart';
+import 'package:dr/reminders/reminder_schedule.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:mocktail/mocktail.dart';

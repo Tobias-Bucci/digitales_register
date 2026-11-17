@@ -793,10 +793,7 @@ class _GlassWeek extends StatelessWidget {
               key: const Key('calendar-last-fetched'),
               message: lastFetched == null
                   ? l10n.text('offline.title')
-                  : l10n.text(
-                      'grades.offlineMode',
-                      args: {'time': l10n.formatTimeAgo(lastFetched)},
-                    ),
+                  : l10n.offlineSince(lastFetched),
               onRetry: onRetry ?? () {},
             ),
           ),

@@ -6,7 +6,7 @@ import 'package:dr/account_scope.dart';
 import 'package:dr/app_state.dart';
 import 'package:dr/assessment_attachments.dart';
 import 'package:dr/middleware/middleware.dart';
-import 'package:dr/study_data_service.dart';
+import 'package:dr/study_data/study_data_service.dart';
 import 'package:dr/util.dart';
 import 'package:dr/wrapper.dart';
 import 'package:flutter_test/flutter_test.dart';

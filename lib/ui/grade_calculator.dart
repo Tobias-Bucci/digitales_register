@@ -22,7 +22,7 @@ import 'package:dr/actions/app_actions.dart';
 import 'package:dr/analytics_service.dart';
 import 'package:dr/app_state.dart';
 import 'package:dr/data.dart';
-import 'package:dr/grade_average.dart';
+import 'package:dr/grades/grade_average.dart';
 import 'package:dr/i18n/app_localizations.dart';
 import 'package:dr/ui/dashboard_app_header.dart';
 import 'package:dr/ui/dialog.dart';
@@ -122,18 +122,22 @@ int? tryParseFormattedGrade(String grade) {
   return null;
 }
 
-String _calculateAverage(List<_Grade> grades) {
+/// The weighted average of [grades] in hundredths, rounded as everywhere else,
+/// or null without any weight.
+int? _averageHundredths(List<_Grade> grades) {
   var weights = 0;
   var sum = 0;
   for (final grade in grades) {
     weights += grade.weightPercentage;
     sum += grade.grade * grade.weightPercentage;
   }
-  if (weights == 0) {
-    return "/";
-  }
-  final average = roundedGradeAverage(sum, weights)!;
-  return gradeAverageFormat.format(average / 100);
+  return roundedGradeAverage(sum, weights);
+}
+
+/// [_averageHundredths] as text, "/" without any weight.
+String _calculateAverage(List<_Grade> grades) {
+  final average = _averageHundredths(grades);
+  return average == null ? '/' : gradeAverageFormat.format(average / 100);
 }
 
 typedef _UpdateGrade = void Function(_Grade previous, _Grade? updated);

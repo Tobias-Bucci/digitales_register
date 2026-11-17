@@ -9,7 +9,7 @@ import 'package:dr/main.dart' show RegisterApp, navigatorKey;
 import 'package:dr/middleware/middleware.dart' show showLegacyStudyDataDialog;
 import 'package:dr/school_notification_engine.dart';
 import 'package:dr/school_notification_service.dart';
-import 'package:dr/study_data_migration.dart';
+import 'package:dr/study_data/study_data_migration.dart';
 import 'package:dr/ui/compact_day_list.dart';
 import 'package:dr/ui/days.dart';
 import 'package:dr/ui/glass_page.dart';

@@ -1,7 +1,7 @@
 import 'dart:async';
 import 'dart:convert';
 
-import 'package:dr/android_widget_service.dart';
+import 'package:dr/android_widget/android_widget_service.dart';
 import 'package:dr/app_state.dart';
 import 'package:dr/util.dart';
 import 'package:flutter_test/flutter_test.dart';

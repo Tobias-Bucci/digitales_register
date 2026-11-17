@@ -8,10 +8,10 @@ import 'package:dr/container/sorted_grades_container.dart';
 import 'package:dr/data.dart';
 import 'package:dr/i18n/app_localizations.dart';
 import 'package:dr/reducer/reducer.dart';
+import 'package:dr/school_config_parser.dart';
 import 'package:dr/serializers.dart';
 import 'package:dr/star_rating.dart';
 import 'package:dr/ui/sorted_grades_widget.dart';
-import 'package:dr/wrapper.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:intl/date_symbol_data_local.dart';
@@ -23,7 +23,7 @@ void main() {
   setUpAll(() => initializeDateFormatting());
   for (final scale in [5, 6, 7, 12, 1000]) {
     test('reads school scale $scale from existing webpage structure', () {
-      final config = Wrapper.parseConfig(webpage.source.replaceFirst(
+      final config = parseSchoolConfig(webpage.source.replaceFirst(
           'competence_stars_scale: 5', 'competence_stars_scale: $scale'));
       expect(config.competenceStarsScale, scale);
       final restored = serializers.deserializeWith(Config.serializer,
@@ -46,26 +46,26 @@ void main() {
       '99999999999999999999'
     ]) {
       expect(
-          Wrapper.parseConfig(webpage.source.replaceFirst(
+          parseSchoolConfig(webpage.source.replaceFirst(
                   'competence_stars_scale: 5', 'competence_stars_scale: $raw'))
               .competenceStarsScale,
           isNull,
           reason: raw);
     }
     expect(
-        Wrapper.parseConfig(
+        parseSchoolConfig(
                 webpage.source.replaceFirst('competence_stars_scale: 5,', ''))
             .competenceStarsScale,
         isNull);
     expect(
-        Wrapper.parseConfig(webpage.source.replaceFirst(
+        parseSchoolConfig(webpage.source.replaceFirst(
                 'competence_stars_scale: 5,',
                 'competence_stars_scale: 5, competence_stars_scale: 6,'))
             .competenceStarsScale,
         isNull);
     for (final raw in ['"6"', "'7'", '8.0']) {
       expect(
-          Wrapper.parseConfig(webpage.source.replaceFirst(
+          parseSchoolConfig(webpage.source.replaceFirst(
                   'competence_stars_scale: 5', 'competence_stars_scale: $raw'))
               .competenceStarsScale,
           isNotNull);
@@ -183,7 +183,7 @@ void main() {
       {'typeName': 'Reading', 'grade': '12'}
     ]);
     for (final raw in ['7', '5', 'null', '6']) {
-      store.actions.setConfig(Wrapper.parseConfig(webpage.source.replaceFirst(
+      store.actions.setConfig(parseSchoolConfig(webpage.source.replaceFirst(
           'competence_stars_scale: 5', 'competence_stars_scale: $raw')));
       expect(SortedGradesViewModel.from(store.state).competenceStarsScale,
           int.tryParse(raw));

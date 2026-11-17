@@ -1,6 +1,7 @@
 import 'dart:async';
 
 import 'package:dr/biometric_app_lock.dart';
+import 'package:dr/ui/biometric_app_lock_overlay.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';

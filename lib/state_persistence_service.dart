@@ -20,7 +20,7 @@ import 'dart:convert';
 import 'package:dr/app_state.dart';
 import 'package:dr/diagnostics_service.dart';
 import 'package:dr/serializers.dart';
-import 'package:dr/study_data_service.dart';
+import 'package:dr/study_data/study_data_service.dart';
 import 'package:dr/util.dart';
 
 typedef PersistStateWriter = Future<void> Function(String key, String value);
@@ -161,7 +161,6 @@ class AppStatePersistenceService {
       return;
     }
 
-    final stopwatch = Stopwatch()..start();
     diagnostics.values({'operation': 'save', 'data_source': 'local'});
     try {
       await retryStorageWrite(
@@ -174,20 +173,11 @@ class AppStatePersistenceService {
       onWriteFailed?.call();
       rethrow;
     }
-    stopwatch.stop();
     if (generation == _generation) {
       _lastPersistedIdentity = identity;
       _lastPersistedKey = storageKey;
       _lastPersistedPayload = toPersist;
     }
-    logPerformanceEvent(
-      "state_persisted",
-      <String, Object?>{
-        "bytes": utf8.encode(toPersist).length,
-        "elapsedMs": stopwatch.elapsedMilliseconds,
-        "settingsOnly": identity.settingsOnly,
-      },
-    );
   }
 
   void clear() {

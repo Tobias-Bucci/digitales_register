@@ -16,7 +16,7 @@
 // along with digitales_register.  If not, see <http://www.gnu.org/licenses/>.
 
 import 'package:built_collection/built_collection.dart';
-import 'package:dr/android_widget_snapshot.dart';
+import 'package:dr/android_widget/android_widget_snapshot.dart';
 import 'package:dr/app_selectors.dart';
 import 'package:dr/data.dart';
 import 'package:dr/utc_date_time.dart';
