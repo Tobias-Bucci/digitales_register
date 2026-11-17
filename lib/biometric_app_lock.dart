@@ -268,8 +268,6 @@ class BiometricAppLockController extends ChangeNotifier {
         notifyListeners();
         return true;
       }
-    } on AuthException {
-      return false;
     } catch (_) {
       return false;
     }

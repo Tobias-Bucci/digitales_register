@@ -82,8 +82,6 @@ GlobalKey<ScaffoldMessengerState>? scaffoldMessengerKey;
 StreamSubscription<Uri?>? _uriLinkSubscription;
 SettingsState _startupSettingsState = SettingsState();
 
-typedef SingleArgumentVoidCallback<T> = void Function(T arg);
-
 // Actions are now global (although this doesn't seem to be the case in the official example).
 // This way it is easier for ui code to dispatch actions.
 // TODO: This is actually a bad idea for testing. It should be removed again.
@@ -715,37 +713,3 @@ void showSnackBar(
         : SnackBarAction(label: actionLabel, onPressed: onAction),
   ));
 }
-
-/*
-ThemeData _getDarkTheme(MaterialColor primarySwatch) {
-  final colorScheme = ColorScheme(
-    primary: primarySwatch,
-    primaryVariant: primarySwatch[700],
-    secondary: primarySwatch,
-    secondaryVariant: primarySwatch[700],
-    surface: Colors.grey[800],
-    background: Colors.grey[700],
-    error: Colors.red[700],
-    onPrimary: Colors.white,
-    onSecondary: Colors.white,
-    onSurface: Colors.white,
-    onBackground: Colors.white,
-    onError: Colors.black,
-    brightness: Brightness.dark,
-  );
-  return ThemeData(
-    brightness: Brightness.dark,
-    primarySwatch: primarySwatch,
-    primaryColor: primarySwatch,
-    primaryColorLight: primarySwatch[100],
-    primaryColorDark: primarySwatch[700],
-    toggleableActiveColor: primarySwatch[600],
-    accentColor: primarySwatch[500],
-    secondaryHeaderColor: primarySwatch[200],
-    backgroundColor: primarySwatch[200],
-    indicatorColor: primarySwatch[500],
-    buttonColor: primarySwatch[600],
-    colorScheme: colorScheme,
-  );
-}
-*/

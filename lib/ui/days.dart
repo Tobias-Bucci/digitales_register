@@ -60,6 +60,7 @@ import 'package:dr/ui/settings_page_new.dart'
 import 'package:dr/utc_date_time.dart';
 import 'package:dr/util.dart';
 import 'package:dr/web_app/web_routing.dart';
+import 'package:flutter/foundation.dart' show AsyncCallback;
 import 'package:flutter/material.dart';
 import 'package:flutter/rendering.dart';
 import 'package:flutter_built_redux/flutter_built_redux.dart';
@@ -75,7 +76,6 @@ typedef EditReminderCallback = void Function(
   Day day,
   String reminder,
 );
-typedef AsyncCallback = Future<void> Function();
 typedef RemoveReminderCallback = void Function(Homework hw, Day day);
 typedef ToggleDoneCallback = void Function(Homework hw, bool done);
 typedef MarkAsNotNewOrChangedCallback = void Function(Homework hw);
@@ -2009,7 +2009,7 @@ String formatChanged(AppLocalizations l10n, Homework hw) {
       'dashboard.history.before',
       args: {'date': dateTime.format(hw.firstSeen)},
     );
-  } else if (toDate(hw.firstSeen) == toDate(hw.lastNotSeen!)) {
+  } else if (hw.firstSeen.stripTime() == hw.lastNotSeen!.stripTime()) {
     when = l10n.text('dashboard.history.sameDay', args: {
       'date': DateFormat('EEEE, dd.MM', localeTag).format(hw.firstSeen),
       'from': time.format(hw.lastNotSeen!),
@@ -2032,10 +2032,6 @@ String formatChanged(AppLocalizations l10n, Homework hw) {
     event = 'dashboard.history.changed';
   }
   return l10n.text(event, args: {'when': when});
-}
-
-UtcDateTime toDate(UtcDateTime dateTime) {
-  return UtcDateTime(dateTime.year, dateTime.month, dateTime.day);
 }
 
 class AttachmentWidget extends StatelessWidget {

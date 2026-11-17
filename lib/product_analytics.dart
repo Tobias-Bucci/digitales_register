@@ -88,7 +88,6 @@ class ProductAnalytics {
   Future<void> _tail = Future.value();
   bool get enabled => _enabled && decision().analyticsAllowed;
   bool get identityReady => enabled && _accountOpen && _identity != null;
-  String get identitySource => 'installation_uuid'; // Local only.
   int get sessionEpoch => _epoch;
   bool isSession(int epoch) => enabled && epoch == _epoch;
   void gate(bool allowed) {

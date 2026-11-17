@@ -27,7 +27,7 @@ import 'package:dr/local_reminder_assessments.dart';
 import 'package:dr/theme/app_palette.dart';
 import 'package:dr/ui/committed_deleteable.dart';
 import 'package:dr/ui/dashboard_event_banner.dart';
-import 'package:dr/ui/days.dart' hide AsyncCallback;
+import 'package:dr/ui/days.dart';
 import 'package:dr/ui/glass_page.dart' show GlassPanel;
 import 'package:dr/ui/glass_surface.dart';
 import 'package:dr/ui/grade_colors.dart';

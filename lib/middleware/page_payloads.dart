@@ -21,11 +21,6 @@ part of 'middleware.dart';
 // Raw page payloads (homework summary, class register lessons) with the
 // account-scoped keys of their on-device caches.
 
-Future<String?> loadHomeworkSummaryHtml() async {
-  final snapshot = await refreshHomeworkSummaryHtmlPayload();
-  return snapshot?.payload;
-}
-
 Future<PagePayloadSnapshot<String>?> loadCachedHomeworkSummaryHtmlPayload() {
   return pagePayloadCacheService.load(
     _homeworkSummaryCacheKey(),

@@ -72,9 +72,6 @@ class AbsenceStatsViewModel {
   });
 
   bool get hasHistoricalData => monthlyHistory.isNotEmpty;
-
-  bool get spansMultipleYears =>
-      monthlyHistory.map((entry) => entry.month.year).toSet().length > 1;
 }
 
 class AbsenceMonthlyHistoryValue {
