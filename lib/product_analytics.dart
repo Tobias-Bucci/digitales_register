@@ -66,6 +66,16 @@ class SecureAnalyticsStore implements AnalyticsLocalStore {
 
 /// The only application event boundary. Invalid input is rejected, not truncated.
 /// Queued work is fenced by an epoch, so revocation/switch invalidates old work.
+/// The user properties that describe the open account. They are cleared with
+/// its identity; language, theme and build stay.
+const _accountProperties = [
+  'school_id',
+  'school_api_type',
+  'academic_year',
+  'demo_mode',
+  'notifications_enabled',
+];
+
 class ProductAnalytics {
   ProductAnalytics(
       {required this.sink, required this.store, required this.decision});
@@ -249,13 +259,7 @@ class ProductAnalytics {
     _school = null;
     _desiredSchool = null;
     _snapshots.clear();
-    for (final key in [
-      'school_id',
-      'school_api_type',
-      'academic_year',
-      'demo_mode',
-      'notifications_enabled'
-    ]) {
+    for (final key in _accountProperties) {
       _properties.remove(key);
     }
     if (!enabled) return Future.value();
@@ -263,13 +267,7 @@ class ProductAnalytics {
       try {
         await sink.userId(null);
       } catch (_) {}
-      for (final key in [
-        'school_id',
-        'school_api_type',
-        'academic_year',
-        'demo_mode',
-        'notifications_enabled'
-      ]) {
+      for (final key in _accountProperties) {
         try {
           await sink.property(key, null);
         } catch (_) {}

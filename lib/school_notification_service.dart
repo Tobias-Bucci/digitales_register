@@ -358,8 +358,10 @@ class SchoolNotificationService extends ChangeNotifier
           if (mobileBackgroundSupported) {
             await _scheduler.initialize(schoolNotificationDispatcher);
           }
-        } catch (_) {
+        } catch (error) {
           backgroundAvailable = false;
+          runtimeTrace('SchoolNotifications', 'scheduler-initialize-failed',
+              detail: 'type=${error.runtimeType}');
         }
       }
       await reload();
@@ -1145,8 +1147,10 @@ class SchoolNotificationService extends ChangeNotifier
                 .invokeMapMethod<String, dynamic>('diagnostics') ??
             {};
       }
-    } catch (_) {
+    } catch (error) {
       backgroundAvailable = false;
+      runtimeTrace('SchoolNotifications', 'schedule-failed',
+          detail: 'type=${error.runtimeType}');
     }
     notifyListeners();
   }
