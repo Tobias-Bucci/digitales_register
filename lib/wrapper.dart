@@ -497,21 +497,12 @@ class Wrapper {
     return mapped.isConnectionIssue;
   }
 
-  /// Leaves a trace of a request that was never answered, without any data.
-  void _logDropped(String reason, String url) {
-    logPerformanceEvent("request_dropped", <String, Object?>{
-      "reason": reason,
-      "endpoint": DiagnosticSanitizer.endpoint(url),
-    });
-  }
-
   Future<T> _runRequest<T>(
     String operation,
     Future<T> Function() request, {
     bool allowSingleRetry = false,
     bool retryLostConnection = false,
   }) async {
-    final stopwatch = Stopwatch()..start();
     var didRetry = false;
     while (true) {
       if (!_appInForeground) {
@@ -520,15 +511,6 @@ class Wrapper {
       try {
         final result = await runZoned(request,
             zoneValues: {#diagnosticRetry: didRetry ? 1 : 0});
-        stopwatch.stop();
-        logPerformanceEvent(
-          "network_request",
-          <String, Object?>{
-            "operation": operation,
-            "elapsedMs": stopwatch.elapsedMilliseconds,
-            "retried": didRetry,
-          },
-        );
         return result;
       } catch (error) {
         final mayRetry = allowSingleRetry
@@ -538,25 +520,9 @@ class Wrapper {
           didRetry = true;
           diagnostics.update('request_retry_count', 1);
           diagnostics.safeLog('request_retry');
-          logPerformanceEvent(
-            "network_retry",
-            <String, Object?>{
-              "operation": operation,
-              "reason": _mapRequestError(error).message,
-            },
-          );
           await Future<void>.delayed(requestRetryDelay);
           continue;
         }
-        stopwatch.stop();
-        logPerformanceEvent(
-          "network_failure",
-          <String, Object?>{
-            "operation": operation,
-            "elapsedMs": stopwatch.elapsedMilliseconds,
-            "error": _mapRequestError(error).message,
-          },
-        );
         throw _mapRequestError(error);
       }
     }
@@ -618,11 +584,6 @@ class Wrapper {
       );
     }
     if (_isLoginPage(source)) {
-      logPerformanceEvent("config_login_page", <String, Object?>{
-        "statusCode": response.statusCode,
-        "contentType": response.headers.value(Headers.contentTypeHeader),
-        "path": response.realUri.path,
-      });
       throw UnexpectedLogoutException();
     }
     diagnostics.values({
@@ -853,7 +814,6 @@ class Wrapper {
     bool acceptEmptyResponse = false,
   }) async {
     if (!_appInForeground) {
-      _logDropped('background', url);
       return null;
     }
     if (demoMode) {
@@ -868,11 +828,9 @@ class Wrapper {
       forceRelogin: forceRelogin,
     )) {
       privacyLog('technical_operation');
-      _logDropped('no_session', url);
       return null;
     }
     if (!_appInForeground) {
-      _logDropped('background', url);
       return null;
     }
 
@@ -913,7 +871,6 @@ class Wrapper {
           ..address = DiagnosticSanitizer.endpoint(url)
           ..response = responseData == null ? 'failed' : 'completed'
           ..parameters = '[redacted]'));
-        _logDropped('request_failed', url);
         return null;
       }
     }
@@ -926,7 +883,6 @@ class Wrapper {
     // gets a single new session, at most once a minute.
     if (sessionRejected) {
       if (unexpectedLogoutRetryCount >= 1) {
-        _logDropped('refused', url);
         return null;
       }
       return send(
@@ -955,7 +911,6 @@ class Wrapper {
         privacyLog('technical_operation');
         error = "Die Sitzung konnte nicht automatisch erneuert werden.";
         _loggedIn = Future.value(false);
-        _logDropped('session_not_renewed', url);
         return null;
       }
 
@@ -1125,7 +1080,6 @@ class Wrapper {
         throw const FormatException('Missing session refresh response');
       }
       if (result['forceLogout'] == true) {
-        logPerformanceEvent('session_refresh_forced_logout');
         logout(hard: safeMode, logoutForcedByServer: true);
         return;
       }
@@ -1135,10 +1089,6 @@ class Wrapper {
     } catch (error, stack) {
       diagnostics.report(error, stack, DiagnosticError.login);
       privacyLog('technical_operation');
-      logPerformanceEvent("session_refresh_failed", <String, Object?>{
-        "reason": error.runtimeType.toString(),
-        "forcedLogout": true,
-      });
       logout(hard: safeMode, logoutForcedByServer: true);
       return;
     }
@@ -1164,13 +1114,6 @@ class Wrapper {
       _url = user = pass = null;
       _serverLogoutTime = null;
     }
-    logPerformanceEvent(
-      "logout",
-      <String, Object?>{
-        "hard": hard,
-        "forcedByServer": logoutForcedByServer,
-      },
-    );
     _loggedIn = Future.value(false);
     _clearCookies();
   }

@@ -425,13 +425,6 @@ class _SubjectWidgetState extends State<SubjectWidget> {
             widget.noInternet && entries == null ? const SizedBox() : null,
         onExpansionChanged: (expansion) {
           if (expansion) {
-            logPerformanceEvent(
-              "grades_subject_expanded",
-              <String, Object?>{
-                "subjectId": widget.subject.id,
-                "semester": widget.semester.name,
-              },
-            );
             widget.viewSubjectDetail();
           }
           widget.onExpansionChanged(expansion);

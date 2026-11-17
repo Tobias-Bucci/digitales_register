@@ -46,20 +46,6 @@ String get appVersion {
 
 void setPackageInfo(PackageInfo info) {
   packageInfo = info;
-  logPerformanceEvent(
-    "package_info_loaded",
-    <String, Object?>{
-      "version": info.version,
-      "buildNumber": info.buildNumber,
-    },
-  );
-}
-
-void logPerformanceEvent(
-  String event, [
-  Map<String, Object?> details = const <String, Object?>{},
-]) {
-  privacyLog('technical_operation');
 }
 
 extension ListIntersperse<T> on List<List<T>> {

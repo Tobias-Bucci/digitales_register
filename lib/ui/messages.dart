@@ -645,18 +645,7 @@ class _MessageWidgetState extends State<MessageWidget> {
 Widget renderMessage(Message message) {
   final Delta delta;
   try {
-    final stopwatch = Stopwatch()..start();
-    final resolved = _resolveMessageDelta(message);
-    delta = resolved.delta;
-    stopwatch.stop();
-    logPerformanceEvent(
-      "message_render_ready",
-      <String, Object?>{
-        "messageId": message.id,
-        "elapsedUs": stopwatch.elapsedMicroseconds,
-        "fromCache": resolved.fromCache,
-      },
-    );
+    delta = _resolveMessageDelta(message);
   } catch (_) {
     return const _MessageBodyNotice('messages.body.unsupported');
   }
@@ -718,27 +707,15 @@ class _MessageBodyNotice extends StatelessWidget {
   }
 }
 
-_ResolvedMessageDelta _resolveMessageDelta(Message message) {
+Delta _resolveMessageDelta(Message message) {
   final cached = _messageDeltaCache[message.id];
   if (cached != null && cached.source == message.text) {
     _messageDeltaCache.remove(message.id);
     _messageDeltaCache[message.id] = cached;
-    return _ResolvedMessageDelta(
-      delta: cached.delta,
-      fromCache: true,
-    );
+    return cached.delta;
   }
 
-  final stopwatch = Stopwatch()..start();
   final delta = Delta.fromJson(jsonDecode(message.text)["ops"] as List);
-  stopwatch.stop();
-  logPerformanceEvent(
-    "message_delta_parsed",
-    <String, Object?>{
-      "messageId": message.id,
-      "elapsedMs": stopwatch.elapsedMilliseconds,
-    },
-  );
   _messageDeltaCache[message.id] = _CachedMessageDelta(
     source: message.text,
     delta: delta,
@@ -746,10 +723,7 @@ _ResolvedMessageDelta _resolveMessageDelta(Message message) {
   while (_messageDeltaCache.length > _messageDeltaCacheLimit) {
     _messageDeltaCache.remove(_messageDeltaCache.keys.first);
   }
-  return _ResolvedMessageDelta(
-    delta: delta,
-    fromCache: false,
-  );
+  return delta;
 }
 
 class _CachedMessageDelta {
@@ -760,14 +734,4 @@ class _CachedMessageDelta {
 
   final String source;
   final Delta delta;
-}
-
-class _ResolvedMessageDelta {
-  const _ResolvedMessageDelta({
-    required this.delta,
-    required this.fromCache,
-  });
-
-  final Delta delta;
-  final bool fromCache;
 }
