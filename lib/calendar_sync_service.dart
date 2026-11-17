@@ -173,47 +173,51 @@ extension CalendarSyncService on Never {
     final previous = _operationTail;
     final done = Completer<void>();
     _operationTail = done.future;
-    await previous;
-    final product = AnalyticsService.product;
-    final epoch = product.sessionEpoch;
-    final stopwatch = Stopwatch()..start();
-    void reportResult(String result) {
-      if (!product.isSession(epoch)) return;
-      unawaited(product.event('calendar_sync_result', {
-        'result': result,
-        'duration_bucket': AnalyticsSchema.duration(stopwatch.elapsed)
-      }));
-      unawaited(product.event('sync_completed', {
-        'sync_type': 'calendar',
-        'result': result,
-        'duration_bucket': AnalyticsSchema.duration(stopwatch.elapsed)
-      }));
-    }
-
-    unawaited(AnalyticsService.product
-        .event('sync_started', {'sync_type': 'calendar'}));
+    // Completed whatever happens below: a later sync waits for it.
     try {
-      diagnostics.values({
-        'background_task': 'sync',
-        'sync_running': true,
-        'operation': 'sync'
-      });
-      diagnostics.safeLog('sync_started');
+      await previous;
+      final product = AnalyticsService.product;
+      final epoch = product.sessionEpoch;
+      final stopwatch = Stopwatch()..start();
+      void reportResult(String result) {
+        if (!product.isSession(epoch)) return;
+        unawaited(product.event('calendar_sync_result', {
+          'result': result,
+          'duration_bucket': AnalyticsSchema.duration(stopwatch.elapsed)
+        }));
+        unawaited(product.event('sync_completed', {
+          'sync_type': 'calendar',
+          'result': result,
+          'duration_bucket': AnalyticsSchema.duration(stopwatch.elapsed)
+        }));
+      }
+
+      unawaited(AnalyticsService.product
+          .event('sync_started', {'sync_type': 'calendar'}));
       try {
-        final result = await operation();
-        diagnostics.update(
-            'last_sync_result', result == false ? 'partial' : 'success');
-        diagnostics.safeLog('sync_completed');
-        reportResult(result == false ? 'partial' : 'success');
-        return result;
-      } catch (e, stack) {
-        diagnostics.update('last_sync_result', 'failed');
-        reportResult('failed');
-        diagnostics.report(e, stack, DiagnosticError.background);
-        rethrow;
+        diagnostics.values({
+          'background_task': 'sync',
+          'sync_running': true,
+          'operation': 'sync'
+        });
+        diagnostics.safeLog('sync_started');
+        try {
+          final result = await operation();
+          diagnostics.update(
+              'last_sync_result', result == false ? 'partial' : 'success');
+          diagnostics.safeLog('sync_completed');
+          reportResult(result == false ? 'partial' : 'success');
+          return result;
+        } catch (e, stack) {
+          diagnostics.update('last_sync_result', 'failed');
+          reportResult('failed');
+          diagnostics.report(e, stack, DiagnosticError.background);
+          rethrow;
+        }
+      } finally {
+        diagnostics.values({'sync_running': false, 'background_task': 'none'});
       }
     } finally {
-      diagnostics.values({'sync_running': false, 'background_task': 'none'});
       done.complete();
     }
   }

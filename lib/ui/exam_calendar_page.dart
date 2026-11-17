@@ -499,7 +499,7 @@ class _ExamDetailPageState extends State<_ExamDetailPage> {
             context: context,
             builder: (_) => _StudyPhaseEditor(initial: current),
           );
-    if (editedPhases == null) return;
+    if (!mounted || editedPhases == null) return;
     final completedIds = editedPhases.map((phase) => phase.id).toSet();
     setState(() {
       _phases = editedPhases;

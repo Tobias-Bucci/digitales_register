@@ -502,6 +502,7 @@ class _FutureAbsenceDialogState extends State<_FutureAbsenceDialog> {
             firstDate: now.subtract(const Duration(days: 1)),
             lastDate: now.add(const Duration(days: 365 * 2)),
           );
+          if (!mounted) return;
           if (picked != null) {
             setState(() {
               _startDate = DateTime(
@@ -535,6 +536,7 @@ class _FutureAbsenceDialogState extends State<_FutureAbsenceDialog> {
             firstDate: _startDate,
             lastDate: now.add(const Duration(days: 365 * 2)),
           );
+          if (!mounted) return;
           if (picked != null) {
             setState(() {
               _endDate = DateTime(

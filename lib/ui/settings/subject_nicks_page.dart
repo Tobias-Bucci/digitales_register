@@ -112,7 +112,7 @@ class _SubjectNicksSettingsPageState extends State<_SubjectNicksSettingsPage> {
       entry.value,
       [..._subjectsWithoutNick, entry.key],
     );
-    if (newValue == null) {
+    if (!mounted || newValue == null) {
       return;
     }
     setState(() {
@@ -208,7 +208,7 @@ class _SubjectNicksSettingsPageState extends State<_SubjectNicksSettingsPage> {
       '',
       _subjectsWithoutNick,
     );
-    if (newValue == null) {
+    if (!mounted || newValue == null) {
       return;
     }
     setState(() {
@@ -307,7 +307,7 @@ class _SubjectNicksSettingsPageState extends State<_SubjectNicksSettingsPage> {
                                   entry.value,
                                   [..._subjectsWithoutNick, entry.key],
                                 );
-                                if (newValue == null) {
+                                if (!mounted || newValue == null) {
                                   return;
                                 }
                                 setState(() {

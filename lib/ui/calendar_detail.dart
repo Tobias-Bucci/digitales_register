@@ -166,6 +166,8 @@ class _CalendarDetailPageState extends State<CalendarDetailPage> {
     }
     final pageViewIndex = _pageViewIndex(widget.selectedDay!);
     if (!_controller.hasClients) {
+      // Not attached to the page view, so it can go right away.
+      _controller.dispose();
       _controller = PageController(
         initialPage: pageViewIndex,
       );

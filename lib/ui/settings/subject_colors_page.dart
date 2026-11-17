@@ -69,7 +69,7 @@ class _SubjectColorsSettingsPageState
       subject: entry.key,
       current: Color(entry.value.color),
     );
-    if (color == null) {
+    if (!mounted || color == null) {
       return;
     }
     final updatedTheme = entry.value.rebuild(
