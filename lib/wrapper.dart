@@ -28,19 +28,22 @@ import 'package:dr/app_state.dart';
 import 'package:dr/demo.dart';
 import 'package:dr/diagnostics_network.dart';
 import 'package:dr/diagnostics_service.dart';
-import 'package:dr/i18n/app_localizations.dart';
 import 'package:dr/main.dart';
 import 'package:dr/privacy_log.dart';
 import 'package:dr/school_api_endpoints.dart';
 import 'package:dr/school_proxy.dart';
 import 'package:dr/star_rating.dart';
-import 'package:dr/ui/controlled_text_builder.dart';
-import 'package:dr/ui/dialog.dart';
 import 'package:dr/util.dart';
-import 'package:flutter/material.dart';
+import 'package:flutter/foundation.dart';
 import 'package:mutex/mutex.dart';
 
 typedef AddNetworkProtocolItem = void Function(NetworkProtocolItem item);
+
+/// Asks the user for the code of the two-factor authentication, again with a
+/// hint when [wasWrong]. Completes with null when the user cancels.
+typedef RequestTwoFactorCode = Future<String?> Function({
+  required bool wasWrong,
+});
 
 class UnexpectedLogoutException implements Exception {}
 
@@ -153,6 +156,7 @@ class Wrapper {
     _url = user = pass = null;
     _serverLogoutTime = null;
     onLogout = onRelogin = onConfigLoaded = onAddProtocolItem = null;
+    onRequestTwoFactorCode = null;
     // The logout request still needs the session cookie.
     unawaited(serverLogout.whenComplete(() {
       _clearCookies();
@@ -251,6 +255,9 @@ class Wrapper {
   VoidCallback? onLogout, onRelogin;
   Future<void>? Function()? onConfigLoaded;
   AddNetworkProtocolItem? onAddProtocolItem;
+
+  /// Set by whoever signs in before [login]; the network layer shows no UI.
+  RequestTwoFactorCode? onRequestTwoFactorCode;
   late bool safeMode;
 
   bool noInternet = false;
@@ -440,35 +447,10 @@ class Wrapper {
     return response;
   }
 
-  Future<String?> _request2FA({bool wasWrong = false}) {
-    return showDialog(
-      context: navigatorKey!.currentContext!,
-      builder: (context) {
-        return ControlledTextBuilder(
-          builder: (context, textInputController) => InfoDialog(
-            title: Text(context.l10n
-                .text(wasWrong ? 'login.invalid2FA' : 'login.require2FA')),
-            content: TextField(
-              controller: textInputController,
-            ),
-            actions: [
-              TextButton(
-                onPressed: () => Navigator.pop(context),
-                child: Text(context.l10n.text('privacyConsent.cancel')),
-              ),
-              ElevatedButton(
-                onPressed: () => Navigator.pop(
-                  context,
-                  textInputController.value.text,
-                ),
-                child: Text(context.l10n.text('login.confirm2FA')),
-              ),
-            ],
-          ),
-        );
-      },
-    );
-  }
+  /// Without a way to ask (a wrapper that was retired), the sign-in stops as
+  /// if the user had cancelled.
+  Future<String?> _request2FA({bool wasWrong = false}) async =>
+      await onRequestTwoFactorCode?.call(wasWrong: wasWrong);
 
   AppRequestException _mapRequestError(Object error) {
     if (error is AppRequestException) {

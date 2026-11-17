@@ -99,6 +99,7 @@ import 'package:dr/ui/school_notification_opt_in.dart';
 import 'package:dr/ui/server_notifications/server_notification_routes.dart';
 import 'package:dr/ui/settings_page_new.dart' show SettingsSheetActions;
 import 'package:dr/ui/system_pages.dart';
+import 'package:dr/ui/two_factor_dialog.dart';
 import 'package:dr/utc_date_time.dart';
 import 'package:dr/util.dart';
 import 'package:dr/web_app/browser_download.dart';

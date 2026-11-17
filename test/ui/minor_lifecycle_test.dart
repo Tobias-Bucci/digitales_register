@@ -1,6 +1,7 @@
 import 'package:dio/dio.dart';
 import 'package:dr/app_state.dart';
 import 'package:dr/container/login_page.dart';
+import 'package:dr/main.dart';
 import 'package:dr/ui/change_email.dart';
 import 'package:dr/ui/controlled_text_builder.dart';
 import 'package:dr/ui/days.dart';
@@ -8,6 +9,7 @@ import 'package:dr/ui/grade_calculator.dart';
 import 'package:dr/ui/login_page_content.dart';
 import 'package:dr/ui/pass_reset.dart';
 import 'package:dr/ui/request_pass_reset.dart';
+import 'package:dr/ui/two_factor_dialog.dart';
 import 'package:dr/wrapper.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -21,7 +23,10 @@ void main() {
   for (final dismissal in ['confirm', 'cancel', 'navigation']) {
     testWidgets('2FA controller is released after $dismissal', (tester) async {
       await pumpApp(tester, store: createStore(), home: const Scaffold());
-      final client = Wrapper();
+      final client = Wrapper()
+        ..onRequestTwoFactorCode = ({required wasWrong}) =>
+            showTwoFactorCodeDialog(navigatorKey!.currentContext!,
+                wasWrong: wasWrong);
       addTearDown(() => client.dio.close(force: true));
       final codes = <String?>[];
       client.dio.interceptors.insert(0, InterceptorsWrapper(
