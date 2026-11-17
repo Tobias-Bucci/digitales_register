@@ -40,6 +40,15 @@ const schoolNotificationChannels = [
   'school_other',
 ];
 
+// Keys of the secure storage of this service. Installed apps have saved
+// values under them, so they must not change.
+const _activeAccountKey = 'school-notification-active';
+const _sessionKey = 'school-notification-session';
+const _backgroundAllowedKey = 'school-notification-background';
+const _permissionKey = 'school-notification-permission';
+const _foregroundUntilKey = 'school-notification-foreground-until';
+const _desktopConsentKey = 'school-notification-desktop-consent';
+
 /// System notifications for school news are offered on Android, iOS and macOS
 /// only. Linux and Windows stay without alerts and background checks.
 bool schoolNotificationsSupported() =>
@@ -408,7 +417,7 @@ class SchoolNotificationService extends ChangeNotifier
         } else {
           await _storage.delete(key: 'school-notification-foreground-v2');
         }
-        await _storage.delete(key: 'school-notification-foreground-until');
+        await _storage.delete(key: _foregroundUntilKey);
       }, label: 'foreground-heartbeat', history: false);
 
   @override
@@ -431,8 +440,7 @@ class SchoolNotificationService extends ChangeNotifier
     if (HostPlatform.isLinux || HostPlatform.isWindows) {
       // These desktop daemons enforce system policy and expose no permission
       // request API. Require explicit in-app consent before submitting alerts.
-      return await _storage.read(key: 'school-notification-desktop-consent') ==
-          'true';
+      return await _storage.read(key: _desktopConsentKey) == 'true';
     }
     if (HostPlatform.isAndroid) {
       return await _native
@@ -458,7 +466,7 @@ class SchoolNotificationService extends ChangeNotifier
 
   Future<SchoolNotificationPreferences> _readPreferences(
       {String? account, bool legacyEligible = false}) async {
-    account ??= await _storage.read(key: 'school-notification-active');
+    account ??= await _storage.read(key: _activeAccountKey);
     var raw = account == null
         ? null
         : await _storage.read(
@@ -596,8 +604,8 @@ class SchoolNotificationService extends ChangeNotifier
       return true;
     }
     // Transitional iOS/desktop heartbeat. Android ignores this old record.
-    final until = DateTime.tryParse(
-        await _storage.read(key: 'school-notification-foreground-until') ?? '');
+    final until =
+        DateTime.tryParse(await _storage.read(key: _foregroundUntilKey) ?? '');
     return until != null && until.isAfter(DateTime.now().toUtc());
   }
 
@@ -670,10 +678,9 @@ class SchoolNotificationService extends ChangeNotifier
       permissionRequested = await _storage.read(
               key: 'school-notification-permission-requested-v1') ==
           'true';
-      final previous =
-          await _storage.read(key: 'school-notification-permission');
+      final previous = await _storage.read(key: _permissionKey);
       if (granted && previous != 'true') {
-        final account = await _storage.read(key: 'school-notification-active');
+        final account = await _storage.read(key: _activeAccountKey);
         for (final account in {
           ...(await _enrolledAccounts()).keys,
           if (account != null) account
@@ -684,10 +691,9 @@ class SchoolNotificationService extends ChangeNotifier
           await _resetSnapshot(account);
         }
       }
-      await _storage.write(
-          key: 'school-notification-permission', value: '$granted');
+      await _storage.write(key: _permissionKey, value: '$granted');
       if (granted && previous != 'true') await _prepareBackgroundCredentials();
-      final account = await _storage.read(key: 'school-notification-active');
+      final account = await _storage.read(key: _activeAccountKey);
       activeAccount = account;
       final raw = account == null
           ? null
@@ -725,9 +731,7 @@ class SchoolNotificationService extends ChangeNotifier
               ? 'permission'
               : account == null
                   ? 'noAccount'
-                  : await _storage.read(
-                              key: 'school-notification-background') !=
-                          'true'
+                  : await _storage.read(key: _backgroundAllowedKey) != 'true'
                       ? 'credentials'
                       : null;
     });
@@ -745,7 +749,7 @@ class SchoolNotificationService extends ChangeNotifier
   Future<void> _requestPermission() async {
     if (!supported) return;
     await initialize();
-    final account = await _storage.read(key: 'school-notification-active');
+    final account = await _storage.read(key: _activeAccountKey);
     if (account == null ||
         !(await _readPreferences(account: account)).enabled) {
       return;
@@ -763,7 +767,7 @@ class SchoolNotificationService extends ChangeNotifier
           true;
     }
     if (generation != _sessionGeneration ||
-        await _storage.read(key: 'school-notification-active') != account) {
+        await _storage.read(key: _activeAccountKey) != account) {
       return;
     }
     if (canAsk) {
@@ -805,8 +809,7 @@ class SchoolNotificationService extends ChangeNotifier
               MacOSFlutterLocalNotificationsPlugin>()
           ?.requestPermissions(alert: true, badge: true, sound: true);
     } else {
-      await _storage.write(
-          key: 'school-notification-desktop-consent', value: 'true');
+      await _storage.write(key: _desktopConsentKey, value: 'true');
     }
   }
 
@@ -834,7 +837,7 @@ class SchoolNotificationService extends ChangeNotifier
     await _locked(() async {
       await _loadPreferences();
       preferences.setCategory(category, value);
-      final account = await _storage.read(key: 'school-notification-active');
+      final account = await _storage.read(key: _activeAccountKey);
       if (account != null) {
         await _engine.baselineNext(account, category.name);
         await _resetSnapshot(account);
@@ -858,7 +861,7 @@ class SchoolNotificationService extends ChangeNotifier
       preferences.consent = value
           ? SchoolNotificationConsent.accepted
           : SchoolNotificationConsent.declined;
-      final account = await _storage.read(key: 'school-notification-active');
+      final account = await _storage.read(key: _activeAccountKey);
       if (account != null) {
         for (final category in SchoolNotificationCategory.values) {
           await _engine.baselineNext(account, category.name);
@@ -886,7 +889,7 @@ class SchoolNotificationService extends ChangeNotifier
     await _initializing;
     if (!supported || !_initialized) return null;
     return _locked(() async {
-      final account = await _storage.read(key: 'school-notification-active');
+      final account = await _storage.read(key: _activeAccountKey);
       if (account == null ||
           (await _readPreferences(account: account)).consent !=
               SchoolNotificationConsent.unknown) {
@@ -901,8 +904,7 @@ class SchoolNotificationService extends ChangeNotifier
       {required bool accept, bool grades = true, bool messages = true}) async {
     final saved = await _locked(() async {
       if (offer.generation != _sessionGeneration ||
-          await _storage.read(key: 'school-notification-active') !=
-              offer.account) {
+          await _storage.read(key: _activeAccountKey) != offer.account) {
         return false;
       }
       final current = await _readPreferences(account: offer.account);
@@ -946,7 +948,7 @@ class SchoolNotificationService extends ChangeNotifier
     await _locked(() async {
       await _loadPreferences();
       preferences.details = value;
-      final account = await _storage.read(key: 'school-notification-active');
+      final account = await _storage.read(key: _activeAccountKey);
       if (account != null) await _resetSnapshot(account);
       await _storage.write(
           key: account == null
@@ -963,7 +965,7 @@ class SchoolNotificationService extends ChangeNotifier
     await _locked(() async {
       await _loadPreferences();
       preferences.showEventCount = value;
-      final account = await _storage.read(key: 'school-notification-active');
+      final account = await _storage.read(key: _activeAccountKey);
       await _storage.write(
           key: account == null
               ? 'school-notification-preferences-v1'
@@ -993,7 +995,7 @@ class SchoolNotificationService extends ChangeNotifier
     await _locked(() async {
       if (generation != _sessionGeneration) return;
       final account = accountKey(server, user);
-      final previous = await _storage.read(key: 'school-notification-active');
+      final previous = await _storage.read(key: _activeAccountKey);
       final enrolled = await _enrolledAccounts();
       // Materialize unknown/legacy decisions before enrolling a new account;
       // old positive global settings must not opt new accounts in implicitly.
@@ -1003,14 +1005,14 @@ class SchoolNotificationService extends ChangeNotifier
           value: jsonEncode(settings.toJson()));
       if (previous != account) await _clearSchoolAlerts();
       activeAccountLabel = user;
-      await _storage.write(key: 'school-notification-active', value: account);
+      await _storage.write(key: _activeAccountKey, value: account);
       // A session token also rejects late responses after A -> B -> A or logout
       // followed by another login to the same account, across Flutter engines.
       await _storage.write(
-          key: 'school-notification-session',
+          key: _sessionKey,
           value: notificationDigest(Hive.generateSecureKey()));
       await _storage.write(
-          key: 'school-notification-background', value: '$backgroundAllowed');
+          key: _backgroundAllowedKey, value: '$backgroundAllowed');
       enrolled[account] = true;
       await _storage.write(
           key: 'school-notification-accounts-v1', value: jsonEncode(enrolled));
@@ -1028,7 +1030,7 @@ class SchoolNotificationService extends ChangeNotifier
     if (!HostPlatform.isIOS ||
         !granted ||
         !(await _readPreferences()).enabled ||
-        await _storage.read(key: 'school-notification-background') != 'true') {
+        await _storage.read(key: _backgroundAllowedKey) != 'true') {
       return;
     }
     final login = await _storage.read(key: 'login');
@@ -1040,7 +1042,7 @@ class SchoolNotificationService extends ChangeNotifier
     if (raw != null) return jsonDecode(raw) as Map<String, dynamic>;
     // Upgrade the previous single-account installation without resetting its
     // opt-in/history. An explicit empty registry (deletion) is never migrated.
-    final active = await _storage.read(key: 'school-notification-active');
+    final active = await _storage.read(key: _activeAccountKey);
     return {if (active != null) active: true};
   }
 
@@ -1058,10 +1060,10 @@ class SchoolNotificationService extends ChangeNotifier
       await _history!.delete('school-notification-diagnostics-$account');
       await _history!.delete(_snapshotKey(account));
       await _history!.flush();
-      if (await _storage.read(key: 'school-notification-active') == account) {
+      if (await _storage.read(key: _activeAccountKey) == account) {
         ++_sessionGeneration;
-        await _storage.delete(key: 'school-notification-active');
-        await _storage.delete(key: 'school-notification-session');
+        await _storage.delete(key: _activeAccountKey);
+        await _storage.delete(key: _sessionKey);
         activeAccountLabel = null;
         activeAccount = null;
         diagnostics = {};
@@ -1083,8 +1085,8 @@ class SchoolNotificationService extends ChangeNotifier
             key: 'school-notification-accounts-v1',
             value: jsonEncode(enrolled));
       }
-      await _storage.delete(key: 'school-notification-active');
-      await _storage.delete(key: 'school-notification-session');
+      await _storage.delete(key: _activeAccountKey);
+      await _storage.delete(key: _sessionKey);
       if (!switchingAccount) {
         await _storage.delete(key: 'school-notification-accounts-v1');
       }
@@ -1123,9 +1125,8 @@ class SchoolNotificationService extends ChangeNotifier
       }
       if (!granted ||
           !anyEnabled ||
-          await _storage.read(key: 'school-notification-active') == null ||
-          await _storage.read(key: 'school-notification-background') !=
-              'true') {
+          await _storage.read(key: _activeAccountKey) == null ||
+          await _storage.read(key: _backgroundAllowedKey) != 'true') {
         await _scheduler.cancel();
       } else {
         if (HostPlatform.isIOS &&
@@ -1159,7 +1160,7 @@ class SchoolNotificationService extends ChangeNotifier
     await _locked(() async {
       final account = accountKey(server, user);
       if (generation != _sessionGeneration ||
-          await _storage.read(key: 'school-notification-active') != account) {
+          await _storage.read(key: _activeAccountKey) != account) {
         return;
       }
       await _ingest(account, data, background: background);
@@ -1452,7 +1453,7 @@ class SchoolNotificationService extends ChangeNotifier
     await _locked(() async {
       final account = accountKey(server, user);
       if (generation != _sessionGeneration ||
-          await _storage.read(key: 'school-notification-active') != account ||
+          await _storage.read(key: _activeAccountKey) != account ||
           !(await _enrolledAccounts()).containsKey(account)) {
         return;
       }
@@ -1520,7 +1521,7 @@ class SchoolNotificationService extends ChangeNotifier
     if (!mobileBackgroundSupported) return;
     final accounts = await _locked(() async {
       final enrolled = await _enrolledAccounts();
-      final active = await _storage.read(key: 'school-notification-active');
+      final active = await _storage.read(key: _activeAccountKey);
       if (active == null) return <String>[];
       // Least recently attempted first prevents a slow school from starving
       // other accounts when iOS grants only a short execution window.
@@ -1567,12 +1568,11 @@ class SchoolNotificationService extends ChangeNotifier
       if (!preferences.enabled || !preferences.anyCategory) {
         return null;
       }
-      final active = await _storage.read(key: 'school-notification-active');
+      final active = await _storage.read(key: _activeAccountKey);
       final account = targetAccount;
       if (active == null ||
           !(await _enrolledAccounts()).containsKey(account) ||
-          await _storage.read(key: 'school-notification-background') !=
-              'true') {
+          await _storage.read(key: _backgroundAllowedKey) != 'true') {
         return null;
       }
       final last = DateTime.tryParse(
@@ -1632,7 +1632,7 @@ class SchoolNotificationService extends ChangeNotifier
       final lease = DateTime.tryParse(
           await _storage.read(key: 'school-notification-lease-$account') ?? '');
       if (lease != null && lease.isAfter(DateTime.now().toUtc())) return null;
-      final session = await _storage.read(key: 'school-notification-session');
+      final session = await _storage.read(key: _sessionKey);
       final rawDiagnostics =
           await _history!.get('school-notification-diagnostics-$account');
       final previous = rawDiagnostics == null
@@ -1712,16 +1712,13 @@ class SchoolNotificationService extends ChangeNotifier
         final last = DateTime.tryParse(await _storage.read(
                 key: 'school-notification-last-sync-${request.account}') ??
             '');
-        if (await _storage.read(key: 'school-notification-active') !=
-                request.active ||
+        if (await _storage.read(key: _activeAccountKey) != request.active ||
             await _storage.read(
                     key: 'school-notification-lease-${request.account}') !=
                 request.lease ||
             !(await _enrolledAccounts()).containsKey(request.account) ||
-            await _storage.read(key: 'school-notification-session') !=
-                request.session ||
-            await _storage.read(key: 'school-notification-background') !=
-                'true' ||
+            await _storage.read(key: _sessionKey) != request.session ||
+            await _storage.read(key: _backgroundAllowedKey) != 'true' ||
             await _storage.read(key: 'login') != request.rawLogin ||
             !await _hasPermission() ||
             await _foregroundSessionActive() ||
@@ -1741,8 +1738,7 @@ class SchoolNotificationService extends ChangeNotifier
     } on SchoolNotificationAuthenticationRequired {
       await _locked(() async {
         if (!(await _enrolledAccounts()).containsKey(request.account) ||
-            await _storage.read(key: 'school-notification-session') !=
-                request.session ||
+            await _storage.read(key: _sessionKey) != request.session ||
             await _storage.read(key: 'login') != request.rawLogin) {
           return;
         }
@@ -1755,8 +1751,7 @@ class SchoolNotificationService extends ChangeNotifier
     } catch (error) {
       await _locked(() async {
         if (!(await _enrolledAccounts()).containsKey(request.account) ||
-            await _storage.read(key: 'school-notification-session') !=
-                request.session ||
+            await _storage.read(key: _sessionKey) != request.session ||
             await _storage.read(key: 'login') != request.rawLogin) {
           return;
         }
