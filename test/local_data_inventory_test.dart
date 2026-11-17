@@ -442,7 +442,7 @@ void main() {
       'lib/page_payload_cache.dart': {'key'},
       'lib/class_register_cache.dart': {'key'},
       'lib/calendar_sync_service.dart': {'_calendarSyncRecordsKey'},
-      'lib/middleware/middleware.dart': {
+      'lib/middleware/course_materials.dart': {
         '_courseMaterialVersionsKeyFor(scope)',
       },
       'lib/ui/days.dart': {'_gradeDeadlinePreferenceStorageKey()'},
@@ -456,11 +456,11 @@ void main() {
         '_subjectTranslationEnabledPreferenceKey',
       },
       'lib/middleware/middleware.dart': {
-        '_legacyStudyPromptedKey',
         // Web only: the welcome dialog was shown in this browser (the native
         // app keeps this marker as a file in its folder).
         '_welcomeShownPreference',
       },
+      'lib/middleware/study_data.dart': {'_legacyStudyPromptedKey'},
       // How the notification center is filtered on this device, like the
       // theme. Holds no content and no account.
       'lib/notification_feed.dart': {'notificationFilterPreferenceKey'},
@@ -544,7 +544,8 @@ void main() {
 
     test('the namespaces the inventory deletes are the ones that are written',
         () {
-      final source = File('lib/middleware/middleware.dart').readAsStringSync();
+      final source =
+          File('lib/middleware/page_payloads.dart').readAsStringSync();
       for (final namespace in [
         "'homeworkSummary:",
         "'classRegisterLessons:",
