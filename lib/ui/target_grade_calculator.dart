@@ -237,86 +237,16 @@ class _TargetGradeCalculatorPageState
       _invalidate(() => _additionalExistingGrades.remove(grade));
 
   Future<void> _addExistingGrade() async {
-    if (ResponsiveNavigationScope.isActive(context)) {
-      // A sheet of glass in the new design, with the same checks.
-      final entry = await _showExistingGradeSheet(context);
-      if (!mounted || entry == null) return;
-      _invalidate(() => _additionalExistingGrades.add(entry));
-      return;
-    }
-    final gradeController = TextEditingController();
-    final weightController = TextEditingController(text: '100');
-    String? error;
-    final added = await showDialog<bool>(
-      context: context,
-      builder: (dialogContext) => StatefulBuilder(
-        builder: (context, setDialogState) => AlertDialog(
-          title: Text(context.l10n.text('targetCalculator.addExistingGrade')),
-          content: Column(mainAxisSize: MainAxisSize.min, children: [
-            TextField(
-              controller: gradeController,
-              keyboardType:
-                  const TextInputType.numberWithOptions(decimal: true),
-              decoration: InputDecoration(
-                  labelText: context.l10n.text('gradeCalculator.grade')),
-            ),
-            const SizedBox(height: 12),
-            TextField(
-              controller: weightController,
-              keyboardType: TextInputType.number,
-              decoration: InputDecoration(
-                labelText: context.l10n.text('gradeCalculator.weight'),
-                suffixText: '%',
-              ),
-            ),
-            if (error != null) ...[
-              const SizedBox(height: 8),
-              Text(error!,
-                  style: TextStyle(color: Theme.of(context).colorScheme.error)),
-            ],
-          ]),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.pop(dialogContext),
-              child: Text(context.l10n.text('dialog.close')),
-            ),
-            ElevatedButton(
-              onPressed: () {
-                final grade = tryParseFormattedGrade(gradeController.text);
-                final weight = int.tryParse(weightController.text);
-                if (grade == null ||
-                    grade < minimumGrade ||
-                    grade > maximumGrade ||
-                    weight == null ||
-                    weight < 0) {
-                  setDialogState(() => error = context.l10n
-                      .text('targetCalculator.error.invalidExisting'));
-                  return;
-                }
-                Navigator.pop(dialogContext, true);
-              },
-              child:
-                  Text(context.l10n.text('targetCalculator.addExistingGrade')),
-            ),
-          ],
-        ),
-      ),
-    );
-    if (!mounted || added != true) {
-      gradeController.dispose();
-      weightController.dispose();
-      return;
-    }
-    setState(() {
-      _additionalExistingGrades.add(TargetGradeEntry(
-        grade: tryParseFormattedGrade(gradeController.text)!,
-        weightPercentage: int.parse(weightController.text),
-      ));
-      _calculation = null;
-      _error = null;
-    });
-    gradeController.dispose();
-    weightController.dispose();
+    // A sheet of glass in the new design, a dialog in the legacy one; both
+    // own their fields, so the fields outlive the closing animation.
+    final entry = ResponsiveNavigationScope.isActive(context)
+        ? await _showExistingGradeSheet(context)
+        : await showDialog<TargetGradeEntry>(
+            context: context,
+            builder: (_) => const _ExistingGradeDialog(),
+          );
+    if (!mounted || entry == null) return;
+    _invalidate(() => _additionalExistingGrades.add(entry));
   }
 
   @override
@@ -729,6 +659,95 @@ class _ResultCard extends StatelessWidget {
           ],
         ),
       ),
+    );
+  }
+}
+
+/// The grade and weight typed for a grade the subject already has, or null
+/// when either is not a valid grade or a non-negative weight. Both designs
+/// check with this.
+TargetGradeEntry? _parseExistingGrade(String grade, String weight) {
+  final parsedGrade = tryParseFormattedGrade(grade);
+  final parsedWeight = int.tryParse(weight);
+  if (parsedGrade == null ||
+      parsedGrade < minimumGrade ||
+      parsedGrade > maximumGrade ||
+      parsedWeight == null ||
+      parsedWeight < 0) {
+    return null;
+  }
+  return TargetGradeEntry(grade: parsedGrade, weightPercentage: parsedWeight);
+}
+
+/// The Legacy dialog for a grade the subject already has. It owns its fields
+/// so that they live until the dialog has finished closing.
+class _ExistingGradeDialog extends StatefulWidget {
+  const _ExistingGradeDialog();
+
+  @override
+  State<_ExistingGradeDialog> createState() => _ExistingGradeDialogState();
+}
+
+class _ExistingGradeDialogState extends State<_ExistingGradeDialog> {
+  final _gradeController = TextEditingController();
+  final _weightController = TextEditingController(text: '100');
+  String? _error;
+
+  @override
+  void dispose() {
+    _gradeController.dispose();
+    _weightController.dispose();
+    super.dispose();
+  }
+
+  void _add() {
+    final entry =
+        _parseExistingGrade(_gradeController.text, _weightController.text);
+    if (entry == null) {
+      setState(() =>
+          _error = context.l10n.text('targetCalculator.error.invalidExisting'));
+      return;
+    }
+    Navigator.pop(context, entry);
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final l10n = context.l10n;
+    return AlertDialog(
+      title: Text(l10n.text('targetCalculator.addExistingGrade')),
+      content: Column(mainAxisSize: MainAxisSize.min, children: [
+        TextField(
+          controller: _gradeController,
+          keyboardType: const TextInputType.numberWithOptions(decimal: true),
+          decoration:
+              InputDecoration(labelText: l10n.text('gradeCalculator.grade')),
+        ),
+        const SizedBox(height: 12),
+        TextField(
+          controller: _weightController,
+          keyboardType: TextInputType.number,
+          decoration: InputDecoration(
+            labelText: l10n.text('gradeCalculator.weight'),
+            suffixText: '%',
+          ),
+        ),
+        if (_error != null) ...[
+          const SizedBox(height: 8),
+          Text(_error!,
+              style: TextStyle(color: Theme.of(context).colorScheme.error)),
+        ],
+      ]),
+      actions: [
+        TextButton(
+          onPressed: () => Navigator.pop(context),
+          child: Text(l10n.text('dialog.close')),
+        ),
+        ElevatedButton(
+          onPressed: _add,
+          child: Text(l10n.text('targetCalculator.addExistingGrade')),
+        ),
+      ],
     );
   }
 }
