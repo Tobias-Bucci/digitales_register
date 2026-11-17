@@ -38,10 +38,7 @@ class LastFetchedOverlay extends StatelessWidget {
       return child;
     }
     return RawLastFetchedOverlay(
-      message: l10n.text(
-        'grades.offlineMode',
-        args: {'time': l10n.formatTimeAgo(lastFetched!)},
-      ),
+      message: l10n.offlineSince(lastFetched!),
       child: child,
     );
   }

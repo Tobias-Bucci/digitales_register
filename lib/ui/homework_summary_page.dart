@@ -28,7 +28,6 @@ import 'package:dr/ui/readable_content.dart';
 import 'package:flutter/material.dart';
 import 'package:html/dom.dart' as dom;
 import 'package:html/parser.dart' as html_parser;
-import 'package:intl/intl.dart';
 import 'package:responsive_scaffold/responsive_scaffold.dart';
 
 class HomeworkSummaryPage extends StatefulWidget {
@@ -380,9 +379,7 @@ class _HomeworkSummaryHeader extends StatelessWidget {
                         l10n.text(
                           '$translationPrefix.lastFetched',
                           args: {
-                            'time': DateFormat.Hm(
-                              l10n.locale.toLanguageTag(),
-                            ).format(lastFetched!),
+                            'time': l10n.formatHourMinute(lastFetched!),
                           },
                         ),
                         style: theme.textTheme.bodySmall?.copyWith(

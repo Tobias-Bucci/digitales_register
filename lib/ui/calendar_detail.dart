@@ -428,10 +428,7 @@ class CalendarDetailWrapper extends StatelessWidget {
                 key: const Key('calendar-detail-last-fetched'),
                 message: lastFetched == null
                     ? l10n.text('offline.title')
-                    : l10n.text(
-                        'grades.offlineMode',
-                        args: {'time': l10n.formatTimeAgo(lastFetched)},
-                      ),
+                    : l10n.offlineSince(lastFetched),
                 onRetry: () => actions.calendarActions.load(toMonday(day.date)),
               )
             : null,

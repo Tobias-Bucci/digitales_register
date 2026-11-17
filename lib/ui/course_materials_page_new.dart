@@ -23,7 +23,6 @@ import 'package:dr/ui/dashboard_app_header.dart';
 import 'package:dr/ui/glass_page.dart';
 import 'package:dr/ui/glass_surface.dart';
 import 'package:flutter/material.dart';
-import 'package:intl/intl.dart';
 
 /// The gap between the courses of the list.
 const _courseGap = 8.0;
@@ -226,8 +225,7 @@ class _Summary extends StatelessWidget {
             l10n.text(
               'courseMaterials.lastFetched',
               args: {
-                'time': DateFormat.Hm(l10n.locale.toLanguageTag())
-                    .format(lastFetched),
+                'time': l10n.formatHourMinute(lastFetched),
               },
             ),
         ].join(' · '),

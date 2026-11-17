@@ -147,10 +147,7 @@ class _AbsencesPageNewState extends State<AbsencesPageNew> {
       body: refreshFailed
           ? l10n.text('absences.refreshFailed')
           : widget.noInternet && lastFetched != null
-              ? l10n.text(
-                  'grades.offlineMode',
-                  args: {'time': l10n.formatTimeAgo(lastFetched)},
-                )
+              ? l10n.offlineSince(lastFetched)
               : '',
       actionLabel: refreshFailed
           ? l10n.text('absences.retry')
@@ -247,10 +244,7 @@ class _AbsencesPageNewState extends State<AbsencesPageNew> {
         (_) => spaced(
               GlassOfflineHint(
                 key: const Key('absences-last-fetched'),
-                message: l10n.text(
-                  'grades.offlineMode',
-                  args: {'time': l10n.formatTimeAgo(lastFetched)},
-                ),
+                message: l10n.offlineSince(lastFetched),
                 onRetry: widget.onRetry,
               ),
             ),

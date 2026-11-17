@@ -248,10 +248,7 @@ class _MessagesPageNewState extends State<MessagesPageNew> {
             padding: const EdgeInsets.only(bottom: 8),
             child: GlassOfflineHint(
               key: const Key('messages-last-fetched'),
-              message: l10n.text(
-                'grades.offlineMode',
-                args: {'time': l10n.formatTimeAgo(lastFetched!)},
-              ),
+              message: l10n.offlineSince(lastFetched!),
               onRetry: widget.onRetry ?? () {},
             ),
           );

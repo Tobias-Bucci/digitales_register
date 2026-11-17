@@ -125,14 +125,8 @@ class ClassRegisterPageNew extends StatelessWidget {
       if (offline && lastFetched != null)
         GlassOfflineHint(
           key: const Key('class-register-last-fetched'),
-          message: l10n.text(
-            'grades.offlineMode',
-            args: {
-              'time': l10n.formatTimeAgo(
-                UtcDateTime.makeUtc(lastFetched.toLocal()),
-              ),
-            },
-          ),
+          message:
+              l10n.offlineSince(UtcDateTime.makeUtc(lastFetched.toLocal())),
           onRetry: () => unawaited(onRefresh()),
         ),
       _Summary(count: lessons.length, lastFetched: lastFetched),
@@ -185,8 +179,7 @@ class _Summary extends StatelessWidget {
             l10n.text(
               'classRegister.lastFetched',
               args: {
-                'time': DateFormat.Hm(l10n.locale.toLanguageTag())
-                    .format(lastFetched),
+                'time': l10n.formatHourMinute(lastFetched),
               },
             ),
         ].join(' · '),

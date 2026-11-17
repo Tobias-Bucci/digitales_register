@@ -25,7 +25,6 @@ import 'package:dr/ui/homework_summary_page.dart';
 import 'package:dr/ui/linkified_text.dart';
 import 'package:dr/utc_date_time.dart';
 import 'package:flutter/material.dart';
-import 'package:intl/intl.dart';
 
 /// The gap between the weeks of the list.
 const _weekGap = 8.0;
@@ -127,14 +126,8 @@ class HomeworkSummaryPageNew extends StatelessWidget {
       if (offline && lastFetched != null)
         GlassOfflineHint(
           key: const Key('homework-summary-last-fetched'),
-          message: l10n.text(
-            'grades.offlineMode',
-            args: {
-              'time': l10n.formatTimeAgo(
-                UtcDateTime.makeUtc(lastFetched.toLocal()),
-              ),
-            },
-          ),
+          message:
+              l10n.offlineSince(UtcDateTime.makeUtc(lastFetched.toLocal())),
           onRetry: () => unawaited(onRefresh()),
         ),
       _Summary(
@@ -202,8 +195,7 @@ class _Summary extends StatelessWidget {
             l10n.text(
               '$translationPrefix.lastFetched',
               args: {
-                'time': DateFormat.Hm(l10n.locale.toLanguageTag())
-                    .format(lastFetched),
+                'time': l10n.formatHourMinute(lastFetched),
               },
             ),
         ].join(' · '),

@@ -27,7 +27,6 @@ import 'package:dr/ui/course_materials_page_new.dart';
 import 'package:dr/ui/no_internet.dart';
 import 'package:dr/ui/readable_content.dart';
 import 'package:flutter/material.dart';
-import 'package:intl/intl.dart';
 import 'package:responsive_scaffold/responsive_scaffold.dart';
 
 class CourseMaterialsPage extends StatefulWidget {
@@ -418,9 +417,7 @@ class _CourseMaterialsHeader extends StatelessWidget {
                         l10n.text(
                           'courseMaterials.lastFetched',
                           args: {
-                            'time': DateFormat.Hm(
-                              l10n.locale.toLanguageTag(),
-                            ).format(lastFetched!),
+                            'time': l10n.formatHourMinute(lastFetched!),
                           },
                         ),
                         style: theme.textTheme.bodySmall?.copyWith(
