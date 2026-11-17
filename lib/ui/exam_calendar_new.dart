@@ -868,14 +868,7 @@ class _StudyPhaseSheetState extends State<_StudyPhaseSheet> {
           _StudyPhaseForm(existing: index == null ? null : _phases[index]),
     );
     if (result == null || !mounted) return;
-    setState(() {
-      if (index == null) {
-        _phases.add(result);
-      } else {
-        _phases[index] = result;
-      }
-      _phases.sort((a, b) => a.date.compareTo(b.date));
-    });
+    setState(() => putStudyPhase(_phases, result, index: index));
   }
 }
 
@@ -931,19 +924,14 @@ class _StudyPhaseFormState extends State<_StudyPhaseForm> {
   }
 
   void _done() {
-    final value = _title.trim();
-    if (value.isEmpty) return;
-    final existing = widget.existing;
-    Navigator.pop(
-      context,
-      StudyPhase(
-        existing?.id ?? 'custom-${DateTime.now().microsecondsSinceEpoch}',
-        value,
-        _date,
-        effort: existing?.effort ?? 'Mittel',
-        durationDays: _durationDays,
-      ),
+    final phase = StudyPhase.fromForm(
+      existing: widget.existing,
+      title: _title,
+      date: _date,
+      durationDays: _durationDays,
     );
+    if (phase == null) return;
+    Navigator.pop(context, phase);
   }
 
   @override

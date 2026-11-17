@@ -66,6 +66,36 @@ class StudyPhase {
         'effort': effort,
         'durationDays': durationDays,
       };
+
+  /// The phase an edit form confirms: [title] trimmed, the id and effort of
+  /// [existing] kept or a new custom id. Null when the title is empty.
+  static StudyPhase? fromForm({
+    StudyPhase? existing,
+    required String title,
+    required DateTime date,
+    required int durationDays,
+  }) {
+    final value = title.trim();
+    if (value.isEmpty) return null;
+    return StudyPhase(
+      existing?.id ?? 'custom-${DateTime.now().microsecondsSinceEpoch}',
+      value,
+      date,
+      effort: existing?.effort ?? 'Mittel',
+      durationDays: durationDays,
+    );
+  }
+}
+
+/// Puts [phase] into [phases], in place of the one at [index] when given, and
+/// keeps them in date order.
+void putStudyPhase(List<StudyPhase> phases, StudyPhase phase, {int? index}) {
+  if (index == null) {
+    phases.add(phase);
+  } else {
+    phases[index] = phase;
+  }
+  phases.sort((a, b) => a.date.compareTo(b.date));
 }
 
 DateTime _date(DateTime value) => DateTime(value.year, value.month, value.day);
