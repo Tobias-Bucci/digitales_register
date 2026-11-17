@@ -25,7 +25,7 @@ import 'package:dr/host_platform.dart';
 import 'package:dr/privacy_log.dart';
 import 'package:dr/school_proxy.dart';
 import 'package:dr/utc_date_time.dart';
-import 'package:flutter/material.dart';
+import 'package:flutter/foundation.dart';
 import 'package:http/http.dart' as http;
 import 'package:intl/intl.dart';
 import 'package:package_info_plus/package_info_plus.dart';
@@ -61,15 +61,6 @@ void logPerformanceEvent(
   Map<String, Object?> details = const <String, Object?>{},
 ]) {
   privacyLog('technical_operation');
-}
-
-Widget maybeWrap(Widget widget, Widget Function(Widget w) wrapWidget,
-    {required bool wrap}) {
-  if (wrap) {
-    return wrapWidget(widget);
-  } else {
-    return widget;
-  }
 }
 
 extension ListIntersperse<T> on List<List<T>> {

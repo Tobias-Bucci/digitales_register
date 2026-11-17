@@ -55,6 +55,7 @@ import 'package:dr/server_notifications/server_notification_service.dart';
 import 'package:dr/settings_persistence_service.dart';
 import 'package:dr/startup_timeline.dart';
 import 'package:dr/theme_controller.dart';
+import 'package:dr/ui/biometric_app_lock_overlay.dart';
 import 'package:dr/ui/grade_calculator.dart';
 import 'package:dr/ui/grades_chart_page.dart';
 import 'package:dr/ui/launch/app_launch_animation.dart';

@@ -321,7 +321,7 @@ class _CalendarDetailPageState extends State<CalendarDetailPage> {
       return _buildNew(context);
     }
     final l10n = context.l10n;
-    return maybeWrap(
+    return _maybeWrap(
       Scaffold(
         appBar: AppBar(
           leading: widget.isSidebar
@@ -632,5 +632,14 @@ class _NoSchool extends StatelessWidget {
         ),
       ],
     );
+  }
+}
+
+Widget _maybeWrap(Widget widget, Widget Function(Widget w) wrapWidget,
+    {required bool wrap}) {
+  if (wrap) {
+    return wrapWidget(widget);
+  } else {
+    return widget;
   }
 }
