@@ -75,6 +75,9 @@ Future<void> schoolNotificationOperation(
   }
 }
 
+// Workmanager keeps a callback handle of this function on the device, and the
+// handle names this library. Moving this file or renaming the function breaks
+// the background checks of an installed app until it is opened again.
 @pragma('vm:entry-point')
 void schoolNotificationDispatcher() {
   initializeSchoolNotificationBackground();
