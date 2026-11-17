@@ -116,10 +116,11 @@ class ReminderNotificationService {
           .invokeMethod<String>('timeZone');
 
   Future<void> _initialize() =>
-      _initialized ??= _initializePlugin().catchError((Object error) {
+      _initialized ??=
+          _initializePlugin().catchError((Object error, StackTrace stack) {
         // Optional functionality: the next sync may try again.
         _initialized = null;
-        throw error;
+        Error.throwWithStackTrace(error, stack);
       });
 
   Future<void> _initializePlugin() async {
