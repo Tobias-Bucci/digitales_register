@@ -490,7 +490,7 @@ void main() {
       // Whether the intro was seen and a design was chosen (#108), for the
       // installation and kept across logout and updates.
       'lib/tutorial/tutorial_service.dart': {'seenKey', 'designChoiceKey'},
-      'lib/ui/days.dart': {'_localReminderAssessmentHintKey'},
+      'lib/ui/days/reminder_entry.dart': {'_localReminderAssessmentHintKey'},
     };
 
     Map<String, Set<String>> writesInLib() {
