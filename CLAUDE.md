@@ -152,8 +152,10 @@ Rules:
 
 Additional Graphify guidance:
 
-- The current graph covers `lib/` and `test/` only.
-- It does not currently represent `packages/`, `android/`, `ios/` or `docs/`.
+- The graph's scope is set by `.graphifyignore` in the repository root. The git hooks rebuild the graph from the repository root, so without that file they pull in every folder. Change the scope there, never with a temporary ignore file.
+- The graph covers `lib/`, `test/`, `tool/`, first-party native code (Kotlin in `android/app/src/main/kotlin/`, Swift in `ios/` and `macos/`, the Linux and Windows runners), `pubspec.yaml`, `analysis_options.yaml`, the CI workflow, the Flatpak manifests, and the Markdown documentation (`docs/`, `README.md`, `CLAUDE.md`, `REFACTORING_REPORT.md`, `RELEASE_CHECKLIST.md`).
+- It does not represent the local package forks in `packages/` (they appear only as import nodes such as `package:built_redux/built_redux.dart`), generated files, Xcode project metadata, images, fonts, or the platform resources Graphify cannot parse (`AndroidManifest.xml`, `android/app/src/main/res/`, `Info.plist`, `*.entitlements`). `contract/public.openapi.yaml`, `firebase.json`, the `CMakeLists.txt` files and `web/index.html` are scanned but produce no nodes. Read those files directly.
+- Documentation is extracted structurally (one node per heading). There has been no LLM semantic pass, so do not expect inferred links from docs to code.
 - Never assume that a dependency or component is absent simply because it does not appear in the graph.
 - Treat graph results as navigation and structural evidence, not proof of runtime behavior.
 - Verify important architectural findings against the actual Dart implementation and tests.

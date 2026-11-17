@@ -1,0 +1,111 @@
+# Scope of the Graphify knowledge graph (graphify-out/).
+#
+# The graph covers the project's own architecture and source code: the Dart
+# app (lib/), its tests (test/), first-party native code, build and release
+# tooling (tool/), the public API contract, and the project documentation.
+# The git hooks (post-commit, post-checkout, post-merge, post-rewrite) rebuild
+# the graph unscoped from the repository root, so this file is what keeps them
+# from pulling in the folders below. Same syntax as .gitignore.
+
+# ---------------------------------------------------------------------------
+# Third-party code
+# ---------------------------------------------------------------------------
+
+# Local forks of third-party packages (path dependencies in pubspec.yaml).
+# Each fork brings its own examples, tests and changelogs, which made up 45 %
+# of the unscoped graph. The app's imports of these packages still appear as
+# import nodes such as package:built_redux/built_redux.dart.
+packages/
+
+# Upstream Flutter embedding sources and the prebuilt embedding artifact.
+android/flutter_embedding_patchsrc/
+android/local-maven/
+
+# ---------------------------------------------------------------------------
+# Generated files
+# ---------------------------------------------------------------------------
+
+# Flatpak generator output (flutter SDK module, pubspec sources, patches).
+generated/
+
+# Plugin registrants and build glue written by the Flutter tool.
+linux/flutter/
+windows/flutter/
+generated_plugin_registrant.*
+generated_plugins.cmake
+GeneratedPluginRegistrant.*
+
+# Lock files.
+*.lock
+
+# Xcode project and workspace metadata, CocoaPods and Flutter build settings.
+*.xcodeproj/
+*.xcworkspace/
+ios/Flutter/
+macos/Flutter/
+Podfile
+*.xcconfig
+
+# ---------------------------------------------------------------------------
+# Binary files and media (no source structure to extract)
+# ---------------------------------------------------------------------------
+
+*.png
+*.jpg
+*.jpeg
+*.gif
+*.webp
+*.svg
+*.ico
+*.ttf
+*.otf
+*.pdf
+*.jar
+screenshots/
+assets/
+web/fonts/
+LICENSE.txt
+
+# ---------------------------------------------------------------------------
+# Platform resources and configuration without a Graphify extractor
+# ---------------------------------------------------------------------------
+
+# Relevant to the app, but Graphify has no parser for these formats, so they
+# would only be listed as "unclassified" in GRAPH_REPORT.md. Read them
+# directly: android/app/src/main/AndroidManifest.xml, android/app/src/main/res/
+# (home-screen widget layouts and metadata), ios/Runner/Info.plist and the
+# *.entitlements files.
+*.xml
+*.plist
+*.entitlements
+*.storyboard
+*.xib
+*.strings
+*.xcprivacy
+*.storekit
+*.properties
+*.pro
+*.rc
+*.manifest
+*.desktop
+*.gpx
+*.example
+*.csv
+**/Assets.xcassets/
+
+# ---------------------------------------------------------------------------
+# Test data and tool configuration
+# ---------------------------------------------------------------------------
+
+# JSON response fixtures; the contract itself is contract/public.openapi.yaml.
+contract/fixtures/
+
+# Local configuration of development tools, not part of the app.
+.claude/
+.impeccable/
+.idea/
+.vscode/
+.metadata
+.gitignore
+.gitattributes
+.graphifyignore
