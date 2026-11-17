@@ -1,10 +1,10 @@
+import 'package:dr/school_config_parser.dart';
 import 'package:dr/util.dart';
-import 'package:dr/wrapper.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 void main() {
   test('parseConfig reads the important profile values from the webpage', () {
-    final config = Wrapper.parseConfig(source);
+    final config = parseSchoolConfig(source);
 
     expect(config.userId, 3539);
     expect(config.fullName, 'Michael Debertol');
@@ -19,7 +19,7 @@ void main() {
 
   test('parseConfig reports redirect pages as parse errors', () {
     expect(
-      () => Wrapper.parseConfig(redirectSource),
+      () => parseSchoolConfig(redirectSource),
       throwsA(isA<ParseException>()),
     );
   });

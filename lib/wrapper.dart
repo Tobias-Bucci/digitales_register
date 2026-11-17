@@ -31,8 +31,8 @@ import 'package:dr/diagnostics_service.dart';
 import 'package:dr/main.dart';
 import 'package:dr/privacy_log.dart';
 import 'package:dr/school_api_endpoints.dart';
+import 'package:dr/school_config_parser.dart';
 import 'package:dr/school_proxy.dart';
-import 'package:dr/star_rating.dart';
 import 'package:dr/util.dart';
 import 'package:flutter/foundation.dart';
 import 'package:mutex/mutex.dart';
@@ -583,7 +583,7 @@ class Wrapper {
         message: "Die Konfigurationsseite konnte nicht geladen werden.",
       );
     }
-    if (_isLoginPage(source)) {
+    if (isSchoolLoginPage(source)) {
       throw UnexpectedLogoutException();
     }
     diagnostics.values({
@@ -592,152 +592,7 @@ class Wrapper {
       'operation': 'parse',
       'response_format': 'html'
     });
-    config = tryParse(source, parseConfig);
-  }
-
-  static Config parseConfig(String source) {
-    return tryParse(source, (source) {
-      if (_isLoginPage(source)) {
-        throw const FormatException(
-          "Received login redirect page instead of the expected config page.",
-        );
-      }
-
-      final id = _readUserId(source);
-      final fullName = _readFullName(source);
-      final imgSource = _readImgSource(source);
-      final autoLogout = _readAutoLogoutSeconds(source);
-      final currentSemesterMaybe = _readCurrentSemester(source);
-      final isStudentOrParent = _readIsStudentOrParent(source);
-      return Config(
-        (b) => b
-          ..userId = id
-          ..autoLogoutSeconds = autoLogout
-          ..fullName = fullName
-          ..imgSource = imgSource
-          ..competenceStarsScale = _readCompetenceStarsScale(source)
-          ..currentSemesterMaybe = currentSemesterMaybe
-          ..isStudentOrParent = isStudentOrParent,
-      );
-    });
-  }
-
-  static int? _readCompetenceStarsScale(String source) {
-    // This key is present in the existing register webpage fixture. Do not
-    // infer a maximum from observed grades or carry a previous school's scale.
-    final matches = RegExp(
-      r'''(?:["']?competence_stars_scale["']?)\s*:\s*([^,}\r\n]+)''',
-    ).allMatches(source).toList();
-    if (matches.length != 1) return null;
-    var raw = matches.single.group(1)!.trim();
-    if (raw.length >= 2 &&
-        ((raw.startsWith('"') && raw.endsWith('"')) ||
-            (raw.startsWith("'") && raw.endsWith("'")))) {
-      raw = raw.substring(1, raw.length - 1);
-    }
-    return parseStarScale(raw);
-  }
-
-  static bool _isLoginRedirectPage(String source) {
-    return RegExp(
-      r'^[\s\n]*<script type="text/javascript">\n?\s*window\.location = "https://.+\.digitalesregister.it/v2/login";\n?\s*</script>[\s\n]*$',
-    ).hasMatch(source);
-  }
-
-  /// Whether [source] is the school's login page or login redirect script,
-  /// which the server returns with HTTP 200 once the session has expired.
-  static bool isLoginPage(String source) => _isLoginPage(source);
-
-  static bool _isLoginPage(String source) {
-    return _isLoginRedirectPage(source) ||
-        (RegExp(r'<html\b', caseSensitive: false).hasMatch(source) &&
-            RegExp(r'<title\b[^>]*>\s*Login\s*</title>', caseSensitive: false)
-                .hasMatch(source));
-  }
-
-  static String _readAssignmentValue(String source, String key) {
-    final marker = "$key=";
-    final start = source.indexOf(marker);
-    if (start < 0) {
-      throw FormatException("Missing '$marker' in config page.");
-    }
-    final valueStart = start + marker.length;
-    final end = source.indexOf(";", valueStart);
-    if (end < 0) {
-      throw FormatException("Missing ';' after '$marker' in config page.");
-    }
-    return source.substring(valueStart, end).trim();
-  }
-
-  static String _readConfigValue(String source, String key) {
-    final marker = "$key: ";
-    final start = source.indexOf(marker);
-    if (start < 0) {
-      throw FormatException("Missing '$marker' in config page.");
-    }
-    final valueStart = start + marker.length;
-    final end = source.indexOf(",", valueStart);
-    if (end < 0) {
-      throw FormatException("Missing ',' after '$marker' in config page.");
-    }
-    return source.substring(valueStart, end).trim();
-  }
-
-  static String _readRequiredSubstring(
-    String source,
-    String startMarker,
-    String endMarker,
-  ) {
-    final start = source.indexOf(startMarker);
-    if (start < 0) {
-      throw FormatException("Missing '$startMarker' in config page.");
-    }
-    final valueStart = start + startMarker.length;
-    final end = source.indexOf(endMarker, valueStart);
-    if (end < 0) {
-      throw FormatException(
-        "Missing '$endMarker' after '$startMarker' in config page.",
-      );
-    }
-    return source.substring(valueStart, end).trim();
-  }
-
-  static bool _readIsStudentOrParent(String source) {
-    return !source.contains("var isStudentOrParent=0;");
-  }
-
-  static int? _readCurrentSemester(String source) {
-    if (source.contains("semesterWechsel=1")) return 2;
-    if (source.contains("semesterWechsel=2")) {
-      return 1;
-    } else {
-      return null;
-    }
-  }
-
-  static int _readAutoLogoutSeconds(String source) {
-    return int.parse(_readConfigValue(source, "auto_logout_seconds"));
-  }
-
-  static int _readUserId(String source) {
-    return int.parse(_readAssignmentValue(source, "currentUserId"));
-  }
-
-  static String _readAfterImgId(String source) {
-    return source
-        .substring(source.indexOf("navigationProfilePicture") +
-            "navigationProfilePicture".length)
-        .trim();
-  }
-
-  static String _readFullName(String source) {
-    final afterImgId = _readAfterImgId(source);
-    return _readRequiredSubstring(afterImgId, ">", "<");
-  }
-
-  static String _readImgSource(String source) {
-    final afterImgId = _readAfterImgId(source);
-    return _readRequiredSubstring(afterImgId, 'src="', '"');
+    config = tryParse(source, parseSchoolConfig);
   }
 
   final _loginMutex = Mutex();
@@ -900,7 +755,7 @@ class Wrapper {
     //window.location = "https://vinzentinum.digitalesregister.it/v2/login";
     //</script>
 
-    if (responseData is String && _isLoginPage(responseData)) {
+    if (responseData is String && isSchoolLoginPage(responseData)) {
       // This is a very frequently reported bug, but I don't have an idea as to why this is happening.
       // Possible causes might be that the user's time is off, or the user might be trying to log in from a different device at the same time.
 
@@ -1005,7 +860,7 @@ class Wrapper {
       );
     }
 
-    if (responseData is String && _isLoginPage(responseData)) {
+    if (responseData is String && isSchoolLoginPage(responseData)) {
       if (unexpectedLogoutRetryCount >= 2) {
         privacyLog('technical_operation');
         error = "Die Sitzung konnte nicht automatisch erneuert werden.";

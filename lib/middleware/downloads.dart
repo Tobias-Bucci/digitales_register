@@ -208,7 +208,7 @@ DownloadValidation validateDownloadedDocument(
       .replaceFirst('﻿', '')
       .trimLeft();
   final looksLikeMarkup = prefix.startsWith('<');
-  if (looksLikeMarkup && Wrapper.isLoginPage(prefix)) {
+  if (looksLikeMarkup && isSchoolLoginPage(prefix)) {
     return DownloadValidation.loginPage;
   }
   final extension = fileName.contains('.')

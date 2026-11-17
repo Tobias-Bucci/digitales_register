@@ -77,6 +77,7 @@ import 'package:dr/privacy_log.dart';
 import 'package:dr/profile_picture.dart';
 import 'package:dr/reminders/reminder_sync.dart';
 import 'package:dr/school_api_endpoints.dart';
+import 'package:dr/school_config_parser.dart';
 import 'package:dr/school_notification_service.dart';
 import 'package:dr/school_proxy.dart';
 import 'package:dr/serializers.dart';

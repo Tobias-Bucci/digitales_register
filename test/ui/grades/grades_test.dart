@@ -1,11 +1,11 @@
 import 'package:dr/app_state.dart';
 import 'package:dr/container/grades_page_container.dart';
+import 'package:dr/school_config_parser.dart';
 import 'package:dr/ui/animated_linear_progress_indicator.dart';
 import 'package:dr/ui/favorite_subject_filter.dart';
 import 'package:dr/ui/grades_chart_page.dart';
 import 'package:dr/ui/readable_content.dart';
 import 'package:dr/ui/sorted_grades_widget.dart';
-import 'package:dr/wrapper.dart';
 import '../../parse_webpage_test.dart' as webpage;
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -150,7 +150,7 @@ void main() {
   testWidgets('competences render as star icons', (tester) async {
     final store = createStore(
         initialState: buildGradesPageState().rebuild(
-            (b) => b.config.replace(Wrapper.parseConfig(webpage.source))));
+            (b) => b.config.replace(parseSchoolConfig(webpage.source))));
 
     await pumpApp(
       tester,
