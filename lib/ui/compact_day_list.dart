@@ -23,7 +23,7 @@ import 'package:dr/container/days_container.dart'
     show AttachmentCallback, DaysViewModel;
 import 'package:dr/data.dart';
 import 'package:dr/i18n/app_localizations.dart';
-import 'package:dr/local_reminder_assessments.dart';
+import 'package:dr/reminders/local_reminder_assessments.dart';
 import 'package:dr/theme/app_palette.dart';
 import 'package:dr/ui/committed_deleteable.dart';
 import 'package:dr/ui/dashboard_event_banner.dart';

@@ -18,8 +18,8 @@
 import 'package:dr/app_selectors.dart';
 import 'package:dr/app_state.dart';
 import 'package:dr/data.dart';
-import 'package:dr/grade_category.dart';
-import 'package:dr/local_reminder_assessments.dart';
+import 'package:dr/grades/grade_category.dart';
+import 'package:dr/reminders/local_reminder_assessments.dart';
 import 'package:dr/utc_date_time.dart';
 import 'package:dr/util.dart';
 import 'package:html/parser.dart' as html;

@@ -1,4 +1,4 @@
-import 'package:dr/grade_category.dart';
+import 'package:dr/grades/grade_category.dart';
 import 'package:dr/theme/app_palette.dart';
 import 'package:flutter/material.dart';
 

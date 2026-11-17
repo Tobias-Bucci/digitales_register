@@ -23,7 +23,7 @@ import 'package:dr/account_scope.dart';
 import 'package:dr/assessment_attachments.dart';
 import 'package:dr/host_platform.dart';
 import 'package:dr/settings_persistence_service.dart';
-import 'package:dr/study_data_service.dart';
+import 'package:dr/study_data/study_data_service.dart';
 import 'package:dr/util.dart';
 import 'package:flutter/foundation.dart';
 

@@ -19,7 +19,7 @@ import 'dart:async';
 import 'dart:convert';
 
 import 'package:dr/host_platform.dart';
-import 'package:dr/reminder_schedule.dart';
+import 'package:dr/reminders/reminder_schedule.dart';
 import 'package:dr/runtime_trace.dart';
 import 'package:dr/school_notification_service.dart';
 import 'package:flutter/foundation.dart';

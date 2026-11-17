@@ -1,5 +1,5 @@
 import 'package:dr/actions/login_actions.dart';
-import 'package:dr/android_widget_service.dart';
+import 'package:dr/android_widget/android_widget_service.dart';
 import 'package:dr/app_state.dart';
 import 'package:dr/middleware/middleware.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';

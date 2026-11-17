@@ -30,7 +30,7 @@ import 'package:dr/class_register_cache.dart';
 import 'package:dr/local_data_inventory.dart';
 import 'package:dr/middleware/middleware.dart';
 import 'package:dr/page_payload_cache.dart';
-import 'package:dr/study_data_service.dart';
+import 'package:dr/study_data/study_data_service.dart';
 import 'package:dr/wrapper.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -449,7 +449,9 @@ void main() {
     };
     const globalWrites = <String, Set<String>>{
       'lib/analytics_service.dart': {"'lastObservedAppVersion'"},
-      'lib/android_widget_service.dart': {'androidWidgetSnapshotStorageKey'},
+      'lib/android_widget/android_widget_service.dart': {
+        'androidWidgetSnapshotStorageKey'
+      },
       'lib/app_clock.dart': {'_preferenceKey'},
       'lib/app_language_controller.dart': {'_appLanguagePreferenceKey'},
       'lib/app_subject_translation_controller.dart': {
@@ -476,7 +478,9 @@ void main() {
       // installation, not of an account; logout must not let it vote again.
       'lib/polls/poll_storage.dart': {'key'},
       // Ids, hashes and times only; emptied on logout.
-      'lib/reminder_notifications.dart': {'reminderStoragePreferenceKey'},
+      'lib/reminders/reminder_notifications.dart': {
+        'reminderStoragePreferenceKey'
+      },
       'lib/theme_controller.dart': {
         'accentPreferenceKey',
         'platformOverridePreferenceKey',

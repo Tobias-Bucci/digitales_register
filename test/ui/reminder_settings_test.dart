@@ -1,5 +1,5 @@
 import 'package:dr/i18n/app_localizations.dart';
-import 'package:dr/reminder_notifications.dart';
+import 'package:dr/reminders/reminder_notifications.dart';
 import 'package:dr/ui/reminder_settings.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';

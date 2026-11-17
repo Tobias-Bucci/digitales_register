@@ -22,7 +22,7 @@ import 'package:built_value/serializer.dart';
 
 import 'package:dr/dashboard_items.dart';
 import 'package:dr/data.dart';
-import 'package:dr/reminder_schedule.dart';
+import 'package:dr/reminders/reminder_schedule.dart';
 import 'package:dr/utc_date_time.dart';
 
 part 'app_state.g.dart';

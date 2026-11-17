@@ -19,7 +19,7 @@ import 'dart:async';
 import 'dart:convert';
 
 import 'package:dr/actions/app_actions.dart';
-import 'package:dr/android_widget_snapshot.dart';
+import 'package:dr/android_widget/android_widget_snapshot.dart';
 import 'package:dr/app_state.dart';
 import 'package:dr/diagnostics_service.dart';
 import 'package:dr/host_platform.dart';

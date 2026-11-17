@@ -5,7 +5,7 @@ import 'package:dr/container/calendar_week_container.dart';
 import 'package:dr/data.dart';
 import 'package:dr/i18n/app_language.dart';
 import 'package:dr/i18n/app_localizations.dart';
-import 'package:dr/local_reminder_assessments.dart';
+import 'package:dr/reminders/local_reminder_assessments.dart';
 import 'package:dr/utc_date_time.dart';
 import 'package:flutter_test/flutter_test.dart';
 

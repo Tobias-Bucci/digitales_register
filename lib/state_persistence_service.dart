@@ -20,7 +20,7 @@ import 'dart:convert';
 import 'package:dr/app_state.dart';
 import 'package:dr/diagnostics_service.dart';
 import 'package:dr/serializers.dart';
-import 'package:dr/study_data_service.dart';
+import 'package:dr/study_data/study_data_service.dart';
 import 'package:dr/util.dart';
 
 typedef PersistStateWriter = Future<void> Function(String key, String value);

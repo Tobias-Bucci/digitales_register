@@ -18,9 +18,9 @@
 import 'package:dr/actions/app_actions.dart';
 import 'package:dr/app_state.dart';
 import 'package:dr/data.dart';
-import 'package:dr/grade_forecast.dart';
-import 'package:dr/grade_history.dart';
-import 'package:dr/grade_statistics.dart';
+import 'package:dr/grades/grade_forecast.dart';
+import 'package:dr/grades/grade_history.dart';
+import 'package:dr/grades/grade_statistics.dart';
 import 'package:dr/i18n/app_localizations.dart';
 import 'package:dr/theme/app_palette.dart';
 import 'package:dr/ui/glass_page.dart';

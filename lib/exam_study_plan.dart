@@ -4,7 +4,7 @@ import 'package:dr/app_clock.dart';
 import 'package:dr/app_state.dart';
 import 'package:dr/calendar_date.dart';
 import 'package:dr/data.dart';
-import 'package:dr/local_reminder_assessments.dart';
+import 'package:dr/reminders/local_reminder_assessments.dart';
 import 'package:dr/utc_date_time.dart';
 import 'package:dr/util.dart';
 

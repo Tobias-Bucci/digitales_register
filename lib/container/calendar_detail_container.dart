@@ -21,7 +21,7 @@ import 'package:collection/collection.dart';
 import 'package:dr/actions/app_actions.dart';
 import 'package:dr/app_state.dart';
 import 'package:dr/data.dart';
-import 'package:dr/local_reminder_assessments.dart';
+import 'package:dr/reminders/local_reminder_assessments.dart';
 import 'package:dr/ui/calendar_detail.dart';
 import 'package:dr/utc_date_time.dart';
 import 'package:dr/util.dart';

@@ -22,7 +22,7 @@ import 'package:dr/actions/app_actions.dart';
 import 'package:dr/analytics_service.dart';
 import 'package:dr/app_state.dart';
 import 'package:dr/data.dart';
-import 'package:dr/grade_average.dart';
+import 'package:dr/grades/grade_average.dart';
 import 'package:dr/i18n/app_localizations.dart';
 import 'package:dr/ui/dashboard_app_header.dart';
 import 'package:dr/ui/dialog.dart';

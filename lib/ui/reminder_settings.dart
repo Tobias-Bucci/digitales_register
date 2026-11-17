@@ -18,9 +18,9 @@
 import 'dart:async';
 
 import 'package:dr/i18n/app_localizations.dart';
-import 'package:dr/reminder_link.dart';
-import 'package:dr/reminder_notifications.dart';
-import 'package:dr/reminder_schedule.dart';
+import 'package:dr/reminders/reminder_link.dart';
+import 'package:dr/reminders/reminder_notifications.dart';
+import 'package:dr/reminders/reminder_schedule.dart';
 import 'package:dr/ui/glass_page.dart' show GlassPanel;
 import 'package:dr/ui/glass_surface.dart' show showGlassSheet;
 import 'package:dr/ui/settings_page_new.dart';

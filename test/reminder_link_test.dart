@@ -1,4 +1,4 @@
-import 'package:dr/reminder_link.dart';
+import 'package:dr/reminders/reminder_link.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 void main() {

@@ -1,7 +1,7 @@
 import 'package:dr/actions/app_actions.dart';
 import 'package:dr/app_clock.dart';
 import 'package:dr/app_state.dart';
-import 'package:dr/grade_statistics.dart';
+import 'package:dr/grades/grade_statistics.dart';
 import 'package:dr/i18n/app_localizations.dart';
 import 'package:dr/ui/grade_colors.dart';
 import 'package:dr/util.dart';
