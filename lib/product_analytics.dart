@@ -1,6 +1,5 @@
 import 'dart:async';
 import 'dart:convert';
-import 'dart:math';
 
 import 'package:dr/analytics_schema.dart';
 import 'package:dr/analytics_school_ids.dart';
@@ -8,6 +7,7 @@ import 'package:dr/desktop.dart';
 import 'package:dr/diagnostics_service.dart';
 import 'package:dr/privacy_consent.dart';
 import 'package:dr/privacy_log.dart';
+import 'package:dr/random_uuid.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -144,14 +144,7 @@ class ProductAnalytics {
     }
   }
 
-  static String newUuid() {
-    final random = Random.secure();
-    final bytes = List<int>.generate(16, (_) => random.nextInt(256));
-    bytes[6] = (bytes[6] & 15) | 64;
-    bytes[8] = (bytes[8] & 63) | 128;
-    final hex = bytes.map((b) => b.toRadixString(16).padLeft(2, '0')).join();
-    return '${hex.substring(0, 8)}-${hex.substring(8, 12)}-${hex.substring(12, 16)}-${hex.substring(16, 20)}-${hex.substring(20)}';
-  }
+  static String newUuid() => randomUuidV4();
 
   // localAccountKey is never passed to the sink, log output or event schemas.
   // It is used solely inside encrypted local storage to separate saved accounts.

@@ -4,6 +4,7 @@ import 'package:dr/app_state.dart';
 import 'package:dr/grade_statistics.dart';
 import 'package:dr/i18n/app_localizations.dart';
 import 'package:dr/ui/grade_colors.dart';
+import 'package:dr/util.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_built_redux/flutter_built_redux.dart';
 
@@ -172,7 +173,8 @@ class _SubjectBars extends StatelessWidget {
                   ),
                 ),
                 const SizedBox(width: 10),
-                SizedBox(width: 32, child: Text(_format(value.average))),
+                SizedBox(
+                    width: 32, child: Text(formatGradeEstimate(value.average))),
               ]),
             ),
         ],
@@ -192,6 +194,3 @@ class _EmptyStatistics extends StatelessWidget {
         ]),
       );
 }
-
-String _format(double value) =>
-    (value / 100).toStringAsFixed(1).replaceAll('.', ',');

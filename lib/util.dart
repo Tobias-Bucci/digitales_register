@@ -162,6 +162,18 @@ String stringifyMaybeJson(dynamic param) {
 
 NumberFormat gradeAverageFormat = NumberFormat("0.00", "de");
 
+/// [hundredths] as a grade with one decimal and a decimal comma ("7,5"), as
+/// the grade forecast, history and statistics show their estimates.
+String formatGradeEstimate(double hundredths) =>
+    (hundredths / 100).toStringAsFixed(1).replaceAll('.', ',');
+
+/// The time of day of [time] as HH:mm in 24 hours, whatever the language.
+String formatClockTime(DateTime time) {
+  final hour = time.hour.toString().padLeft(2, '0');
+  final minute = time.minute.toString().padLeft(2, '0');
+  return '$hour:$minute';
+}
+
 class ParseException implements Exception {
   final String payload;
   final String parent;

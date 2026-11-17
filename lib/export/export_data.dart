@@ -9,6 +9,7 @@ import 'package:dr/app_selectors.dart';
 import 'package:dr/app_state.dart';
 import 'package:dr/calendar_date.dart';
 import 'package:dr/data.dart';
+import 'package:dr/util.dart';
 import 'package:html/dom.dart' as dom;
 import 'package:html/parser.dart' as html;
 
@@ -224,7 +225,8 @@ class ExportDataSource {
                     'hour': '${hour.fromHour}-${hour.toHour}',
                     'weekday': '${day.date.weekday}',
                     'time': hour.timeSpans
-                        .map((t) => '${_time(t.from)}-${_time(t.to)}')
+                        .map((t) =>
+                            '${formatClockTime(t.from)}-${formatClockTime(t.to)}')
                         .join(', '),
                     'teacher': hour.teachers.map((t) => t.fullName).join(', '),
                     'room': hour.rooms.join(', '),
@@ -324,9 +326,6 @@ class ExportDataSource {
             if (r.date != null) exportSchoolYear(r.date!),
       }.toList()
         ..sort((a, b) => b.compareTo(a)));
-
-  static String _time(DateTime t) =>
-      '${t.hour.toString().padLeft(2, '0')}:${t.minute.toString().padLeft(2, '0')}';
 }
 
 /// Extract structural text, never execute HTML or fetch images/tracking URLs.

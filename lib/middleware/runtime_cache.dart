@@ -44,6 +44,17 @@ const String _messagesCacheKey = 'messages';
 const String _absencesCacheKey = 'absences';
 const String _certificateCacheKey = 'certificate';
 
+/// The analytics feature of each kind of cached page, by the prefix of its key.
+const _cacheFeatures = {
+  'dashboard': 'homework',
+  'calendar': 'timetable',
+  'notifications': 'notifications',
+  'messages': 'messages',
+  'absences': 'absences',
+  'profile': 'register',
+  'certificate': 'register'
+};
+
 bool _isFresh(UtcDateTime? timestamp, Duration ttl) {
   if (timestamp == null) {
     diagnostics.update('cache_hit', false);
@@ -61,16 +72,7 @@ bool _isFresh(UtcDateTime? timestamp, Duration ttl) {
 
 bool _isRuntimeCacheFresh(String key, Duration ttl) {
   final fresh = _isFresh(_runtimeCacheTimes[key], ttl);
-  const features = {
-    'dashboard': 'homework',
-    'calendar': 'timetable',
-    'notifications': 'notifications',
-    'messages': 'messages',
-    'absences': 'absences',
-    'profile': 'register',
-    'certificate': 'register'
-  };
-  final feature = features[key.split(':').first];
+  final feature = _cacheFeatures[key.split(':').first];
   if (fresh && feature != null) {
     unawaited(AnalyticsService.product
         .event('cache_result', {'feature': feature, 'result': 'hit'}));
@@ -127,16 +129,7 @@ Future<void> _runCoalescedLoad(String key, Future<void> Function() load) async {
     final stopwatch = Stopwatch()..start();
     final previousCacheTime = _runtimeCacheTimes[key];
     final prefix = key.split(':').first;
-    const features = {
-      'dashboard': 'homework',
-      'calendar': 'timetable',
-      'notifications': 'notifications',
-      'messages': 'messages',
-      'absences': 'absences',
-      'profile': 'register',
-      'certificate': 'register'
-    };
-    final feature = features[prefix];
+    final feature = _cacheFeatures[prefix];
     if (feature != null) {
       unawaited(product
           .event('cache_result', {'feature': feature, 'result': 'miss'}));

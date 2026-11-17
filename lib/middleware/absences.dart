@@ -479,23 +479,17 @@ String? _collectLessonTimeFromDay(
     final expectedLength = hour.toHour - hour.fromHour + 1;
     if (spans.length == expectedLength) {
       final span = spans[lessonHour - hour.fromHour];
-      return _formatClockTime(endTime ? span.to : span.from);
+      return formatClockTime(endTime ? span.to : span.from);
     }
 
     if (lessonHour == hour.fromHour && !endTime) {
-      return _formatClockTime(spans.first.from);
+      return formatClockTime(spans.first.from);
     }
     if (lessonHour == hour.toHour && endTime) {
-      return _formatClockTime(spans.last.to);
+      return formatClockTime(spans.last.to);
     }
   }
   return null;
-}
-
-String _formatClockTime(DateTime time) {
-  final hour = time.hour.toString().padLeft(2, '0');
-  final minute = time.minute.toString().padLeft(2, '0');
-  return '$hour:$minute';
 }
 
 const Map<int, String> _defaultLessonStartTimes = <int, String>{

@@ -1502,18 +1502,23 @@ class _PieSliceData {
   });
 }
 
-Tuple2<Map<UtcDateTime, Map<int, String>>, Map<UtcDateTime, Map<int, String>>>
-    _collectLessonTimesByDate(AppState state) {
-  final lessonStarts = <UtcDateTime, Map<int, String>>{};
-  final lessonEnds = <UtcDateTime, Map<int, String>>{};
+/// The start and end time of each lesson hour, by the key [keyOf] gives a
+/// day (its date or its weekday). The earliest day that has a time wins.
+Tuple2<Map<K, Map<int, String>>, Map<K, Map<int, String>>>
+    _collectLessonTimes<K>(
+  AppState state,
+  K Function(CalendarDay day) keyOf,
+) {
+  final lessonStarts = <K, Map<int, String>>{};
+  final lessonEnds = <K, Map<int, String>>{};
 
   final calendarDays = state.calendarState.days.values.toList()
     ..sort((a, b) => a.date.compareTo(b.date));
 
   for (final day in calendarDays) {
-    final date = UtcDateTime(day.date.year, day.date.month, day.date.day);
-    final dayStarts = lessonStarts.putIfAbsent(date, () => {});
-    final dayEnds = lessonEnds.putIfAbsent(date, () => {});
+    final key = keyOf(day);
+    final starts = lessonStarts.putIfAbsent(key, () => {});
+    final ends = lessonEnds.putIfAbsent(key, () => {});
     for (final hour in day.hours) {
       final spans = hour.timeSpans.toList()
         ..sort((a, b) => a.from.compareTo(b.from));
@@ -1525,85 +1530,39 @@ Tuple2<Map<UtcDateTime, Map<int, String>>, Map<UtcDateTime, Map<int, String>>>
       if (spans.length == expectedLength) {
         for (var i = 0; i < spans.length; i++) {
           final lessonHour = hour.fromHour + i;
-          dayStarts.putIfAbsent(
+          starts.putIfAbsent(
             lessonHour,
-            () => _formatLessonTime(spans[i].from),
+            () => formatClockTime(spans[i].from),
           );
-          dayEnds.putIfAbsent(
+          ends.putIfAbsent(
             lessonHour,
-            () => _formatLessonTime(spans[i].to),
+            () => formatClockTime(spans[i].to),
           );
         }
         continue;
       }
 
-      dayStarts.putIfAbsent(
+      starts.putIfAbsent(
         hour.fromHour,
-        () => _formatLessonTime(spans.first.from),
+        () => formatClockTime(spans.first.from),
       );
-      dayEnds.putIfAbsent(
+      ends.putIfAbsent(
         hour.toHour,
-        () => _formatLessonTime(spans.last.to),
+        () => formatClockTime(spans.last.to),
       );
     }
   }
 
   return Tuple2(lessonStarts, lessonEnds);
 }
+
+Tuple2<Map<UtcDateTime, Map<int, String>>, Map<UtcDateTime, Map<int, String>>>
+    _collectLessonTimesByDate(AppState state) =>
+        _collectLessonTimes(state, (day) => day.date.stripTime());
 
 Tuple2<Map<int, Map<int, String>>, Map<int, Map<int, String>>>
-    _collectLessonTimesByWeekday(AppState state) {
-  final lessonStarts = <int, Map<int, String>>{};
-  final lessonEnds = <int, Map<int, String>>{};
-
-  final calendarDays = state.calendarState.days.values.toList()
-    ..sort((a, b) => a.date.compareTo(b.date));
-
-  for (final day in calendarDays) {
-    final weekdayStarts = lessonStarts.putIfAbsent(day.date.weekday, () => {});
-    final weekdayEnds = lessonEnds.putIfAbsent(day.date.weekday, () => {});
-    for (final hour in day.hours) {
-      final spans = hour.timeSpans.toList()
-        ..sort((a, b) => a.from.compareTo(b.from));
-      if (spans.isEmpty) {
-        continue;
-      }
-
-      final expectedLength = hour.toHour - hour.fromHour + 1;
-      if (spans.length == expectedLength) {
-        for (var i = 0; i < spans.length; i++) {
-          final lessonHour = hour.fromHour + i;
-          weekdayStarts.putIfAbsent(
-            lessonHour,
-            () => _formatLessonTime(spans[i].from),
-          );
-          weekdayEnds.putIfAbsent(
-            lessonHour,
-            () => _formatLessonTime(spans[i].to),
-          );
-        }
-        continue;
-      }
-
-      weekdayStarts.putIfAbsent(
-        hour.fromHour,
-        () => _formatLessonTime(spans.first.from),
-      );
-      weekdayEnds.putIfAbsent(
-        hour.toHour,
-        () => _formatLessonTime(spans.last.to),
-      );
-    }
-  }
-
-  return Tuple2(lessonStarts, lessonEnds);
-}
-
-String _formatLessonTime(DateTime time) {
-  final hour = time.hour.toString().padLeft(2, '0');
-  final minute = time.minute.toString().padLeft(2, '0');
-  return '$hour:$minute';
-}
+    _collectLessonTimesByWeekday(AppState state) =>
+        _collectLessonTimes(state, (day) => day.date.weekday);
 
 Tuple2<Map<int, Map<int, String>>, Map<int, Map<int, String>>>
     collectLessonTimesByWeekday(AppState state) {
