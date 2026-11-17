@@ -1,5 +1,6 @@
 import 'package:dr/analytics_service.dart';
 import 'package:dr/i18n/app_localizations.dart';
+import 'package:dr/ui/privacy_consent_dialog.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -33,8 +34,7 @@ void main() {
       home: Builder(
           builder: (context) => Scaffold(
               body: TextButton(
-                  onPressed: () =>
-                      AnalyticsService.showPrivacyConsentDialog(context),
+                  onPressed: () => showPrivacyConsentDialog(context),
                   child: const Text('open')))),
     ));
     await tester.pumpAndSettle();

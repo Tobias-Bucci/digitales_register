@@ -43,6 +43,7 @@ import 'package:dr/ui/glass_page.dart' show GlassPanel;
 import 'package:dr/ui/glass_segmented_control.dart';
 import 'package:dr/ui/glass_surface.dart' show DesignTokens, showGlassSheet;
 import 'package:dr/ui/network_protocol_page.dart';
+import 'package:dr/ui/privacy_consent_dialog.dart';
 import 'package:dr/ui/privacy_data_details_page.dart';
 import 'package:dr/ui/readable_content.dart';
 import 'package:dr/ui/reminder_settings.dart';
@@ -1300,7 +1301,7 @@ class _SettingsPageWidgetState extends State<SettingsPageWidget> {
               title: Text(l10n.text('privacySettings.change')),
               trailing: const Icon(Icons.chevron_right),
               onTap: () async {
-                await AnalyticsService.showPrivacyOptionsForm(context);
+                await showPrivacyOptionsForm(context);
                 if (mounted) setState(() {});
               }),
           ListTile(

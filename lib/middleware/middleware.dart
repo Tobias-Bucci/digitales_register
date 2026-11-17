@@ -94,6 +94,7 @@ import 'package:dr/ui/glass_surface.dart' show NewDesignTheme;
 import 'package:dr/ui/grade_calculator.dart' show GradeCalculator;
 import 'package:dr/ui/grades_chart_page.dart' show GradesChartPage;
 import 'package:dr/ui/launch/app_launch_animation.dart';
+import 'package:dr/ui/privacy_consent_dialog.dart';
 import 'package:dr/ui/school_notification_opt_in.dart';
 import 'package:dr/ui/server_notifications/server_notification_routes.dart';
 import 'package:dr/ui/settings_page_new.dart' show SettingsSheetActions;
@@ -913,5 +914,5 @@ Future<void> _checkShowPrivacyConsentAlert() async {
     return;
   }
 
-  await AnalyticsService.showPrivacyConsentDialog(context);
+  await showPrivacyConsentDialog(context);
 }

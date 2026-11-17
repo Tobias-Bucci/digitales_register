@@ -1,5 +1,6 @@
 import 'package:dr/analytics_service.dart';
 import 'package:dr/i18n/app_localizations.dart';
+import 'package:dr/ui/privacy_consent_dialog.dart';
 import 'package:dr/ui/privacy_data_details_page.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
@@ -45,12 +46,10 @@ void main() {
         builder: (context) => Scaffold(
                 body: Column(children: [
               TextButton(
-                  onPressed: () =>
-                      AnalyticsService.showPrivacyConsentDialog(context),
+                  onPressed: () => showPrivacyConsentDialog(context),
                   child: const Text('open')),
               TextButton(
-                  onPressed: () =>
-                      AnalyticsService.showPrivacyOptionsForm(context),
+                  onPressed: () => showPrivacyOptionsForm(context),
                   child: const Text('manage')),
             ])))));
     await tester.pumpAndSettle();
