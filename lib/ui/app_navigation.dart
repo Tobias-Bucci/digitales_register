@@ -609,8 +609,8 @@ class _BarItemState extends State<_BarItem> {
 
 /// [FloatingNavigationBar] turned upright for wide windows, where height is
 /// scarcer than width. It keeps a margin of its own and floats in the middle of
-/// it. The wash of the page continues below it, so that the page has no edge
-/// there.
+/// it. The wash of the dashboard continues below it, so that the page has no
+/// edge there.
 class AppNavigationRail extends StatelessWidget {
   const AppNavigationRail({
     super.key,
@@ -665,9 +665,11 @@ class AppNavigationRail extends StatelessWidget {
     return SizedBox(
       width: appNavigationRailExtent,
       height: double.infinity,
-      // Every destination is a page with the wash, so it always continues
-      // here. Without it the rail would stand out as a plain strip.
-      child: DashboardBackdrop(child: rail),
+      child: DashboardBackdrop(
+        visible: selected == AppDestination.dashboard ||
+            selected == AppDestination.grades,
+        child: rail,
+      ),
     );
   }
 }

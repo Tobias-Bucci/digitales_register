@@ -3749,25 +3749,23 @@ void main() {
       );
     });
 
-    testWidgets('the wash of the page continues below the rail on every tab',
+    testWidgets(
+        'the wash of the page continues below the rail only where it has one',
         (tester) async {
-      // Every destination is a page with the wash (#139).
       final selected = await pumpRail(tester);
       final wash = find.descendant(
-        of: find.descendant(
-          of: find.byType(AppNavigationRail),
-          matching: find.byType(DashboardBackdrop),
-        ),
-        matching: find.byType(DecoratedBox),
+        of: find.byType(AppNavigationRail),
+        matching: find.byType(DashboardBackdrop),
       );
-      for (final destination in AppDestination.values) {
-        selected.value = destination;
-        await tester.pumpAndSettle();
-        final decoration =
-            tester.widget<DecoratedBox>(wash.first).decoration as BoxDecoration;
-        expect(decoration.gradient, isA<LinearGradient>(),
-            reason: '$destination');
-      }
+      expect(tester.widget<DashboardBackdrop>(wash).visible, isTrue);
+
+      selected.value = AppDestination.grades;
+      await tester.pumpAndSettle();
+      expect(tester.widget<DashboardBackdrop>(wash).visible, isTrue);
+
+      selected.value = AppDestination.messages;
+      await tester.pumpAndSettle();
+      expect(tester.widget<DashboardBackdrop>(wash).visible, isFalse);
     });
   });
 
