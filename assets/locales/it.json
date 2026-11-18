@@ -894,6 +894,8 @@
   "privacySettings.technicalId.none": "Nessuno: per questo account non è mai stata consentita l’analisi dell’utilizzo su questo dispositivo.",
   "privacySettings.technicalId.hint": "Indica questo identificativo pseudonimo se chiedi l’accesso ai tuoi dati statistici o diagnostici o la loro cancellazione.",
   "privacySettings.technicalId.copy": "Copia identificativo",
+  "privacySettings.technicalId.unavailable": "Nessuno: l’analisi dell’utilizzo è consentita, ma non è disponibile in questa versione dell’app su questo dispositivo. Non è stato creato alcun identificativo e non è stato inviato nulla.",
+  "privacySettings.technicalId.pending": "Ancora nessuno: viene creato quando accedi a un account.",
   "legal.nonAffiliation": "L’app è un client indipendente e non ufficiale di terze parti per il registro scolastico su digitalesregister.it. Il progetto non ha alcun legame con la Provincia autonoma di Bolzano – Alto Adige, le Direzioni Istruzione e Formazione, le scuole o Informatica Alto Adige S.p.A. (SIAG) e non è da questi né autorizzato né sostenuto.",
   "error.network": "La connessione non è riuscita. Controlla la connessione e riprova.",
   "error.webProxyUnavailable": "La web app non è temporaneamente disponibile. Riprova più tardi o usa l’app.",

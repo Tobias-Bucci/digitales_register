@@ -894,6 +894,8 @@
   "privacySettings.technicalId.none": "None: usage analytics was never allowed for this account on this device.",
   "privacySettings.technicalId.hint": "Include this pseudonymous ID when you ask for access to or deletion of your statistics or diagnostics data.",
   "privacySettings.technicalId.copy": "Copy ID",
+  "privacySettings.technicalId.unavailable": "None: usage analytics is allowed but is not available in this version of the app on this device. No ID was created and nothing was sent.",
+  "privacySettings.technicalId.pending": "None yet: it is created once you are signed in to an account.",
   "legal.nonAffiliation": "The app is an independent, unofficial third-party client for the school register at digitalesregister.it. The project is in no way affiliated with the Autonomous Province of Bolzano – South Tyrol, the education directorates, the schools or Südtiroler Informatik AG (SIAG), and is neither authorised nor supported by them.",
   "error.network": "The connection failed. Check your internet connection and try again.",
   "error.webProxyUnavailable": "The web app is temporarily unavailable. Please try again later or use the app.",

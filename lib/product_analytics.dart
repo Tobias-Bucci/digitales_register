@@ -96,6 +96,12 @@ class ProductAnalytics {
   final Map<String, DateTime> _lastEvents = {};
   int _epoch = 0;
   Future<void> _tail = Future.value();
+
+  /// Counts every change that can change the identifier shown in the
+  /// settings: the analytics gate, the open account, a newly stored
+  /// identifier. Listeners read it again with [currentPseudonymousId].
+  final ValueNotifier<int> identityChanges = ValueNotifier<int>(0);
+  void _identityChanged() => identityChanges.value++;
   bool get enabled => _enabled && decision().analyticsAllowed;
   bool get identityReady => enabled && _accountOpen && _identity != null;
   int get sessionEpoch => _epoch;
@@ -111,6 +117,7 @@ class ProductAnalytics {
       _properties.clear();
       _snapshots.clear();
     }
+    _identityChanged();
   }
 
   Future<void> _serialize(Future<void> Function() work) {
@@ -158,6 +165,8 @@ class ProductAnalytics {
 
   // localAccountKey is never passed to the sink, log output or event schemas.
   // It is used solely inside encrypted local storage to separate saved accounts.
+  // While usage analytics is off this only records the open account: nothing
+  // is read, created or sent, and a later consent identifies it at once.
   Future<void> identifyUser(String localAccountKey,
       {required bool demo, String? schoolId}) {
     final selectedSchool =
@@ -169,11 +178,13 @@ class ProductAnalytics {
       // clearIdentity closes the account gate synchronously and queues SDK clear.
       unawaited(clearIdentity());
     }
+    final accountChanged = !_accountOpen || _accountKey != localAccountKey;
     _accountOpen = true;
     _accountKey = localAccountKey;
     _demo = demo;
     _school = selectedSchool;
     _desiredSchool = _school;
+    if (accountChanged) _identityChanged();
     if (!enabled) return Future.value();
     final epoch = _epoch;
     return _accepted(() async {
@@ -214,6 +225,7 @@ class ProductAnalytics {
         }
         if (repaired) {
           await store.write('analyticsIdentityMapV4', jsonEncode(map));
+          _identityChanged();
         }
         if (epoch != _epoch || !enabled || !_accountOpen) return;
         await sink.userId(id);
@@ -234,6 +246,9 @@ class ProductAnalytics {
   /// ever created (it only exists after consent to usage analytics). Shown in
   /// the settings so a privacy request can name it (Art. 11(2) GDPR): the
   /// operator stores no account or name it could be found by. Creates nothing.
+  ///
+  /// A withdrawn consent keeps the stored id (only the SDK data is reset), so
+  /// it is still shown: it is the only way to find data uploaded before.
   Future<String?> currentPseudonymousId() async {
     final key = _accountKey;
     if (key == null) return null;
@@ -262,6 +277,7 @@ class ProductAnalytics {
     for (final key in _accountProperties) {
       _properties.remove(key);
     }
+    _identityChanged();
     if (!enabled) return Future.value();
     return _serialize(() async {
       try {

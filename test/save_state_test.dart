@@ -24,6 +24,8 @@ void main() {
   setUp(() async {
     mockWrapper = MockWrapper();
     when(() => mockWrapper.loginAddress).thenReturn(testLoginAddress);
+    // Read by the analytics middleware, which records the open account.
+    when(() => mockWrapper.demoMode).thenReturn(false);
     await bootstrapTestEnvironment(wrapperOverride: mockWrapper);
     storage = secureStorage as TestSecureStorage;
   });

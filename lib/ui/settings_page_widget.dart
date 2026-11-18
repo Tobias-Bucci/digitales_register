@@ -1262,55 +1262,26 @@ class _SettingsPageWidgetState extends State<SettingsPageWidget> {
       );
 
   List<Widget> _buildPrivacyChoices(AppLocalizations l10n) => [
-        FutureBuilder<String?>(
-          future: AnalyticsService.product.currentPseudonymousId(),
-          builder: (context, snapshot) {
-            final id = snapshot.data;
-            return ListTile(
-              key: const Key('settings-technical-id'),
-              leading: const Icon(Icons.fingerprint),
-              title: Text(l10n.text('privacySettings.technicalId')),
-              subtitle: Text(id == null
-                  ? l10n.text('privacySettings.technicalId.none')
-                  : '$id\n${l10n.text('privacySettings.technicalId.hint')}'),
-              trailing: id == null
-                  ? null
-                  : IconButton(
-                      key: const Key('settings-technical-id-copy'),
-                      tooltip: l10n.text('privacySettings.technicalId.copy'),
-                      icon: const Icon(Icons.copy_rounded),
-                      onPressed: () async {
-                        await Clipboard.setData(ClipboardData(text: id));
-                        if (context.mounted) {
-                          ScaffoldMessenger.maybeOf(context)?.showSnackBar(
-                              SnackBar(
-                                  content: Text(l10n
-                                      .text('network.copiedToClipboard'))));
-                        }
-                      },
-                    ),
-            );
-          },
-        ),
-          for (final category in ['diagnostics', 'usage', 'academic'])
-            ListTile(
-                title: Text(l10n.text('privacyCategory.$category.title')),
-                subtitle: Text(
-                    '${l10n.text('privacyCategory.$category.body')}\n${l10n.text((category == 'diagnostics' ? AnalyticsService.privacy.decision.diagnosticsAllowed : category == 'usage' ? AnalyticsService.privacy.decision.analyticsAllowed : AnalyticsService.privacy.decision.academicStatsAllowed) ? 'privacySettings.enabled' : 'privacySettings.disabled')}')),
+        const _TechnicalIdTile(),
+        for (final category in ['diagnostics', 'usage', 'academic'])
           ListTile(
-              title: Text(l10n.text('privacySettings.change')),
-              trailing: const Icon(Icons.chevron_right),
-              onTap: () async {
-                await showPrivacyOptionsForm(context);
-                if (mounted) setState(() {});
-              }),
-          ListTile(
-              title: Text(l10n.text('privacyDetails.title')),
-              trailing: const Icon(Icons.chevron_right),
-              onTap: () => Navigator.of(context).push(MaterialPageRoute<void>(
-                  settings: const RouteSettings(name: '/privacy_details'),
-                  builder: (_) => const PrivacyDataDetailsPage()))),
-        ];
+              title: Text(l10n.text('privacyCategory.$category.title')),
+              subtitle: Text(
+                  '${l10n.text('privacyCategory.$category.body')}\n${l10n.text((category == 'diagnostics' ? AnalyticsService.privacy.decision.diagnosticsAllowed : category == 'usage' ? AnalyticsService.privacy.decision.analyticsAllowed : AnalyticsService.privacy.decision.academicStatsAllowed) ? 'privacySettings.enabled' : 'privacySettings.disabled')}')),
+        ListTile(
+            title: Text(l10n.text('privacySettings.change')),
+            trailing: const Icon(Icons.chevron_right),
+            onTap: () async {
+              await showPrivacyOptionsForm(context);
+              if (mounted) setState(() {});
+            }),
+        ListTile(
+            title: Text(l10n.text('privacyDetails.title')),
+            trailing: const Icon(Icons.chevron_right),
+            onTap: () => Navigator.of(context).push(MaterialPageRoute<void>(
+                settings: const RouteSettings(name: '/privacy_details'),
+                builder: (_) => const PrivacyDataDetailsPage()))),
+      ];
 
   Widget _buildAdvancedSection(AppLocalizations l10n) {
     return _SettingsSectionCard(
@@ -1696,4 +1667,89 @@ bool _isSyncCalendarMissing(
       snapshot.connectionState == ConnectionState.done &&
       !(snapshot.data ?? const <CalendarSyncCalendar>[])
           .any((calendar) => calendar.id == selectedId);
+}
+
+/// The pseudonymous identifier of the open account for privacy requests.
+/// It reads the identifier again whenever the analytics gate, the open account
+/// or the stored identifier changes, so it appears without leaving the page.
+class _TechnicalIdTile extends StatefulWidget {
+  const _TechnicalIdTile();
+
+  @override
+  State<_TechnicalIdTile> createState() => _TechnicalIdTileState();
+}
+
+class _TechnicalIdTileState extends State<_TechnicalIdTile> {
+  late Future<String?> _id;
+
+  @override
+  void initState() {
+    super.initState();
+    _id = AnalyticsService.product.currentPseudonymousId();
+    AnalyticsService.product.identityChanges.addListener(_reload);
+  }
+
+  @override
+  void dispose() {
+    AnalyticsService.product.identityChanges.removeListener(_reload);
+    super.dispose();
+  }
+
+  void _reload() {
+    if (!mounted) return;
+    setState(() {
+      _id = AnalyticsService.product.currentPseudonymousId();
+    });
+  }
+
+  /// Why there is no identifier. It exists only once usage analytics ran for
+  /// the open account; a consent that this build or device cannot act on
+  /// (no Firebase, desktop) creates none, and must not read as "never allowed".
+  String _none(AppLocalizations l10n) {
+    if (!AnalyticsService.privacy.decision.analyticsAllowed) {
+      return l10n.text('privacySettings.technicalId.none');
+    }
+    if (!AnalyticsService.product.enabled) {
+      return l10n.text('privacySettings.technicalId.unavailable');
+    }
+    return l10n.text('privacySettings.technicalId.pending');
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final l10n = context.l10n;
+    return FutureBuilder<String?>(
+      future: _id,
+      builder: (context, snapshot) {
+        // Not the previous read while the next one runs: after an account
+        // switch that would be the identifier of another account.
+        final id = snapshot.connectionState == ConnectionState.done
+            ? snapshot.data
+            : null;
+        return ListTile(
+          key: const Key('settings-technical-id'),
+          leading: const Icon(Icons.fingerprint),
+          title: Text(l10n.text('privacySettings.technicalId')),
+          subtitle: Text(id == null
+              ? _none(l10n)
+              : '$id\n${l10n.text('privacySettings.technicalId.hint')}'),
+          trailing: id == null
+              ? null
+              : IconButton(
+                  key: const Key('settings-technical-id-copy'),
+                  tooltip: l10n.text('privacySettings.technicalId.copy'),
+                  icon: const Icon(Icons.copy_rounded),
+                  onPressed: () async {
+                    await Clipboard.setData(ClipboardData(text: id));
+                    if (context.mounted) {
+                      ScaffoldMessenger.maybeOf(context)?.showSnackBar(SnackBar(
+                          content:
+                              Text(l10n.text('network.copiedToClipboard'))));
+                    }
+                  },
+                ),
+        );
+      },
+    );
+  }
 }

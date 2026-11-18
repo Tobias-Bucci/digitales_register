@@ -894,6 +894,8 @@
   "privacySettings.technicalId.none": "Keine: Für dieses Konto wurde auf diesem Gerät nie eine Nutzungsanalyse erlaubt.",
   "privacySettings.technicalId.hint": "Gib diese pseudonyme Kennung an, wenn du Auskunft über deine Statistik- oder Diagnosedaten oder ihre Löschung verlangst.",
   "privacySettings.technicalId.copy": "Kennung kopieren",
+  "privacySettings.technicalId.unavailable": "Keine: Die Nutzungsanalyse ist erlaubt, ist in dieser App-Version auf diesem Gerät aber nicht verfügbar. Es wurde keine Kennung erstellt und nichts gesendet.",
+  "privacySettings.technicalId.pending": "Noch keine: Sie wird erstellt, sobald du bei einem Konto angemeldet bist.",
   "legal.nonAffiliation": "Die App ist ein unabhängiger, inoffizieller Drittanbieter-Client für das Schulregister unter digitalesregister.it. Das Projekt steht in keinerlei Verbindung zur Autonomen Provinz Bozen – Südtirol, den Bildungsdirektionen, den Schulen oder der Südtiroler Informatik AG (SIAG) und wird von diesen weder autorisiert noch unterstützt.",
   "error.network": "Die Verbindung ist fehlgeschlagen. Prüfe deine Internetverbindung und versuche es erneut.",
   "error.webProxyUnavailable": "Die Web-App ist vorübergehend nicht verfügbar. Bitte versuche es später erneut oder verwende die App.",

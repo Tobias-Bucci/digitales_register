@@ -104,15 +104,18 @@ NextActionHandler _diagnosticsMiddleware(
 
 Future<void> refreshProductAnalyticsContext(AppState state) async {
   final product = AnalyticsService.product;
-  if (!product.enabled) return;
   if (state.loginState.loggedIn && state.loginState.username != null) {
     if (state.url != wrapper.url || state.isDemo != wrapper.demoMode) return;
     // This local key is used only by encrypted identity storage, never Firebase.
+    // With usage analytics off this only records the open account (nothing
+    // is created or sent), so the settings can show its stored identifier
+    // and a later consent identifies it at once.
     await product.identifyUser(
         jsonEncode([state.url, state.loginState.username]),
         demo: state.isDemo,
         schoolId: analyticsSchoolIdForUrl(state.url));
   }
+  if (!product.enabled) return;
   final year = schoolYearForDate(now);
   await product.updateUserProperties({
     'app_language': state.settingsState.languageCode == 'lld'
@@ -211,6 +214,10 @@ NextActionHandler _productAnalyticsMiddleware(
               unawaited(product.clearIdentity());
             }
             await next(action);
+            if (name == 'LoginActions-loggedIn' ||
+                name == 'AppActions-setUrl') {
+              await refreshProductAnalyticsContext(api.state);
+            }
             return;
           }
           final before = api.state;

@@ -894,6 +894,8 @@
   "privacySettings.technicalId.none": "Degöna: por chësc account ne n’é mai stada autorisada l’analisa dl’adoranza sön chësc aparat.",
   "privacySettings.technicalId.hint": "Dá ite chësta identificaziun pseudonima canche te damanes azès o scancelaziun de tües dades statistiches o de diagnosa.",
   "privacySettings.technicalId.copy": "Copié l’identificaziun",
+  "privacySettings.technicalId.unavailable": "Degöna: l’analisa dl’adoranza é autorisada, mo n’é nia desponibla te chësta verjiun dl’app sön chësc aparat. Al n’é gnü fat degöna identificaziun y nia n’é gnü mandé.",
+  "privacySettings.technicalId.pending": "Degöna ćiamò: ara vëgn fata sciöche te vas ite cun n account.",
   "legal.nonAffiliation": "L’app é n client indipendënt y nia ofizial de terzi por le register dla scora sön digitalesregister.it. Le proiet n’à degöna liaziun cun la Provinzia autonoma de Balsan – Südtirol, les direziuns d’istruziun y formaziun, les scores o la Südtiroler Informatik AG (SIAG) y ne vëgn nia autorisé ni sostignì da ëi.",
   "error.network": "La conescion n’é nia reuscida. Controleia la conescion y pröia d’agof.",
   "error.webProxyUnavailable": "La web app n’é por le momënt nia a disposiziun. Pröia plü tert o adora l’app.",

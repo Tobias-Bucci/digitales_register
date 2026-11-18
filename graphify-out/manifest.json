@@ -684,9 +684,9 @@
     "semantic_hash": "cacd1d21a3f0edc20630b2c34cdafaef"
   },
   "lib/product_analytics.dart": {
-    "mtime": 1794932475.0060196,
-    "seen": 1794932530.079576,
-    "ast_hash": "05dcde92779a397b74c2903b5b798346",
+    "mtime": 1795037189.7718432,
+    "seen": 1795037320.0171566,
+    "ast_hash": "3190afca239fecc854364fda37976741",
     "semantic_hash": ""
   },
   "lib/profile_picture.dart": {
@@ -1416,9 +1416,9 @@
     "semantic_hash": ""
   },
   "lib/ui/polls/server_poll_page.dart": {
-    "mtime": 1794832290.6382425,
-    "seen": 1794932530.079695,
-    "ast_hash": "8db1a4fa7dae56f05081311355307d2f",
+    "mtime": 1795027287.8367875,
+    "seen": 1795037052.7371323,
+    "ast_hash": "6af779481a287802c3aaa35f3d581066",
     "semantic_hash": ""
   },
   "lib/ui/privacy_data_details_page.dart": {
@@ -1536,9 +1536,9 @@
     "semantic_hash": ""
   },
   "lib/ui/settings_page_widget.dart": {
-    "mtime": 1794932475.042128,
-    "seen": 1794932530.0797188,
-    "ast_hash": "89b42a21a90091a86a9208d0e7544473",
+    "mtime": 1795037292.5945368,
+    "seen": 1795037320.0173178,
+    "ast_hash": "7bc9ff4f4f47228f0f60b822b04c7888",
     "semantic_hash": ""
   },
   "lib/ui/sidebar.dart": {
@@ -2202,9 +2202,9 @@
     "semantic_hash": ""
   },
   "test/polls/server_poll_page_test.dart": {
-    "mtime": 1794832341.569977,
-    "seen": 1794932530.0806947,
-    "ast_hash": "16e81eca0abccaba2efa7a7e789b4512",
+    "mtime": 1795027290.6289334,
+    "seen": 1795037052.7372813,
+    "ast_hash": "cd47b19443979c34d65d04d2d429f825",
     "semantic_hash": ""
   },
   "test/privacy_consent_test.dart": {
@@ -3084,9 +3084,9 @@
     "semantic_hash": ""
   },
   "lib/middleware/analytics.dart": {
-    "mtime": 1794932475.0010202,
-    "seen": 1794932530.0795488,
-    "ast_hash": "a69dbf1671c53aa42cb078854f4e417e",
+    "mtime": 1795037140.9352477,
+    "seen": 1795037320.0171258,
+    "ast_hash": "2597885909f690fafdb9a422d2abc935",
     "semantic_hash": ""
   },
   "lib/middleware/course_materials.dart": {
@@ -3939,6 +3939,12 @@
     "mtime": 1795026074.278793,
     "seen": 1795026244.0977778,
     "ast_hash": "433b78e191dab5d115dcc00dd5aecb5f",
+    "semantic_hash": ""
+  },
+  "test/ui/settings/technical_id_test.dart": {
+    "mtime": 1795037292.6220472,
+    "seen": 1795037320.0175557,
+    "ast_hash": "b5616caf8187d7d3d6c122184234e27f",
     "semantic_hash": ""
   }
 }
