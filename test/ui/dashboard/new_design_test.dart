@@ -3404,6 +3404,32 @@ void main() {
       }
     }
 
+    // At launch the window can be laid out at a size of next to nothing before
+    // its real metrics arrive; the lens must not throw there (#139 run log).
+    testWidgets('lays out without an error on a track of no length',
+        (tester) async {
+      final selected = await pumpBar(tester, width: 0);
+      expect(tester.takeException(), isNull);
+
+      selected.value = AppDestination.extras;
+      await tester.pumpAndSettle();
+      expect(tester.takeException(), isNull);
+      expect(tester.getRect(lens).left, greaterThanOrEqualTo(0));
+    });
+
+    testWidgets('keeps its bounds on a track shorter than the lens',
+        (tester) async {
+      // The items cannot fit in 30 px either, and their row reports that it
+      // overflows; only the lens itself must not fail.
+      final selected = await pumpBar(tester, width: 30);
+      expect(tester.takeException(), isNot(isArgumentError));
+
+      selected.value = AppDestination.extras;
+      await tester.pumpAndSettle();
+      expect(tester.takeException(), isNot(isArgumentError));
+      expect(tester.getRect(lens).left, greaterThanOrEqualTo(0));
+    });
+
     testWidgets('slides over and stretches on the way', (tester) async {
       final selected = await pumpBar(tester);
       final rest = tester.getRect(lens);

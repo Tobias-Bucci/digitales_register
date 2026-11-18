@@ -990,10 +990,10 @@
     "semantic_hash": ""
   },
   "lib/ui/app_navigation.dart": {
-    "mtime": 1794073984.6736696,
-    "seen": 1794932530.0796309,
-    "ast_hash": "dcac9ff0eabca5462b2fb3dd308dd1a4",
-    "semantic_hash": "dcac9ff0eabca5462b2fb3dd308dd1a4"
+    "mtime": 1795024513.4979143,
+    "seen": 1795024632.6871865,
+    "ast_hash": "c4e0f3195113c8edda7795fc834a56e7",
+    "semantic_hash": ""
   },
   "lib/ui/app_popup_button.dart": {
     "mtime": 1794073984.6750464,
@@ -1014,9 +1014,9 @@
     "semantic_hash": "b92eb2bd9b24ccc206f255d622b5f24a"
   },
   "lib/ui/calendar.dart": {
-    "mtime": 1794827616.2364078,
-    "seen": 1794932530.0796351,
-    "ast_hash": "4dfe748266dcbfe43ba66deeed57c1c3",
+    "mtime": 1795023077.3901005,
+    "seen": 1795023251.7732582,
+    "ast_hash": "0aa843612d3facaa68953bd8bc699a63",
     "semantic_hash": ""
   },
   "lib/ui/calendar_card.dart": {
@@ -1032,9 +1032,9 @@
     "semantic_hash": ""
   },
   "lib/ui/calendar_week.dart": {
-    "mtime": 1794932475.0185294,
-    "seen": 1794932530.0796378,
-    "ast_hash": "273063b3142ef4bb54001c4b3ce6deba",
+    "mtime": 1795023105.8616016,
+    "seen": 1795023251.7732615,
+    "ast_hash": "a6dc19d78e791edeb33b8a74e7ab3172",
     "semantic_hash": ""
   },
   "lib/ui/certificate.dart": {
@@ -1110,9 +1110,9 @@
     "semantic_hash": ""
   },
   "lib/ui/dashboard_app_header.dart": {
-    "mtime": 1794360774.2085564,
-    "seen": 1794932530.0796487,
-    "ast_hash": "6bb33c54b840c40c8a6eefc337ba5af0",
+    "mtime": 1795020189.8444512,
+    "seen": 1795020560.645222,
+    "ast_hash": "432007a905ac9bf7277fd7e3ff5df7b4",
     "semantic_hash": ""
   },
   "lib/ui/dashboard_card_layout.dart": {
@@ -1164,9 +1164,9 @@
     "semantic_hash": ""
   },
   "lib/ui/exam_calendar_new.dart": {
-    "mtime": 1794932475.0255275,
-    "seen": 1794932530.0796592,
-    "ast_hash": "810fc862f1ff6414f3bc261e47610afa",
+    "mtime": 1795022188.7420788,
+    "seen": 1795022270.6987467,
+    "ast_hash": "d8857dd512d757d1f42fc7e4563564c2",
     "semantic_hash": ""
   },
   "lib/ui/exam_calendar_page.dart": {
@@ -2604,9 +2604,9 @@
     "semantic_hash": ""
   },
   "test/ui/calendar/calendar_new_design_test.dart": {
-    "mtime": 1794396982.1534877,
-    "seen": 1794932530.0807538,
-    "ast_hash": "964fbd14c3ca5a318a4b6020c43485fb",
+    "mtime": 1795023055.6124847,
+    "seen": 1795023251.773532,
+    "ast_hash": "2485c64d4f0446ecb86714e4310e59bd",
     "semantic_hash": ""
   },
   "test/ui/calendar/calendar_test.dart": {
@@ -2736,9 +2736,9 @@
     "semantic_hash": ""
   },
   "test/ui/dashboard/new_design_test.dart": {
-    "mtime": 1794462377.140506,
-    "seen": 1794932530.0807738,
-    "ast_hash": "3dc335ff1bb1436e78d180e1c7f078bb",
+    "mtime": 1795024553.086384,
+    "seen": 1795024632.6874816,
+    "ast_hash": "0fcafeebdd5c2f7151c116c8d73e7caf",
     "semantic_hash": ""
   },
   "test/ui/dashboard/school_countdown_overview_test.dart": {
@@ -2748,10 +2748,10 @@
     "semantic_hash": ""
   },
   "test/ui/exam_calendar_new_design_test.dart": {
-    "mtime": 1794432672.6167464,
-    "seen": 1794932530.0807757,
-    "ast_hash": "61b147c9dd547e0dcf0d7ac0e892f61d",
-    "semantic_hash": "61b147c9dd547e0dcf0d7ac0e892f61d"
+    "mtime": 1795022153.9438865,
+    "seen": 1795022270.6990213,
+    "ast_hash": "9d991270377c35de479d4a6df788e58a",
+    "semantic_hash": ""
   },
   "test/ui/exam_calendar_page_test.dart": {
     "mtime": 1793816483.8858175,

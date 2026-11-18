@@ -15,6 +15,8 @@
 // You should have received a copy of the GNU General Public License
 // along with digitales_register.  If not, see <http://www.gnu.org/licenses/>.
 
+import 'dart:math' as math;
+
 import 'package:dr/i18n/app_localizations.dart';
 import 'package:dr/middleware/middleware.dart';
 import 'package:dr/ui/dashboard_app_header.dart';
@@ -415,9 +417,11 @@ class _LensTrackState extends State<_LensTrack>
             final along = lensLength * (1 + 0.16 * stretch);
             final across = _lensHeight * (1 - 0.04 * stretch);
             final center = gap + _barItemExtent / 2 + position * pitch;
+            // A track too short for the lens, as for a moment at launch,
+            // would turn the bounds around; the lens then keeps to the start.
             final start = (center - along / 2).clamp(
               _lensEdgeGap,
-              length - along - _lensEdgeGap,
+              math.max<double>(_lensEdgeGap, length - along - _lensEdgeGap),
             );
             final side = (appNavigationBarHeight - across) / 2;
             return Stack(
