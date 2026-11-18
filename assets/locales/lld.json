@@ -1156,7 +1156,6 @@
   "polls.votesOne": "1 vot",
   "polls.votesMany": "{count} vosc",
   "polls.resultSemantics": "{option}: {percent} por cënt, {votes}",
-  "polls.perDevice": "Al vëgn cunté i vosc por aparat, nia les porsones.",
   "polls.closed": "Chësta enrescida é fenida.",
   "polls.gone": "Chësta enrescida n'é nia plü disponibla.",
   "polls.failed": "Vodé ne n'é nia poscibl sćiö. Porva indô plü tard.",

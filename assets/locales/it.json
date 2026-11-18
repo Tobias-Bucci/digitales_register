@@ -1156,7 +1156,6 @@
   "polls.votesOne": "1 voto",
   "polls.votesMany": "{count} voti",
   "polls.resultSemantics": "{option}: {percent} per cento, {votes}",
-  "polls.perDevice": "Si contano i voti per dispositivo, non le persone.",
   "polls.closed": "Questo sondaggio è concluso.",
   "polls.gone": "Questo sondaggio non è più disponibile.",
   "polls.failed": "Al momento non è possibile votare. Riprova più tardi.",

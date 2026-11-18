@@ -146,6 +146,35 @@ void main() {
     await resetTestState();
   });
 
+  group('new design: the card starts below the header (#137)', () {
+    const sizes = {
+      'phone': Size(412, 900),
+      'tablet': Size(1024, 768),
+      'desktop': Size(1440, 900),
+    };
+    for (final entry in sizes.entries) {
+      for (final textScale in [1.0, 3.0]) {
+        testWidgets('${entry.key}, text scale $textScale', (tester) async {
+          // GlassPage clamps the scale at 2; 3 checks the clamp too.
+          tester.platformDispatcher.textScaleFactorTestValue = textScale;
+          addTearDown(tester.platformDispatcher.clearTextScaleFactorTestValue);
+          final f = _Fixture(replies: [jsonResponse(_state('poll-open'))]);
+          await _pump(tester, f,
+              newDesign: true, themeMode: ThemeMode.dark, size: entry.value);
+          expect(tester.takeException(), isNull);
+
+          final headerBottom =
+              tester.getRect(find.byKey(const Key('poll-header'))).bottom;
+          final card = tester.getRect(find.byKey(const Key('poll-card')));
+          final question =
+              tester.getRect(find.byKey(const Key('poll-question')));
+          expect(card.top, greaterThanOrEqualTo(headerBottom));
+          expect(question.top, greaterThanOrEqualTo(headerBottom));
+        });
+      }
+    }
+  });
+
   for (final newDesign in [false, true]) {
     final design = newDesign ? 'new design' : 'legacy design';
 
@@ -191,10 +220,16 @@ void main() {
         expect(find.text('Du hast abgestimmt: Notenrechner'), findsOneWidget);
         expect(find.byKey(const Key('poll-vote')), findsNothing);
         expect(find.byKey(const Key('poll-results')), findsOneWidget);
+        // The results end with the options: no vote total, no note on how
+        // votes are counted (#137).
+        expect(find.byKey(const Key('poll-total')), findsNothing);
+        expect(find.textContaining('Gezählt werden'), findsNothing);
+        expect(find.text('7 Stimmen'), findsNothing);
         expect(
-            find.text('7 Stimmen. Gezählt werden Stimmen pro Gerät, '
-                'nicht Personen.'),
-            findsOneWidget);
+            find.descendant(
+                of: find.byKey(const Key('poll-results')),
+                matching: find.textContaining('Stimmen.')),
+            findsNothing);
         expect(f.storage.values[pollVotesKey], contains(_optionB));
         // The screen reader lands on the confirmation.
         final voted = find.ancestor(

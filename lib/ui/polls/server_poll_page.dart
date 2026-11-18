@@ -5,7 +5,6 @@ import 'package:dr/polls/poll_models.dart';
 import 'package:dr/polls/server_polls.dart';
 import 'package:dr/ui/glass_page.dart';
 import 'package:dr/ui/glass_surface.dart';
-import 'package:dr/ui/readable_content.dart';
 import 'package:dr/ui/server_notifications/server_notification_visuals.dart'
     show formatServerNotificationTime;
 import 'package:flutter/material.dart';
@@ -55,7 +54,6 @@ class _ServerPollPageState extends State<ServerPollPage> {
     final newDesign = ResponsiveNavigationScope.isActive(context);
     final view = ServerPollView(controller: _controller, newDesign: newDesign);
     if (newDesign) {
-      final padding = MediaQuery.paddingOf(context);
       return GlassPage(
         header: GlassPageHeader(
           surfaceKey: const Key('poll-header'),
@@ -63,24 +61,17 @@ class _ServerPollPageState extends State<ServerPollPage> {
           floatingMaxWidth:
               glassHeaderFloatingWidth(MediaQuery.sizeOf(context).width),
         ),
-        body: ReadableContent(
-          maxWidth: DesignTokens.contentMaxWidth,
-          child: ListView(
-            key: const Key('poll-list'),
-            padding: EdgeInsets.fromLTRB(
-              DesignTokens.gutter,
-              padding.top + 8,
-              DesignTokens.gutter,
-              padding.bottom + DesignTokens.gutter,
+        // GlassListBody reads the padding below the scaffold, which includes
+        // the header; this build method only sees the status bar.
+        body: GlassListBody(
+          listKey: const Key('poll-list'),
+          children: [
+            GlassCard(
+              key: const Key('poll-card'),
+              padding: const EdgeInsets.fromLTRB(20, 20, 20, 16),
+              child: view,
             ),
-            children: [
-              GlassCard(
-                key: const Key('poll-card'),
-                padding: const EdgeInsets.fromLTRB(20, 20, 20, 16),
-                child: view,
-              ),
-            ],
-          ),
+          ],
         ),
       );
     }
@@ -513,14 +504,8 @@ class _Results extends StatelessWidget {
               ],
             ),
           ),
-          const SizedBox(height: 14),
+          if (option != poll.options.last) const SizedBox(height: 14),
         ],
-        Text(
-          '${votes(results.totalVotes)}. ${l10n.text('polls.perDevice')}',
-          key: const Key('poll-total'),
-          style: theme.textTheme.bodyMedium
-              ?.copyWith(color: scheme.onSurfaceVariant),
-        ),
       ],
     );
   }

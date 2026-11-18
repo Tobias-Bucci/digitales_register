@@ -1156,7 +1156,6 @@
   "polls.votesOne": "1 vote",
   "polls.votesMany": "{count} votes",
   "polls.resultSemantics": "{option}: {percent} percent, {votes}",
-  "polls.perDevice": "Votes are counted per device, not per person.",
   "polls.closed": "This poll has ended.",
   "polls.gone": "This poll is no longer available.",
   "polls.failed": "Voting is not possible right now. Please try again later.",

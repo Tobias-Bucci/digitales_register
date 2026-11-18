@@ -1156,7 +1156,6 @@
   "polls.votesOne": "1 Stimme",
   "polls.votesMany": "{count} Stimmen",
   "polls.resultSemantics": "{option}: {percent} Prozent, {votes}",
-  "polls.perDevice": "Gezählt werden Stimmen pro Gerät, nicht Personen.",
   "polls.closed": "Diese Umfrage ist beendet.",
   "polls.gone": "Diese Umfrage ist nicht mehr verfügbar.",
   "polls.failed": "Abstimmen ist gerade nicht möglich. Versuche es später erneut.",
