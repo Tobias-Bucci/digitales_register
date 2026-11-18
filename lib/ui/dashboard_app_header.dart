@@ -336,15 +336,22 @@ class HeaderDiscButton extends StatelessWidget {
       );
 }
 
-/// A quiet accent wash behind the dashboard, so that its translucent surfaces
+/// The quiet accent wash of the new design, so that its translucent surfaces
 /// have something to show. Pure black stays pure black on AMOLED.
+///
+/// It is one wash across the whole window: the dashboard, every `GlassPage`
+/// and the navigation rail beside them each paint their part of it. So that
+/// the parts meet without an edge (#139), each starts at the top of the
+/// window and the wash fades out over the height of the window, not over
+/// the height of the part. A page that the keyboard makes shorter keeps
+/// the same wash as the rail beside it.
 class DashboardBackdrop extends StatelessWidget {
-  const DashboardBackdrop(
-      {super.key, required this.child, this.visible = true});
+  const DashboardBackdrop({super.key, required this.child});
 
-  /// Without it [child] stays where it is in the tree and keeps its state.
-  final bool visible;
   final Widget child;
+
+  /// Where the wash has faded out, as a share of the height of the window.
+  static const double fadedAt = 0.55;
 
   @override
   Widget build(BuildContext context) {
@@ -352,19 +359,41 @@ class DashboardBackdrop extends StatelessWidget {
     if (scheme.surface == const Color(0xFF000000)) return child;
     return DecoratedBox(
       decoration: BoxDecoration(
-        gradient: !visible
-            ? null
-            : LinearGradient(
-                begin: Alignment.topCenter,
-                end: Alignment.bottomCenter,
-                stops: const [0, 0.55],
-                colors: [
-                  scheme.primaryContainer.withValues(alpha: 0.42),
-                  scheme.primaryContainer.withValues(alpha: 0),
-                ],
-              ),
+        gradient: LinearGradient(
+          begin: Alignment.topCenter,
+          end: Alignment.bottomCenter,
+          stops: const [0, fadedAt],
+          colors: [
+            scheme.primaryContainer.withValues(alpha: 0.42),
+            scheme.primaryContainer.withValues(alpha: 0),
+          ],
+          transform: _OverHeight(MediaQuery.sizeOf(context).height),
+        ),
       ),
       child: child,
     );
   }
+}
+
+/// Stretches a vertical gradient from the top of its box over [height]
+/// instead of over the height of the box.
+class _OverHeight extends GradientTransform {
+  const _OverHeight(this.height);
+
+  final double height;
+
+  @override
+  Matrix4? transform(Rect bounds, {TextDirection? textDirection}) {
+    if (bounds.height <= 0 || height <= 0) return null;
+    return Matrix4.translationValues(0, bounds.top, 0)
+      ..scaleByDouble(1, height / bounds.height, 1, 1)
+      ..translateByDouble(0, -bounds.top, 0, 1);
+  }
+
+  @override
+  bool operator ==(Object other) =>
+      other is _OverHeight && other.height == height;
+
+  @override
+  int get hashCode => height.hashCode;
 }

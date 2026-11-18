@@ -3749,23 +3749,107 @@ void main() {
       );
     });
 
-    testWidgets(
-        'the wash of the page continues below the rail only where it has one',
-        (tester) async {
-      final selected = await pumpRail(tester);
-      final wash = find.descendant(
-        of: find.byType(AppNavigationRail),
-        matching: find.byType(DashboardBackdrop),
-      );
-      expect(tester.widget<DashboardBackdrop>(wash).visible, isTrue);
+    group('the wash beside the rail (#139)', () {
+      const size = Size(1200, 800);
+      final boundary = GlobalKey();
 
-      selected.value = AppDestination.grades;
-      await tester.pumpAndSettle();
-      expect(tester.widget<DashboardBackdrop>(wash).visible, isTrue);
+      /// The real shell with the rail, in [themeMode].
+      Future<void> pumpShell(WidgetTester tester, ThemeMode themeMode) async {
+        tester.view.physicalSize = size;
+        tester.view.devicePixelRatio = 1;
+        addTearDown(tester.view.reset);
+        final store = createStore(
+          initialState: _dashboardState(),
+          newDesign: true,
+          withMiddleware: true,
+        );
+        await tester.pumpWidget(RepaintBoundary(
+          key: boundary,
+          child: buildTestApp(
+            store: store,
+            home: DaysContainer(),
+            themeMode: themeMode,
+          ),
+        ));
+        await settleFor(tester);
+      }
 
-      selected.value = AppDestination.messages;
-      await tester.pumpAndSettle();
-      expect(tester.widget<DashboardBackdrop>(wash).visible, isFalse);
+      Future<void> open(WidgetTester tester, AppDestination destination) async {
+        await tester
+            .tap(find.byKey(ValueKey('app-navigation-${destination.name}')));
+        await settleFor(tester, duration: const Duration(seconds: 1));
+        if (destination == AppDestination.profile) {
+          // The menu first, then the page of the profile.
+          await tester.tap(find.byKey(const Key('profile-menu-header')));
+          await settleFor(tester, duration: const Duration(seconds: 1));
+        }
+      }
+
+      Future<ByteData> capture(WidgetTester tester) async {
+        final render = boundary.currentContext!.findRenderObject()!
+            as RenderRepaintBoundary;
+        return (await tester.runAsync(() async {
+          final image = await render.toImage();
+          // Raw RGBA, the default.
+          final data = await image.toByteData();
+          image.dispose();
+          return data!;
+        }))!;
+      }
+
+      /// The largest difference of a channel between the margin of the rail
+      /// and the page right beside it, from the top down to where the wash
+      /// has faded out. A hard edge differs by 20 to 40.
+      int edge(ByteData pixels) {
+        var largest = 0;
+        for (var y = 4; y < size.height * 0.6; y += 24) {
+          int at(double x, int channel) => pixels
+              .getUint8((y * size.width.toInt() + x.toInt()) * 4 + channel);
+          for (var channel = 0; channel < 3; channel++) {
+            final difference =
+                (at(2, channel) - at(appNavigationRailExtent + 2, channel))
+                    .abs();
+            if (difference > largest) largest = difference;
+          }
+        }
+        return largest;
+      }
+
+      for (final themeMode in [ThemeMode.dark, ThemeMode.light]) {
+        testWidgets(
+            'runs on below the rail on every destination, ${themeMode.name}',
+            (tester) async {
+          await pumpShell(tester, themeMode);
+          for (final destination in AppDestination.values) {
+            if (destination != AppDestination.dashboard) {
+              await open(tester, destination);
+            }
+            expect(
+              edge(await capture(tester)),
+              lessThanOrEqualTo(2),
+              reason: 'edge beside the rail on ${destination.name}',
+            );
+            await tester.tap(find.byKey(
+                ValueKey('app-navigation-${AppDestination.dashboard.name}')));
+            await settleFor(tester, duration: const Duration(seconds: 1));
+          }
+          await _finish(tester);
+        });
+      }
+
+      testWidgets('lines up with the rail while the keyboard is open',
+          (tester) async {
+        await pumpShell(tester, ThemeMode.dark);
+        await open(tester, AppDestination.messages);
+
+        // The keyboard makes the body of the page shorter, not the rail.
+        tester.view.viewInsets = const FakeViewPadding(bottom: 360);
+        addTearDown(tester.view.resetViewInsets);
+        await settleFor(tester);
+
+        expect(edge(await capture(tester)), lessThanOrEqualTo(2));
+        await _finish(tester);
+      });
     });
   });
 
