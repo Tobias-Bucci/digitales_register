@@ -62,6 +62,7 @@ AppState _state({
   bool nicksBar = false,
   bool substituteBar = false,
   String languageCode = 'de',
+  int? lateHour,
 }) =>
     AppState((b) {
       b.dashboardState.allDays = ListBuilder<Day>();
@@ -95,7 +96,10 @@ AppState _state({
             _hour('Religion', 4, 4, substitute: true)
           ],
           [_hour('Mathematik', 1, 2), _hour('Deutsch', 3, 3)],
-          [_hour('Geschichte', 1, 1)],
+          [
+            _hour('Geschichte', 1, 1),
+            if (lateHour != null) _hour('Religion', lateHour, lateHour),
+          ],
           [],
         ];
         b.calendarState.days = MapBuilder<UtcDateTime, CalendarDay>({
@@ -505,6 +509,77 @@ void main() {
         expect(tester.takeException(), isNull);
       });
     }
+
+    group('a long day on a phone held sideways (#139)', () {
+      const sideways = Size(790, 412);
+
+      ScrollPosition pageScroll(WidgetTester tester) => tester
+          .state<ScrollableState>(
+            // The first is the page; the weeks inside it scroll sideways.
+            find
+                .descendant(
+                  of: find.byKey(const Key('calendar-scroll')),
+                  matching: find.byType(Scrollable),
+                )
+                .first,
+          )
+          .position;
+
+      testWidgets('scrolls the page instead of squeezing the lessons',
+          (tester) async {
+        await _pumpCalendar(
+          tester,
+          size: sideways,
+          state: _state(lateHour: 10, nicksBar: true, substituteBar: true),
+        );
+        expect(tester.takeException(), isNull);
+
+        // Every lesson keeps its subject and a teacher at full size.
+        for (final subject in ['Geschichte', 'Mathematik']) {
+          final cell = find
+              .ancestor(
+                of: find.text(subject).first,
+                matching: find.byType(InkWell),
+              )
+              .first;
+          expect(tester.getRect(cell).height, greaterThanOrEqualTo(36));
+        }
+        expect(find.text('Rossi'), findsWidgets);
+        expect(pageScroll(tester).maxScrollExtent, greaterThan(0));
+
+        // The page scrolls as a whole, down to the late lesson and the bars.
+        await tester.drag(
+          find.byKey(const Key('calendar-scroll')),
+          const Offset(0, -2000),
+        );
+        await _settle(tester);
+        final position = pageScroll(tester);
+        expect(position.pixels, position.maxScrollExtent);
+        final late = find.text('Religion').last;
+        expect(tester.getRect(late).bottom, lessThanOrEqualTo(sideways.height));
+        expect(
+          tester.getRect(find.byType(EditNickBar)).bottom,
+          lessThanOrEqualTo(sideways.height),
+        );
+        expect(tester.takeException(), isNull);
+      });
+
+      testWidgets('a window with room for the day does not scroll',
+          (tester) async {
+        await _pumpCalendar(tester, size: _wide, state: _state(lateHour: 10));
+
+        expect(pageScroll(tester).maxScrollExtent, 0);
+        // The lessons share the room of the window, as before.
+        final cell = find
+            .ancestor(
+              of: find.text('Geschichte').first,
+              matching: find.byType(InkWell),
+            )
+            .first;
+        expect(tester.getRect(cell).height, greaterThan(36));
+        expect(tester.takeException(), isNull);
+      });
+    });
 
     testWidgets('a phone held sideways keeps the lessons readable',
         (tester) async {

@@ -17,6 +17,7 @@
 // along with digitales_register.  If not, see <http://www.gnu.org/licenses/>.
 
 import 'dart:async';
+import 'dart:math' as math;
 
 import 'package:dr/analytics_service.dart';
 import 'package:dr/calendar_load_log.dart';
@@ -27,6 +28,7 @@ import 'package:dr/container/calendar_week_container.dart';
 import 'package:dr/container/exam_calendar_container.dart';
 import 'package:dr/data.dart';
 import 'package:dr/i18n/app_localizations.dart';
+import 'package:dr/ui/calendar_week.dart' show CalendarWeek;
 import 'package:dr/ui/dashboard_app_header.dart' show HeaderDiscButton;
 import 'package:dr/ui/favorite_subject_filter.dart';
 import 'package:dr/ui/glass_page.dart';
@@ -34,6 +36,7 @@ import 'package:dr/ui/glass_surface.dart';
 import 'package:dr/utc_date_time.dart';
 import 'package:dr/util.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/rendering.dart';
 import 'package:intl/intl.dart';
 import 'package:responsive_scaffold/responsive_scaffold.dart';
 
@@ -548,7 +551,8 @@ class _CalendarState extends State<Calendar> with TickerProviderStateMixin {
     final first = vm.first ?? vm.currentMonday;
     final last = vm.last ?? vm.currentMonday.add(const Duration(days: 5));
     final range = '${_dateFormat.format(first)} – ${_dateFormat.format(last)}';
-    final week = Column(
+    final top = Column(
+      mainAxisSize: MainAxisSize.min,
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: <Widget>[
         const SizedBox(height: 8),
@@ -577,23 +581,30 @@ class _CalendarState extends State<Calendar> with TickerProviderStateMixin {
             padding: const EdgeInsets.only(top: 8),
           ),
         const SizedBox(height: 8),
-        Expanded(
-          child: NotificationListener<ScrollStartNotification>(
-            onNotification: (n) {
-              _chevronOpacityController.forward();
-              _dateRangeOpacityController.forward();
-              return false;
-            },
-            child: NotificationListener<ScrollEndNotification>(
-              onNotification: (_) {
-                _chevronOpacityController.reverse();
-                _dateRangeOpacityController.reverse();
-                return false;
-              },
-              child: pageView,
-            ),
-          ),
-        ),
+      ],
+    );
+    // Only the swipe between weeks fades the bar, not a scroll inside one.
+    final weeks = NotificationListener<ScrollStartNotification>(
+      onNotification: (notification) {
+        if (notification.depth != 0) return false;
+        _chevronOpacityController.forward();
+        _dateRangeOpacityController.forward();
+        return false;
+      },
+      child: NotificationListener<ScrollEndNotification>(
+        onNotification: (notification) {
+          if (notification.depth != 0) return false;
+          _chevronOpacityController.reverse();
+          _dateRangeOpacityController.reverse();
+          return false;
+        },
+        child: pageView,
+      ),
+    );
+    final bars = Column(
+      mainAxisSize: MainAxisSize.min,
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
         EditNickBar(
           show: vm.showEditNicksBar,
           onShowEditNicks: widget.showEditSubjectNicks,
@@ -605,6 +616,23 @@ class _CalendarState extends State<Calendar> with TickerProviderStateMixin {
           enabled: vm.substituteDetectionEnabled,
         ),
       ],
+    );
+    final latestHour = vm.currentDays.fold<int>(
+      0,
+      (latest, day) => math.max(latest, day.toHour),
+    );
+    // The week fills the page, but never gets lower than its lessons need
+    // to be read; then the page scrolls as a whole, so that the lessons get
+    // the whole screen of a phone held sideways (#139).
+    final week = _FillOrScroll(
+      top: top,
+      middle: weeks,
+      bottom: bars,
+      minMiddleHeight: (context) => CalendarWeek.minGlassHeight(
+        context,
+        latestHour: latestHour,
+        noInternet: vm.noInternet,
+      ),
     );
     return GlassPage(
       scrolls: false,
@@ -868,4 +896,151 @@ class _GlassHelperBar extends StatelessWidget {
           show ? CrossFadeState.showFirst : CrossFadeState.showSecond,
     );
   }
+}
+
+/// [top], [middle] and [bottom] one below the other. The middle fills what
+/// the others leave of the height, as long as that is at least
+/// [minMiddleHeight]; otherwise it gets that height and all three scroll
+/// together. A window with room for everything never scrolls.
+class _FillOrScroll extends StatefulWidget {
+  const _FillOrScroll({
+    required this.top,
+    required this.middle,
+    required this.bottom,
+    required this.minMiddleHeight,
+  });
+
+  final Widget top, middle, bottom;
+
+  /// Measured in the context of the page, with its text scale.
+  final double Function(BuildContext context) minMiddleHeight;
+
+  @override
+  State<_FillOrScroll> createState() => _FillOrScrollState();
+}
+
+class _FillOrScrollState extends State<_FillOrScroll> {
+  final _controller = ScrollController();
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return LayoutBuilder(
+      builder: (context, constraints) => Scrollbar(
+        controller: _controller,
+        child: ScrollConfiguration(
+          // The scrollbar above is the only one, on every platform.
+          behavior: ScrollConfiguration.of(context).copyWith(scrollbars: false),
+          child: SingleChildScrollView(
+            key: const Key('calendar-scroll'),
+            controller: _controller,
+            child: _FillOrScrollLayout(
+              viewport: constraints.maxHeight,
+              minMiddleHeight: widget.minMiddleHeight(context),
+              children: [widget.top, widget.middle, widget.bottom],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _FillOrScrollLayout extends MultiChildRenderObjectWidget {
+  const _FillOrScrollLayout({
+    required this.viewport,
+    required this.minMiddleHeight,
+    required super.children,
+  }) : assert(children.length == 3);
+
+  final double viewport, minMiddleHeight;
+
+  @override
+  RenderObject createRenderObject(BuildContext context) => _RenderFillOrScroll(
+        viewport: viewport,
+        minMiddleHeight: minMiddleHeight,
+      );
+
+  @override
+  void updateRenderObject(
+    BuildContext context,
+    _RenderFillOrScroll renderObject,
+  ) {
+    renderObject
+      ..viewport = viewport
+      ..minMiddleHeight = minMiddleHeight;
+  }
+}
+
+class _FillOrScrollParentData extends ContainerBoxParentData<RenderBox> {}
+
+class _RenderFillOrScroll extends RenderBox
+    with
+        ContainerRenderObjectMixin<RenderBox, _FillOrScrollParentData>,
+        RenderBoxContainerDefaultsMixin<RenderBox, _FillOrScrollParentData> {
+  _RenderFillOrScroll({
+    required double viewport,
+    required double minMiddleHeight,
+  })  : _viewport = viewport,
+        _minMiddleHeight = minMiddleHeight;
+
+  double _viewport;
+  double get viewport => _viewport;
+  set viewport(double value) {
+    if (value == _viewport) return;
+    _viewport = value;
+    markNeedsLayout();
+  }
+
+  double _minMiddleHeight;
+  double get minMiddleHeight => _minMiddleHeight;
+  set minMiddleHeight(double value) {
+    if (value == _minMiddleHeight) return;
+    _minMiddleHeight = value;
+    markNeedsLayout();
+  }
+
+  @override
+  void setupParentData(RenderBox child) {
+    if (child.parentData is! _FillOrScrollParentData) {
+      child.parentData = _FillOrScrollParentData();
+    }
+  }
+
+  @override
+  void performLayout() {
+    final width = constraints.maxWidth;
+    final top = firstChild!;
+    final middle = childAfter(top)!;
+    final bottom = childAfter(middle)!;
+    final natural = BoxConstraints.tightFor(width: width);
+    top.layout(natural, parentUsesSize: true);
+    bottom.layout(natural, parentUsesSize: true);
+    final middleHeight = math.max(
+      _minMiddleHeight,
+      _viewport - top.size.height - bottom.size.height,
+    );
+    middle.layout(BoxConstraints.tightFor(width: width, height: middleHeight));
+    (top.parentData! as _FillOrScrollParentData).offset = Offset.zero;
+    (middle.parentData! as _FillOrScrollParentData).offset =
+        Offset(0, top.size.height);
+    (bottom.parentData! as _FillOrScrollParentData).offset =
+        Offset(0, top.size.height + middleHeight);
+    size = constraints.constrain(
+      Size(width, top.size.height + middleHeight + bottom.size.height),
+    );
+  }
+
+  @override
+  void paint(PaintingContext context, Offset offset) =>
+      defaultPaint(context, offset);
+
+  @override
+  bool hitTestChildren(BoxHitTestResult result, {required Offset position}) =>
+      defaultHitTestChildren(result, position: position);
 }

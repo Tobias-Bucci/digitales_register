@@ -51,6 +51,21 @@ class CalendarWeek extends StatelessWidget {
     this.onRetry,
   });
 
+  /// The least height of a week of the new design whose lessons end with
+  /// [latestHour]: the names of the days and every hour at
+  /// [_GlassHour.minExtent], at the text scale of [context]. Below it the
+  /// lessons scroll; a page that can scroll as a whole gives a week this
+  /// height instead.
+  static double minGlassHeight(
+    BuildContext context, {
+    required int latestHour,
+    required bool noInternet,
+  }) =>
+      (noInternet ? _GlassWeek.offlineHintExtent : 0) +
+      _GlassDayHeader.extent(context) +
+      _GlassWeek.headerGap +
+      latestHour * _GlassHour.minExtent(context);
+
   @override
   Widget build(BuildContext context) {
     final latestHour =
@@ -756,6 +771,13 @@ class _GlassWeek extends StatelessWidget {
   final bool loading;
   final VoidCallback? onRetry;
 
+  /// Between the names of the days and their lessons.
+  static const double headerGap = 4;
+
+  /// The hint that the week is from an earlier visit, with its gap. A
+  /// little more than it takes, as a page measures the week by it.
+  static const double offlineHintExtent = 56;
+
   @override
   Widget build(BuildContext context) {
     final l10n = context.l10n;
@@ -783,6 +805,22 @@ class _GlassWeek extends StatelessWidget {
       );
     }
     final UtcDateTime? lastFetched = vm.days.first.lastFetched;
+    Widget eachDay(
+      Widget Function(_DisplayedCalendarDay day) build, {
+      CrossAxisAlignment crossAxisAlignment = CrossAxisAlignment.stretch,
+    }) =>
+        Row(
+          crossAxisAlignment: crossAxisAlignment,
+          children: [
+            for (final displayedDay in displayedDays)
+              Expanded(
+                child: Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 2),
+                  child: build(displayedDay),
+                ),
+              ),
+          ],
+        );
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
@@ -797,29 +835,31 @@ class _GlassWeek extends StatelessWidget {
               onRetry: onRetry ?? () {},
             ),
           ),
+        // Apart from the lessons, so that they stay named when only the
+        // lessons scroll (see [_GlassWeekLessons]).
+        eachDay(
+          (displayedDay) => _GlassDayHeader(date: displayedDay.day.date),
+          crossAxisAlignment: CrossAxisAlignment.start,
+        ),
+        const SizedBox(height: headerGap),
         Expanded(
-          child: Row(
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: [
-              for (final displayedDay in displayedDays)
-                Expanded(
-                  child: Padding(
-                    padding: const EdgeInsets.symmetric(horizontal: 2),
-                    child: _GlassDay(
-                      calendarDay: displayedDay.day,
-                      max: latestHour,
-                      subjectNicks: vm.subjectNicks,
-                      isSelected: vm.selection?.date == displayedDay.day.date,
-                      selectedHour: vm.selection?.date == displayedDay.day.date
-                          ? vm.selection?.hour
-                          : null,
-                      colorBackground: vm.colorBackground,
-                      subjectThemes: vm.subjectThemes,
-                      showNoFavoriteSubject: displayedDay.showNoFavoriteSubject,
-                    ),
-                  ),
-                ),
-            ],
+          child: _GlassWeekLessons(
+            latestHour: latestHour,
+            builder: (viewport) => eachDay(
+              (displayedDay) => _GlassDayLessons(
+                calendarDay: displayedDay.day,
+                max: latestHour,
+                viewport: viewport,
+                subjectNicks: vm.subjectNicks,
+                isSelected: vm.selection?.date == displayedDay.day.date,
+                selectedHour: vm.selection?.date == displayedDay.day.date
+                    ? vm.selection?.hour
+                    : null,
+                colorBackground: vm.colorBackground,
+                subjectThemes: vm.subjectThemes,
+                showNoFavoriteSubject: displayedDay.showNoFavoriteSubject,
+              ),
+            ),
           ),
         ),
       ],
@@ -827,11 +867,136 @@ class _GlassWeek extends StatelessWidget {
   }
 }
 
-/// One day of [_GlassWeek]: its name and date, then its lessons where they
-/// fall in the day.
-class _GlassDay extends StatelessWidget {
-  const _GlassDay({
+/// The lessons of all days of [_GlassWeek], each hour at least
+/// [_GlassHour.minExtent] high. The calendar page gives the week the height
+/// for that and scrolls as a whole ([CalendarWeek.minGlassHeight]); should
+/// the week still get less, the lessons scroll together below the names of
+/// the days instead of getting squeezed. A taller week is filled.
+class _GlassWeekLessons extends StatefulWidget {
+  const _GlassWeekLessons({required this.latestHour, required this.builder});
+
+  final int latestHour;
+
+  /// The lessons of all days, given the height of what is visible of them.
+  final Widget Function(double viewport) builder;
+
+  @override
+  State<_GlassWeekLessons> createState() => _GlassWeekLessonsState();
+}
+
+class _GlassWeekLessonsState extends State<_GlassWeekLessons> {
+  // Its offset is kept in the page storage, so the next week opens at the
+  // same hours as the one before.
+  final _controller = ScrollController();
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final viewport = constraints.maxHeight;
+        final needed = widget.latestHour * _GlassHour.minExtent(context);
+        if (needed <= viewport) return widget.builder(viewport);
+        return Scrollbar(
+          controller: _controller,
+          child: ScrollConfiguration(
+            // The scrollbar above is the only one, on every platform.
+            behavior:
+                ScrollConfiguration.of(context).copyWith(scrollbars: false),
+            child: SingleChildScrollView(
+              key: const PageStorageKey('calendar-week-lessons'),
+              controller: _controller,
+              child: SizedBox(
+                height: needed,
+                child: widget.builder(viewport),
+              ),
+            ),
+          ),
+        );
+      },
+    );
+  }
+}
+
+/// The name and date of a day of [_GlassWeek], marked when it is today.
+class _GlassDayHeader extends StatelessWidget {
+  const _GlassDayHeader({required this.date});
+
+  final UtcDateTime date;
+
+  static const double _verticalPadding = 2;
+
+  static TextStyle _nameStyle(ThemeData theme) =>
+      theme.textTheme.labelMedium!.copyWith(fontWeight: FontWeight.w600);
+
+  static TextStyle _dateStyle(ThemeData theme) => theme.textTheme.labelSmall!;
+
+  /// Its height at the text scale of [context]; less where it has to scale
+  /// down to fit a narrow day.
+  static double extent(BuildContext context) {
+    final theme = Theme.of(context);
+    return 2 * _verticalPadding +
+        _lineHeight(context, _nameStyle(theme)) +
+        _lineHeight(context, _dateStyle(theme));
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final scheme = theme.colorScheme;
+    final localeTag = Localizations.localeOf(context).toLanguageTag();
+    final isToday = date == Day.dateToday();
+    final headerColor =
+        isToday ? scheme.onPrimaryContainer : scheme.onSurfaceVariant;
+    return Center(
+      child: Container(
+        key: isToday ? const Key('calendar-today-indicator') : null,
+        padding: const EdgeInsets.symmetric(
+          horizontal: 8,
+          vertical: _verticalPadding,
+        ),
+        decoration: isToday
+            ? ShapeDecoration(
+                color: scheme.primaryContainer,
+                shape: const StadiumBorder(),
+              )
+            : null,
+        child: FittedBox(
+          fit: BoxFit.scaleDown,
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Text(
+                context.l10n
+                    .capitalize(DateFormat("E", localeTag).format(date)),
+                maxLines: 1,
+                style: _nameStyle(theme).copyWith(
+                  color: isToday ? headerColor : scheme.onSurface,
+                ),
+              ),
+              Text(
+                DateFormat("dd.MM", localeTag).format(date),
+                maxLines: 1,
+                style: _dateStyle(theme).copyWith(color: headerColor),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+/// The lessons of one day of [_GlassWeek], where they fall in the day.
+class _GlassDayLessons extends StatelessWidget {
+  const _GlassDayLessons({
     required this.max,
+    required this.viewport,
     required this.calendarDay,
     required this.subjectNicks,
     required this.isSelected,
@@ -842,6 +1007,10 @@ class _GlassDay extends StatelessWidget {
   });
 
   final int max;
+
+  /// The height of what is visible of the lessons; a free day is shown at
+  /// its top, not in the middle of lessons that scroll.
+  final double viewport;
   final CalendarDay calendarDay;
   final BuiltMap<String, String> subjectNicks;
   final bool isSelected;
@@ -852,91 +1021,48 @@ class _GlassDay extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    final scheme = theme.colorScheme;
-    final localeTag = Localizations.localeOf(context).toLanguageTag();
-    final isToday = calendarDay.date == Day.dateToday();
     final chunks = _hourChunks(calendarDay.hours);
-    final headerColor =
-        isToday ? scheme.onPrimaryContainer : scheme.onSurfaceVariant;
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.stretch,
-      children: <Widget>[
-        Center(
-          child: Container(
-            key: isToday ? const Key('calendar-today-indicator') : null,
-            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
-            decoration: isToday
-                ? ShapeDecoration(
-                    color: scheme.primaryContainer,
-                    shape: const StadiumBorder(),
-                  )
-                : null,
-            child: FittedBox(
-              fit: BoxFit.scaleDown,
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  Text(
-                    context.l10n.capitalize(
-                      DateFormat("E", localeTag).format(calendarDay.date),
-                    ),
-                    maxLines: 1,
-                    style: theme.textTheme.labelMedium?.copyWith(
-                      fontWeight: FontWeight.w600,
-                      color: isToday ? headerColor : scheme.onSurface,
-                    ),
-                  ),
-                  Text(
-                    DateFormat("dd.MM", localeTag).format(calendarDay.date),
-                    maxLines: 1,
-                    style: theme.textTheme.labelSmall?.copyWith(
-                      color: headerColor,
-                    ),
-                  ),
-                ],
-              ),
-            ),
+    if (chunks.isEmpty) {
+      // In the upper part of the day, so that it is in view when the
+      // lessons of the other days are taller than the page and scroll.
+      final halfWindow = MediaQuery.sizeOf(context).height / 2;
+      return Align(
+        alignment: Alignment.topCenter,
+        child: SizedBox(
+          height: viewport < halfWindow ? viewport : halfWindow,
+          child: _GlassFreeDay(
+            date: calendarDay.date,
+            noFavoriteSubject: showNoFavoriteSubject,
           ),
         ),
-        const SizedBox(height: 4),
+      );
+    }
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        for (var i = 0; i < chunks.length; i++) ...[
+          Expanded(
+            flex: chunks[i].first.fromHour -
+                (i == 0 ? 0 : _lastHourOf(chunks[i - 1])) -
+                1,
+            child: const SizedBox.shrink(),
+          ),
+          Expanded(
+            flex: _lastHourOf(chunks[i]) - chunks[i].first.fromHour + 1,
+            child: _GlassHoursChunk(
+              hours: chunks[i],
+              subjectNicks: subjectNicks,
+              day: calendarDay,
+              selectedHour: selectedHour,
+              isSelected: isSelected,
+              colorBackground: colorBackground,
+              subjectThemes: subjectThemes,
+            ),
+          ),
+        ],
         Expanded(
-          child: chunks.isEmpty
-              ? _GlassFreeDay(
-                  date: calendarDay.date,
-                  noFavoriteSubject: showNoFavoriteSubject,
-                )
-              : Column(
-                  crossAxisAlignment: CrossAxisAlignment.stretch,
-                  children: [
-                    for (var i = 0; i < chunks.length; i++) ...[
-                      Expanded(
-                        flex: chunks[i].first.fromHour -
-                            (i == 0 ? 0 : _lastHourOf(chunks[i - 1])) -
-                            1,
-                        child: const SizedBox.shrink(),
-                      ),
-                      Expanded(
-                        flex: _lastHourOf(chunks[i]) -
-                            chunks[i].first.fromHour +
-                            1,
-                        child: _GlassHoursChunk(
-                          hours: chunks[i],
-                          subjectNicks: subjectNicks,
-                          day: calendarDay,
-                          selectedHour: selectedHour,
-                          isSelected: isSelected,
-                          colorBackground: colorBackground,
-                          subjectThemes: subjectThemes,
-                        ),
-                      ),
-                    ],
-                    Expanded(
-                      flex: max - calendarDay.toHour,
-                      child: const SizedBox.shrink(),
-                    ),
-                  ],
-                ),
+          flex: max - calendarDay.toHour,
+          child: const SizedBox.shrink(),
         ),
       ],
     );
@@ -1088,6 +1214,33 @@ class _GlassHour extends StatelessWidget {
 
   static const _shape = RoundedRectangleBorder();
 
+  /// Above and below the text of a lesson.
+  static const double _verticalPadding = 1;
+
+  static TextStyle _subjectStyle(ThemeData theme) =>
+      theme.textTheme.labelMedium!.copyWith(
+        fontWeight: FontWeight.w600,
+        color: theme.colorScheme.onSurface,
+      );
+
+  static TextStyle _teacherStyle(ThemeData theme) =>
+      theme.textTheme.labelSmall!.copyWith(
+        color: theme.colorScheme.onSurfaceVariant,
+      );
+
+  /// The least height of a lesson of one hour: its subject and a teacher at
+  /// full size and the text scale of [context], with a little air, so that
+  /// a lesson is never squeezed below what can be read at a glance.
+  static double minExtent(BuildContext context) {
+    final theme = Theme.of(context);
+    return _lineHeight(context, _subjectStyle(theme)) +
+        2 +
+        _lineHeight(context, _teacherStyle(theme)) +
+        2 * _verticalPadding +
+        // The divider to the next lesson and some air around the text.
+        6;
+  }
+
   final CalendarHour hour;
   final CalendarDay day;
   final BuiltMap<String, String> subjectNicks;
@@ -1110,13 +1263,8 @@ class _GlassHour extends StatelessWidget {
     final subject = subjectNicks[hour.subject.toLowerCase()] ??
         context.l10n.translateSubjectName(hour.subject);
     final teachers = [for (final teacher in hour.teachers) teacher.lastName];
-    final subjectStyle = theme.textTheme.labelMedium!.copyWith(
-      fontWeight: FontWeight.w600,
-      color: scheme.onSurface,
-    );
-    final teacherStyle = theme.textTheme.labelSmall!.copyWith(
-      color: scheme.onSurfaceVariant,
-    );
+    final subjectStyle = _subjectStyle(theme);
+    final teacherStyle = _teacherStyle(theme);
     return Flexible(
       flex: hour.length,
       child: Semantics(
@@ -1149,8 +1297,10 @@ class _GlassHour extends StatelessWidget {
                 ),
                 child: SizedBox.expand(
                   child: Padding(
-                    padding:
-                        const EdgeInsets.symmetric(horizontal: 4, vertical: 1),
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 4,
+                      vertical: _verticalPadding,
+                    ),
                     child: LayoutBuilder(
                       builder: (context, constraints) => _content(
                         context,
