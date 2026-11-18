@@ -29,6 +29,7 @@ import 'package:dr/app_language_controller.dart';
 import 'package:dr/app_state.dart';
 import 'package:dr/app_subject_translation_controller.dart';
 import 'package:dr/biometric_app_lock.dart';
+import 'package:dr/calendar_sync_service.dart';
 import 'package:dr/container/change_email_container.dart';
 import 'package:dr/container/home_page.dart';
 import 'package:dr/container/login_page.dart';
@@ -354,6 +355,9 @@ Future<void> _initializeAfterFirstFrame({
       // this might not finish in time:
       store.actions.saveState.call,
     ),
+  );
+  CalendarSyncService.watchDayChange(
+    () => reconcileCalendarSyncInBackground(store.state),
   );
 }
 

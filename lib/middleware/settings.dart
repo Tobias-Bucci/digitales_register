@@ -31,6 +31,8 @@ final _settingsMiddleware = MiddlewareBuilder<AppState, AppStateBuilder,
   ..add(DashboardActionsNames.reminderEdited, _reconcileCalendarSync)
   ..add(DashboardActionsNames.deleteHomework, _reconcileCalendarSync)
   ..add(DashboardActionsNames.toggleDone, _reconcileCalendarSync)
+  ..add(AppActionsNames.start, _reconcileCalendarSyncAfterAppEvent)
+  ..add(AppActionsNames.restarted, _reconcileCalendarSyncAfterAppEvent)
   ..add(SettingsActionsNames.setLanguage, _setLanguage)
   ..add(
       SettingsActionsNames.substituteDetectionEnabled, _recalculateSubstitutes)
@@ -539,6 +541,34 @@ Future<void> _reconcileCalendarSync(
   // Calendar synchronization may load localized assets. Do not block the
   // action dispatcher while that asynchronous work completes.
   unawaited(CalendarSyncService.reconcile(api.state));
+}
+
+/// Removes the events of entries that expired while the app was closed or in
+/// the background, also when no new data is loaded (#138). The handlers of
+/// [AppActionsNames.start] and [AppActionsNames.restarted] in `middleware.dart`
+/// run the reducer step, so `next` is not called here.
+Future<void> _reconcileCalendarSyncAfterAppEvent(
+    MiddlewareApi<AppState, AppStateBuilder, AppActions> api,
+    ActionHandler next,
+    Action<dynamic> action) async {
+  reconcileCalendarSyncInBackground(api.state);
+}
+
+/// Reconciles the device calendar without waiting for it, for a new day or
+/// the return to the app. Only with the data of a signed-in account: without
+/// it every tracked event would look obsolete.
+void reconcileCalendarSyncInBackground(AppState state) {
+  if (!isAndroidPlatform ||
+      !state.settingsState.calendarSyncEnabled ||
+      !state.loginState.loggedIn ||
+      state.dashboardState.allDays == null) {
+    return;
+  }
+  unawaited(CalendarSyncService.reconcile(state).then<void>(
+    (_) {},
+    // Already reported to the diagnostics by the service.
+    onError: (Object _) {},
+  ));
 }
 
 Future<void> _setLanguage(

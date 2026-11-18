@@ -518,6 +518,12 @@ extension CalendarSyncService on Never {
           if (dueDate.isBefore(today)) {
             continue;
           }
+          // Calendar entries have no done state of their own: an exam or test
+          // is ticked off through its dashboard entry.
+          if (_hasCheckedDashboardEntry(
+              state, dueDate, homeworkExam, hour.subject)) {
+            continue;
+          }
           final syncKey = 'calendar:${homeworkExam.id}';
           items[syncKey] = _buildDesiredItem(
             syncKey: syncKey,
@@ -611,6 +617,38 @@ extension CalendarSyncService on Never {
           homeworkExam: homeworkExam,
           subject: hour.subject,
         )) {
+          return true;
+        }
+      }
+    }
+    return false;
+  }
+
+  /// Whether the dashboard entry of [homeworkExam], the one
+  /// [_hasMatchingCalendarExam] leaves out in its favour, is ticked off.
+  static bool _hasCheckedDashboardEntry(
+    AppState state,
+    UtcDateTime dueDate,
+    HomeworkExam homeworkExam,
+    String subject,
+  ) {
+    final knownSubjects = state.extractAllSubjects();
+    for (final day in state.dashboardState.allDays ?? const <Day>[]) {
+      if (day.date.year != dueDate.year ||
+          day.date.month != dueDate.month ||
+          day.date.day != dueDate.day) {
+        continue;
+      }
+      for (final homework in day.homework) {
+        if (homework.checked &&
+            (homework.type == HomeworkType.gradeGroup ||
+                isLocalReminderAssessmentHomework(homework, knownSubjects)) &&
+            _isDuplicateGradeGroupEntry(
+              homework: homework,
+              knownSubjects: knownSubjects,
+              homeworkExam: homeworkExam,
+              subject: subject,
+            )) {
           return true;
         }
       }
@@ -878,9 +916,35 @@ extension CalendarSyncService on Never {
     return hash & 0x7fffffff;
   }
 
+  static Timer? _dayChangeTimer;
+
+  /// Calls [onDayChange] shortly after every midnight of [now] while the app
+  /// runs, so the entries of the day that just ended can leave the calendar
+  /// without a data load (#138). Replaces an earlier watch.
+  static void watchDayChange(VoidCallback onDayChange) {
+    _dayChangeTimer?.cancel();
+    final current = now;
+    final nextDay = UtcDateTime(current.year, current.month, current.day + 1);
+    // A timer that fires early (an hour on a daylight saving change) only
+    // reconciles the same day again and then waits for the real midnight.
+    _dayChangeTimer = Timer(
+      nextDay.difference(current) + const Duration(seconds: 1),
+      () {
+        onDayChange();
+        watchDayChange(onDayChange);
+      },
+    );
+  }
+
+  static void stopDayChangeWatch() {
+    _dayChangeTimer?.cancel();
+    _dayChangeTimer = null;
+  }
+
   @visibleForTesting
   static Future<void> resetForTest() async {
     await _operationTail;
+    stopDayChangeWatch();
     requestPermissionOverride = null;
     getDefaultCalendarIdOverride = null;
     getWritableCalendarsOverride = null;
