@@ -486,7 +486,11 @@ void main() {
     for (final size in const [
       Size(1280, 800),
       Size(1920, 1080),
-      Size(800, 600)
+      Size(800, 600),
+      // A phone held sideways just above the breakpoint of the rail: the
+      // page beside the rail is narrower than 720 px, but the header floats
+      // as on every page, not as a band beside the rail (#139).
+      Size(790, 412),
     ]) {
       testWidgets('at ${size.width} x ${size.height} the header floats',
           (tester) async {

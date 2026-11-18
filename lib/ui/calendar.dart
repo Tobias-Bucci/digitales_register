@@ -276,7 +276,6 @@ class _CalendarState extends State<Calendar> with TickerProviderStateMixin {
       if (newDesign) {
         return _buildNew(
           context,
-          width: constraints.maxWidth,
           pageView: pageView,
           availableFavoriteSubjects: availableFavoriteSubjects,
           selectedFavoriteSubject: selectedFavoriteSubject,
@@ -529,14 +528,18 @@ class _CalendarState extends State<Calendar> with TickerProviderStateMixin {
   /// wide windows, the day beside it.
   Widget _buildNew(
     BuildContext context, {
-    required double width,
     required Widget pageView,
     required List<String> availableFavoriteSubjects,
     required String? selectedFavoriteSubject,
   }) {
     final l10n = context.l10n;
     final reduceMotion = _reduceMotion(context);
-    final floatingMaxWidth = glassHeaderFloatingWidth(width, twoColumns: true);
+    // By the window, like every page, so that the header floats wherever the
+    // rail is shown (#139).
+    final floatingMaxWidth = glassHeaderFloatingWidth(
+      MediaQuery.sizeOf(context).width,
+      twoColumns: true,
+    );
     final chevronOpacity =
         reduceMotion ? kAlwaysCompleteAnimation : _chevronOpacityAnimation;
     final rangeOpacity =

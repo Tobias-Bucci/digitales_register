@@ -3750,11 +3750,18 @@ void main() {
     });
 
     group('the wash beside the rail (#139)', () {
-      const size = Size(1200, 800);
+      const wide = Size(1200, 800);
+      // A phone held sideways just above the breakpoint of the rail: the page
+      // beside the rail is narrower than 720 px.
+      const sideways = Size(790, 412);
       final boundary = GlobalKey();
 
       /// The real shell with the rail, in [themeMode].
-      Future<void> pumpShell(WidgetTester tester, ThemeMode themeMode) async {
+      Future<void> pumpShell(
+        WidgetTester tester,
+        ThemeMode themeMode, {
+        Size size = wide,
+      }) async {
         tester.view.physicalSize = size;
         tester.view.devicePixelRatio = 1;
         addTearDown(tester.view.reset);
@@ -3800,7 +3807,7 @@ void main() {
       /// The largest difference of a channel between the margin of the rail
       /// and the page right beside it, from the top down to where the wash
       /// has faded out. A hard edge differs by 20 to 40.
-      int edge(ByteData pixels) {
+      int edge(ByteData pixels, {Size size = wide}) {
         var largest = 0;
         for (var y = 4; y < size.height * 0.6; y += 24) {
           int at(double x, int channel) => pixels
@@ -3815,26 +3822,31 @@ void main() {
         return largest;
       }
 
-      for (final themeMode in [ThemeMode.dark, ThemeMode.light]) {
-        testWidgets(
-            'runs on below the rail on every destination, ${themeMode.name}',
-            (tester) async {
-          await pumpShell(tester, themeMode);
-          for (final destination in AppDestination.values) {
-            if (destination != AppDestination.dashboard) {
-              await open(tester, destination);
+      for (final (name, size) in const [
+        ('wide', wide),
+        ('sideways', sideways)
+      ]) {
+        for (final themeMode in [ThemeMode.dark, ThemeMode.light]) {
+          testWidgets(
+              'runs on below the rail on every destination, $name, '
+              '${themeMode.name}', (tester) async {
+            await pumpShell(tester, themeMode, size: size);
+            for (final destination in AppDestination.values) {
+              if (destination != AppDestination.dashboard) {
+                await open(tester, destination);
+              }
+              expect(
+                edge(await capture(tester), size: size),
+                lessThanOrEqualTo(2),
+                reason: 'edge beside the rail on ${destination.name}',
+              );
+              await tester.tap(find.byKey(
+                  ValueKey('app-navigation-${AppDestination.dashboard.name}')));
+              await settleFor(tester, duration: const Duration(seconds: 1));
             }
-            expect(
-              edge(await capture(tester)),
-              lessThanOrEqualTo(2),
-              reason: 'edge beside the rail on ${destination.name}',
-            );
-            await tester.tap(find.byKey(
-                ValueKey('app-navigation-${AppDestination.dashboard.name}')));
-            await settleFor(tester, duration: const Duration(seconds: 1));
-          }
-          await _finish(tester);
-        });
+            await _finish(tester);
+          });
+        }
       }
 
       testWidgets('lines up with the rail while the keyboard is open',

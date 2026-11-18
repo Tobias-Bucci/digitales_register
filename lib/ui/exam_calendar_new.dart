@@ -60,52 +60,51 @@ class _NewExamCalendarView extends StatelessWidget {
   Widget build(BuildContext context) {
     final l10n = context.l10n;
     // Measured like the calendar, so that the switch stays where it is when
-    // switching between both pages.
-    return LayoutBuilder(
-      builder: (context, constraints) => GlassPage(
-        header: GlassPageHeader(
-          surfaceKey: const Key('exam-calendar-app-header'),
-          title: l10n.text('exam.title'),
-          titleWidget: const CalendarViewSwitcher(exams: true),
-          floatingMaxWidth: glassHeaderFloatingWidth(
-            constraints.maxWidth,
-            twoColumns: true,
-          ),
-          actions: [
-            HeaderDiscButton(
-              key: const Key('exam-timeline-view'),
-              tooltip:
-                  l10n.text(timeline ? 'exam.listView' : 'exam.timelineView'),
-              icon: timeline ? Icons.view_list_outlined : Icons.timeline,
-              onPressed: onToggleTimeline,
-            ),
-            HeaderDiscButton(
-              key: const Key('exam-calendar-week-view'),
-              tooltip: l10n.text('exam.calendarView'),
-              icon: Icons.calendar_month_outlined,
-              onPressed: onOpenWeek,
-            ),
-          ],
+    // switching between both pages: by the window, like every page, so that
+    // the header floats wherever the rail is shown (#139).
+    return GlassPage(
+      header: GlassPageHeader(
+        surfaceKey: const Key('exam-calendar-app-header'),
+        title: l10n.text('exam.title'),
+        titleWidget: const CalendarViewSwitcher(exams: true),
+        floatingMaxWidth: glassHeaderFloatingWidth(
+          MediaQuery.sizeOf(context).width,
+          twoColumns: true,
         ),
-        body: timeline
-            ? ExamTimeline(
-                assessments: upcoming,
-                now: now,
-                assessmentBuilder: cardBuilder,
-              )
-            : upcoming.isEmpty && past.isEmpty
-                ? GlassStateCard(
-                    key: const Key('exam-calendar-empty'),
-                    icon: Icons.event_available_rounded,
-                    title: l10n.text('exam.empty'),
-                    body: l10n.text('exam.emptyHint'),
-                  )
-                : _GlassExamList(
-                    upcoming: upcoming,
-                    past: past,
-                    cardBuilder: cardBuilder,
-                  ),
+        actions: [
+          HeaderDiscButton(
+            key: const Key('exam-timeline-view'),
+            tooltip:
+                l10n.text(timeline ? 'exam.listView' : 'exam.timelineView'),
+            icon: timeline ? Icons.view_list_outlined : Icons.timeline,
+            onPressed: onToggleTimeline,
+          ),
+          HeaderDiscButton(
+            key: const Key('exam-calendar-week-view'),
+            tooltip: l10n.text('exam.calendarView'),
+            icon: Icons.calendar_month_outlined,
+            onPressed: onOpenWeek,
+          ),
+        ],
       ),
+      body: timeline
+          ? ExamTimeline(
+              assessments: upcoming,
+              now: now,
+              assessmentBuilder: cardBuilder,
+            )
+          : upcoming.isEmpty && past.isEmpty
+              ? GlassStateCard(
+                  key: const Key('exam-calendar-empty'),
+                  icon: Icons.event_available_rounded,
+                  title: l10n.text('exam.empty'),
+                  body: l10n.text('exam.emptyHint'),
+                )
+              : _GlassExamList(
+                  upcoming: upcoming,
+                  past: past,
+                  cardBuilder: cardBuilder,
+                ),
     );
   }
 }
@@ -609,185 +608,184 @@ class _NewExamDetailView extends StatelessWidget {
     const rowShape = RoundedRectangleBorder(
       borderRadius: BorderRadius.all(Radius.circular(12)),
     );
-    return LayoutBuilder(
-      builder: (context, constraints) => GlassPage(
-        header: GlassPageHeader(
-          surfaceKey: const Key('exam-detail-app-header'),
-          title: l10n.text('exam.details'),
-          floatingMaxWidth: glassHeaderFloatingWidth(constraints.maxWidth),
-        ),
-        body: GlassListBody(
-          listKey: const Key('exam-detail-list'),
-          children: [
-            GlassCard(
-              padding: const EdgeInsets.all(16),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Semantics(
-                    header: true,
-                    child: Text(
-                      assessment.title,
-                      style: theme.textTheme.titleLarge?.copyWith(
-                        fontWeight: FontWeight.w700,
-                      ),
+    return GlassPage(
+      header: GlassPageHeader(
+        surfaceKey: const Key('exam-detail-app-header'),
+        title: l10n.text('exam.details'),
+        floatingMaxWidth:
+            glassHeaderFloatingWidth(MediaQuery.sizeOf(context).width),
+      ),
+      body: GlassListBody(
+        listKey: const Key('exam-detail-list'),
+        children: [
+          GlassCard(
+            padding: const EdgeInsets.all(16),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Semantics(
+                  header: true,
+                  child: Text(
+                    assessment.title,
+                    style: theme.textTheme.titleLarge?.copyWith(
+                      fontWeight: FontWeight.w700,
                     ),
                   ),
-                  const SizedBox(height: 4),
-                  Text(_subtitle(context, assessment), style: secondary),
-                  const SizedBox(height: 12),
-                  _GlassCountdownChip(days: days),
-                ],
-              ),
+                ),
+                const SizedBox(height: 4),
+                Text(_subtitle(context, assessment), style: secondary),
+                const SizedBox(height: 12),
+                _GlassCountdownChip(days: days),
+              ],
             ),
-            const SizedBox(height: 8),
-            GlassSectionHeading(
-              title: l10n.text('exam.plan'),
-              trailing: HeaderDiscButton(
-                key: const Key('exam-edit-phases'),
-                tooltip: l10n.text('exam.edit'),
-                icon: Icons.edit_outlined,
-                onPressed: onEditPhases,
-              ),
+          ),
+          const SizedBox(height: 8),
+          GlassSectionHeading(
+            title: l10n.text('exam.plan'),
+            trailing: HeaderDiscButton(
+              key: const Key('exam-edit-phases'),
+              tooltip: l10n.text('exam.edit'),
+              icon: Icons.edit_outlined,
+              onPressed: onEditPhases,
             ),
-            GlassCard(
-              padding: const EdgeInsets.fromLTRB(4, 12, 4, 4),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.stretch,
-                children: [
-                  Padding(
-                    padding: const EdgeInsets.symmetric(horizontal: 12),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        _StudyProgressBar(done: done, total: phases.length),
-                        const SizedBox(height: 6),
-                        Text(
-                          l10n.text('exam.progress', args: {
-                            'done': '$done',
-                            'total': '${phases.length}',
-                          }),
-                          style: theme.textTheme.labelSmall?.copyWith(
-                            color: scheme.onSurfaceVariant,
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                  const SizedBox(height: 4),
-                  Material(
-                    type: MaterialType.transparency,
-                    child: Column(
-                      children: [
-                        for (final phase in phases)
-                          CheckboxListTile(
-                            key: Key('exam-phase-${phase.id}'),
-                            shape: rowShape,
-                            contentPadding:
-                                const EdgeInsets.symmetric(horizontal: 12),
-                            value: completed.contains(phase.id),
-                            title: Text(l10n.studyLabel(phase.title)),
-                            subtitle: Text(_phaseSubtitle(context, phase)),
-                            onChanged: (checked) =>
-                                onPhaseDone(phase.id, checked == true),
-                          ),
-                      ],
-                    ),
-                  ),
-                ],
-              ),
-            ),
-            const SizedBox(height: 8),
-            GlassSectionHeading(title: l10n.text('exam.material')),
-            GlassCard(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.stretch,
-                children: [
-                  if (material != null) ...[
-                    Padding(
-                      padding: const EdgeInsets.symmetric(horizontal: 4),
-                      child: Text(material, style: theme.textTheme.bodyMedium),
-                    ),
-                    const SizedBox(height: 12),
-                  ],
-                  TextField(
-                    key: const Key('exam-notes'),
-                    controller: noteController,
-                    minLines: 2,
-                    maxLines: 5,
-                    decoration: InputDecoration(
-                      border: const OutlineInputBorder(),
-                      labelText: l10n.text('exam.notes'),
-                    ),
-                    onChanged: onNoteChanged,
-                  ),
-                ],
-              ),
-            ),
-            const SizedBox(height: 8),
-            GlassSectionHeading(
-              title: l10n.text('exam.files'),
-              count: attachments.length,
-              trailing: HeaderDiscButton(
-                key: const Key('exam-add-file'),
-                tooltip: l10n.text('exam.addFile'),
-                icon: Icons.attach_file_rounded,
-                onPressed: onAddAttachment,
-              ),
-            ),
-            GlassCard(
-              padding: const EdgeInsets.fromLTRB(4, 12, 4, 4),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.stretch,
-                children: [
-                  Padding(
-                    padding: const EdgeInsets.fromLTRB(12, 0, 12, 8),
-                    child: Text(
-                      l10n.text(attachments.isEmpty
-                          ? 'exam.noFiles'
-                          : 'exam.localFilesHint'),
-                      style: secondary,
-                    ),
-                  ),
-                  if (attachments.isEmpty)
-                    Padding(
-                      padding: const EdgeInsets.fromLTRB(12, 0, 12, 8),
-                      child: Text(
-                        l10n.text('exam.localFilesHint'),
-                        style: theme.textTheme.bodySmall?.copyWith(
+          ),
+          GlassCard(
+            padding: const EdgeInsets.fromLTRB(4, 12, 4, 4),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 12),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      _StudyProgressBar(done: done, total: phases.length),
+                      const SizedBox(height: 6),
+                      Text(
+                        l10n.text('exam.progress', args: {
+                          'done': '$done',
+                          'total': '${phases.length}',
+                        }),
+                        style: theme.textTheme.labelSmall?.copyWith(
                           color: scheme.onSurfaceVariant,
                         ),
                       ),
-                    ),
-                  Material(
-                    type: MaterialType.transparency,
-                    child: Column(
-                      children: [
-                        for (final attachment in attachments)
-                          ListTile(
-                            shape: rowShape,
-                            contentPadding:
-                                const EdgeInsets.only(left: 12, right: 4),
-                            leading: Icon(
-                              Icons.description_outlined,
-                              color: scheme.primary,
-                            ),
-                            title: Text(attachment.name),
-                            onTap: () => onOpenAttachment(attachment),
-                            trailing: IconButton(
-                              tooltip: l10n.text('exam.removeFile'),
-                              icon: const Icon(Icons.delete_outline_rounded),
-                              onPressed: () => onRemoveAttachment(attachment),
-                            ),
-                          ),
-                      ],
+                    ],
+                  ),
+                ),
+                const SizedBox(height: 4),
+                Material(
+                  type: MaterialType.transparency,
+                  child: Column(
+                    children: [
+                      for (final phase in phases)
+                        CheckboxListTile(
+                          key: Key('exam-phase-${phase.id}'),
+                          shape: rowShape,
+                          contentPadding:
+                              const EdgeInsets.symmetric(horizontal: 12),
+                          value: completed.contains(phase.id),
+                          title: Text(l10n.studyLabel(phase.title)),
+                          subtitle: Text(_phaseSubtitle(context, phase)),
+                          onChanged: (checked) =>
+                              onPhaseDone(phase.id, checked == true),
+                        ),
+                    ],
+                  ),
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(height: 8),
+          GlassSectionHeading(title: l10n.text('exam.material')),
+          GlassCard(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                if (material != null) ...[
+                  Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 4),
+                    child: Text(material, style: theme.textTheme.bodyMedium),
+                  ),
+                  const SizedBox(height: 12),
+                ],
+                TextField(
+                  key: const Key('exam-notes'),
+                  controller: noteController,
+                  minLines: 2,
+                  maxLines: 5,
+                  decoration: InputDecoration(
+                    border: const OutlineInputBorder(),
+                    labelText: l10n.text('exam.notes'),
+                  ),
+                  onChanged: onNoteChanged,
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(height: 8),
+          GlassSectionHeading(
+            title: l10n.text('exam.files'),
+            count: attachments.length,
+            trailing: HeaderDiscButton(
+              key: const Key('exam-add-file'),
+              tooltip: l10n.text('exam.addFile'),
+              icon: Icons.attach_file_rounded,
+              onPressed: onAddAttachment,
+            ),
+          ),
+          GlassCard(
+            padding: const EdgeInsets.fromLTRB(4, 12, 4, 4),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                Padding(
+                  padding: const EdgeInsets.fromLTRB(12, 0, 12, 8),
+                  child: Text(
+                    l10n.text(attachments.isEmpty
+                        ? 'exam.noFiles'
+                        : 'exam.localFilesHint'),
+                    style: secondary,
+                  ),
+                ),
+                if (attachments.isEmpty)
+                  Padding(
+                    padding: const EdgeInsets.fromLTRB(12, 0, 12, 8),
+                    child: Text(
+                      l10n.text('exam.localFilesHint'),
+                      style: theme.textTheme.bodySmall?.copyWith(
+                        color: scheme.onSurfaceVariant,
+                      ),
                     ),
                   ),
-                ],
-              ),
+                Material(
+                  type: MaterialType.transparency,
+                  child: Column(
+                    children: [
+                      for (final attachment in attachments)
+                        ListTile(
+                          shape: rowShape,
+                          contentPadding:
+                              const EdgeInsets.only(left: 12, right: 4),
+                          leading: Icon(
+                            Icons.description_outlined,
+                            color: scheme.primary,
+                          ),
+                          title: Text(attachment.name),
+                          onTap: () => onOpenAttachment(attachment),
+                          trailing: IconButton(
+                            tooltip: l10n.text('exam.removeFile'),
+                            icon: const Icon(Icons.delete_outline_rounded),
+                            onPressed: () => onRemoveAttachment(attachment),
+                          ),
+                        ),
+                    ],
+                  ),
+                ),
+              ],
             ),
-          ],
-        ),
+          ),
+        ],
       ),
     );
   }
@@ -1037,97 +1035,94 @@ class _NewExamWeekView extends StatelessWidget {
     final range = '${DateFormat('dd.MM.').format(monday)} – '
         '${DateFormat('dd.MM.yyyy').format(sunday)}';
     final currentMonday = _mondayOf(now);
-    return LayoutBuilder(
-      builder: (context, constraints) {
-        final floatingMaxWidth = glassHeaderFloatingWidth(
-          constraints.maxWidth,
-          twoColumns: true,
-        );
-        final side = floatingMaxWidth == null ? 6.0 : DesignTokens.gutter;
-        return GlassPage(
-          scrolls: false,
-          header: GlassPageHeader(
-            surfaceKey: const Key('exam-week-app-header'),
-            title: l10n.text('calendar.title'),
-            floatingMaxWidth: floatingMaxWidth,
-            actions: [
-              if (!_sameDay(monday, currentMonday))
-                HeaderDiscButton(
-                  key: const Key('exam-week-current'),
-                  tooltip: l10n.text('calendar.currentWeek'),
-                  icon: Icons.today_outlined,
-                  onPressed: () => onMondayChanged(currentMonday),
-                ),
-            ],
+    // By the window, like every page, so that the header floats
+    // wherever the rail is shown (#139).
+    final floatingMaxWidth = glassHeaderFloatingWidth(
+      MediaQuery.sizeOf(context).width,
+      twoColumns: true,
+    );
+    final side = floatingMaxWidth == null ? 6.0 : DesignTokens.gutter;
+    return GlassPage(
+      scrolls: false,
+      header: GlassPageHeader(
+        surfaceKey: const Key('exam-week-app-header'),
+        title: l10n.text('calendar.title'),
+        floatingMaxWidth: floatingMaxWidth,
+        actions: [
+          if (!_sameDay(monday, currentMonday))
+            HeaderDiscButton(
+              key: const Key('exam-week-current'),
+              tooltip: l10n.text('calendar.currentWeek'),
+              icon: Icons.today_outlined,
+              onPressed: () => onMondayChanged(currentMonday),
+            ),
+        ],
+      ),
+      body: Align(
+        alignment: Alignment.topCenter,
+        child: ConstrainedBox(
+          constraints: BoxConstraints(
+            maxWidth: floatingMaxWidth ?? double.infinity,
           ),
-          body: Align(
-            alignment: Alignment.topCenter,
-            child: ConstrainedBox(
-              constraints: BoxConstraints(
-                maxWidth: floatingMaxWidth ?? double.infinity,
-              ),
-              child: Padding(
-                padding:
-                    EdgeInsets.fromLTRB(side, 0, side, DesignTokens.gutter),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.stretch,
-                  children: [
-                    const SizedBox(height: 8),
-                    GlassWeekBar(
-                      previousKey: const Key('exam-week-previous'),
-                      nextKey: const Key('exam-week-next'),
-                      rangeKey: const Key('exam-week-range'),
-                      range: range,
-                      onPrevious: () => onMondayChanged(
-                        monday.subtract(const Duration(days: 7)),
-                      ),
-                      onNext: () => onMondayChanged(
-                        monday.add(const Duration(days: 7)),
-                      ),
-                      onPickWeek: () => _pickWeek(context),
-                    ),
-                    const SizedBox(height: 8),
-                    Expanded(
-                      child: LayoutBuilder(
-                        builder: (context, constraints) {
-                          final width = math.max(
-                            constraints.maxWidth,
-                            7 * minDayWidth,
-                          );
-                          return SingleChildScrollView(
-                            key: const Key('exam-week-days'),
-                            scrollDirection: Axis.horizontal,
-                            child: SizedBox(
-                              width: width,
-                              height: constraints.maxHeight,
-                              child: Row(
-                                crossAxisAlignment: CrossAxisAlignment.stretch,
-                                children: [
-                                  for (var offset = 0; offset < 7; offset++)
-                                    Expanded(
-                                      child: Padding(
-                                        padding: const EdgeInsets.symmetric(
-                                          horizontal: 2,
-                                        ),
-                                        child: _buildDay(
-                                          monday.add(Duration(days: offset)),
-                                        ),
-                                      ),
-                                    ),
-                                ],
-                              ),
-                            ),
-                          );
-                        },
-                      ),
-                    ),
-                  ],
+          child: Padding(
+            padding: EdgeInsets.fromLTRB(side, 0, side, DesignTokens.gutter),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                const SizedBox(height: 8),
+                GlassWeekBar(
+                  previousKey: const Key('exam-week-previous'),
+                  nextKey: const Key('exam-week-next'),
+                  rangeKey: const Key('exam-week-range'),
+                  range: range,
+                  onPrevious: () => onMondayChanged(
+                    monday.subtract(const Duration(days: 7)),
+                  ),
+                  onNext: () => onMondayChanged(
+                    monday.add(const Duration(days: 7)),
+                  ),
+                  onPickWeek: () => _pickWeek(context),
                 ),
-              ),
+                const SizedBox(height: 8),
+                Expanded(
+                  child: LayoutBuilder(
+                    builder: (context, constraints) {
+                      final width = math.max(
+                        constraints.maxWidth,
+                        7 * minDayWidth,
+                      );
+                      return SingleChildScrollView(
+                        key: const Key('exam-week-days'),
+                        scrollDirection: Axis.horizontal,
+                        child: SizedBox(
+                          width: width,
+                          height: constraints.maxHeight,
+                          child: Row(
+                            crossAxisAlignment: CrossAxisAlignment.stretch,
+                            children: [
+                              for (var offset = 0; offset < 7; offset++)
+                                Expanded(
+                                  child: Padding(
+                                    padding: const EdgeInsets.symmetric(
+                                      horizontal: 2,
+                                    ),
+                                    child: _buildDay(
+                                      monday.add(Duration(days: offset)),
+                                    ),
+                                  ),
+                                ),
+                            ],
+                          ),
+                        ),
+                      );
+                    },
+                  ),
+                ),
+              ],
             ),
           ),
-        );
-      },
+        ),
+      ),
     );
   }
 

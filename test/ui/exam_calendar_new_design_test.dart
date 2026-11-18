@@ -490,6 +490,21 @@ void main() {
       expect(tester.getRect(_card(2)).top, greaterThanOrEqualTo(header.bottom));
     });
 
+    testWidgets(
+        'a phone held sideways floats the headers beside the rail (#139)',
+        (tester) async {
+      // Just above the breakpoint of the rail, the page beside it is
+      // narrower than 720 px. A band there would end in a hard edge
+      // against the rail.
+      await _pumpExams(tester, size: const Size(790, 412));
+      expect(find.byKey(const Key('app-navigation-rail')), findsOneWidget);
+      expect(tester.getRect(_header).top, DesignTokens.gutter);
+
+      await _openWeek(tester);
+      expect(tester.getRect(_weekHeader).top, DesignTokens.gutter);
+      expect(tester.takeException(), isNull);
+    });
+
     testWidgets('wide windows float the header like the calendar',
         (tester) async {
       await _pumpExams(tester, size: _wide);
