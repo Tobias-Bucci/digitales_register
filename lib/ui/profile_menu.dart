@@ -31,6 +31,7 @@ class ProfileMenu extends StatelessWidget {
     required this.account,
     required this.userIcon,
     required this.otherAccounts,
+    this.logoutKeepsAccount = false,
     required this.showProfile,
     required this.showSettings,
     required this.selectAccount,
@@ -45,6 +46,10 @@ class ProfileMenu extends StatelessWidget {
   final String? account;
   final String? userIcon;
   final List<String> otherAccounts;
+
+  /// Whether signing out keeps the account on this device (not on the web
+  /// and not in the demo); the confirmation says what happens.
+  final bool logoutKeepsAccount;
   final VoidCallback showProfile, showSettings, addAccount;
   final VoidCallback removeCurrentAccount, logout;
   final SelectAccountCallback selectAccount;
@@ -62,7 +67,9 @@ class ProfileMenu extends StatelessWidget {
       context: context,
       builder: (dialogContext) => AlertDialog(
         title: Text(l10n.text('profileMenu.logout.title')),
-        content: Text(l10n.text('profileMenu.logout.body')),
+        content: Text(l10n.text(logoutKeepsAccount
+            ? 'profileMenu.logout.keepsAccountBody'
+            : 'profileMenu.logout.body')),
         actions: [
           TextButton(
             onPressed: () => Navigator.of(dialogContext).pop(false),

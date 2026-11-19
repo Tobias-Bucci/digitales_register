@@ -24,6 +24,7 @@ import 'package:dr/profile_picture.dart';
 import 'package:dr/ui/app_navigation.dart';
 import 'package:dr/ui/glass_surface.dart';
 import 'package:dr/ui/profile_menu.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_built_redux/flutter_built_redux.dart';
 import 'package:responsive_scaffold/responsive_scaffold.dart';
@@ -67,7 +68,7 @@ class ProfileMenuContainer extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) => StoreConnection<AppState, AppActions,
-          (String?, String?, String?, BuiltList<String>, String?)>(
+          (String?, String?, String?, BuiltList<String>, String?, bool)>(
         connect: (state) {
           final username = state.loginState.username;
           final school = schoolNameForUrl(state.url);
@@ -81,6 +82,8 @@ class ProfileMenuContainer extends StatelessWidget {
             ),
             state.loginState.otherAccounts,
             username,
+            // See _logout: the browser and the demo forget the account.
+            !kIsWeb && !state.isDemo,
           );
         },
         builder: (context, vm, actions) => ProfileMenu(
@@ -89,6 +92,7 @@ class ProfileMenuContainer extends StatelessWidget {
           account: vm.$2?.isEmpty ?? true ? null : vm.$2,
           userIcon: vm.$3,
           otherAccounts: vm.$4.toList(),
+          logoutKeepsAccount: vm.$6,
           showProfile: actions.routingActions.showProfile.call,
           showSettings: actions.routingActions.showSettings.call,
           selectAccount: actions.loginActions.selectAccount.call,

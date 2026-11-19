@@ -263,6 +263,23 @@ class ProductAnalytics {
     }
   }
 
+  /// Deletes the stored identifier of an account that is removed from the
+  /// device, so that adding it again starts with a new one. Ordered behind
+  /// every queued write of the identity map; data uploaded before is not
+  /// affected.
+  Future<void> forgetAccount(String localAccountKey) => _serialize(() async {
+        final raw = await store.read('analyticsIdentityMapV4');
+        if (raw == null) return;
+        final decoded = jsonDecode(raw);
+        if (decoded is! Map<String, dynamic> ||
+            !decoded.containsKey(localAccountKey)) {
+          return;
+        }
+        decoded.remove(localAccountKey);
+        await store.write('analyticsIdentityMapV4', jsonEncode(decoded));
+        _identityChanged();
+      });
+
   Future<void> clearIdentity() {
     _epoch++;
     gradeOwnership.clear();

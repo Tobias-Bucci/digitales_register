@@ -1,5 +1,7 @@
 import 'dart:convert';
 
+import 'package:built_redux/built_redux.dart';
+import 'package:dr/actions/app_actions.dart';
 import 'package:dr/actions/login_actions.dart';
 import 'package:dr/app_state.dart';
 import 'package:dr/data.dart';
@@ -200,8 +202,8 @@ void main() {
 
   for (final noPasswordSaving in [false, true]) {
     test(
-        'explicit logout still deletes account data, remember off: $noPasswordSaving',
-        () async {
+        'explicit logout deletes account data but keeps the account, '
+        'remember off: $noPasswordSaving', () async {
       wrapper = AccountWrapper()
         ..user = 'a'
         ..pass = 'password-a'
@@ -226,8 +228,13 @@ void main() {
         ..hard = true
         ..forced = false));
       expect(store.state.loginState.loggedIn, isFalse);
-      expect(store.state.loginState.otherAccounts.toList(), ['b']);
-      expect((await savedLogin()).containsKey('pass'), isFalse);
+      // Signing out keeps the account (#142); only removal deletes it.
+      expect(store.state.loginState.otherAccounts.toList(), ['a', 'b']);
+      expect(await savedLogin(), {
+        ...account('a'),
+        'signedOut': true,
+        'otherAccounts': [account('b')],
+      });
       final stored = await secureStorage.read(
           key: escapeKey(
               getStorageKey('a', 'https://example.org/v2/api/auth/login')));
@@ -381,5 +388,204 @@ void main() {
     await Future<void>.delayed(Duration.zero);
     expect(store.state.loginState.loggedIn, isTrue);
     expect(deletedData, isFalse);
+  });
+
+  group('signing out keeps the account (#142)', () {
+    Future<Store<AppState, AppStateBuilder, AppActions>> signedInAs(
+      String user, {
+      List<String> others = const [],
+      bool noPasswordSaving = false,
+      bool deleteDataOnLogout = false,
+    }) async {
+      wrapper = AccountWrapper()
+        ..user = user
+        ..pass = 'password-$user'
+        ..url = 'https://example.org'
+        ..signedIn = true;
+      await secureStorage.write(
+          key: 'login',
+          value: jsonEncode({
+            ...account(user),
+            'otherAccounts': [for (final other in others) account(other)],
+          }));
+      final store = createStore(
+          withMiddleware: true,
+          initialState: AppState((b) => b
+            ..loginState.loggedIn = true
+            ..loginState.username = user
+            ..url = 'https://example.org'
+            ..settingsState.noPasswordSaving = noPasswordSaving
+            ..settingsState.deleteDataOnLogout = deleteDataOnLogout));
+      addTearDown(store.dispose);
+      return store;
+    }
+
+    Future<void> signOut(Store<AppState, AppStateBuilder, AppActions> store) =>
+        store.actions.loginActions.logout(LogoutPayload((b) => b
+          ..hard = true
+          ..forced = false));
+
+    String storageKeyOf(String user) =>
+        escapeKey(getStorageKey(user, 'https://example.org/v2/api/auth/login'));
+
+    for (final noPasswordSaving in [false, true]) {
+      test(
+          'the account is listed after signing out and signs in without '
+          'its password, remember off: $noPasswordSaving', () async {
+        final store = await signedInAs('a',
+            others: ['b'], noPasswordSaving: noPasswordSaving);
+
+        await signOut(store);
+
+        expect(store.state.loginState.loggedIn, isFalse);
+        expect(store.state.loginState.otherAccounts.toList(), ['a', 'b']);
+        // The session is gone; nothing can sign in on its own.
+        final session = AccountWrapper();
+        wrapper = session;
+
+        await store.actions.loginActions.selectAccount(0);
+
+        expect(store.state.loginState.loggedIn, isTrue);
+        expect(store.state.loginState.username, 'a');
+        expect(session.user, 'a');
+        expect(session.pass, 'password-a');
+        expect(store.state.loginState.otherAccounts.toList(), ['b']);
+        // Signed in again: the account is no longer marked as signed out.
+        expect(await savedLogin(), {
+          ...account('a'),
+          'otherAccounts': [account('b')],
+        });
+      });
+    }
+
+    test('the other saved account can be chosen after signing out', () async {
+      final store = await signedInAs('a', others: ['b']);
+      await signOut(store);
+      wrapper = AccountWrapper();
+
+      await store.actions.loginActions.selectAccount(1);
+
+      expect(store.state.loginState.username, 'b');
+      expect(store.state.loginState.otherAccounts.toList(), ['a']);
+      final login = await savedLogin();
+      expect(login['user'], 'b');
+      expect(login.containsKey('signedOut'), isFalse);
+      expect(login['otherAccounts'], [account('a')]);
+    });
+
+    test('the app does not sign in on its own at the next start', () async {
+      final store = await signedInAs('a', others: ['b']);
+      await signOut(store);
+      store.dispose();
+      await resetTestState();
+
+      final session = AccountWrapper();
+      wrapper = session;
+      final restarted = createStore(withMiddleware: true);
+      addTearDown(restarted.dispose);
+      await restarted.actions.load();
+
+      expect(restarted.state.loginState.loggedIn, isFalse);
+      expect(session.signedIn, isFalse);
+      expect(restarted.state.loginState.otherAccounts.toList(), ['a', 'b']);
+
+      await restarted.actions.loginActions.selectAccount(0);
+      expect(restarted.state.loginState.username, 'a');
+      expect(session.pass, 'password-a');
+    });
+
+    test('a sign-in typed on the sign-in screen clears the mark', () async {
+      final store = await signedInAs('a');
+      await signOut(store);
+      wrapper = AccountWrapper();
+
+      await store.actions.loginActions.login(LoginPayload((b) => b
+        ..user = 'a'
+        ..pass = 'password-a'
+        ..url = 'https://example.org'
+        ..fromStorage = false));
+
+      expect(await savedLogin(), {...account('a'), 'otherAccounts': []});
+    });
+
+    test('deleting data on sign out keeps the account and its credentials',
+        () async {
+      final store = await signedInAs('a', deleteDataOnLogout: true);
+      await signOut(store);
+
+      expect(deletedData, isTrue);
+      expect(await savedLogin(), {
+        ...account('a'),
+        'signedOut': true,
+        'otherAccounts': [],
+      });
+      // Only the settings are saved for the account, no register data.
+      final stored = serializers.deserialize(
+          jsonDecode((await secureStorage.read(key: storageKeyOf('a')))!)
+              as Object);
+      expect(stored, isA<SettingsState>());
+      expect(store.state.loginState.otherAccounts.toList(), ['a']);
+    });
+
+    for (final index in [0, 1]) {
+      test('removing account $index after signing out removes only it',
+          () async {
+        final store = await signedInAs('a', others: ['b']);
+        await secureStorage.write(key: storageKeyOf('b'), value: 'state of b');
+        await signOut(store);
+        expect(await secureStorage.read(key: storageKeyOf('a')), isNotNull);
+
+        await store.actions.loginActions.removeAccount(index);
+
+        final removed = index == 0 ? 'a' : 'b';
+        final kept = index == 0 ? 'b' : 'a';
+        expect(store.state.loginState.otherAccounts.toList(), [kept]);
+        final login = await savedLogin();
+        final users = {
+          if (login['user'] != null) login['user'],
+          for (final other in login['otherAccounts'] as List) other['user'],
+        };
+        expect(users, {kept});
+        expect(jsonEncode(login), isNot(contains('password-$removed')));
+        expect(await secureStorage.read(key: storageKeyOf(removed)), isNull);
+        expect(await secureStorage.read(key: storageKeyOf(kept)), isNotNull);
+        if (index == 0) expect(login.containsKey('signedOut'), isFalse);
+      });
+    }
+
+    test('an expired session keeps forgetting the credentials as before',
+        () async {
+      final store =
+          await signedInAs('a', others: ['b'], noPasswordSaving: true);
+
+      await store.actions.loginActions.logout(LogoutPayload((b) => b
+        ..hard = true
+        ..forced = true));
+
+      expect(store.state.loginState.loggedIn, isFalse);
+      expect(store.state.loginState.otherAccounts.toList(), ['b']);
+      expect((await savedLogin()).containsKey('pass'), isFalse);
+      expect((await savedLogin()).containsKey('signedOut'), isFalse);
+    });
+
+    test('signing out of the demo leaves no saved demo account', () async {
+      wrapper = Wrapper();
+      final store = createStore(withMiddleware: true);
+      addTearDown(store.dispose);
+      await store.actions.loginActions.login(LoginPayload((b) => b
+        ..user = 'demo'
+        ..pass = 'demo'
+        ..url = ''
+        ..fromStorage = false));
+      expect((await savedLogin())['user'], 'demo');
+
+      await signOut(store);
+
+      final login = await savedLogin();
+      expect(login.containsKey('user'), isFalse);
+      expect(login.containsKey('pass'), isFalse);
+      expect(login.containsKey('signedOut'), isFalse);
+      expect(store.state.loginState.otherAccounts.toList(), isEmpty);
+    });
   });
 }

@@ -446,8 +446,11 @@ Future<void> _loadAccounts(
   final pass = getString(login["pass"]);
   final url = getString(login["url"]);
   final hasPrimaryAccount = user != null && pass != null && url != null;
-  final shouldSignIn =
-      explicitSelection || !api.state.settingsState.noPasswordSaving;
+  // After the user signed out, the account waits on the sign-in screen until
+  // it is chosen there.
+  final shouldSignIn = explicitSelection ||
+      (!api.state.settingsState.noPasswordSaving &&
+          login[signedOutKey] != true);
   final List<String> otherAccounts = List.from(
     (login["otherAccounts"] as List?)?.map<String>(
           (dynamic login) => login["user"] as String,

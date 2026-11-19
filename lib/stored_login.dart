@@ -2,8 +2,16 @@ import 'dart:convert';
 
 import 'package:dr/diagnostics_service.dart';
 
+/// The key of the saved login block that marks its account as signed out.
+///
+/// The user signed out of the account but kept it on the device: its
+/// credentials stay, it is listed on the sign-in screen, and the app does not
+/// sign in with it on its own. Removing the account deletes it.
+const signedOutKey = 'signedOut';
+
 /// Validates the encrypted login block, preserving independent valid accounts.
-/// The URL-only block is also valid after an explicit logout.
+/// The URL-only block is also valid after an explicit logout that forgets the
+/// account (on the web, in the demo, or when the session expired).
 Map<String, dynamic> decodeStoredLogin(String? raw) {
   if (raw == null) return <String, dynamic>{};
   try {
@@ -26,6 +34,7 @@ Map<String, dynamic> decodeStoredLogin(String? raw) {
         result.addAll({
           'user': decoded['user'],
           'pass': decoded['pass'],
+          if (decoded[signedOutKey] == true) signedOutKey: true,
         });
       } else {
         damaged = true;
@@ -56,3 +65,19 @@ Map<String, dynamic> decodeStoredLogin(String? raw) {
     return <String, dynamic>{};
   }
 }
+
+/// Whether the primary account of [login] is shown in the list of saved
+/// accounts on the sign-in screen, instead of being signed in on its own:
+/// "stay signed in" is off, or the user signed out of it.
+///
+/// While signed in, the list holds only the other accounts.
+bool primaryAccountListed(
+  Map<dynamic, dynamic> login, {
+  required bool loggedIn,
+  required bool noPasswordSaving,
+}) =>
+    !loggedIn &&
+    (noPasswordSaving || login[signedOutKey] == true) &&
+    login['user'] != null &&
+    login['pass'] != null &&
+    login['url'] != null;

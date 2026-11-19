@@ -311,7 +311,7 @@ void main() {
           state: AppState((b) => b.loginState.otherAccounts.addAll(accounts)),
           onSelect: (value) => selected = value,
         ));
-    expect(find.text('Weitere Konten'), findsOneWidget);
+    expect(find.text('Gespeicherte Konten'), findsOneWidget);
     expect(find.text('d.four'), findsNothing);
     expect(find.byTooltip('Konto entfernen'), findsNWidgets(3));
     await revealAndTap(tester, find.text('2 weitere anzeigen'));
@@ -324,7 +324,7 @@ void main() {
 
   testWidgets('no saved accounts means no account section', (tester) async {
     await pumpApp(tester, store: createStore(), home: login());
-    expect(find.text('Weitere Konten'), findsNothing);
+    expect(find.text('Gespeicherte Konten'), findsNothing);
   });
 
   testWidgets('long errors, names and large text fit a small phone',

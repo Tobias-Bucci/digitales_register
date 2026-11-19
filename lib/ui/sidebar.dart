@@ -264,7 +264,12 @@ Future<bool> confirmRemoveAccount(
           onPressed: () => Navigator.of(dialogContext).pop(false),
           child: Text(l10n.text('common.cancel')),
         ),
+        // Destructive, unlike signing out, which keeps the account.
         FilledButton(
+          style: FilledButton.styleFrom(
+            backgroundColor: Theme.of(dialogContext).colorScheme.error,
+            foregroundColor: Theme.of(dialogContext).colorScheme.onError,
+          ),
           onPressed: () => Navigator.of(dialogContext).pop(true),
           child: Text(l10n.text('login.removeAccount')),
         ),

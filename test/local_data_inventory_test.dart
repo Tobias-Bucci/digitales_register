@@ -23,6 +23,7 @@ import 'package:built_redux/built_redux.dart';
 import 'package:dr/account_scope.dart';
 import 'package:dr/actions/app_actions.dart';
 import 'package:dr/actions/login_actions.dart';
+import 'package:dr/analytics_service.dart';
 import 'package:dr/app_state.dart';
 import 'package:dr/assessment_attachments.dart';
 import 'package:dr/calendar_sync_service.dart';
@@ -322,6 +323,28 @@ void main() {
       // Entries in the calendar of the device are not the app's to remove.
       expect(p.getString('calendarSyncRecords'), isNotNull);
     });
+
+    test('forgets its analytics identifier and keeps the others', () async {
+      const mine = 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa';
+      const anna = 'bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb';
+      final analytics = AnalyticsService.product.store;
+      await analytics.write(
+          'analyticsIdentityMapV4',
+          jsonEncode({
+            jsonEncode([_school, 'max']): mine,
+            jsonEncode([_school, 'anna']): anna,
+          }));
+      await secureStorage.write(
+          key: 'login',
+          value: jsonEncode({'user': 'max', 'pass': 'p', 'url': _school}));
+
+      await store.actions.loginActions.removeCurrentAccount();
+      await AnalyticsService.product.flush();
+
+      expect(jsonDecode((await analytics.read('analyticsIdentityMapV4'))!), {
+        jsonEncode([_school, 'anna']): anna,
+      });
+    });
   });
 
   group('the calendar entries the app exported', () {
@@ -401,6 +424,7 @@ void main() {
         'downloads': LocalDataCategory.download,
         'downloadVersions': LocalDataCategory.appOwnedCache,
         'schoolNotificationState': LocalDataCategory.appOwnedCache,
+        'analyticsIdentity': LocalDataCategory.appOwnedCache,
         'calendarSyncRecords': LocalDataCategory.export,
       });
     });

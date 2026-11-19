@@ -142,6 +142,15 @@ final LocalDataInventory localDataInventory = LocalDataInventory([
         () => schoolNotifications.forgetAccount(
             account.scope.server, account.scope.user!)),
   ),
+  // The random identifier usage analytics uses for the account (only there
+  // after consent). The key is the one refreshProductAnalyticsContext uses.
+  LocalDataEntry(
+    id: 'analyticsIdentity',
+    category: LocalDataCategory.appOwnedCache,
+    deletedBy: {LocalDataTrigger.removeAccount},
+    deleteFor: (account) => AnalyticsService.product
+        .forgetAccount(jsonEncode([account.scope.server, account.scope.user])),
+  ),
   // Events the app wrote into the calendar of the device, and the list of
   // which ones they are. Nothing deletes them but the user's own action in
   // the settings: they live outside the app, and the list is what lets the

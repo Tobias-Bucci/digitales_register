@@ -72,21 +72,37 @@ Future<void> _logout(
         ));
   }
   var savedLogin = <String, dynamic>{};
+  // Signing out keeps the account on the device, marked as signed out: it is
+  // listed on the sign-in screen and signs in again without the password.
+  // Only removing the account deletes it. A browser may be shared, the demo
+  // has no real account, and an expired session keeps its former behavior:
+  // there the credentials of the account are forgotten.
+  var keepAccount = false;
   if (action.payload.hard) {
     await bestEffort(() async {
       savedLogin = decodeStoredLogin(await secureStorage.read(key: 'login'));
     });
+    keepAccount = !kIsWeb &&
+        !action.payload.forced &&
+        !api.state.isDemo &&
+        savedLogin['user'] != null &&
+        savedLogin['pass'] != null &&
+        savedLogin['url'] != null;
     final saved = await bestEffort(() => secureStorage.write(
           key: "login",
-          value: json.encode(<String, Object?>{
-            "url": wrapper.url,
-            'otherAccounts': savedLogin['otherAccounts'] ?? <Object?>[],
-          }),
+          value: json.encode(keepAccount
+              ? <String, Object?>{...savedLogin, signedOutKey: true}
+              : <String, Object?>{
+                  "url": wrapper.url,
+                  'otherAccounts': savedLogin['otherAccounts'] ?? <Object?>[],
+                }),
         ));
     if (!saved && await bestEffort(() => secureStorage.delete(key: 'login'))) {
       // If rewriting credentials fails but deletion works, prioritize logout
-      // over retaining the secondary account list in a damaged store.
+      // over retaining the secondary account list in a damaged store. An
+      // unmarked account left behind would sign in again at the next start.
       savedLogin = <String, dynamic>{};
+      keepAccount = false;
     }
   }
   // In a browser, which may be shared, signing out always removes the
@@ -113,11 +129,11 @@ Future<void> _logout(
     await api.actions.mountAppState(_emptyAppStateKeepingSettings(api.state));
     // Do not reload credentials after a failed storage write: it would log the
     // user straight back in. The explicit logout owns the in-memory state.
-    await api.actions.loginActions.setAvailableAccounts(
-      (savedLogin['otherAccounts'] as List? ?? <Object?>[])
-          .map((dynamic account) => account['user'] as String)
-          .toList(),
-    );
+    await api.actions.loginActions.setAvailableAccounts([
+      if (keepAccount) savedLogin['user'] as String,
+      ...(savedLogin['otherAccounts'] as List? ?? <Object?>[])
+          .map((dynamic account) => account['user'] as String),
+    ]);
     await api.actions.routingActions.showLogin();
   }
 }
@@ -491,23 +507,26 @@ Future<void> _selectAccount(
   final otherAccounts = login["otherAccounts"] as List<Object?>;
   var selectedIndex = action.payload;
   if (login["user"] != null && login["pass"] != null && login["url"] != null) {
+    // On the sign-in screen the primary account may be part of the visible
+    // list. While signed in, that list contains only the other accounts.
+    if (!primaryAccountListed(login,
+        loggedIn: api.state.loginState.loggedIn,
+        noPasswordSaving: api.state.settingsState.noPasswordSaving)) {
+      selectedIndex += 1;
+    }
     otherAccounts.insert(0, <String, Object?>{
       "user": login["user"],
       "pass": login["pass"],
       "url": login["url"],
     });
-    // On the sign-in screen the primary account is part of the visible list.
-    // While signed in, that list contains only the other accounts.
-    if (api.state.loginState.loggedIn ||
-        !api.state.settingsState.noPasswordSaving) {
-      selectedIndex += 1;
-    }
   }
   if (selectedIndex < 0 || selectedIndex >= otherAccounts.length) return;
   final dynamic selected = otherAccounts.removeAt(selectedIndex);
   login["user"] = selected["user"];
   login["pass"] = selected["pass"];
   login["url"] = selected["url"];
+  // Choosing an account is signing in with it.
+  login.remove(signedOutKey);
   await secureStorage.write(key: "login", value: json.encode(login));
   await _switchAccountSession(api, explicitSelection: true);
 }
@@ -547,16 +566,16 @@ Future<void> _removeAccount(
   if (rawLogin == null) return;
   final login = decodeStoredLogin(rawLogin);
   final rawAccounts = login['otherAccounts'] as List? ?? <Object?>[];
-  final includesPrimary = !api.state.loginState.loggedIn &&
-      api.state.settingsState.noPasswordSaving &&
-      login['user'] != null &&
-      login['pass'] != null;
+  final includesPrimary = primaryAccountListed(login,
+      loggedIn: api.state.loginState.loggedIn,
+      noPasswordSaving: api.state.settingsState.noPasswordSaving);
   final index = action.payload - (includesPrimary ? 1 : 0);
   Map? removed;
   if (includesPrimary && action.payload == 0) {
     removed = Map<String, dynamic>.from(login);
     login.remove('user');
     login.remove('pass');
+    login.remove(signedOutKey);
   } else {
     if (index < 0 || index >= rawAccounts.length) return;
     removed = getMap(rawAccounts.removeAt(index));
