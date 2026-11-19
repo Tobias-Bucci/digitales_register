@@ -19,7 +19,6 @@ import 'package:built_collection/built_collection.dart';
 import 'package:dr/actions/app_actions.dart';
 import 'package:dr/analytics_service.dart';
 import 'package:dr/app_state.dart';
-import 'package:dr/dashboard_events.dart';
 import 'package:dr/data.dart';
 import 'package:dr/middleware/middleware.dart';
 import 'package:dr/notification_feed.dart';
@@ -48,9 +47,6 @@ class NotificationPageContainer extends StatelessWidget {
   Widget build(BuildContext context) {
     return StoreConnection<AppState, AppActions, _SchoolFeedState>(
       builder: (context, vm, actions) {
-        // Each entry is looked up once per build, also for an entry that
-        // reading has taken out of the feed.
-        final grades = <int, int?>{};
         return ServerNotificationCenterPage(
           initialSchoolId: focusSchoolId,
           initialId: focusAppId,
@@ -65,11 +61,6 @@ class NotificationPageContainer extends StatelessWidget {
               actions.routingActions.showMessage(id);
             },
             lastFetched: vm.lastFetched,
-            gradeOf: (item) => grades.putIfAbsent(
-              item.id,
-              () => notificationGradeHundredths(item,
-                  grades: vm.grades, days: vm.days),
-            ),
             // Each design follows its own setting, as its grade lists do.
             colorGrades: ResponsiveNavigationScope.isActive(context)
                 ? vm.colorGradesNew
@@ -86,8 +77,6 @@ class NotificationPageContainer extends StatelessWidget {
             state.notificationState.notifications ?? BuiltList<Notification>(),
         lastFetched: state.notificationState.lastFetched,
         noInternet: state.noInternet,
-        grades: state.gradesState,
-        days: state.dashboardState.allDays,
         colorGradesNew: !state.settingsState.gradeColorsTurnedOff,
         colorGradesLegacy: state.settingsState.colorGrades,
       ),
@@ -95,15 +84,12 @@ class NotificationPageContainer extends StatelessWidget {
   }
 }
 
-/// What the notification center reads from the state. The grades and the
-/// dashboard give the values of announced grades; both are immutable, so an
-/// unchanged state compares equal at once.
+/// What the notification center reads from the state, with both designs'
+/// choice of grade colours for the grades of new-grade entries (#153).
 typedef _SchoolFeedState = ({
   BuiltList<Notification> notifications,
   UtcDateTime? lastFetched,
   bool noInternet,
-  GradesState grades,
-  BuiltList<Day>? days,
   bool colorGradesNew,
   bool colorGradesLegacy,
 });

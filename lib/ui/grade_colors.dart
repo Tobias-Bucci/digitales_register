@@ -9,6 +9,22 @@ Color? gradeColor(num? hundredths) => switch (gradeCategory(hundredths)) {
       null => null,
     };
 
+/// The foreground and background of the badge of [hundredths], by
+/// [gradeCategory], or null for a missing grade. Every grade badge uses it.
+(Color, Color)? gradeBadgeColors(ColorScheme scheme, num? hundredths) =>
+    switch (gradeCategory(hundredths)) {
+      GradeCategory.failing => (scheme.onErrorContainer, scheme.errorContainer),
+      GradeCategory.satisfactory => (
+          scheme.onWarningContainer,
+          scheme.warningContainer
+        ),
+      GradeCategory.good => (
+          scheme.onSuccessContainer,
+          scheme.successContainer
+        ),
+      null => null,
+    };
+
 /// A shared badge for individual grades and averages. Missing grades remain
 /// plain text, as do grades when the user's color preference is disabled.
 class GradeBadge extends StatelessWidget {
@@ -34,20 +50,11 @@ class GradeBadge extends StatelessWidget {
       textStyle = (textStyle ?? const TextStyle())
           .copyWith(decoration: TextDecoration.lineThrough);
     }
-    final category = colorized ? gradeCategory(hundredths) : null;
-    if (category == null) return Text(text, style: textStyle);
-    final scheme = Theme.of(context).colorScheme;
-    final (foreground, background) = switch (category) {
-      GradeCategory.failing => (scheme.onErrorContainer, scheme.errorContainer),
-      GradeCategory.satisfactory => (
-          scheme.onWarningContainer,
-          scheme.warningContainer
-        ),
-      GradeCategory.good => (
-          scheme.onSuccessContainer,
-          scheme.successContainer
-        ),
-    };
+    final colors = colorized
+        ? gradeBadgeColors(Theme.of(context).colorScheme, hundredths)
+        : null;
+    if (colors == null) return Text(text, style: textStyle);
+    final (foreground, background) = colors;
     return DecoratedBox(
       decoration:
           ShapeDecoration(color: background, shape: const StadiumBorder()),

@@ -115,7 +115,6 @@ extension _NewCenter on _ServerNotificationCenterPageState {
         ? SchoolNotificationDetailView(
             key: ValueKey(_keyOfSchool(selectedSchool.id)),
             notification: selectedSchool,
-            gradeHundredths: widget.school?.gradeOf(selectedSchool),
             colorGrades: widget.school?.colorGrades ?? true,
             onShown: _markSchoolRead,
           )
@@ -193,7 +192,8 @@ class _NewNotificationList extends StatelessWidget {
       SchoolFeedEntry(notification: final item) => _NewSchoolTile(
           key: ValueKey(_keyOfSchool(item.id)),
           item: item,
-          icon: _schoolIconOf(item, school!),
+          icon:
+              SchoolNotificationIcon.of(item, colorGrades: school!.colorGrades),
           noInternet: school.noInternet,
           selected: _keyOfSchool(item.id) == selectedKey,
           onTap: () => onOpen(entry),

@@ -333,13 +333,28 @@ class _DemoStore {
           'timeSent': _isoDateTime(_today()),
           'read': false,
         },
-        // A new grade and an absence, as the school's feed announces them
-        // (#153). The objectId of a grade is the id of the grade itself.
+        // New grades and an absence, as the school's feed announces them
+        // (#153): the wording, then subject, kind and grade in quotes. The
+        // objectId of a grade is the id of the grade itself.
         <String, dynamic>{
           'id': 4002,
           'kind': 'grade',
           'type': 'grade',
           'objectId': 301,
+          'subject': 'Inglese',
+          'gradeType': 'Test',
+          'grade': '8',
+          'timeSent': _isoDateTime(_today().subtract(const Duration(days: 2))),
+          'read': false,
+        },
+        <String, dynamic>{
+          'id': 4004,
+          'kind': 'grade',
+          'type': 'grade',
+          'objectId': null,
+          'subject': 'Storia',
+          'gradeType': 'Interrogazione',
+          'grade': '4',
           'timeSent': _isoDateTime(_today().subtract(const Duration(days: 2))),
           'read': false,
         },
@@ -874,7 +889,10 @@ class _DemoStore {
           'id': notification['id'] as int,
           'title': switch (notification['kind']) {
             'localMode' => _text('notificationLocalModeTitle'),
-            'grade' => _text('notificationGradeTitle'),
+            'grade' => '${_text('notificationGradeTitle')} '
+                '"${notification['subject']}" '
+                '"${_demoGradeTypeText(notification['gradeType'] as String, _demoLanguage)}" '
+                '"${notification['grade']}"',
             'absence' => _text('notificationAbsenceTitle'),
             _ => _text('messageFallbackSubject'),
           },
@@ -882,7 +900,6 @@ class _DemoStore {
           'objectId': notification['objectId'] as int?,
           'subTitle': switch (notification['kind']) {
             'localMode' => _text('notificationLocalModeSubtitle'),
-            'grade' => 'Inglese',
             'absence' => _text('notificationAbsenceSubtitle'),
             _ => '',
           },
@@ -2605,7 +2622,7 @@ const Map<String, Map<String, String>> _demoTranslations =
   },
   'notificationGradeTitle': {
     'de': 'Neue Bewertung',
-    'en': 'New grade',
+    'en': 'New assessment',
     'it': 'Nuova valutazione',
     'lld': 'Nöia valutaziun',
   },

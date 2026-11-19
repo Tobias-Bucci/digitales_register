@@ -132,62 +132,29 @@ _GradeMatch? _gradeInGradesState(GradesState state, int id) {
   return null;
 }
 
-/// The grade entry [id] on the dashboard and its day.
-(Day, Homework)? _gradeEntryOnDashboard(Iterable<Day>? days, int id) {
-  for (final day in days ?? const <Day>[]) {
+_GradeMatch? _gradeOnDashboard(AppState state, int id) {
+  for (final day in state.dashboardState.allDays ?? const <Day>[]) {
     for (final homework in day.homework) {
       if (homework.type == HomeworkType.grade && homework.id == id) {
-        return (day, homework);
+        final subject = state.gradesState.subjects.firstWhereOrNull(
+          (subject) =>
+              subject.name.toLowerCase() == homework.label?.toLowerCase(),
+        );
+        final known = state.extractAllSubjects();
+        final subtitle = displayedHomeworkSubtitle(homework, known);
+        return _GradeMatch(
+          description: subtitle.isNotEmpty
+              ? subtitle
+              : displayedHomeworkTitle(homework, known),
+          gradeHundredths: parseBackendGradeHundredths(homework.grade),
+          subject: homework.label,
+          gradeSubject: subject,
+          date: day.date,
+        );
       }
     }
   }
   return null;
-}
-
-_GradeMatch? _gradeOnDashboard(AppState state, int id) {
-  final entry = _gradeEntryOnDashboard(state.dashboardState.allDays, id);
-  if (entry == null) return null;
-  final (day, homework) = entry;
-  final subject = state.gradesState.subjects.firstWhereOrNull(
-    (subject) => subject.name.toLowerCase() == homework.label?.toLowerCase(),
-  );
-  final known = state.extractAllSubjects();
-  final subtitle = displayedHomeworkSubtitle(homework, known);
-  return _GradeMatch(
-    description: subtitle.isNotEmpty
-        ? subtitle
-        : displayedHomeworkTitle(homework, known),
-    gradeHundredths: parseBackendGradeHundredths(homework.grade),
-    subject: homework.label,
-    gradeSubject: subject,
-    date: day.date,
-  );
-}
-
-/// The value of the grade a feed entry of the school announces, in
-/// hundredths, for the notification center (#153). Null when the entry is no
-/// grade or its value is not in the loaded data.
-///
-/// It looks the grade up as the events on the dashboard do: the entry's
-/// `objectId` is the id of the grade, first in the loaded grades, then on the
-/// dashboard. The lookup only needs those two parts of the state, so the
-/// value stays known after reading the entry takes it out of the feed.
-int? notificationGradeHundredths(
-  Notification notification, {
-  required GradesState grades,
-  required Iterable<Day>? days,
-}) {
-  if (dashboardEventKindOf(notification.type) != DashboardEventKind.grade) {
-    return null;
-  }
-  final id = notification.objectId;
-  if (id == null) return null;
-  final inGrades = _gradeInGradesState(grades, id);
-  if (inGrades != null) return inGrades.gradeHundredths;
-  final onDashboard = _gradeEntryOnDashboard(days, id);
-  return onDashboard == null
-      ? null
-      : parseBackendGradeHundredths(onDashboard.$2.grade);
 }
 
 /// The subject average with the grade and, by leaving it out, before it.

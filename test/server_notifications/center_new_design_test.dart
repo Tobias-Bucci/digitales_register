@@ -719,13 +719,15 @@ void main() {
   });
 
   group('icons of the school entries (#153)', () {
+    // The grade is read from the text of the entry itself.
+    const good = 'Neue Bewertung "Mathematik" "Schularbeit" "8½"';
+    const failing = 'Neue Bewertung "Latein" "Test" "4"';
     final items = [
       ..._schoolItems,
       buildNotification(
         id: 3,
-        title: 'Neue Bewertung',
+        title: good,
         type: 'grade',
-        objectId: 42,
         timeSent: UtcDateTime(2026, 10, 21, 8),
       ),
       buildNotification(
@@ -737,10 +739,15 @@ void main() {
       ),
       buildNotification(
         id: 5,
-        title: 'Bewertung ohne Wert',
-        type: 'grade',
-        objectId: 99,
+        title: failing,
+        type: 'GRADE',
         timeSent: UtcDateTime(2026, 10, 21, 6),
+      ),
+      buildNotification(
+        id: 6,
+        title: 'Neue Bewertung',
+        type: 'grade',
+        timeSent: UtcDateTime(2026, 10, 21, 5),
       ),
     ];
     SchoolNotificationFeed feed() => SchoolNotificationFeed(
@@ -749,31 +756,52 @@ void main() {
           onMarkRead: (_) {},
           onMarkAllRead: () {},
           onOpenMessage: (_) {},
-          gradeOf: (item) => item.objectId == 42 ? 850 : null,
         );
     Finder iconOf(Finder entry, Finder matching) => find.descendant(
           of: find.descendant(
               of: entry, matching: find.byType(SchoolNotificationIcon)),
           matching: matching,
         );
+    Color tileOf(WidgetTester tester, Finder entry) => (tester
+            .widget<Container>(iconOf(entry, find.byType(Container)))
+            .decoration! as BoxDecoration)
+        .color!;
 
     for (final newDesign in [true, false]) {
       final design = newDesign ? 'new design' : 'legacy';
-      testWidgets('in the list, $design', (tester) async {
+      for (final scale in [1.0, 2.0]) {
+        testWidgets('in the list, $design, text at $scale', (tester) async {
+          tester.platformDispatcher.textScaleFactorTestValue = scale;
+          addTearDown(tester.platformDispatcher.clearTextScaleFactorTestValue);
+          final repository = await _repository(tester, []);
+          await _pumpCenter(tester, repository,
+              school: feed(), newDesign: newDesign);
+          final scheme = Theme.of(tester.element(_schoolEntry(1))).colorScheme;
+
+          await tester.scrollUntilVisible(_schoolEntry(3), 200,
+              scrollable: find.byType(Scrollable).first);
+          expect(iconOf(_schoolEntry(3), find.text('8/9')), findsOneWidget);
+          expect(tileOf(tester, _schoolEntry(3)), scheme.successContainer);
+          await tester.scrollUntilVisible(_schoolEntry(6), 200,
+              scrollable: find.byType(Scrollable).first);
+          expect(iconOf(_schoolEntry(4), find.byIcon(Icons.schedule_rounded)),
+              findsOneWidget);
+          expect(iconOf(_schoolEntry(5), find.text('4')), findsOneWidget);
+          expect(tileOf(tester, _schoolEntry(5)), scheme.errorContainer);
+          expect(iconOf(_schoolEntry(6), find.byIcon(Icons.auto_graph_rounded)),
+              findsOneWidget);
+          expect(tester.takeException(), isNull);
+        });
+      }
+
+      testWidgets('other entries keep the school, $design', (tester) async {
         final repository = await _repository(tester, []);
         await _pumpCenter(tester, repository,
             school: feed(), newDesign: newDesign);
-
-        expect(iconOf(_schoolEntry(3), find.text('8/9')), findsOneWidget);
-        expect(iconOf(_schoolEntry(4), find.byIcon(Icons.schedule_rounded)),
-            findsOneWidget);
-        expect(iconOf(_schoolEntry(5), find.byIcon(Icons.auto_graph_rounded)),
-            findsOneWidget);
         expect(iconOf(_schoolEntry(1), find.byIcon(Icons.school_outlined)),
             findsOneWidget);
         expect(iconOf(_schoolEntry(2), find.byIcon(Icons.school_outlined)),
             findsOneWidget);
-        expect(tester.takeException(), isNull);
       });
 
       for (final (size, twoPanes) in [(_phone, false), (_wide, true)]) {
@@ -797,7 +825,7 @@ void main() {
             await tester.tap(find.byType(BackButton).last);
             await _settle(tester);
           }
-          await tester.tap(find.text('Neue Bewertung'));
+          await tester.tap(find.text(good).first);
           await _settle(tester);
           expect(inDetail(find.text('8/9')), findsOneWidget);
           expect(tester.takeException(), isNull);
@@ -817,7 +845,6 @@ Future<Store<AppState, AppStateBuilder, AppActions>> _pumpShell(
   Size size = _phone,
   bool newDesign = true,
   List<Notification>? school,
-  void Function(AppStateBuilder b)? update,
 }) async {
   tester.view.physicalSize = size;
   tester.view.devicePixelRatio = 1;
@@ -832,12 +859,9 @@ Future<Store<AppState, AppStateBuilder, AppActions>> _pumpShell(
   serverNotifications.isLoggedIn = () => true;
   addTearDown(() => serverNotifications.isLoggedIn = () => false);
   final store = createStore(
-    initialState: _state().rebuild((b) {
-      b.notificationState
-        ..notifications = ListBuilder<Notification>(school ?? _schoolItems)
-        ..lastFetched = UtcDateTime(2026, 10, 22, 7);
-      update?.call(b);
-    }),
+    initialState: _state().rebuild((b) => b.notificationState
+      ..notifications = ListBuilder<Notification>(school ?? _schoolItems)
+      ..lastFetched = UtcDateTime(2026, 10, 22, 7)),
     newDesign: newDesign,
   );
   await pumpApp(tester, store: store, home: DaysContainer());
@@ -929,7 +953,7 @@ void _shellTests() {
 
     for (final (size, twoPanes) in [(_phone, false), (_wide, true)]) {
       final layout = twoPanes ? 'two panes' : 'phone';
-      testWidgets('a grade from the app state stays after reading, $layout',
+      testWidgets('a grade from the text stays after reading, $layout',
           (tester) async {
         final store = await _pumpShell(
           tester,
@@ -937,18 +961,10 @@ void _shellTests() {
           school: [
             buildNotification(
               id: 3,
-              title: 'Neue Bewertung',
+              title: 'Neue Bewertung "Mathematik" "Schularbeit" "10"',
               type: 'grade',
-              objectId: 42,
             ),
           ],
-          update: (b) => b.gradesState.subjects = ListBuilder<Subject>([
-            buildSubject(name: 'Mathematik', grades: {
-              Semester.first: BuiltList<GradeDetail>([
-                buildGradeDetail(id: 42, date: fixtureNow, grade: 1000),
-              ]),
-            }),
-          ]),
         );
 
         expect(showNotificationCenterInShell(), isTrue);
@@ -960,7 +976,8 @@ void _shellTests() {
         expect(find.descendant(of: icon, matching: find.text('10')),
             findsOneWidget);
 
-        await tester.tap(find.text('Neue Bewertung'));
+        await tester
+            .tap(find.text('Neue Bewertung "Mathematik" "Schularbeit" "10"'));
         await _settle(tester);
         // Showing it marks it read, which takes it out of the feed.
         expect(store.state.notificationState.notifications, isEmpty);

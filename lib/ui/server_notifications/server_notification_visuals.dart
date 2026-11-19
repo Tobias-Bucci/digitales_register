@@ -2,13 +2,15 @@ import 'dart:math' as math;
 
 import 'package:dr/dashboard_events.dart'
     show DashboardEventKind, dashboardEventKindOf;
-import 'package:dr/data.dart' show formatGradeFromInt;
-import 'package:dr/grades/grade_category.dart';
+import 'package:dr/data.dart' show Notification, formatGradeFromInt;
 import 'package:dr/i18n/app_localizations.dart';
 import 'package:dr/server_notifications/server_notification_models.dart';
-import 'package:dr/theme/app_palette.dart';
-import 'package:flutter/material.dart';
+import 'package:dr/ui/grade_colors.dart';
+import 'package:dr/ui/grades_format.dart';
+import 'package:dr/ui/server_notifications/school_notification_grade.dart';
+import 'package:flutter/material.dart' hide Notification;
 import 'package:intl/intl.dart';
+import 'package:responsive_scaffold/responsive_scaffold.dart';
 
 /// Shown for icon names this version does not know yet.
 const serverNotificationFallbackIcon = Icons.campaign_outlined;
@@ -137,45 +139,61 @@ class ServerNotificationTypeIcon extends StatelessWidget {
 ///
 /// What it shows follows the entry's [type] (#153): a clock for absences, the
 /// grade itself for a new grade, and the school for everything else. A grade
-/// whose value is not known shows the icon of the grades instead of a number.
-/// Decorative for screen readers, because the text next to it says the same.
+/// whose text has no usable grade shows the icon of the grades instead of a
+/// number. Decorative for screen readers, because the text next to it says
+/// the same.
 class SchoolNotificationIcon extends StatelessWidget {
   const SchoolNotificationIcon({
     super.key,
     this.type,
-    this.gradeHundredths,
+    this.grade,
     this.colorGrades = true,
     this.size = 40,
   });
 
+  /// The icon of [notification], with the grade its text announces.
+  SchoolNotificationIcon.of(
+    Notification notification, {
+    Key? key,
+    bool colorGrades = true,
+    double size = 40,
+  }) : this(
+          key: key,
+          type: notification.type,
+          grade: schoolNotificationGradeOf(notification),
+          colorGrades: colorGrades,
+          size: size,
+        );
+
   /// The type of the feed entry, such as `grade` or `absence`, in any case.
   final String? type;
 
-  /// The value of the grade, for entries of the type `grade` only.
-  final int? gradeHundredths;
+  /// The grade of the entry, shown for entries of the type `grade` only.
+  final SchoolNotificationGrade? grade;
 
-  /// Whether the grade takes the colour of its grade, as the grade badges do.
+  /// Whether the grade takes the colour of its badge on the grades page.
   final bool colorGrades;
   final double size;
+
+  /// The grade as the grades page writes it, or as the register wrote it
+  /// when the app cannot read it.
+  String _gradeText(BuildContext context, SchoolNotificationGrade grade) {
+    final hundredths = grade.hundredths;
+    if (hundredths == null) return grade.text;
+    final text = formatGradeFromInt(hundredths);
+    return text.contains(',') && ResponsiveNavigationScope.isActive(context)
+        ? GradesFormat.of(context).grade(text)
+        : text;
+  }
 
   @override
   Widget build(BuildContext context) {
     final scheme = Theme.of(context).colorScheme;
     final kind = dashboardEventKindOf(type);
-    final grade = kind == DashboardEventKind.grade ? gradeHundredths : null;
-    final (background, foreground) =
-        switch (colorGrades && grade != null ? gradeCategory(grade) : null) {
-      GradeCategory.failing => (scheme.errorContainer, scheme.onErrorContainer),
-      GradeCategory.satisfactory => (
-          scheme.warningContainer,
-          scheme.onWarningContainer
-        ),
-      GradeCategory.good => (
-          scheme.successContainer,
-          scheme.onSuccessContainer
-        ),
-      null => (scheme.secondaryContainer, scheme.onSecondaryContainer),
-    };
+    final grade = kind == DashboardEventKind.grade ? this.grade : null;
+    final (foreground, background) =
+        (colorGrades ? gradeBadgeColors(scheme, grade?.hundredths) : null) ??
+            (scheme.onSecondaryContainer, scheme.secondaryContainer);
     return ExcludeSemantics(
       child: Container(
         width: size,
@@ -191,7 +209,7 @@ class SchoolNotificationIcon extends StatelessWidget {
                 child: FittedBox(
                   fit: BoxFit.scaleDown,
                   child: Text(
-                    formatGradeFromInt(grade),
+                    _gradeText(context, grade),
                     maxLines: 1,
                     softWrap: false,
                     style: Theme.of(context).textTheme.titleMedium?.copyWith(

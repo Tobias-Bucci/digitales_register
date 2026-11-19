@@ -83,8 +83,6 @@ int? takeNotificationCenterFocus() {
   return id;
 }
 
-int? _noGrade(Notification notification) => null;
-
 /// What the notification center needs from the school's feed. Every entry of
 /// that feed is unread: reading one removes it.
 class SchoolNotificationFeed {
@@ -95,7 +93,6 @@ class SchoolNotificationFeed {
     required this.onMarkAllRead,
     required this.onOpenMessage,
     this.lastFetched,
-    this.gradeOf = _noGrade,
     this.colorGrades = true,
   });
 
@@ -106,12 +103,8 @@ class SchoolNotificationFeed {
   final ValueChanged<int> onOpenMessage;
   final UtcDateTime? lastFetched;
 
-  /// The value of the grade an entry announces, in hundredths, shown as its
-  /// icon (#153); null when it is no grade or the value is not known. It also
-  /// answers for an entry that reading has taken out of [notifications].
-  final int? Function(Notification notification) gradeOf;
-
-  /// Whether that value takes the colour of its grade, as the user chose.
+  /// Whether the grade of a new-grade entry takes the colour of its grade, as
+  /// the user chose for the grades of the current design (#153).
   final bool colorGrades;
 }
 
