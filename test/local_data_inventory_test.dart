@@ -72,7 +72,8 @@ class _AccountWrapper extends MockWrapper {
       bool isRetryAfterUnexpectedLogout = false,
       bool forceRelogin = false,
       int unexpectedLogoutRetryCount = 0,
-      bool acceptEmptyResponse = false}) async {
+      bool acceptEmptyResponse = false,
+      bool acceptRefusal = false}) async {
     sent.add(path);
     return answer;
   }

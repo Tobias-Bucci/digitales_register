@@ -15,7 +15,8 @@ class _DelayedGrades extends Wrapper {
       bool isRetryAfterUnexpectedLogout = false,
       bool forceRelogin = false,
       int unexpectedLogoutRetryCount = 0,
-      bool acceptEmptyResponse = false}) async {
+      bool acceptEmptyResponse = false,
+      bool acceptRefusal = false}) async {
     if (url == 'api/student/all_subjects') {
       requests++;
       if (!requested.isCompleted) requested.complete();

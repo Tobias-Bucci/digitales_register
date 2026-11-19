@@ -93,6 +93,7 @@ class _Session {
     Map<String, Object?>? args,
     String? method,
     bool? acceptEmptyResponse,
+    bool? acceptRefusal,
   }) async {
     ensureCurrent();
     try {
@@ -104,6 +105,7 @@ class _Session {
           if (method != null) #method: method,
           if (acceptEmptyResponse != null)
             #acceptEmptyResponse: acceptEmptyResponse,
+          if (acceptRefusal != null) #acceptRefusal: acceptRefusal,
         },
       );
       ensureCurrent();

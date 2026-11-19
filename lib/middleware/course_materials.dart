@@ -75,22 +75,15 @@ Future<List<CourseMaterialCourse>> _loadCourseMaterialsRemote(
     // course of the last snapshot.
     final found = {
       for (final source in discovery.sources)
-        '${source.classId}|${source.subjectId}',
+        _courseKey(source.classId, source.subjectId),
     };
-    final cached = await pagePayloadCacheService.load(
-      _courseMaterialsCacheKey(session),
-      parseMapListPayload,
-    );
-    final lostKnownCourse = cached != null &&
-        courseMaterialCoursesFromPayload(cached.payload).any(
-          (course) => !found.contains('${course.classId}|${course.subjectId}'),
-        );
-    if (lostKnownCourse) {
+    if (await _savedSnapshotHasCourse(session, (key) => !found.contains(key))) {
       throw const CourseMaterialsIncompleteException();
     }
   }
   final courses = <CourseMaterialCourse>[];
   final seenCourseIds = <int>{};
+  final refused = <String>{};
   for (final source in discovery.sources) {
     final response = await session.send(
       'api/courseContent/getCourse',
@@ -98,10 +91,16 @@ Future<List<CourseMaterialCourse>> _loadCourseMaterialsRemote(
         'classId': source.classId,
         'subjectId': source.subjectId,
       },
-      // The server answers a subject without a course with an empty body.
+      // A subject without a course: the server used to answer with an empty
+      // body and, since autumn 2026, refuses it with 403 (#150).
       acceptEmptyResponse: true,
+      acceptRefusal: true,
     );
     if (response == true) {
+      continue;
+    }
+    if (response is RefusedResponse) {
+      refused.add(_courseKey(source.classId, source.subjectId));
       continue;
     }
     // A failed request: the course is unknown, not absent. Malformed
@@ -113,8 +112,32 @@ Future<List<CourseMaterialCourse>> _loadCourseMaterialsRemote(
       courses.add(course);
     }
   }
+  // A course the last snapshot showed may not silently disappear because of
+  // a refusal: that may also come from a session problem on the server.
+  if (refused.isNotEmpty &&
+      await _savedSnapshotHasCourse(session, refused.contains)) {
+    throw const CourseMaterialsIncompleteException();
+  }
   courses.sort((a, b) => a.subjectName.compareTo(b.subjectName));
   return courses;
+}
+
+String _courseKey(int classId, int subjectId) => '$classId|$subjectId';
+
+/// Whether the saved snapshot of the account holds a course whose
+/// class/subject key [isMissing] matches.
+Future<bool> _savedSnapshotHasCourse(
+  _Session session,
+  bool Function(String key) isMissing,
+) async {
+  final cached = await pagePayloadCacheService.load(
+    _courseMaterialsCacheKey(session),
+    parseMapListPayload,
+  );
+  return cached != null &&
+      courseMaterialCoursesFromPayload(cached.payload).any(
+        (course) => isMissing(_courseKey(course.classId, course.subjectId)),
+      );
 }
 
 List<CourseMaterialCourse> courseMaterialCoursesFromPayload(
@@ -176,7 +199,7 @@ void _addCourseMaterialSources(
 ) {
   for (final source in courseMaterialSourcesFromPayload(root)) {
     sources.putIfAbsent(
-      '${source.classId}|${source.subjectId}',
+      _courseKey(source.classId, source.subjectId),
       () => source,
     );
   }

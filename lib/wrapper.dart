@@ -73,6 +73,7 @@ class AppRequestException implements Exception {
     this.isConnectionIssue = false,
     this.isLostConnection = false,
     this.isSessionRejected = false,
+    this.statusCode,
   });
 
   final String message;
@@ -86,11 +87,21 @@ class AppRequestException implements Exception {
   /// The server refused the request as such (401 or 403).
   final bool isSessionRejected;
 
+  /// The HTTP status of the server's answer, if there was one.
+  final int? statusCode;
+
   @override
   String toString() => message;
 }
 
 const String _serverLogoutExtra = 'serverLogout';
+
+/// What [Wrapper.send] returns with `acceptRefusal` when the server still
+/// answers 403 Forbidden after a new session: this account may not make this
+/// request, which is an answer and not a failure (#150).
+class RefusedResponse {
+  const RefusedResponse();
+}
 
 /// How long to wait before sending a request again on a new connection.
 @visibleForTesting
@@ -485,6 +496,7 @@ class Wrapper {
                     error.error is SocketException)),
         isSessionRejected: error.type == DioExceptionType.badResponse &&
             (status == 401 || status == 403),
+        statusCode: status,
       );
     }
     return const AppRequestException(
@@ -667,6 +679,7 @@ class Wrapper {
     bool forceRelogin = false,
     int unexpectedLogoutRetryCount = 0,
     bool acceptEmptyResponse = false,
+    bool acceptRefusal = false,
   }) {
     return _sendInSession(
       url,
@@ -693,6 +706,7 @@ class Wrapper {
       // Some mutation endpoints acknowledge success with an empty HTTP body.
       // Keep null reserved for failures for callers that opt into this behavior.
       acceptEmptyResponse: acceptEmptyResponse,
+      acceptRefusal: acceptRefusal,
       isRetryAfterUnexpectedLogout: isRetryAfterUnexpectedLogout,
       forceRelogin: forceRelogin,
       unexpectedLogoutRetryCount: unexpectedLogoutRetryCount,
@@ -705,6 +719,7 @@ class Wrapper {
         forceRelogin: forceRelogin,
         unexpectedLogoutRetryCount: unexpectedLogoutRetryCount,
         acceptEmptyResponse: acceptEmptyResponse,
+        acceptRefusal: acceptRefusal,
       ),
     );
   }
@@ -759,6 +774,8 @@ class Wrapper {
   /// runs [request], records it in the network protocol and, through [retry],
   /// repeats it once after the server refused the session, or twice when it
   /// answered with its login page (the second time with a forced sign-in).
+  /// With [acceptRefusal], a request that is still refused with 403 after
+  /// that returns [RefusedResponse] instead of null.
   Future<dynamic> _sendInSession(
     String url, {
     required String operation,
@@ -774,6 +791,7 @@ class Wrapper {
     bool allowSingleRetry = false,
     bool retryLostConnection = false,
     bool acceptEmptyResponse = false,
+    bool acceptRefusal = false,
   }) async {
     if (!_appInForeground) {
       return null;
@@ -796,6 +814,7 @@ class Wrapper {
 
     dynamic responseData;
     var sessionRejected = false;
+    int? rejectedStatus;
     try {
       final response = await _runRequest(
         operation,
@@ -812,6 +831,7 @@ class Wrapper {
       }
     } on Exception catch (e) {
       sessionRejected = e is AppRequestException && e.isSessionRejected;
+      rejectedStatus = e is AppRequestException ? e.statusCode : null;
       if (!sessionRejected) {
         await _handleError(e);
         _addProtocolItem(url, responseData);
@@ -824,7 +844,9 @@ class Wrapper {
     // gets a single new session, at most once a minute.
     if (sessionRejected) {
       if (unexpectedLogoutRetryCount >= 1) {
-        return null;
+        return acceptRefusal && rejectedStatus == 403
+            ? const RefusedResponse()
+            : null;
       }
       return retry(forceRelogin: false, unexpectedLogoutRetryCount: 1);
     }

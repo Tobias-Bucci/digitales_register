@@ -15,7 +15,8 @@ class _CalendarSession extends Wrapper {
       bool isRetryAfterUnexpectedLogout = false,
       bool forceRelogin = false,
       int unexpectedLogoutRetryCount = 0,
-      bool acceptEmptyResponse = false}) async {
+      bool acceptEmptyResponse = false,
+      bool acceptRefusal = false}) async {
     requests++;
     if (failOneWeek && requests == 2) return null;
     return <String, dynamic>{args['startDate']! as String: <String, dynamic>{}};

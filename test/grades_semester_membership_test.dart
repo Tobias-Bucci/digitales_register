@@ -77,7 +77,8 @@ class _SemesterServer extends Wrapper {
       bool isRetryAfterUnexpectedLogout = false,
       bool forceRelogin = false,
       int unexpectedLogoutRetryCount = 0,
-      bool acceptEmptyResponse = false}) async {
+      bool acceptEmptyResponse = false,
+      bool acceptRefusal = false}) async {
     if (url.startsWith('?semesterWechsel=')) {
       current = int.parse(url.split('=').last);
       return '';

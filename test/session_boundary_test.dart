@@ -103,7 +103,8 @@ class HoldingWrapper extends MockWrapper {
       bool isRetryAfterUnexpectedLogout = false,
       bool forceRelogin = false,
       int unexpectedLogoutRetryCount = 0,
-      bool acceptEmptyResponse = false}) {
+      bool acceptEmptyResponse = false,
+      bool acceptRefusal = false}) {
     sent.add(path);
     final held = _pending[path];
     if (held != null && _delivered.add(path)) return held.future;
@@ -564,7 +565,8 @@ class _AnyPathWrapper extends HoldingWrapper {
       bool isRetryAfterUnexpectedLogout = false,
       bool forceRelogin = false,
       int unexpectedLogoutRetryCount = 0,
-      bool acceptEmptyResponse = false}) {
+      bool acceptEmptyResponse = false,
+      bool acceptRefusal = false}) {
     sent.add(path);
     return answer;
   }

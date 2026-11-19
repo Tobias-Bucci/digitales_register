@@ -21,7 +21,8 @@ class _GradesSession extends Wrapper {
       bool isRetryAfterUnexpectedLogout = false,
       bool forceRelogin = false,
       int unexpectedLogoutRetryCount = 0,
-      bool acceptEmptyResponse = false}) async {
+      bool acceptEmptyResponse = false,
+      bool acceptRefusal = false}) async {
     requests.add(url);
     if (url.startsWith('?semesterWechsel')) {
       final error = switchError;

@@ -618,10 +618,10 @@
     "semantic_hash": ""
   },
   "lib/middleware/session.dart": {
-    "mtime": 1794086483.07022,
-    "seen": 1795080325.0622568,
-    "ast_hash": "089b1c21f0edb180904915a2c870043f",
-    "semantic_hash": "089b1c21f0edb180904915a2c870043f"
+    "mtime": 1795108970.3483827,
+    "seen": 1795109285.6128504,
+    "ast_hash": "72a16ce6db647fb7546c6e93eb1692f0",
+    "semantic_hash": ""
   },
   "lib/middleware/settings.dart": {
     "mtime": 1795026065.4390194,
@@ -1626,9 +1626,9 @@
     "semantic_hash": "099124585c1a59627a953cbbfb8c96f4"
   },
   "lib/wrapper.dart": {
-    "mtime": 1794932475.0451283,
-    "seen": 1795080325.062423,
-    "ast_hash": "98b1ecfc7a44e4830bb40ba86c1a40c2",
+    "mtime": 1795108960.6390278,
+    "seen": 1795109285.6130753,
+    "ast_hash": "9a6f71c92886694ff0bcdb63f7f3d04e",
     "semantic_hash": ""
   },
   "test/about_app_dialog_test.dart": {
@@ -1668,9 +1668,9 @@
     "semantic_hash": "96d65cb719ada9375ecf51365bcc0af5"
   },
   "test/account_switch_test.dart": {
-    "mtime": 1795080304.4642289,
-    "seen": 1795080325.0624378,
-    "ast_hash": "c768442d8d289c18989295820689446e",
+    "mtime": 1795108733.2300391,
+    "seen": 1795109285.613098,
+    "ast_hash": "62a667a6a5154485ec70e0c41afdb1a3",
     "semantic_hash": ""
   },
   "test/android_build_config_test.dart": {
@@ -1770,9 +1770,9 @@
     "semantic_hash": ""
   },
   "test/calendar_loading_test.dart": {
-    "mtime": 1792799650.5040092,
-    "seen": 1795080325.0624526,
-    "ast_hash": "dab77954f53375d1b0c176afdd37a86c",
+    "mtime": 1795108717.1095772,
+    "seen": 1795109285.6131182,
+    "ast_hash": "2267d51f29b1000f6c1e381453e9ccf8",
     "semantic_hash": ""
   },
   "test/calendar_parallel_lessons_test.dart": {
@@ -1836,16 +1836,16 @@
     "semantic_hash": "5e36829e3a3e53ab7caa074c6db145fe"
   },
   "test/course_materials_refresh_test.dart": {
-    "mtime": 1793450656.5172963,
-    "seen": 1795080325.062464,
-    "ast_hash": "356d22a35d287f3503fd201ddb4eda6f",
-    "semantic_hash": "356d22a35d287f3503fd201ddb4eda6f"
+    "mtime": 1795108732.0186102,
+    "seen": 1795109285.6131358,
+    "ast_hash": "28b9746a81790db974abb0be99fa3369",
+    "semantic_hash": ""
   },
   "test/course_materials_server_test.dart": {
-    "mtime": 1793723314.1293435,
-    "seen": 1795080325.062465,
-    "ast_hash": "b48f5c404f2aa370ee280fc8da8e98ec",
-    "semantic_hash": "b48f5c404f2aa370ee280fc8da8e98ec"
+    "mtime": 1795108733.213803,
+    "seen": 1795109285.6131375,
+    "ast_hash": "6813e432916cfda0f1bcc54d65339103",
+    "semantic_hash": ""
   },
   "test/course_materials_test.dart": {
     "mtime": 1788011730.2273507,
@@ -1908,10 +1908,10 @@
     "semantic_hash": "caeabd4f7b9d888916d048f9ea8653fb"
   },
   "test/export_calendar_hydration_test.dart": {
-    "mtime": 1792792312.074512,
-    "seen": 1795080325.0624743,
-    "ast_hash": "141d06324fb26a6269d8eb9e63144796",
-    "semantic_hash": "141d06324fb26a6269d8eb9e63144796"
+    "mtime": 1795108717.1095772,
+    "seen": 1795109285.613151,
+    "ast_hash": "fb7e33616f9568eb6b9cfc479a493b6a",
+    "semantic_hash": ""
   },
   "test/export_font_test.dart": {
     "mtime": 1792792312.07556,
@@ -1998,22 +1998,22 @@
     "semantic_hash": ""
   },
   "test/grades_loading_completion_test.dart": {
-    "mtime": 1792792312.0775604,
-    "seen": 1795080325.0624874,
-    "ast_hash": "714f2400d93a11a7f3f786a5559ee5ba",
-    "semantic_hash": "714f2400d93a11a7f3f786a5559ee5ba"
+    "mtime": 1795108717.1095772,
+    "seen": 1795109285.61317,
+    "ast_hash": "d6a7215ce3e7945a9171dded27d6bc66",
+    "semantic_hash": ""
   },
   "test/grades_missing_config_test.dart": {
-    "mtime": 1794515226.457043,
-    "seen": 1795080325.0624883,
-    "ast_hash": "6b37a079735fa69ccc1b0af2ce1a13c2",
-    "semantic_hash": "6b37a079735fa69ccc1b0af2ce1a13c2"
+    "mtime": 1795108717.1110835,
+    "seen": 1795109285.613171,
+    "ast_hash": "a756bd20025776414a6010774fe1ded0",
+    "semantic_hash": ""
   },
   "test/grades_semester_membership_test.dart": {
-    "mtime": 1793723314.1293435,
-    "seen": 1795080325.062489,
-    "ast_hash": "558349ab0965509e6eeae4875ddeccb4",
-    "semantic_hash": "558349ab0965509e6eeae4875ddeccb4"
+    "mtime": 1795108970.3473766,
+    "seen": 1795109285.613172,
+    "ast_hash": "cb625a858d040547c093cf412abcc1ec",
+    "semantic_hash": ""
   },
   "test/high_calendar_date_test.dart": {
     "mtime": 1794932475.0501723,
@@ -2058,9 +2058,9 @@
     "semantic_hash": ""
   },
   "test/local_data_inventory_test.dart": {
-    "mtime": 1795080304.4662437,
-    "seen": 1795080325.062496,
-    "ast_hash": "439c1786268efee501edcb60e8ae1a08",
+    "mtime": 1795108717.1110835,
+    "seen": 1795109285.6131804,
+    "ast_hash": "6435ba45fb39bc02a2c4c3888159c4de",
     "semantic_hash": ""
   },
   "test/local_reminder_assessments_test.dart": {
@@ -2088,9 +2088,9 @@
     "semantic_hash": ""
   },
   "test/login_calendar_tutorial_test.dart": {
-    "mtime": 1794090748.9237826,
-    "seen": 1795080325.0625007,
-    "ast_hash": "4117271c8e0646e118e8a8603722bc01",
+    "mtime": 1795108717.1127553,
+    "seen": 1795109285.6131852,
+    "ast_hash": "a34e2518e29c419cb31d93b913065400",
     "semantic_hash": ""
   },
   "test/logout_persistence_test.dart": {
@@ -2346,9 +2346,9 @@
     "semantic_hash": ""
   },
   "test/semester_lock_test.dart": {
-    "mtime": 1793387996.5663967,
-    "seen": 1795080325.062538,
-    "ast_hash": "673a98e33b14fd6b11712c3cfa79a3e4",
+    "mtime": 1795108717.1127553,
+    "seen": 1795109285.6132522,
+    "ast_hash": "bda66aafb54a0210e9b32d3753e3a572",
     "semantic_hash": ""
   },
   "test/server_notifications/api_test.dart": {
@@ -2412,10 +2412,10 @@
     "semantic_hash": ""
   },
   "test/session_boundary_test.dart": {
-    "mtime": 1794073984.7102563,
-    "seen": 1795080325.0625472,
-    "ast_hash": "56904b964380e135f2eea1ff4ac788f1",
-    "semantic_hash": "56904b964380e135f2eea1ff4ac788f1"
+    "mtime": 1795108717.1137612,
+    "seen": 1795109285.6132684,
+    "ast_hash": "bebec90c2cef42c3970c3b00bab53027",
+    "semantic_hash": ""
   },
   "test/session_refresh_test.dart": {
     "mtime": 1792259134.1593473,
@@ -3090,9 +3090,9 @@
     "semantic_hash": ""
   },
   "lib/middleware/course_materials.dart": {
-    "mtime": 1795080304.427599,
-    "seen": 1795080325.062243,
-    "ast_hash": "ae12dade2f0f0fcd8dabe357fad12665",
+    "mtime": 1795108733.2087944,
+    "seen": 1795109285.612823,
+    "ast_hash": "65b612c12d16f4f88fcd41497e7103b0",
     "semantic_hash": ""
   },
   "lib/middleware/downloads.dart": {
