@@ -58,6 +58,28 @@ jobs:
           path: build/linux/packages/*
           if-no-files-found: error
 
+  test-packages:
+    name: Package fork ${{ matrix.package }}
+    strategy:
+      fail-fast: false
+      matrix:
+        # The forks whose tests run in the package itself without changing
+        # tracked files.
+        package: [collapsible_sidebar, quill_delta_viewer]
+    runs-on: ubuntu-22.04
+    steps:
+      - uses: actions/checkout@v4
+      - name: Set up Flutter
+        run: |
+          git clone --depth 1 --branch 3.47.2 https://github.com/flutter/flutter.git "$RUNNER_TEMP/flutter"
+          echo "$RUNNER_TEMP/flutter/bin" >> "$GITHUB_PATH"
+          "$RUNNER_TEMP/flutter/bin/flutter" --version
+      - name: Test the package
+        working-directory: packages/${{ matrix.package }}
+        run: flutter test
+      - name: Check that the tests changed no tracked files
+        run: git diff --exit-code -- "packages/${{ matrix.package }}"
+
   publish-linux:
     if: github.event_name == 'release'
     needs: build-linux
