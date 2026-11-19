@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:convert';
 
 import 'package:built_collection/built_collection.dart';
 import 'package:built_redux/built_redux.dart' show Store;
@@ -7,6 +8,7 @@ import 'package:dr/app_state.dart';
 import 'package:dr/container/days_container.dart';
 import 'package:dr/container/messages_container.dart';
 import 'package:dr/data.dart';
+import 'package:dr/external_links.dart';
 import 'package:dr/i18n/app_localizations.dart';
 import 'package:dr/main.dart' show scaffoldKey;
 import 'package:dr/middleware/middleware.dart';
@@ -21,6 +23,7 @@ import 'package:dr/ui/messages.dart';
 import 'package:dr/ui/messages_new.dart';
 import 'package:dr/utc_date_time.dart';
 import 'package:dr/ui/dashboard_columns.dart';
+import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:mocktail/mocktail.dart';
@@ -669,6 +672,70 @@ void main() {
       tester.getSize(find.byType(SizeTransition)).height,
       greaterThan(100),
     );
+  });
+
+  group('addresses in the text (#143)', () {
+    for (final newDesign in [true, false]) {
+      testWidgets(
+          '${newDesign ? 'the new design' : 'Legacy'} shows and opens them',
+          (tester) async {
+        final launched = <Uri>[];
+        externalLinkLauncherOverride = (uri) async {
+          launched.add(uri);
+          return true;
+        };
+        addTearDown(() => externalLinkLauncherOverride = null);
+        final messages = _messages()
+          ..[1] = _messages()[1].rebuild((b) => b
+            ..text = jsonEncode({
+              'ops': [
+                {'insert': 'Anmeldung: https://example.org/anmeldung.\n'},
+                {
+                  'insert': 'Infos: www.example.org/wandertag',
+                  'attributes': {'bold': true},
+                },
+                {
+                  'insert': '\n',
+                  'attributes': {'list': 'bullet'},
+                },
+                {'insert': 'Danke\n'},
+              ],
+            }));
+        await _pumpMessages(
+          tester,
+          newDesign: newDesign,
+          page: _page(
+            _Calls(),
+            state: _messagesState(messages: messages, showMessage: 2),
+          ),
+        );
+        if (find
+            .textContaining('Danke', findRichText: true)
+            .evaluate()
+            .isEmpty) {
+          await _tap(tester, _open(2));
+        }
+
+        final links = <TextSpan>[];
+        for (final rich in tester.widgetList<RichText>(find.byType(RichText))) {
+          rich.text.visitChildren((span) {
+            if (span is TextSpan && span.recognizer != null) links.add(span);
+            return true;
+          });
+        }
+        expect(links.map((span) => span.text),
+            ['https://example.org/anmeldung', 'www.example.org/wandertag']);
+        expect(links.last.style?.fontWeight, FontWeight.bold);
+        for (final link in links) {
+          (link.recognizer! as TapGestureRecognizer).onTap!();
+        }
+        await tester.pump();
+        expect(launched, [
+          Uri.parse('https://example.org/anmeldung'),
+          Uri.parse('https://www.example.org/wandertag'),
+        ]);
+      });
+    }
   });
 
   group('languages', () {

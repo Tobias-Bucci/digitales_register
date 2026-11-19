@@ -508,25 +508,38 @@ class _DemoStore {
   }
 
   String _messageBody(Map<String, dynamic> message) {
-    final lines = switch (message['kind']) {
-      'welcome' => <String>[
+    List<Map<String, Object?>> lines(List<String> lines) => [
+          for (final line in lines) <String, Object?>{'insert': '$line\n'}
+        ];
+    const bullet = <String, Object?>{'list': 'bullet'};
+    final ops = switch (message['kind']) {
+      'welcome' => lines([
           _text('messageWelcomeLine1'),
           _text('messageWelcomeLine2'),
+        ]),
+      // Web addresses typed into the text, as teachers write them: with and
+      // without a scheme, in bold, in a list and in brackets (#143).
+      'trip' => <Map<String, Object?>>[
+          ...lines([_text('messageTripLine1'), _text('messageTripLine2')]),
+          <String, Object?>{
+            'insert':
+                '${_text('messageTripSignUp')} https://www.example.org/anmeldung',
+            'attributes': <String, Object?>{'bold': true},
+          },
+          <String, Object?>{'insert': '\n'},
+          <String, Object?>{
+            'insert': '${_text('messageTripProgram')} www.example.org/programm',
+          },
+          <String, Object?>{'insert': '\n', 'attributes': bullet},
+          <String, Object?>{
+            'insert': '${_text('messageTripMap')} (www.example.org/lageplan).',
+          },
+          <String, Object?>{'insert': '\n', 'attributes': bullet},
+          ...lines([_text('messageTripLine3')]),
         ],
-      'trip' => <String>[
-          _text('messageTripLine1'),
-          _text('messageTripLine2'),
-          _text('messageTripLine3'),
-        ],
-      _ => <String>[_text('messageFallbackLine')],
+      _ => lines([_text('messageFallbackLine')]),
     };
-    return json.encode(
-      <String, Object?>{
-        'ops': <Map<String, Object?>>[
-          for (final line in lines) <String, Object?>{'insert': '$line\n'}
-        ],
-      },
-    );
+    return json.encode(<String, Object?>{'ops': ops});
   }
 
   String _certificateRow(String label, String value) {
@@ -2515,6 +2528,24 @@ const Map<String, Map<String, String>> _demoTranslations =
     'en': 'Please bring a water bottle and writing materials.',
     'it': 'Porta con te una borraccia e il materiale per scrivere.',
     'lld': 'Prëi con te na boza d’aiga y material por scrie.',
+  },
+  'messageTripSignUp': {
+    'de': 'Anmeldung bis Mittwoch:',
+    'en': 'Sign up by Wednesday:',
+    'it': 'Iscrizione entro mercoledì:',
+    'lld': 'Iscriziun cina mercui:',
+  },
+  'messageTripProgram': {
+    'de': 'Programm:',
+    'en': 'Programme:',
+    'it': 'Programma:',
+    'lld': 'Program:',
+  },
+  'messageTripMap': {
+    'de': 'Lageplan des Museums',
+    'en': 'Map of the museum',
+    'it': 'Piantina del museo',
+    'lld': 'Plan dl museum',
   },
   'messageFallbackLine': {
     'de': 'Dies ist eine lokal erzeugte Demo-Mitteilung.',

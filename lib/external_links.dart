@@ -73,8 +73,9 @@ class TextLinkSegment {
   String toString() => 'TextLinkSegment($text, $uri)';
 }
 
+// Quotes end an address, typographic ones too: „…“, «…» (#143).
 final _linkInText = RegExp(
-  r'''(?<![\w@./-])(?:https?://|www\.)[^\s<>"']+''',
+  r'''(?<![\w@./-])(?:https?://|www\.)[^\s<>"'“”„«»‹›]+''',
   caseSensitive: false,
 );
 

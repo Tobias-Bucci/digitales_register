@@ -261,6 +261,24 @@ void main() {
           'Siehe https://a.org/x. (www.b.org/y), dann Ende');
     });
 
+    test('quotes end a link, typographic ones too (#143)', () {
+      for (final (open, close) in [
+        ('"', '"'),
+        ("'", "'"),
+        ('„', '“'),
+        ('“', '”'),
+        ('«', '»'),
+        ('‹', '›'),
+      ]) {
+        final text = 'Bitte ${open}https://a.org/x$close lesen';
+        final segments = splitTextLinks(text);
+        expect(segments.where((s) => s.uri != null).map((s) => s.text),
+            ['https://a.org/x'],
+            reason: text);
+        expect(segments.map((s) => s.text).join(), text);
+      }
+    });
+
     test('keeps brackets that are part of the address', () {
       expect(
         splitTextLinks('https://a.org/x_(y)').single.text,

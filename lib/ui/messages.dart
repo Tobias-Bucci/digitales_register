@@ -644,15 +644,13 @@ class _MessageWidgetState extends State<MessageWidget> {
 }
 
 Widget renderMessage(Message message) {
-  final Delta delta;
+  final _MessageBody body;
   try {
-    delta = _resolveMessageDelta(message);
+    body = _resolveMessageBody(message);
   } catch (_) {
     return const _MessageBodyNotice('messages.body.unsupported');
   }
-  // Embeds such as images are not supported by the viewer; their
-  // surrounding text is still shown.
-  final (:text, :hasEmbeds) = _textOnlyDelta(delta);
+  final (:text, :hasEmbeds) = body;
   final hasVisibleText = text.toList().any(
         (op) => (op.data as String).trim().isNotEmpty,
       );
@@ -661,7 +659,8 @@ Widget renderMessage(Message message) {
       hasEmbeds ? 'messages.body.unsupported' : 'messages.body.empty',
     );
   }
-  // Only web addresses open, and a failure is shown (#141).
+  // Only web addresses open, and a failure is shown (#141); that includes
+  // the addresses typed into the text (#143).
   final viewer = QuillDeltaViewer(delta: text, onLinkTap: openExternalLink);
   if (!hasEmbeds) return viewer;
   return Column(
@@ -673,7 +672,13 @@ Widget renderMessage(Message message) {
   );
 }
 
-({Delta text, bool hasEmbeds}) _textOnlyDelta(Delta delta) {
+/// The text of a message as the viewer shows it, and whether parts of it
+/// could not be shown.
+typedef _MessageBody = ({Delta text, bool hasEmbeds});
+
+// Embeds such as images are not supported by the viewer; their surrounding
+// text is still shown.
+_MessageBody _textOnlyDelta(Delta delta) {
   final text = Delta();
   var hasEmbeds = false;
   for (var i = 0; i < delta.length; i++) {
@@ -709,31 +714,96 @@ class _MessageBodyNotice extends StatelessWidget {
   }
 }
 
-Delta _resolveMessageDelta(Message message) {
+/// Marks the web addresses typed into the text as links (#143): the ones
+/// [splitTextLinks] finds, so they open like any other link. Text that is a
+/// link already keeps its target.
+///
+/// An editor can format part of an address, which splits it over several
+/// ops. It is found in the text of all of them together and stays one link;
+/// every part keeps its own formatting. Line formats are on the line break,
+/// which is never part of an address, so they stay as they are.
+Delta _linkPlainAddresses(Delta delta) {
+  final linked = Delta();
+  final run = <Operation>[];
+
+  void addRun() {
+    if (run.isEmpty) return;
+    final text = run.map((op) => op.data as String).join();
+    final segments = splitTextLinks(text);
+    if (segments.every((segment) => segment.uri == null)) {
+      run.forEach(linked.push);
+      run.clear();
+      return;
+    }
+    // Where each segment ends in [text], and where it leads.
+    final ends = <(int, Uri?)>[];
+    var offset = 0;
+    for (final segment in segments) {
+      offset += segment.text.length;
+      ends.add((offset, segment.uri));
+    }
+    var start = 0;
+    var segment = 0;
+    for (final op in run) {
+      final data = op.data as String;
+      final end = start + data.length;
+      var position = start;
+      while (position < end) {
+        final (segmentEnd, uri) = ends[segment];
+        final pieceEnd = segmentEnd < end ? segmentEnd : end;
+        linked.push(Operation.insert(
+          data.substring(position - start, pieceEnd - start),
+          uri == null ? op.attributes : {...?op.attributes, 'link': '$uri'},
+        ));
+        position = pieceEnd;
+        if (position == segmentEnd) segment++;
+      }
+      start = end;
+    }
+    run.clear();
+  }
+
+  for (var i = 0; i < delta.length; i++) {
+    final op = delta.elementAt(i);
+    if (op.isInsert && op.data is String && op.attributes?['link'] == null) {
+      run.add(op);
+    } else {
+      addRun();
+      linked.push(op);
+    }
+  }
+  addRun();
+  return linked;
+}
+
+_MessageBody _resolveMessageBody(Message message) {
   final cached = _messageDeltaCache[message.id];
   if (cached != null && cached.source == message.text) {
     _messageDeltaCache.remove(message.id);
     _messageDeltaCache[message.id] = cached;
-    return cached.delta;
+    return cached.body;
   }
 
   final delta = Delta.fromJson(jsonDecode(message.text)["ops"] as List);
+  final (:text, :hasEmbeds) = _textOnlyDelta(delta);
+  final body = (text: _linkPlainAddresses(text), hasEmbeds: hasEmbeds);
   _messageDeltaCache[message.id] = _CachedMessageDelta(
     source: message.text,
-    delta: delta,
+    body: body,
   );
   while (_messageDeltaCache.length > _messageDeltaCacheLimit) {
     _messageDeltaCache.remove(_messageDeltaCache.keys.first);
   }
-  return delta;
+  return body;
 }
 
+/// The prepared body of a message, kept while its text stays the same.
 class _CachedMessageDelta {
   const _CachedMessageDelta({
     required this.source,
-    required this.delta,
+    required this.body,
   });
 
   final String source;
-  final Delta delta;
+  final _MessageBody body;
 }
