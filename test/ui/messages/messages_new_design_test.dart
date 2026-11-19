@@ -25,8 +25,10 @@ import 'package:dr/utc_date_time.dart';
 import 'package:dr/ui/dashboard_columns.dart';
 import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/rendering.dart' show RenderFlex;
 import 'package:flutter_test/flutter_test.dart';
 import 'package:mocktail/mocktail.dart';
+import 'package:quill_delta_viewer/quill_delta_viewer.dart';
 
 import '../../support/fixtures.dart';
 import '../../support/test_harness.dart';
@@ -735,6 +737,247 @@ void main() {
           Uri.parse('https://www.example.org/wandertag'),
         ]);
       });
+    }
+  });
+
+  group('formatted text (#144)', () {
+    // As a teacher formats it in the web register: a heading, a numbered
+    // list, a quote, italic text, and a list item as the very last line.
+    Message formatted() => _messages()[1].rebuild((b) => b
+      ..text = jsonEncode({
+        'ops': [
+          {'insert': 'Wandertag am Freitag www.example.org/wandertag'},
+          {
+            'insert': '\n',
+            'attributes': {'header': 1},
+          },
+          {
+            'insert': 'Bitte beachten',
+            'attributes': {'italic': true},
+          },
+          {'insert': ':\n'},
+          {'insert': 'Treffpunkt am Bahnhof'},
+          {
+            'insert': '\n',
+            'attributes': {'list': 'ordered'},
+          },
+          {'insert': 'Anmeldung: https://example.org/anmeldung'},
+          {
+            'insert': '\n',
+            'attributes': {'list': 'ordered'},
+          },
+          {
+            'insert': 'Jause',
+            'attributes': {'bold': true},
+          },
+          {
+            'insert': '\n',
+            'attributes': {'list': 'ordered'},
+          },
+          {'insert': 'Die Direktion: www.example.org/regeln'},
+          {
+            'insert': '\n',
+            'attributes': {'blockquote': true},
+          },
+          {'insert': 'Mitnehmen'},
+          {
+            'insert': '\n',
+            'attributes': {'header': 3},
+          },
+          {'insert': 'Regenjacke'},
+          {
+            'insert': '\n',
+            'attributes': {'list': 'bullet'},
+          },
+          {'insert': 'Turnschuhe'},
+          {
+            'insert': '\n',
+            'attributes': {'list': 'bullet'},
+          },
+        ],
+      }));
+
+    Future<void> showFormatted(
+      WidgetTester tester, {
+      required bool newDesign,
+      ThemeMode themeMode = ThemeMode.light,
+      Size size = _phone,
+    }) async {
+      await _pumpMessages(
+        tester,
+        newDesign: newDesign,
+        themeMode: themeMode,
+        size: size,
+        page: _page(
+          _Calls(),
+          state: _messagesState(
+            messages: _messages()..[1] = formatted(),
+            showMessage: 2,
+          ),
+        ),
+      );
+      if (find
+          .textContaining('Turnschuhe', findRichText: true)
+          .evaluate()
+          .isEmpty) {
+        await _tap(tester, _open(2));
+      }
+    }
+
+    List<String> markers(WidgetTester tester) => tester
+        .widgetList<Text>(find.byType(Text))
+        .map((text) => text.data)
+        .whereType<String>()
+        .where((data) => data == '•' || RegExp(r'^\d+\.$').hasMatch(data))
+        .toList();
+
+    /// The style [text] is shown in, merged from the root of its RichText.
+    TextStyle styleOf(WidgetTester tester, String text) {
+      TextStyle? found;
+      void visit(InlineSpan span, TextStyle style) {
+        final merged = style.merge(span.style);
+        if (span is TextSpan) {
+          if (span.text?.contains(text) ?? false) found ??= merged;
+          for (final child in span.children ?? const <InlineSpan>[]) {
+            visit(child, merged);
+          }
+        }
+      }
+
+      for (final rich in tester.widgetList<RichText>(find.byType(RichText))) {
+        visit(rich.text, const TextStyle());
+      }
+      return found!;
+    }
+
+    for (final newDesign in [true, false]) {
+      final design = newDesign ? 'the new design' : 'Legacy';
+      for (final themeMode in [ThemeMode.light, ThemeMode.dark]) {
+        testWidgets('$design, ${themeMode.name}: every line keeps its format',
+            (tester) async {
+          final launched = <Uri>[];
+          externalLinkLauncherOverride = (uri) async {
+            launched.add(uri);
+            return true;
+          };
+          addTearDown(() => externalLinkLauncherOverride = null);
+          final semantics = tester.ensureSemantics();
+          await showFormatted(tester,
+              newDesign: newDesign, themeMode: themeMode);
+
+          // The numbers count, and the last line keeps its bullet.
+          expect(markers(tester), ['1.', '2.', '3.', '•', '•']);
+          final lastRow = find
+              .ancestor(
+                of: find.textContaining('Turnschuhe', findRichText: true),
+                matching: find.byType(Row),
+              )
+              .first;
+          expect(find.descendant(of: lastRow, matching: find.text('•')),
+              findsOneWidget);
+
+          final theme = Theme.of(tester.element(find.byType(MessagesPage)));
+          final heading = styleOf(tester, 'Wandertag am Freitag');
+          expect(heading.fontSize, theme.textTheme.titleLarge!.fontSize);
+          expect(heading.fontSize,
+              greaterThan(styleOf(tester, 'Treffpunkt').fontSize!));
+          expect(styleOf(tester, 'Mitnehmen').fontSize,
+              theme.textTheme.titleSmall!.fontSize);
+          // The heading is marked as one for screen readers; the package
+          // tests check the semantics tree itself.
+          expect(
+            find.ancestor(
+              of: find.textContaining('Wandertag am Freitag',
+                  findRichText: true),
+              matching: find.byWidgetPredicate(
+                (widget) =>
+                    widget is Semantics && widget.properties.header == true,
+              ),
+            ),
+            findsOneWidget,
+          );
+
+          expect(styleOf(tester, 'Bitte beachten').fontStyle, FontStyle.italic);
+          expect(styleOf(tester, 'Die Direktion').color,
+              theme.colorScheme.onSurfaceVariant);
+          expect(styleOf(tester, 'Jause').fontWeight, FontWeight.bold);
+
+          // Addresses in a heading, a numbered item and a quote open.
+          final links = <TextSpan>[];
+          for (final rich
+              in tester.widgetList<RichText>(find.byType(RichText))) {
+            rich.text.visitChildren((span) {
+              if (span is TextSpan && span.recognizer != null) {
+                links.add(span);
+              }
+              return true;
+            });
+          }
+          expect(links.map((span) => span.text), [
+            'www.example.org/wandertag',
+            'https://example.org/anmeldung',
+            'www.example.org/regeln',
+          ]);
+          for (final link in links) {
+            expect(link.style?.color, theme.colorScheme.primary);
+            expect(link.style?.decoration?.contains(TextDecoration.underline),
+                isTrue);
+            (link.recognizer! as TapGestureRecognizer).onTap!();
+          }
+          await tester.pump();
+          expect(launched, [
+            Uri.parse('https://www.example.org/wandertag'),
+            Uri.parse('https://example.org/anmeldung'),
+            Uri.parse('https://www.example.org/regeln'),
+          ]);
+          semantics.dispose();
+        });
+      }
+
+      for (final (name, size, scale) in [
+        ('a narrow phone at text size 2', const Size(320, 640), 2.0),
+        ('a wide window', const Size(1600, 1000), 1.0),
+      ]) {
+        testWidgets('$design fits $name', (tester) async {
+          tester.platformDispatcher.textScaleFactorTestValue = scale;
+          addTearDown(tester.platformDispatcher.clearTextScaleFactorTestValue);
+          await showFormatted(tester, newDesign: newDesign, size: size);
+
+          final error = tester.takeException();
+          if (newDesign) {
+            expect(error, isNull);
+          } else {
+            // The title row of a Legacy message (subject and badges) does
+            // not fit 320 px at text size 2, with or without formatting
+            // (#147). The body is checked below.
+            expect('$error', anyOf('null', contains('overflowed')));
+          }
+          expect(markers(tester), ['1.', '2.', '3.', '•', '•']);
+
+          // Every line of the body wraps inside it: no text and no list
+          // line is wider than the body.
+          final body = tester.getRect(find.byType(QuillDeltaViewer));
+          final texts = find.descendant(
+            of: find.byType(QuillDeltaViewer),
+            matching: find.byType(RichText),
+          );
+          expect(texts, findsWidgets);
+          for (final text in texts.evaluate()) {
+            final rect = tester.getRect(find.byWidget(text.widget));
+            expect(rect.left, greaterThanOrEqualTo(body.left - 0.5));
+            expect(rect.right, lessThanOrEqualTo(body.right + 0.5));
+          }
+          for (final row in tester.renderObjectList<RenderFlex>(find.descendant(
+            of: find.byType(QuillDeltaViewer),
+            matching: find.byType(Row),
+          ))) {
+            var width = 0.0;
+            row.visitChildren(
+                (child) => width += (child as RenderBox).size.width);
+            expect(width, lessThanOrEqualTo(row.size.width + 0.5));
+          }
+        });
+      }
     }
   });
 

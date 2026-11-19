@@ -241,7 +241,8 @@ void main() {
       expect(spans[2].recognizer, isNull);
     });
 
-    testWidgets('of a list line is kept', (tester) async {
+    testWidgets('of a list line is kept, the last one too (#144)',
+        (tester) async {
       await show(tester, [
         {'insert': 'Einleitung\n'},
         {'insert': 'Formular: www.example.org/f'},
@@ -254,9 +255,6 @@ void main() {
           'insert': '\n',
           'attributes': {'list': 'bullet'},
         },
-        // The viewer drops the line format of the very last line, with or
-        // without links; a closing line keeps both list lines in the test.
-        {'insert': 'Mit freundlichen Grüßen\n'},
       ]);
 
       expect(find.text('•'), findsNWidgets(2));

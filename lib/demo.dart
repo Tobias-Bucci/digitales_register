@@ -512,30 +512,46 @@ class _DemoStore {
           for (final line in lines) <String, Object?>{'insert': '$line\n'}
         ];
     const bullet = <String, Object?>{'list': 'bullet'};
+    // Line formats as the web register writes them (#144).
+    const heading = <String, Object?>{'header': 3};
+    const quote = <String, Object?>{'blockquote': true};
+    const numbered = <String, Object?>{'list': 'ordered'};
     final ops = switch (message['kind']) {
       'welcome' => lines([
           _text('messageWelcomeLine1'),
           _text('messageWelcomeLine2'),
         ]),
       // Web addresses typed into the text, as teachers write them: with and
-      // without a scheme, in bold, in a list and in brackets (#143).
+      // without a scheme, in bold, in a list and in brackets (#143). The
+      // lines are formatted as well, to show every line format the viewer
+      // knows: a heading, italic text, a quote, a numbered list, and a list
+      // item as the last line (#144).
       'trip' => <Map<String, Object?>>[
-          ...lines([_text('messageTripLine1'), _text('messageTripLine2')]),
+          <String, Object?>{'insert': _text('messageTripSubject')},
+          <String, Object?>{'insert': '\n', 'attributes': heading},
+          <String, Object?>{
+            'insert': _text('messageTripLine1'),
+            'attributes': <String, Object?>{'italic': true},
+          },
+          <String, Object?>{'insert': '\n'},
+          <String, Object?>{'insert': _text('messageTripLine2')},
+          <String, Object?>{'insert': '\n', 'attributes': quote},
           <String, Object?>{
             'insert':
                 '${_text('messageTripSignUp')} https://www.example.org/anmeldung',
             'attributes': <String, Object?>{'bold': true},
           },
-          <String, Object?>{'insert': '\n'},
+          <String, Object?>{'insert': '\n', 'attributes': numbered},
           <String, Object?>{
             'insert': '${_text('messageTripProgram')} www.example.org/programm',
           },
-          <String, Object?>{'insert': '\n', 'attributes': bullet},
+          <String, Object?>{'insert': '\n', 'attributes': numbered},
           <String, Object?>{
             'insert': '${_text('messageTripMap')} (www.example.org/lageplan).',
           },
+          <String, Object?>{'insert': '\n', 'attributes': numbered},
+          <String, Object?>{'insert': _text('messageTripLine3')},
           <String, Object?>{'insert': '\n', 'attributes': bullet},
-          ...lines([_text('messageTripLine3')]),
         ],
       _ => lines([_text('messageFallbackLine')]),
     };
