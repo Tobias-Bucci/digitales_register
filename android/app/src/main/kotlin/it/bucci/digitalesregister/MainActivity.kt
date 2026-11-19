@@ -19,6 +19,7 @@ import androidx.work.WorkManager
 import io.flutter.embedding.android.FlutterFragmentActivity
 import io.flutter.embedding.engine.FlutterEngine
 import io.flutter.plugin.common.MethodChannel
+import io.flutter.plugin.common.StandardMethodCodec
 
 class MainActivity: FlutterFragmentActivity() {
     private var pendingCalendarPermissionResult: MethodChannel.Result? = null
@@ -119,12 +120,21 @@ class MainActivity: FlutterFragmentActivity() {
                     else -> result.notImplemented()
                 }
             }
+        // The calendar provider is reached through binder calls that can take
+        // tens of milliseconds each. Dart runs on the main thread, so handling
+        // them there stopped every frame while the sync wrote, which made the
+        // launch animation stutter (#151). The queue is serial: the calls run
+        // one after another in the order Dart sent them.
+        val messenger = flutterEngine.dartExecutor.binaryMessenger
         MethodChannel(
-            flutterEngine.dartExecutor.binaryMessenger,
+            messenger,
             CALENDAR_SYNC_METHOD_CHANNEL,
+            StandardMethodCodec.INSTANCE,
+            messenger.makeBackgroundTaskQueue(),
         ).setMethodCallHandler { call, result ->
             when (call.method) {
-                "requestCalendarPermission" -> requestCalendarPermission(result)
+                // The permission dialog and its callback belong to the main thread.
+                "requestCalendarPermission" -> runOnUiThread { requestCalendarPermission(result) }
                 "hasCalendarPermission" -> result.success(hasCalendarPermissions())
                 "getDefaultCalendarId" -> result.success(findDefaultWritableCalendarId())
                 "getWritableCalendars" -> result.success(listWritableCalendars())
