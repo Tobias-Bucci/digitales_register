@@ -46,6 +46,9 @@ class QuillDeltaViewer extends StatefulWidget {
     return operations;
   }
 
+  /// Removes the line break that ends [operations]. The viewer no longer
+  /// uses this: the last line break carries the format of the last line, so
+  /// the lines are read with their breaks (#144).
   List<Operation> removeLastNewline(List<Operation> operations) {
     while (operations.last.stringData.isEmpty) {
       operations.removeLast();
@@ -66,6 +69,7 @@ class QuillDeltaViewer extends StatefulWidget {
           0,
           operation.stringData.length - 1,
         ),
+        operation.attributes,
       );
     } else {
       return operation;
@@ -119,97 +123,114 @@ class _QuillDeltaViewerState extends State<QuillDeltaViewer> {
     if (content == null) {
       _nextRecognizer = 0;
       content = _content = render(
-        widget.removeLastNewline(widget.isolateLines(widget.delta)),
+        _readLines(widget.isolateLines(widget.delta)),
         context,
       );
     }
     return content;
   }
 
-  Widget render(List<Operation> ops, BuildContext context) {
-    final reversed = ops.reversed.toList();
+  /// Shows [lines]. Lines without a line format are shown together as one
+  /// text, as before; a line with a format is a block of its own.
+  Widget render(List<_Line> lines, BuildContext context) {
     final widgets = <Widget>[];
-    var spans = <InlineSpan>[];
+    final plain = <_Line>[];
+    // The number of the current line of a numbered list, 0 outside one.
+    var number = 0;
 
-    /// Whether we previously rendered a block.
-    /// blocks always go to a new line automatically, so _one_
-    /// newline in front should be removed
-    var renderedBlock = false;
-
-    for (var i = 0; i < reversed.length; i++) {
-      var op = reversed[i];
-      if (op.data == "\n") {
-        if (spans.isNotEmpty) {
-          widgets.add(
-            Text.rich(
-              TextSpan(
-                children: spans.reversed.toList(),
-              ),
-            ),
-          );
-          spans = [];
-        }
-        var use = <Operation>[];
-        while (reversed.length > i + 1 &&
-            !reversed[i + 1].stringData.endsWith("\n")) {
-          use.add(reversed[i + 1]);
-          i++;
-        }
-        use = use.reversed.toList();
-        widgets.add(renderBlock(use..add(op), context));
-        renderedBlock = true;
-      } else {
-        if (renderedBlock) {
-          op = widget.removeTrailingNewline(op);
-        }
-        spans.add(renderText(op, context));
-        renderedBlock = false;
+    void addPlain() {
+      if (plain.isEmpty) return;
+      final spans = <InlineSpan>[];
+      for (var i = 0; i < plain.length; i++) {
+        if (i > 0) spans.add(const TextSpan(text: '\n'));
+        spans.addAll(plain[i].text.map((op) => renderText(op, context)));
       }
+      widgets.add(Text.rich(TextSpan(children: spans)));
+      plain.clear();
     }
-    if (spans.isNotEmpty) {
-      widgets.add(
-        Text.rich(
-          TextSpan(
-            children: spans.reversed.toList(),
+
+    for (final line in lines) {
+      final format = line.format;
+      if (format == null) {
+        plain.add(line);
+        number = 0;
+        continue;
+      }
+      addPlain();
+      number = format['list'] == 'ordered' ? number + 1 : 0;
+      widgets.add(renderBlock(line, number, context));
+    }
+    addPlain();
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: widgets,
+    );
+  }
+
+  /// A line with a line format: a list item ([number] is its number in a
+  /// numbered list), a heading or a block quote.
+  Widget renderBlock(_Line line, int number, BuildContext context) {
+    final format = line.format!;
+    final theme = Theme.of(context);
+    final level = _headerLevel(format['header']);
+    final headerStyle = level == null ? null : _headerStyle(level, theme);
+
+    Widget block = Text.rich(
+      TextSpan(
+        children: line.text.map((op) => renderText(op, context)).toList(),
+      ),
+      style: headerStyle,
+    );
+    if (level != null) {
+      block = Semantics(header: true, child: block);
+    }
+
+    final list = format['list'];
+    if (list != null) {
+      block = Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(list == 'ordered' ? '$number.' : '•', style: headerStyle),
+          const SizedBox(width: 2.5),
+          Expanded(child: block),
+        ],
+      );
+    }
+
+    final quote = format['blockquote'];
+    if (quote != null && quote != false) {
+      block = DecoratedBox(
+        decoration: BoxDecoration(
+          border: Border(
+            left: BorderSide(color: theme.colorScheme.outlineVariant, width: 3),
+          ),
+        ),
+        child: Padding(
+          padding: const EdgeInsets.only(left: 8),
+          child: DefaultTextStyle.merge(
+            style: TextStyle(color: theme.colorScheme.onSurfaceVariant),
+            child: block,
           ),
         ),
       );
     }
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: widgets.reversed.toList(),
-    );
+    return block;
   }
 
-  Widget renderBlock(List<Operation> ops, BuildContext context) {
-    final blockOperation = ops.last;
-
-    bool list = false;
-    if (blockOperation.attributes != null) {
-      list = blockOperation.attributes!["list"] != null;
-    }
-    final text = Text.rich(
-      TextSpan(
-        children: widget
-            .removeLastNewline(ops)
-            .map(
-              (e) => renderText(e, context),
-            )
-            .toList(),
-      ),
+  /// Headings 1 to 3 take the title sizes of the theme; smaller headings
+  /// look like heading 3. The color stays the one of the text around them.
+  TextStyle _headerStyle(int level, ThemeData theme) {
+    final title = switch (level) {
+      1 => theme.textTheme.titleLarge,
+      2 => theme.textTheme.titleMedium,
+      _ => theme.textTheme.titleSmall,
+    };
+    return TextStyle(
+      fontSize: title?.fontSize,
+      letterSpacing: title?.letterSpacing,
+      fontWeight: FontWeight.w600,
     );
-
-    if (list) {
-      return Row(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          const Text("•"),
-          const SizedBox(width: 2.5),
-          Expanded(child: text),
-        ],
-      );
-    }
-    return text;
   }
 
   TextSpan renderText(Operation op, BuildContext context) {
@@ -220,7 +241,10 @@ class _QuillDeltaViewerState extends State<QuillDeltaViewer> {
     bool underline = false;
     if (op.attributes != null) {
       bold = op.attributes!["bold"] == true;
-      italics = op.attributes!["italics"] == true;
+      // Quill.js writes "italic"; earlier versions of this viewer read
+      // "italics". Both are shown (#144).
+      italics =
+          op.attributes!["italic"] == true || op.attributes!["italics"] == true;
       link = op.attributes!["link"] as String?;
       strike = op.attributes!["strike"] == true;
       underline = op.attributes!["underline"] == true;
@@ -270,4 +294,60 @@ class _QuillDeltaViewerState extends State<QuillDeltaViewer> {
 
 extension DataHelper on Operation {
   String get stringData => data as String;
+}
+
+/// The line formats the viewer shows. Others, such as `indent`, `align` or
+/// `code-block`, leave the line as plain text.
+const _lineFormats = {'list', 'header', 'blockquote'};
+
+/// One line of the text: its text without the line break, and the line
+/// format that the line break carries, if any.
+class _Line {
+  _Line(this.text, this.format);
+
+  final List<Operation> text;
+  final Map<String, dynamic>? format;
+}
+
+int? _headerLevel(Object? header) {
+  if (header == null || header == false) return null;
+  final level = header is int ? header : int.tryParse('$header');
+  return level != null && level > 0 ? level : null;
+}
+
+/// Reads the lines of [operations], which [QuillDeltaViewer.isolateLines]
+/// split so that a line break only ends an operation. The last line keeps its
+/// format; empty lines without a format at the end are left out, so a text
+/// does not end with blank space.
+List<_Line> _readLines(List<Operation> operations) {
+  final lines = <_Line>[];
+  var text = <Operation>[];
+  for (final op in operations) {
+    final data = op.stringData;
+    if (data.isEmpty) continue;
+    if (!data.endsWith('\n')) {
+      text.add(op);
+      continue;
+    }
+    if (data.length > 1) {
+      text.add(Operation.insert(
+        data.substring(0, data.length - 1),
+        op.attributes,
+      ));
+    }
+    final format = <String, dynamic>{
+      for (final entry in (op.attributes ?? const <String, dynamic>{}).entries)
+        if (_lineFormats.contains(entry.key) && entry.value != null)
+          entry.key: entry.value,
+    };
+    lines.add(_Line(text, format.isEmpty ? null : format));
+    text = [];
+  }
+  if (text.isNotEmpty) lines.add(_Line(text, null));
+  while (lines.isNotEmpty &&
+      lines.last.format == null &&
+      lines.last.text.every((op) => op.stringData.isEmpty)) {
+    lines.removeLast();
+  }
+  return lines;
 }
