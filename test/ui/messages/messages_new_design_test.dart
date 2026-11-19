@@ -1,6 +1,8 @@
 import 'dart:async';
 import 'dart:convert';
+import 'dart:io';
 
+import 'package:badges/badges.dart' as badge;
 import 'package:built_collection/built_collection.dart';
 import 'package:built_redux/built_redux.dart' show Store;
 import 'package:dr/actions/app_actions.dart';
@@ -26,6 +28,7 @@ import 'package:dr/ui/dashboard_columns.dart';
 import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/rendering.dart' show RenderFlex;
+import 'package:flutter/services.dart' show ByteData, FontLoader;
 import 'package:flutter_test/flutter_test.dart';
 import 'package:mocktail/mocktail.dart';
 import 'package:quill_delta_viewer/quill_delta_viewer.dart';
@@ -161,6 +164,23 @@ Future<void> _tap(WidgetTester tester, Finder finder) async {
   await tester.tap(finder);
   await settleFor(tester, duration: const Duration(milliseconds: 500));
 }
+
+/// Real Roboto metrics, so fit checks match an Android phone rather than the
+/// test font's square glyphs (as in test/ui/auth_search_and_fit_test.dart).
+Future<void> _loadRoboto(WidgetTester tester) => tester.runAsync(() async {
+      final root = Platform.environment['FLUTTER_ROOT'] ??
+          File(Platform.resolvedExecutable).parent.parent.parent.parent.path;
+      final fonts = '$root/bin/cache/artifacts/material_fonts';
+      final loader = FontLoader('Roboto');
+      for (final weight in ['regular', 'medium', 'bold']) {
+        final file = File('$fonts/roboto-$weight.ttf');
+        if (file.existsSync()) {
+          loader.addFont(
+              Future.value(ByteData.sublistView(file.readAsBytesSync())));
+        }
+      }
+      await loader.load();
+    });
 
 void main() {
   setUp(() async {
@@ -943,15 +963,7 @@ void main() {
           addTearDown(tester.platformDispatcher.clearTextScaleFactorTestValue);
           await showFormatted(tester, newDesign: newDesign, size: size);
 
-          final error = tester.takeException();
-          if (newDesign) {
-            expect(error, isNull);
-          } else {
-            // The title row of a Legacy message (subject and badges) does
-            // not fit 320 px at text size 2, with or without formatting
-            // (#147). The body is checked below.
-            expect('$error', anyOf('null', contains('overflowed')));
-          }
+          expect(tester.takeException(), isNull);
           expect(markers(tester), ['1.', '2.', '3.', '•', '•']);
 
           // Every line of the body wraps inside it: no text and no list
@@ -978,6 +990,153 @@ void main() {
           }
         });
       }
+    }
+  });
+
+  group('Legacy title row (#147)', () {
+    const longWord = 'Elternsprechtagsanmeldungsformularrueckmeldungsfrist';
+    // An answer is missing (dot and badge), an answer was given (badge), a
+    // new message (badge until it is open), and a long subject without
+    // spaces. The answer buttons of an open message have a test of their
+    // own.
+    List<Message> titled() => [
+          _messages()[0].rebuild((b) => b
+            ..subject = 'Elternsprechtag $longWord'
+            ..showReply = false),
+          _messages()[1].rebuild((b) => b
+            ..subject = 'Wandertag am Freitag nach Lana mit der ganzen Klasse'
+            ..badge = 'not_agree'),
+          buildMessage(id: 5, subject: longWord).rebuild((b) => b
+            ..incoming = true
+            ..labelAll = true),
+        ];
+
+    Future<void> showTitles(
+      WidgetTester tester, {
+      required Size size,
+      required double scale,
+      int? open,
+      String languageCode = 'de',
+      ThemeMode themeMode = ThemeMode.light,
+    }) async {
+      await _loadRoboto(tester);
+      tester.platformDispatcher.textScaleFactorTestValue = scale;
+      addTearDown(tester.platformDispatcher.clearTextScaleFactorTestValue);
+      await _pumpMessages(
+        tester,
+        newDesign: false,
+        size: size,
+        themeMode: themeMode,
+        state: _state(languageCode: languageCode),
+        page: _page(
+          _Calls(),
+          state: _messagesState(messages: titled(), showMessage: open),
+        ),
+      );
+    }
+
+    Finder dot() => find.byWidgetPredicate((widget) =>
+        widget is Container &&
+        widget.decoration is BoxDecoration &&
+        (widget.decoration! as BoxDecoration).shape == BoxShape.circle);
+
+    /// Nothing overflows, and every badge lies inside its message.
+    void expectFits(WidgetTester tester, String reason) {
+      expect(tester.takeException(), isNull, reason: reason);
+      final badges = find.descendant(
+        of: find.byType(MessageWidget),
+        matching: find.byType(badge.Badge),
+      );
+      expect(badges, findsWidgets, reason: reason);
+      for (final element in badges.evaluate()) {
+        final tile = tester.getRect(find
+            .ancestor(
+              of: find.byWidget(element.widget),
+              matching: find.byType(MessageWidget),
+            )
+            .first);
+        final rect = tester.getRect(find.byWidget(element.widget));
+        expect(rect.left, greaterThanOrEqualTo(tile.left - 0.5),
+            reason: reason);
+        expect(rect.right, lessThanOrEqualTo(tile.right + 0.5), reason: reason);
+      }
+    }
+
+    for (final width in [320.0, 360.0, 411.0, 1024.0]) {
+      for (final scale in [1.0, 2.0, 3.0]) {
+        for (final open in [null, 1]) {
+          testWidgets(
+              'fits $width px at text size $scale '
+              '(${open == null ? 'collapsed' : 'open'})', (tester) async {
+            await showTitles(tester,
+                size: Size(width, 900), scale: scale, open: open);
+            expectFits(tester, '$width, $scale, $open');
+          });
+        }
+      }
+    }
+
+    for (final code in const ['de', 'en', 'it', 'lld']) {
+      for (final (scale, themeMode) in [
+        (2.0, ThemeMode.light),
+        (3.0, ThemeMode.dark),
+      ]) {
+        testWidgets('fits 320 px in $code at text size $scale ($themeMode)',
+            (tester) async {
+          await showTitles(tester,
+              size: const Size(320, 900),
+              scale: scale,
+              languageCode: code,
+              themeMode: themeMode);
+          expectFits(tester, '$code, $scale');
+        });
+      }
+    }
+
+    testWidgets('the normal size keeps subject and badge on one line',
+        (tester) async {
+      await showTitles(tester, size: const Size(360, 900), scale: 1);
+
+      final subject = tester.getRect(find.text(
+          'Wandertag am Freitag nach Lana mit der ganzen Klasse',
+          findRichText: true));
+      final chip = tester.getRect(find.text('Stimme nicht zu'));
+      expect(chip.left, greaterThan(subject.right));
+      expect(chip.center.dy, moreOrLessEquals(subject.center.dy, epsilon: 1));
+      // One line, cut with an ellipsis.
+      expect(subject.height, lessThan(30));
+    });
+
+    testWidgets('large text gives the badge a line below the subject',
+        (tester) async {
+      await showTitles(tester, size: const Size(320, 900), scale: 2);
+
+      final subject = tester.getRect(find.text(
+          'Wandertag am Freitag nach Lana mit der ganzen Klasse',
+          findRichText: true));
+      final chip = tester.getRect(find.ancestor(
+          of: find.text('Stimme nicht zu'),
+          matching: find.byType(badge.Badge)));
+      expect(chip.top, greaterThanOrEqualTo(subject.bottom));
+      expect(chip.left, moreOrLessEquals(subject.left, epsilon: 1));
+      // The subject wraps instead of showing a few letters.
+      expect(subject.height, greaterThan(40));
+    });
+
+    for (final scale in [1.0, 2.0]) {
+      testWidgets('the dot stays beside the first line at text size $scale',
+          (tester) async {
+        await showTitles(tester, size: const Size(320, 900), scale: scale);
+
+        final subject = tester.getRect(
+            find.textContaining('Elternsprechtag', findRichText: true).first);
+        final mark = tester.getRect(dot());
+        // The first line of titleMedium (16 px, line height 1.5).
+        final firstLine = Rect.fromLTWH(
+            subject.left - 16, subject.top, subject.width + 16, 24 * scale);
+        expect(firstLine.contains(mark.center), isTrue,
+            reason: '$mark, $subject');
+      });
     }
   });
 

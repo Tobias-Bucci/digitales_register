@@ -391,9 +391,115 @@ class _MessageWidgetState extends State<MessageWidget> {
     return scheme.onPrimary;
   }
 
+  /// The subject, with a dot before it while the message needs an answer,
+  /// and the badge. The normal text size keeps them on one line. With large
+  /// text the subject wraps and the badge gets a line of its own below it, as
+  /// in the new design, so the row fits a narrow phone (#147).
+  Widget _title(BuildContext context) {
+    final large = MediaQuery.textScalerOf(context).scale(1) > 1.3;
+    final needsResponse = widget.message.needsResponse == true;
+    final style = Theme.of(context).textTheme.titleMedium;
+    final dot = Padding(
+      padding: const EdgeInsets.only(right: 8.0),
+      child: Container(
+        width: 8,
+        height: 8,
+        decoration: BoxDecoration(
+          color: Theme.of(context).colorScheme.error,
+          shape: BoxShape.circle,
+        ),
+      ),
+    );
+    final badgeChip = _titleBadge(context);
+    if (large) {
+      return Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Text.rich(
+            TextSpan(children: [
+              // Part of the text, so it stays beside the first line.
+              if (needsResponse)
+                WidgetSpan(alignment: PlaceholderAlignment.middle, child: dot),
+              TextSpan(text: widget.message.subject),
+            ]),
+            style: style,
+            maxLines: 3,
+            overflow: TextOverflow.ellipsis,
+          ),
+          if (badgeChip != null)
+            Padding(
+              padding: const EdgeInsets.only(top: 4.0),
+              child: badgeChip,
+            ),
+        ],
+      );
+    }
+    return Row(
+      children: [
+        if (needsResponse) dot,
+        Expanded(
+          child: Text(
+            widget.message.subject,
+            style: style,
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+          ),
+        ),
+        if (badgeChip != null)
+          Padding(
+            padding: const EdgeInsets.only(left: 8.0),
+            child: badgeChip,
+          ),
+      ],
+    );
+  }
+
+  Widget? _titleBadge(BuildContext context) {
+    if (widget.message.responseRequired == 1 ||
+        (widget.message.badge != null && widget.message.badge!.isNotEmpty)) {
+      final badgeStr = (widget.message.needsResponse == true)
+          ? "Nicht beantwortet"
+          : (widget.message.badge ?? (widget.message.isNew ? "new" : ""));
+
+      if (badgeStr == "new") {
+        return !widget.expand ? _newBadge(context) : null;
+      }
+
+      if (badgeStr.isEmpty) return null;
+
+      return badge.Badge(
+        badgeStyle: badge.BadgeStyle(
+          shape: badge.BadgeShape.square,
+          borderRadius: BorderRadius.circular(20),
+          badgeColor: _getBadgeColor(context, badgeStr),
+        ),
+        badgeContent: Text(
+          _getTranslatedBadge(context, badgeStr),
+          style: TextStyle(
+              color: _getBadgeTextColor(context, badgeStr),
+              fontSize: 12,
+              fontWeight: FontWeight.bold),
+        ),
+      );
+    }
+    if (widget.message.isNew && !widget.expand) return _newBadge(context);
+    return null;
+  }
+
+  Widget _newBadge(BuildContext context) => badge.Badge(
+        badgeStyle: badge.BadgeStyle(
+          shape: badge.BadgeShape.square,
+          borderRadius: BorderRadius.circular(20),
+        ),
+        badgeContent: Text(
+          context.t('messages.new'),
+          style: const TextStyle(color: Colors.white),
+        ),
+      );
+
   @override
   Widget build(BuildContext context) {
-    final textTheme = Theme.of(context).textTheme;
     return ExpansionTile(
       controller: _controller,
       initiallyExpanded: widget.expand,
@@ -404,91 +510,7 @@ class _MessageWidgetState extends State<MessageWidget> {
         }
         widget.onExpansionChanged(expanded);
       },
-      title: Row(
-        children: <Widget>[
-          if (widget.message.needsResponse == true)
-            Padding(
-              padding: const EdgeInsets.only(right: 8.0),
-              child: Container(
-                width: 8,
-                height: 8,
-                decoration: BoxDecoration(
-                  color: Theme.of(context).colorScheme.error,
-                  shape: BoxShape.circle,
-                ),
-              ),
-            ),
-          Expanded(
-            child: Text(
-              widget.message.subject,
-              style: textTheme.titleMedium,
-              maxLines: 1,
-              overflow: TextOverflow.ellipsis,
-            ),
-          ),
-          if (widget.message.responseRequired == 1 ||
-              (widget.message.badge != null &&
-                  widget.message.badge!.isNotEmpty))
-            Builder(builder: (context) {
-              final badgeStr = (widget.message.needsResponse == true)
-                  ? "Nicht beantwortet"
-                  : (widget.message.badge ??
-                      (widget.message.isNew ? "new" : ""));
-
-              if (badgeStr == "new") {
-                return !widget.expand
-                    ? Padding(
-                        padding: const EdgeInsets.only(left: 8.0),
-                        child: badge.Badge(
-                          badgeStyle: badge.BadgeStyle(
-                            shape: badge.BadgeShape.square,
-                            borderRadius: BorderRadius.circular(20),
-                          ),
-                          badgeContent: Text(
-                            context.t('messages.new'),
-                            style: const TextStyle(color: Colors.white),
-                          ),
-                        ),
-                      )
-                    : const SizedBox.shrink();
-              }
-
-              if (badgeStr.isEmpty) return const SizedBox.shrink();
-
-              return Padding(
-                padding: const EdgeInsets.only(left: 8.0),
-                child: badge.Badge(
-                  badgeStyle: badge.BadgeStyle(
-                    shape: badge.BadgeShape.square,
-                    borderRadius: BorderRadius.circular(20),
-                    badgeColor: _getBadgeColor(context, badgeStr),
-                  ),
-                  badgeContent: Text(
-                    _getTranslatedBadge(context, badgeStr),
-                    style: TextStyle(
-                        color: _getBadgeTextColor(context, badgeStr),
-                        fontSize: 12,
-                        fontWeight: FontWeight.bold),
-                  ),
-                ),
-              );
-            })
-          else if (widget.message.isNew && !widget.expand)
-            Padding(
-              padding: const EdgeInsets.only(left: 8.0),
-              child: badge.Badge(
-                badgeStyle: badge.BadgeStyle(
-                  shape: badge.BadgeShape.square,
-                  borderRadius: BorderRadius.circular(20),
-                ),
-                badgeContent: Text(
-                  context.t('messages.new'),
-                  style: const TextStyle(color: Colors.white),
-                ),
-              ),
-            )
-        ],
-      ),
+      title: _title(context),
       children: [
         Padding(
           padding: const EdgeInsets.symmetric(
