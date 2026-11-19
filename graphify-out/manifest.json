@@ -588,9 +588,9 @@
     "semantic_hash": ""
   },
   "lib/middleware/middleware.dart": {
-    "mtime": 1795080304.4305992,
-    "seen": 1795080325.0622494,
-    "ast_hash": "fc2cf3de2c3e58e6454741aa754fdaad",
+    "mtime": 1795089776.0583332,
+    "seen": 1795089981.082561,
+    "ast_hash": "aaa7e4234bff5a6fa8ed3b97c00132c8",
     "semantic_hash": ""
   },
   "lib/middleware/notifications.dart": {
@@ -3975,6 +3975,18 @@
     "mtime": 1795080966.6140957,
     "seen": 1795081353.3534977,
     "ast_hash": "ec294ab331b24774bbf8f383b279b962",
+    "semantic_hash": ""
+  },
+  "lib/ui/welcome_dialog.dart": {
+    "mtime": 1795089827.0447083,
+    "seen": 1795089981.082747,
+    "ast_hash": "f746acc9035e45af01e80d93bb55ce6a",
+    "semantic_hash": ""
+  },
+  "test/ui/welcome_dialog_test.dart": {
+    "mtime": 1795089820.3102798,
+    "seen": 1795089981.0829883,
+    "ast_hash": "7d09e4191641527b7cf7e17fbebe2b99",
     "semantic_hash": ""
   }
 }

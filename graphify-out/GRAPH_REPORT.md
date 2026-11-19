@@ -1,16 +1,16 @@
 # Graph Report - digitales_register  (2026-11-19)
 
 ## Corpus Check
-- 659 files · ~558,636 words
+- 661 files · ~559,309 words
 - Verdict: corpus is large enough that graph structure adds value.
 
 ## Summary
-- 13170 nodes · 21096 edges · 498 communities (370 shown, 128 thin omitted)
+- 13192 nodes · 21150 edges · 479 communities (370 shown, 109 thin omitted)
 - Extraction: 100% EXTRACTED · 0% INFERRED · 0% AMBIGUOUS · INFERRED: 24 edges (avg confidence: 0.88)
 - Token cost: 0 input · 0 output
 
 ## Graph Freshness
-- Built from commit: `381bc3fd`
+- Built from commit: `b40b34c7`
 - Run `git rev-parse HEAD` and compare to check if the graph is stale.
 - Run `graphify update .` after code changes (no API cost).
 
@@ -21,7 +21,7 @@
 - Auth Layout & Tokens
 - Demo Data Backend
 - App State Selectors
-- package:flutter_test/flutter_test.dart
+- package:dr/app_state.dart
 - School Notification Service
 - Login & Accounts UI
 - days.dart
@@ -76,8 +76,8 @@
 - ui/messages.dart
 - app_launch_animation.dart
 - messages_new.dart
-- package:flutter_built_redux/flutter_built_redux.dart
-- grades_page.dart
+- middleware/grades.dart
+- notification_filter_test.dart
 - privacy_consent.dart
 - profile_new.dart
 - settings_actions.dart
@@ -95,7 +95,7 @@
 - diagnostics_service.dart
 - server_notification_center_new.dart
 - ui/network_protocol.dart
-- package:flutter_test/flutter_test.dart
+- ui/school_notification_opt_in_test.dart
 - intro_tour.dart
 - launch_logo_painter.dart
 - calendar_detail.dart
@@ -116,10 +116,10 @@
 - app_actions.dart
 - absences_new_design_test.dart
 - support.dart
-- homework_summary_page_new.dart
+- grades_new_design_test.dart
 - school_notification_engine.dart
 - state_persistence_service.dart
-- ui/school_notification_opt_in_test.dart
+- school_notification_settings.dart
 - poll_api.dart
 - repository_test.dart
 - server_notification_repository.dart
@@ -131,9 +131,9 @@
 - session_boundary_test.dart
 - int get
 - Built
-- glass_page_test.dart
+- class_register_new_design_test.dart
 - study_data_migration_test.dart
-- startup_offline_first_test.dart
+- school_notification_background_test.dart
 - export_page_new.dart
 - server_notification_poller.dart
 - messages_new_design_test.dart
@@ -149,10 +149,10 @@
 - profile_avatar_test.dart
 - ui/profile.dart
 - test/school_notification_opt_in_test.dart
-- desktop.dart
+- int get
 - assessment_attachments.dart
 - grades_overview.dart
-- package:shared_preferences/shared_preferences.dart
+- package:dr/analytics_service.dart
 - reducer/messages.dart
 - school_notification_opt_in.dart
 - bool get
@@ -162,17 +162,17 @@
 - analytics.dart
 - dashboard_app_header.dart
 - grades_page_new.dart
-- package:flutter/material.dart
+- package:dr/app_clock.dart
 - android_widget_service.dart
 - _
 - design_choice.dart
 - grades_actions.dart
-- parse_test.dart
+- poller_test.dart
 - product_analytics_test.dart
 - course_materials.dart
 - exam_study_plan.dart
 - school_countdown_overview.dart
-- package:dr/wrapper.dart
+- ../support/test_harness.dart
 - ui_test.dart
 - target_grade_calculator_new.dart
 - course_materials_page_new.dart
@@ -183,11 +183,11 @@
 - package:dr/actions/login_actions.dart
 - local_data_inventory_test.dart
 - export_new_design_test.dart
-- grades_page.dart
+- tutorial_service.dart
 - reducer/grades.dart
 - dart:io
 - reminder_sync.dart
-- wrapper_login_test.dart
+- parse_webpage_test.dart
 - auth_search_and_fit_test.dart
 - grades_page_container.dart
 - reminder_settings_test.dart
@@ -216,7 +216,7 @@
 - Release Tooling (iOS, Linux)
 - school_notification_settings_test.dart
 - privacy_consent_test.dart
-- launch_animation_test.dart
+- system_pages_new_design_test.dart
 - String?
 - _
 - export_test.dart
@@ -224,15 +224,15 @@
 - request_pass_reset.dart
 - account_switch_test.dart
 - utils.cpp
-- homework_summary_page_new.dart
+- grades_semester_membership_test.dart
 - server_notification_config.dart
 - sorted_grades_container.dart
 - package:flutter/foundation.dart
-- course_materials_refresh_test.dart
+- package:dr/middleware/middleware.dart
 - dashboard_card_layout.dart
 - local_data_inventory.dart
 - app_clock.dart
-- DateTime
+- package:dr/diagnostics_service.dart
 - server_notification_links_before_polls.dart
 - committed_deleteable.dart
 - export_page_test.dart
@@ -244,44 +244,44 @@
 - auth_redesign_test.dart
 - app_popup_button.dart
 - glass_segmented_control.dart
-- dart:convert
-- support.dart
+- account_switch_test.dart
+- calendar_card_container.dart
 - request_pass_reset.dart
 - grade_forecast.dart
 - messages_actions.dart
 - Project Engineering Guidelines
 - analytics_schema.dart
-- Exception
+- host_platform.dart
 - server_notification_links_before_polls.dart
-- package:flutter/services.dart
+- school_notification_keychain_test.dart
 - session.dart
 - package:flutter/material.dart
 - bool get
 - school_proxy_test.dart
-- grades_new_design_test.dart
+- package:dio/dio.dart
 - grades_format.dart
 - linkified_text.dart
 - committed_deleteable.dart
 - poll_storage.dart
-- login_page.dart
+- List
 - homework_filter.dart
 - server_notification_links.dart
 - sidebar_collapsed_test.dart
 - ui/pass_reset.dart
 - school_notification_settings.dart
 - @immutable
-- grade_average.dart
-- biometric_app_lock_overlay.dart
+- certificate_container.dart
+- biometric_app_lock_overlay_test.dart
 - export_container.dart
-- homework_filter_container.dart
-- serializers.dart
+- welcome_dialog.dart
+- DateTime?
 - ui/school_notification_opt_in_test.dart
 - startup_offline_first_test.dart
 - dashboard_customize_dialog.dart
 - middleware/notifications.dart
 - MainActivity.kt
 - ui/certificate.dart
-- class_register_cache.dart
+- Fake
 - dashboard_items.dart
 - package:dr/i18n/app_localizations.dart
 - reducer/login.dart
@@ -296,28 +296,28 @@
 - local_data.dart
 - Map
 - server_notification_links_before_polls.dart
-- subject_swatch_picker.dart
+- package:dr/theme/app_palette.dart
 - school_notification_engine_test.dart
-- android_widget_service_test.dart
+- dart:convert
 - certificate_image_factory.dart
 - Win32Window
-- Future
+- biometric_app_lock_android_test.dart
 - Personal school notifications — Issue #82
-- sidebar_collapsed_test.dart
+- reducer/notifications.dart
 - reminder_link.dart
 - Issue #23 – Crash, load-time and memory triage
 - flutter_window.cpp
-- CourseMaterialsPage
-- _TopicSection
+- privacy_test_mocks.dart
+- app_language.dart
 - AppLocalizations
-- home_page_content.dart
+- package:url_launcher/url_launcher.dart
 - calendar_sync_page.dart
 - ios/Runner/AppDelegate.swift
 - middleware/certificate.dart
 - high_login_test.dart
 - app_language.dart
 - school_api_endpoints.dart
-- action
+- package:dr/startup_timeline.dart
 - controlled_text_builder.dart
 - target_grade_calculation_test.dart
 - _ServerNotificationDetailViewState
@@ -325,41 +325,24 @@
 - reminder_sync_test.dart
 - grade_statistics.dart
 - calendar_date.dart
-- api
+- ColorScheme
 - middleware/course_materials.dart
-- clear
-- file
-- key
 - CalendarSyncService
 - AbsencesStatisticWidget
-- last
-- _load
 - AuthFieldBorder
 - privacy_test_mocks.dart
-- _loggedIn
 - ClassRegisterPage
-- login
-- next
-- otherAccounts
-- _ImportGrades
+- server_notification_bell.dart
 - shell_routing_test.dart
 - _Input
-- schoolNotificationOperation
-- _FitOrGrow
 - my_application_activate
 - _ImportGrades
 - dart:convert
 - _Input
-- session
 - _AccountList
-- HomeworkType
 - PrivacyStore
 - _LegalLinks
-- statePersistenceService
-- url
-- user
 - _FutureAbsenceDialog
-- wrapper
 - assessment
 - attachments
 - _buildDay
@@ -406,16 +389,14 @@
 - _AppLaunchAnimationState
 - Operation.insert
 - Flatpak Build Manifest
-- package:dr/privacy_log.dart
+- package:flutter/foundation.dart
 - _ServerNotificationDetailViewState
 - _ServerNotificationCenterPageState
 - method_call
 - Analytics implementation report — Digitales Register
-- AnalyticsSink
 - Flatpak App Manifest
 - TelemetryCollection
 - PrivacyStore
-- AnalyticsLocalStore
 - schoolNotificationDispatcher
 - file_open_portal.cc
 - Linux Runner
@@ -436,7 +417,7 @@
 - WidgetSyncTrace.kt
 - Dashboard-Redesign – Issue #100
 - export_service.dart
-- package:dr/theme/app_palette.dart
+- calendar_card.dart
 - Dependency Overrides (Forks)
 - README.md
 - Privacy and diagnostics implementation audit
@@ -520,11 +501,11 @@
 ## Import Cycles
 - None detected.
 
-## Communities (498 total, 128 thin omitted)
+## Communities (479 total, 109 thin omitted)
 
 ### Community 0 - "middleware/middleware.dart"
 Cohesion: 0.02
-Nodes (174): 1, absenceGroup, _absencesMiddleware, _addFutureAbsence, average, _buildAbsenceDetails, _buildJustifyAbsencePayload, _buildRemoveFutureAbsencePayload (+166 more)
+Nodes (151): 1, absenceGroup, _absencesMiddleware, _addFutureAbsence, average, _buildAbsenceDetails, _buildJustifyAbsencePayload, _buildRemoveFutureAbsencePayload (+143 more)
 
 ### Community 1 - "Domain Models (Absences, Homework)"
 Cohesion: 0.01
@@ -546,9 +527,9 @@ Nodes (141): _absenceEntry, _absenceGroups, _addFutureAbsence, _archiveMessage, 
 Cohesion: 0.01
 Nodes (125): absences, address, all, allDays, _allSubjectsCache, _allTeachersCache, amoledMode, askWhenDelete (+117 more)
 
-### Community 6 - "package:flutter_test/flutter_test.dart"
+### Community 6 - "package:dr/app_state.dart"
 Cohesion: 0.02
-Nodes (98): build, CalendarCardContainer, CalendarCardViewModel, day, hashCode, hour, hourIndex, noInternet (+90 more)
+Nodes (121): build, ChartLegendContainer, subjectsOf, AbsenceGroup, CalendarDay, CalendarHour, Day, FutureAbsence (+113 more)
 
 ### Community 7 - "School Notification Service"
 Cohesion: 0.02
@@ -575,12 +556,12 @@ Cohesion: 0.02
 Nodes (93): _, activeTint, aroundGradient, blur, blurAllowed, blurPaused, border, borderRadius (+85 more)
 
 ### Community 13 - "package:dr/app_state.dart"
-Cohesion: 0.03
-Nodes (64): delete, save, build, ChartLegendContainer, subjectsOf, certificateReducerBuilder, _loaded, _networkProtocol (+56 more)
+Cohesion: 0.02
+Nodes (73): delete, save, AppState, build, NewGradesPageContainer, NewGradesViewModel, _networkProtocol, networkProtocolReducerBuilder (+65 more)
 
 ### Community 14 - "Wrapper"
-Cohesion: 0.04
-Nodes (51): Wrapper, base, client, _entry, fileOf, folderOf, isRetired, main (+43 more)
+Cohesion: 0.03
+Nodes (67): Wrapper, base, client, _entry, fileOf, folderOf, isRetired, main (+59 more)
 
 ### Community 15 - "Design Token Palette"
 Cohesion: 0.02
@@ -592,15 +573,15 @@ Nodes (86): _applySnapshot, build, _buildBody, _ChipData, classComment, classNam
 
 ### Community 17 - "Stateful Widget States"
 Cohesion: 0.04
-Nodes (80): LifecycleObserver, ServerNotificationService, AppThemeController, DesignChoiceScreen, _DesignChoiceScreenState, offerDesignChoice, _AbsenceJustificationDialog, _AbsenceJustificationDialogState (+72 more)
+Nodes (71): DesignChoiceScreen, _DesignChoiceScreenState, offerDesignChoice, _AbsenceJustificationDialog, _AbsenceJustificationDialogState, _BarItem, _BarItemState, _LensTrack (+63 more)
 
 ### Community 18 - "center_new_design_test.dart"
-Cohesion: 0.02
-Nodes (84): build, focusAppId, focusSchoolId, NotificationPageContainer, Notification, NotificationFilter, _delete, _deleteAll (+76 more)
+Cohesion: 0.05
+Nodes (39): _a, allRead, _app, _appItems, _b, _centers, _detailHeader, done (+31 more)
 
 ### Community 19 - "Intro Illustrations & Grade Stats"
-Cohesion: 0.03
-Nodes (74): build, child, _EmptyStatistics, GradesStatisticsContainer, icon, _SectionCard, _show, _showExplanation (+66 more)
+Cohesion: 0.02
+Nodes (105): build, child, _EmptyStatistics, GradesStatisticsContainer, icon, _SectionCard, _show, _showExplanation (+97 more)
 
 ### Community 20 - "absences_page.dart"
 Cohesion: 0.07
@@ -620,19 +601,19 @@ Nodes (92): a, aList, b, backgroundColor, bList, build, c, calculateEaster (+84 
 
 ### Community 24 - "Launch Splash Tokens"
 Cohesion: 0.03
-Nodes (69): androidSplashIcon, androidSplashMask, at, background, breatheEnd, canvas, checkCorner, checkFirstLength (+61 more)
+Nodes (70): androidSplashIcon, androidSplashMask, at, background, breatheEnd, canvas, checkCorner, checkFirstLength (+62 more)
 
 ### Community 25 - "profile_new_design_test.dart"
-Cohesion: 0.06
-Nodes (25): build, ProfileContainer, GlassCard, amoled, _Calls, changeEmail, _full, _key (+17 more)
+Cohesion: 0.03
+Nodes (54): build, DashboardGradeCard, DashboardNextAssessmentCard, latest, recent, build, GradesChartContainer, isFullscreen (+46 more)
 
 ### Community 26 - "Calendar Sync Service"
 Cohesion: 0.02
 Nodes (73): accountName, _allDayStart, _appendMarker, _buildDesiredItem, calendarId, CalendarSyncCalendar, CalendarSyncCalendarsOverride, CalendarSyncDefaultCalendarOverride (+65 more)
 
 ### Community 27 - "Homework & Grade Payloads"
-Cohesion: 0.03
-Nodes (65): attachments, buildAttachment, buildCalendarDay, buildCalendarHour, buildCompetence, buildDay, buildGradeAll, buildGradeDetail (+57 more)
+Cohesion: 0.02
+Nodes (77): HomeworkExam, LessonContent, Teacher, TimeSpan, main, attachments, buildAttachment, buildCalendarDay (+69 more)
 
 ### Community 28 - "Server Notification Center"
 Cohesion: 0.03
@@ -640,11 +621,11 @@ Nodes (72): _clearSelection, confirmed, confirmServerNotificationDismissal, crea
 
 ### Community 29 - "homework_summary_new_design_test.dart"
 Cohesion: 0.04
-Nodes (40): build, ExtrasPageContainer, amoled, border, _finish, _html, main, newDesign (+32 more)
+Nodes (43): build, ExtrasPageContainer, class, id, main, amoled, border, _finish (+35 more)
 
 ### Community 30 - "Day"
-Cohesion: 0.03
-Nodes (62): l10n, legacyRow, main, main, _backdropLayers, _layerOf, layers, _longList (+54 more)
+Cohesion: 0.02
+Nodes (90): normalized, _normalizeSchoolUrl, null, schoolNameForUrl, schools, main, _offer, offering (+82 more)
 
 ### Community 31 - "Certificate Page"
 Cohesion: 0.03
@@ -652,7 +633,7 @@ Nodes (69): a, adaptCertificateHtml, _adapted, available, b, baseUrl, _body, bui
 
 ### Community 32 - "Glass Page Layout"
 Cohesion: 0.03
-Nodes (73): _, build, columns, DashboardColumns, DashboardColumnsView, forWindow, listPadding, main (+65 more)
+Nodes (61): actionIcon, actionLabel, actions, _actionWidth, body, bottom, build, builder (+53 more)
 
 ### Community 33 - "routing.dart"
 Cohesion: 0.03
@@ -667,20 +648,20 @@ Cohesion: 0.03
 Nodes (64): _AbsencesBadge, _availableFavorites, build, _cancelled, child, colorGrades, competenceStarsScale, count (+56 more)
 
 ### Community 36 - "Day"
-Cohesion: 0.03
-Nodes (60): absences, absencesReducerBuilder, _applyLoaded, futureAbsences, _loaded, _parseAbsence, _parseAbsences, parsed (+52 more)
+Cohesion: 0.04
+Nodes (40): amoled, _header, _hour, _lesson, main, _monday, _phone, pumpApp (+32 more)
 
 ### Community 37 - "Absence Group Container"
-Cohesion: 0.03
-Nodes (58): AbsenceGroupContainer, _AbsenceGroupViewModel, AbsencesViewModel, build, canJustify, duration, fromTo, group (+50 more)
+Cohesion: 0.04
+Nodes (48): absence, _AbsenceCard, AbsenceEntry, AbsencesPageNew, _AbsencesPageNewState, _addFutureAbsence, _body, build (+40 more)
 
 ### Community 38 - "return"
-Cohesion: 0.06
-Nodes (29): build, CalendarViewSwitcher, exams, maxWidth, _reservedWidth, _calendarHeader, _calendarHeaderSurface, _current (+21 more)
+Cohesion: 0.07
+Nodes (24): _calendarHeader, _calendarHeaderSurface, _current, _expectOneHeading, _finish, _headerNodes, _headerOf, headers (+16 more)
 
 ### Community 39 - "new_design_test.dart"
-Cohesion: 0.03
-Nodes (53): FloatingGlass, GlassEdge, GlassRimBorder, _allSchemes, build, costs, createState, _dashboardState (+45 more)
+Cohesion: 0.02
+Nodes (89): Pages, appNavigation, AppNavigationContainer, build, _build, current, _open, rail (+81 more)
 
 ### Community 40 - "local_reminder_assessments.dart"
 Cohesion: 0.03
@@ -707,8 +688,8 @@ Cohesion: 0.03
 Nodes (57): any, availableSubjects, cannotConnectTo, _checkIsList, _checkIsMap, containsStringIgnoreCase, containsSubjectIgnoreCase, convert (+49 more)
 
 ### Community 46 - "homework_summary_page.dart"
-Cohesion: 0.03
-Nodes (57): _applySnapshot, build, _buildBody, _cellAt, cells, _cleanText, createState, dateText (+49 more)
+Cohesion: 0.02
+Nodes (81): count, decoded, number, parseCompetenceList, parseCompetenceMap, parseStarCount, parseStarScale, toInt (+73 more)
 
 ### Community 47 - "server_notification_popup.dart"
 Cohesion: 0.04
@@ -716,11 +697,11 @@ Nodes (57): _announcement, _blocked, blockedChanges, build, child, _close, creat
 
 ### Community 48 - "app_navigation.dart"
 Cohesion: 0.03
-Nodes (63): All Android widgets, Home-screen preparation widgets, iOS signing and verification, PlanningWidgets, _actions, _activate, AppDestination, appNavigationBarExtent (+55 more)
+Nodes (54): _actions, _activate, AppDestination, appNavigationBarExtent, appNavigationBarHeight, AppNavigationRail, appNavigationRailExtent, axis (+46 more)
 
 ### Community 49 - "main.dart"
-Cohesion: 0.03
-Nodes (54): actions, amoledMode, biometricAppLockEnabled, build, context, didChangeAppLifecycleState, extraWaitMs, _foreground (+46 more)
+Cohesion: 0.04
+Nodes (53): actions, amoledMode, biometricAppLockEnabled, build, context, didChangeAppLifecycleState, extraWaitMs, _foreground (+45 more)
 
 ### Community 50 - "certificate_container.dart"
 Cohesion: 0.07
@@ -732,7 +713,7 @@ Nodes (56): all, body, buildSchoolNotificationText, changes, count, day, days, d
 
 ### Community 52 - "reminder_settings.dart"
 Cohesion: 0.04
-Nodes (56): _addAssessmentDay, _anyEnabled, assessmentDays, _assessmentKinds, assessmentMinuteOfDay, assessmentsEnabled, build, _checkPermission (+48 more)
+Nodes (58): _addAssessmentDay, _anyEnabled, assessmentDays, _assessmentKinds, assessmentMinuteOfDay, assessmentsEnabled, build, _checkPermission (+50 more)
 
 ### Community 53 - "middleware/settings.dart"
 Cohesion: 0.03
@@ -740,11 +721,11 @@ Nodes (58): _allKnownSubjectsHavePrimaryTeacher, allSubjects, _applyDetectedSubs
 
 ### Community 54 - "ui/calendar.dart"
 Cohesion: 0.03
-Nodes (61): _animatePageCurve, _animatePageDuration, animatingPages, _availableFavoriteSubjects, bottom, build, _buildNew, _chevronOpacityAnimation (+53 more)
+Nodes (60): _animatePageCurve, _animatePageDuration, animatingPages, _availableFavoriteSubjects, bottom, build, _buildNew, _chevronOpacityAnimation (+52 more)
 
 ### Community 55 - "product_analytics.dart"
-Cohesion: 0.04
-Nodes (56): AcademicDataOwnership, _accepted, _accountKey, _accountOpen, _accountProperties, applyPrivacyState, clear, clearIdentity (+48 more)
+Cohesion: 0.03
+Nodes (59): AcademicDataOwnership, _accepted, _accountKey, _accountOpen, _accountProperties, AnalyticsLocalStore, applyPrivacyState, clear (+51 more)
 
 ### Community 56 - "reducer/settings.dart"
 Cohesion: 0.04
@@ -760,19 +741,19 @@ Nodes (47): body, build, _buildMessageList, _buildNew, cached, _CachedMessageDel
 
 ### Community 59 - "app_launch_animation.dart"
 Cohesion: 0.04
-Nodes (46): _advance, AppLaunchGate, appLaunchInProgress, build, _buildOverlay, checkEmphasis, child, _controller (+38 more)
+Nodes (48): _advance, AppLaunchAnimation, _AppLaunchAnimationState, AppLaunchGate, appLaunchInProgress, build, _buildOverlay, checkEmphasis (+40 more)
 
 ### Community 60 - "messages_new.dart"
 Cohesion: 0.04
 Nodes (51): attachment, _AttachmentRow, _Badge, _badgeOf, _badgeText, _body, build, _controller (+43 more)
 
-### Community 61 - "package:flutter_built_redux/flutter_built_redux.dart"
-Cohesion: 0.07
-Nodes (21): appNavigation, AppNavigationContainer, build, _build, current, _open, rail, build (+13 more)
-
-### Community 62 - "grades_page.dart"
+### Community 61 - "middleware/grades.dart"
 Cohesion: 0.05
-Nodes (29): build, _ExtrasEntry, ExtrasPage, icon, onTap, subtitle, _AverageRow, build (+21 more)
+Nodes (41): config, current, _doForSemester, _enter, every, _findSubject, _grade, _gradesLock (+33 more)
+
+### Community 62 - "notification_filter_test.dart"
+Cohesion: 0.07
+Nodes (25): build, focusAppId, focusSchoolId, NotificationPageContainer, Notification, NotificationFilter, _app, _bell (+17 more)
 
 ### Community 63 - "privacy_consent.dart"
 Cohesion: 0.04
@@ -795,8 +776,8 @@ Cohesion: 0.04
 Nodes (47): after, animation, average, bandGradient, _bandHalf, before, build, canDismiss (+39 more)
 
 ### Community 68 - "analytics_service.dart"
-Cohesion: 0.03
-Nodes (44): _analytics, analyticsCollection, AnalyticsService, available, _capabilities, crashCollection, deleteReports, _ensure (+36 more)
+Cohesion: 0.05
+Nodes (28): _analytics, analyticsCollection, AnalyticsService, available, _capabilities, crashCollection, deleteReports, _ensure (+20 more)
 
 ### Community 69 - "grade_calculator.dart"
 Cohesion: 0.04
@@ -815,8 +796,8 @@ Cohesion: 0.16
 Nodes (5): Cocoa, FlutterMacOS, AppDelegate, MainFlutterWindow, resetPrivacySDKDefaults()
 
 ### Community 73 - "server_notification_service.dart"
-Cohesion: 0.04
-Nodes (41): ServerNotificationPoller, ServerNotificationRepository, _baseUri, _client, didChangeAppLifecycleState, dispose, enabled, _enabledByBuild (+33 more)
+Cohesion: 0.06
+Nodes (33): AppClock, BiometricAppLockController, LifecycleObserver, ServerPollController, ChangeNotifier, ServerNotificationRepository, _baseUri, _client (+25 more)
 
 ### Community 74 - "package:dr/analytics_service.dart"
 Cohesion: 0.06
@@ -824,7 +805,7 @@ Nodes (35): _accountDownloadFolder, askShouldOverwriteFile, _attachmentDownloadD
 
 ### Community 75 - "school_notification_service_test.dart"
 Cohesion: 0.04
-Nodes (49): AppLocalizationsContext, SchoolNotificationScheduler, SchoolNotificationService, _Native, _FakeContext, android, androidBackgroundSupported, attempts (+41 more)
+Nodes (44): SchoolNotificationScheduler, SchoolNotificationService, android, androidBackgroundSupported, attempts, authenticated, _BackgroundHarness, blocked (+36 more)
 
 ### Community 76 - "live_contract_test.dart"
 Cohesion: 0.05
@@ -842,9 +823,9 @@ Nodes (32): _calendarMiddleware, _calendarWeekRequests, _clearSelection, _curren
 Cohesion: 0.07
 Nodes (29): NetworkProtocolItem, address, addressInfo, build, content, _contentLength, _contentPreview, _formatProtocolContent (+21 more)
 
-### Community 80 - "package:flutter_test/flutter_test.dart"
-Cohesion: 0.02
-Nodes (85): Pages, Message, FloatingNavigationBar, blockAt, blocked, failFirst, main, release (+77 more)
+### Community 80 - "ui/school_notification_opt_in_test.dart"
+Cohesion: 0.06
+Nodes (28): HomePageContentViewModel, account, build, DrawerCallback, HomePageContent, vm, async, calendarRequests (+20 more)
 
 ### Community 81 - "intro_tour.dart"
 Cohesion: 0.04
@@ -856,7 +837,7 @@ Nodes (39): _background, _check, _checkDot, checkEmphasis, checkProgress, _farth
 
 ### Community 83 - "calendar_detail.dart"
 Cohesion: 0.05
-Nodes (40): _animationController, build, _buildNew, CalendarDetail, CalendarDetailPage, _CalendarDetailPageState, _CalendarDetailState, CalendarDetailWrapper (+32 more)
+Nodes (38): _animationController, build, _buildNew, CalendarDetail, CalendarDetailPage, _CalendarDetailPageState, _CalendarDetailState, CalendarDetailWrapper (+30 more)
 
 ### Community 84 - "runtime_cache.dart"
 Cohesion: 0.06
@@ -876,7 +857,7 @@ Nodes (9): _HighlightPainter, EventEdgePainter, GlassFocusRingPainter, GlassLens
 
 ### Community 88 - "course_materials_page.dart"
 Cohesion: 0.05
-Nodes (39): _applySnapshot, build, _buildBody, course, _CourseCard, _CourseEntryTile, _CourseMaterialsContent, _CourseMaterialsError (+31 more)
+Nodes (43): _applySnapshot, build, _buildBody, course, _CourseCard, _CourseEntryTile, _CourseMaterialsContent, _CourseMaterialsError (+35 more)
 
 ### Community 89 - "dashboard_edit_mode.dart"
 Cohesion: 0.05
@@ -891,8 +872,8 @@ Cohesion: 0.05
 Nodes (41): attentionRevision, body, _bodyMaxChars, _color, colorValue, compareNewestFirst, critical, _cursorMaxChars (+33 more)
 
 ### Community 92 - "test_harness.dart"
-Cohesion: 0.05
-Nodes (38): aOptions, binding, bootstrapTestEnvironment, buildTestApp, containsKey, count, createStore, delete (+30 more)
+Cohesion: 0.03
+Nodes (65): aOptions, _box, containsKey, _createKeyFile, delete, deleteAll, demo, DesktopSecureStorage (+57 more)
 
 ### Community 93 - "export_pdf.dart"
 Cohesion: 0.05
@@ -926,29 +907,29 @@ Nodes (34): AbsencesPageContainer, build, GlassPage, main, amoled, ensureVisible
 Cohesion: 0.07
 Nodes (25): _code, main, _sources, baseAddress, demoMode, failingKey, failWrites, legacyFile (+17 more)
 
-### Community 101 - "homework_summary_page_new.dart"
-Cohesion: 0.07
-Nodes (27): add, _addGrade, allowed, amoled, enterText, _expectBlurOnlyInHeader, _inShell, languageCode (+19 more)
+### Community 101 - "grades_new_design_test.dart"
+Cohesion: 0.03
+Nodes (54): GradeEntryRow, main, main, _allSchemes, _cancelledState, _closePanel, ensureVisible, favoriteSubjects (+46 more)
 
 ### Community 102 - "school_notification_engine.dart"
 Cohesion: 0.05
 Nodes (39): account, aliases, allows, anyCategory, baselineNext, category, categoryFor, consent (+31 more)
 
 ### Community 103 - "state_persistence_service.dart"
-Cohesion: 0.03
-Nodes (62): DaysLoadedPayload, ChangePassPayload, LoggedInPayload, LoginFailedPayload, LoginPayload, LogoutPayload, AppState, CalendarState (+54 more)
+Cohesion: 0.05
+Nodes (40): absencesState, AppStatePersistenceService, calendarState, certificateState, clear, dashboardState, debounce, deletedData (+32 more)
 
-### Community 104 - "ui/school_notification_opt_in_test.dart"
-Cohesion: 0.06
-Nodes (25): build, _busy, createState, _diagnostic, didChangeAppLifecycleState, dispose, _failed, _frame (+17 more)
+### Community 104 - "school_notification_settings.dart"
+Cohesion: 0.12
+Nodes (13): build, _busy, createState, _diagnostic, didChangeAppLifecycleState, dispose, _failed, _frame (+5 more)
 
 ### Community 105 - "poll_api.dart"
 Cohesion: 0.07
 Nodes (35): alreadyVoted, baseUri, _client, close, fetch, _http, _json, _maxBodyBytes (+27 more)
 
 ### Community 106 - "repository_test.dart"
-Cohesion: 0.06
-Nodes (30): ServerNotificationFailure, ServerNotificationStorage, SharedPreferencesServerNotificationStorage, appPackageInfo, c, failure, main, server (+22 more)
+Cohesion: 0.04
+Nodes (54): ServerNotificationFailure, ServerNotificationStorage, SharedPreferencesServerNotificationStorage, appPackageInfo, c, failure, main, server (+46 more)
 
 ### Community 107 - "server_notification_repository.dart"
 Cohesion: 0.05
@@ -956,15 +937,15 @@ Nodes (39): _adoptBacklog, _api, _apply, byId, _clockOffset, _collectionIds, _de
 
 ### Community 108 - "login_actions.dart"
 Cohesion: 0.05
-Nodes (37): addAccount, automaticallyReloggedIn, cause, changePass, clearAfterLoginCallbacks, email, forced, fromStorage (+29 more)
+Nodes (36): addAccount, automaticallyReloggedIn, cause, changePass, clearAfterLoginCallbacks, email, forced, fromStorage (+28 more)
 
 ### Community 109 - "middleware/profile.dart"
 Cohesion: 0.05
 Nodes (38): _changeEmail, codiceFiscale, contentType, _defaultPickProfilePicture, fileName, _guessImageMimeType, _isJpegProfilePicture, _isServerLanguageSupported (+30 more)
 
 ### Community 110 - "biometric_app_lock.dart"
-Cohesion: 0.05
-Nodes (35): AppClock, _androidAppLockChannel, _appLockEnabledMarker, _appLockPromptInfo, _appLockStorageName, _authenticate, authenticateIfNeeded, _authenticateOnAndroid (+27 more)
+Cohesion: 0.08
+Nodes (24): _androidAppLockChannel, _appLockEnabledMarker, _appLockPromptInfo, _appLockStorageName, _authenticate, authenticateIfNeeded, _authenticateOnAndroid, biometricAvailabilityMessage (+16 more)
 
 ### Community 111 - "reminder_notifications.dart"
 Cohesion: 0.05
@@ -979,24 +960,24 @@ Cohesion: 0.06
 Nodes (38): answer, _AnyPathWrapper, async, baseAddress, config, contentType, count, _delivered (+30 more)
 
 ### Community 114 - "int get"
-Cohesion: 0.07
-Nodes (22): changeEmail, ChangeEmailPayload, email, load, loaded, pass, pickAndUploadProfilePicture, sendNotificationEmails (+14 more)
+Cohesion: 0.06
+Nodes (22): build, ChartLegendEntryContainer, ChartLegendEntryVM, config, from, name, subjectName, build (+14 more)
 
 ### Community 115 - "Built"
-Cohesion: 0.05
-Nodes (35): addReminder, AddReminderPayload, attachmentReady, data, date, deduplicateEntries, deleteHomework, done (+27 more)
+Cohesion: 0.06
+Nodes (34): addReminder, AddReminderPayload, attachmentReady, data, date, DaysLoadedPayload, deduplicateEntries, deleteHomework (+26 more)
 
-### Community 116 - "glass_page_test.dart"
-Cohesion: 0.03
-Nodes (52): amoled, fromExtras, _key, languageCode, _lesson, _lessons, main, newDesign (+44 more)
+### Community 116 - "class_register_new_design_test.dart"
+Cohesion: 0.05
+Nodes (33): found, nested, open, _openCenter, openServerNotificationLink, route, _select, serverNotificationDestinations (+25 more)
 
 ### Community 117 - "study_data_migration_test.dart"
 Cohesion: 0.05
 Nodes (34): abortAt, _account, attachments, contents, _count, createFiles, delete, expectNothingLost (+26 more)
 
-### Community 118 - "startup_offline_first_test.dart"
-Cohesion: 0.10
-Nodes (19): _SchoolServer, LoginAdapter, _Server, _SessionApi, _FakeAdapter, bootstrapTestEnvironment, close, config (+11 more)
+### Community 118 - "school_notification_background_test.dart"
+Cohesion: 0.11
+Nodes (14): _SchoolServer, LoginAdapter, _Server, channel, close, closed, fetch, id (+6 more)
 
 ### Community 119 - "export_page_new.dart"
 Cohesion: 0.06
@@ -1007,8 +988,8 @@ Cohesion: 0.06
 Nodes (33): _active, _attempt, backoff, backoffBase, backoffMax, clampInterval, defaultInterval, _delayAfter (+25 more)
 
 ### Community 121 - "messages_new_design_test.dart"
-Cohesion: 0.04
-Nodes (50): build, MessagesPageContainer, _changed, _created, _dayBefore, _deleted, l10n, main (+42 more)
+Cohesion: 0.03
+Nodes (60): build, MessagesPageContainer, Message, countsTowardAverage, denominator, numerator, rounded, roundedGradeAverage (+52 more)
 
 ### Community 122 - "days_container.dart"
 Cohesion: 0.06
@@ -1028,7 +1009,7 @@ Nodes (34): applyTo, attachments, contains, decode, delete, deleteKey, empty, en
 
 ### Community 126 - "export_page.dart"
 Cohesion: 0.06
-Nodes (33): build, _busy, _cacheRecords, _change, _chooseDates, _chooseEntries, createState, didUpdateWidget (+25 more)
+Nodes (34): ExportFormat, build, _busy, _cacheRecords, _change, _chooseDates, _chooseEntries, createState (+26 more)
 
 ### Community 127 - "file_picker_linux_portal_test.dart"
 Cohesion: 0.06
@@ -1043,8 +1024,8 @@ Cohesion: 0.06
 Nodes (34): _clean, closesAt, _formatTime, id, isClosedAt, _isUnsafe, knownServerPollTypes, label (+26 more)
 
 ### Community 130 - "grades_panels.dart"
-Cohesion: 0.06
-Nodes (34): GlassPanel, _barHeight, build, cancelled, colorGrades, comparison, competence, CompetenceLine (+26 more)
+Cohesion: 0.05
+Nodes (42): build, _changeText, comparison, GradesHistoryContainer, _HistoryDialog, logOpened, _showHistory, GradeHistoryComparison (+34 more)
 
 ### Community 131 - "profile_avatar_test.dart"
 Cohesion: 0.06
@@ -1056,11 +1037,11 @@ Nodes (32): ProfileState, OnSettingChanged, AsyncVoidCallback, baseUrl, biometri
 
 ### Community 133 - "test/school_notification_opt_in_test.dart"
 Cohesion: 0.06
-Nodes (31): allowed, canAsk, clear, create, _data, directory, _Disk, event (+23 more)
+Nodes (32): allowed, canAsk, clear, create, _data, directory, _Disk, event (+24 more)
 
-### Community 134 - "desktop.dart"
-Cohesion: 0.05
-Nodes (27): aOptions, _box, containsKey, _createKeyFile, delete, deleteAll, demo, DesktopSecureStorage (+19 more)
+### Community 134 - "int get"
+Cohesion: 0.08
+Nodes (19): canonicalSchoolServer, fileId, hashCode, operator, server, toString, trimmed, uri (+11 more)
 
 ### Community 135 - "assessment_attachments.dart"
 Cohesion: 0.06
@@ -1070,9 +1051,9 @@ Nodes (32): _absolutePath, AssessmentAttachment, assessmentAttachmentFolder, ass
 Cohesion: 0.06
 Nodes (28): build, forecast, GradesForecastContainer, _GradesForecastRow, _showExplanation, GradeForecast, GlassTile, build (+20 more)
 
-### Community 137 - "package:shared_preferences/shared_preferences.dart"
-Cohesion: 0.03
-Nodes (52): _active, _checkingOffer, _chooseDesign, _designAskedThisRun, designChoiceKey, designChoicePending, _legacyPrefix, maybeOffer (+44 more)
+### Community 137 - "package:dr/analytics_service.dart"
+Cohesion: 0.14
+Nodes (7): main, main, main, open, app, main, main
 
 ### Community 138 - "reducer/messages.dart"
 Cohesion: 0.06
@@ -1080,11 +1061,11 @@ Nodes (33): MessageAttachmentFile, _archivedMessage, _archiveMessage, _archiveMe
 
 ### Community 139 - "school_notification_opt_in.dart"
 Cohesion: 0.06
-Nodes (32): SchoolNotificationOptInOffer, account, accountLabel, _available, build, _busy, _changed, _check (+24 more)
+Nodes (34): SchoolNotificationOptInOffer, account, accountLabel, _available, build, _busy, _changed, _check (+26 more)
 
 ### Community 140 - "bool get"
-Cohesion: 0.06
-Nodes (24): build, CalendarDetailContainer, CalendarDetailItemContainer, CalendarDetailItemVM, CalendarDetailVM, date, day, hashCode (+16 more)
+Cohesion: 0.11
+Nodes (16): build, CalendarDetailContainer, CalendarDetailItemContainer, CalendarDetailItemVM, CalendarDetailVM, date, day, hashCode (+8 more)
 
 ### Community 141 - "middleware/calendar.dart"
 Cohesion: 0.06
@@ -1095,8 +1076,8 @@ Cohesion: 0.06
 Nodes (29): channel, clear, clearWithParameters, close, config, _configPage, connectionFailures, currentUserId (+21 more)
 
 ### Community 143 - "reducer/dashboard.dart"
-Cohesion: 0.07
-Nodes (27): _attachmentReady, dashboardReducerBuilder, daysToDelete, _downloadAttachment, _homeworkAdded, _homeworkRemoved, items, _loaded (+19 more)
+Cohesion: 0.04
+Nodes (43): build, _collectionEquality, error, hashCode, LoginCallback, LoginPage, LoginPageViewModel, operator (+35 more)
 
 ### Community 144 - "analytics.dart"
 Cohesion: 0.09
@@ -1107,16 +1088,16 @@ Cohesion: 0.05
 Nodes (38): build, buttonInset, child, contentInset, DashboardBackdrop, _discSize, fadedAt, floatingButtonInset (+30 more)
 
 ### Community 146 - "grades_page_new.dart"
-Cohesion: 0.06
-Nodes (27): GlassStateCard, _body, build, callbacks, changeSemester, chartHeight, floatingMaxWidth, GradesPageNew (+19 more)
+Cohesion: 0.05
+Nodes (32): build, CalendarViewSwitcher, exams, maxWidth, _reservedWidth, GlassStateCard, _body, build (+24 more)
 
-### Community 147 - "package:flutter/material.dart"
-Cohesion: 0.04
-Nodes (39): build, DashboardGradeCard, DashboardNextAssessmentCard, latest, recent, build, DashboardStudyPlanCard, _openStudyPlan (+31 more)
+### Community 147 - "package:dr/app_clock.dart"
+Cohesion: 0.11
+Nodes (10): build, DashboardStudyPlanCard, _openStudyPlan, emptyTimeline, main, _card, main, pumpLayout (+2 more)
 
 ### Community 148 - "android_widget_service.dart"
-Cohesion: 0.07
-Nodes (28): AndroidWidgetLaunchDestination, AndroidWidgetSnapshotService, androidWidgetSnapshotStorageKey, _bridge, _channel, _channelName, clear, consumeLaunchDestination (+20 more)
+Cohesion: 0.06
+Nodes (30): AndroidWidgetLaunchDestination, AndroidWidgetPlatformBridge, AndroidWidgetSnapshotService, androidWidgetSnapshotStorageKey, _bridge, _channel, _channelName, clear (+22 more)
 
 ### Community 149 - "_"
 Cohesion: 0.06
@@ -1127,16 +1108,16 @@ Cohesion: 0.06
 Nodes (32): _, actualFutureScore, calculateTargetGrades, costs, currentAverage, desiredUnits, existingScore, existingWeight (+24 more)
 
 ### Community 151 - "grades_actions.dart"
-Cohesion: 0.08
-Nodes (18): cancelledDescriptionLoaded, data, detailsLoaded, grade, GradeCancelledDescriptionLoadedPayload, implements, load, loadCancelledDescription (+10 more)
+Cohesion: 0.05
+Nodes (38): EditReminderPayload, ToggleDonePayload, cancelledDescriptionLoaded, data, detailsLoaded, grade, GradeCancelledDescriptionLoadedPayload, implements (+30 more)
 
-### Community 152 - "parse_test.dart"
-Cohesion: 0.07
-Nodes (27): absencesJson, baseStartMinutes, _calendarLoaded, calendarPageOne, calendarPageTwo, _calendarPayloadForDate, enabled, _flushAsyncActions (+19 more)
+### Community 152 - "poller_test.dart"
+Cohesion: 0.10
+Nodes (16): ServerNotificationPoller, async, calls, FixedRandom, Harness, main, nextBool, nextDouble (+8 more)
 
 ### Community 153 - "product_analytics_test.dart"
-Cohesion: 0.07
-Nodes (23): ProductAnalytics, blockingEvent, calls, consent, decision, event, events, failEvent (+15 more)
+Cohesion: 0.06
+Nodes (26): _FirebaseAnalyticsSink, AnalyticsSink, ProductAnalytics, blockingEvent, calls, consent, decision, event (+18 more)
 
 ### Community 154 - "course_materials.dart"
 Cohesion: 0.06
@@ -1150,9 +1131,9 @@ Nodes (32): completedPhaseIds, countdownLabel, date, daysUntil, decodeStudyPhase
 Cohesion: 0.06
 Nodes (30): GradeDeadlineCountdown, HolidayCountdown, DashboardCardDecorator, additionalCards, build, _cardShape, compactSecondary, countdown (+22 more)
 
-### Community 157 - "package:dr/wrapper.dart"
-Cohesion: 0.06
-Nodes (24): main, main, _isDay, _isVenetoClosure, _isWithin, main, _DelayedGrades, main (+16 more)
+### Community 157 - "../support/test_harness.dart"
+Cohesion: 0.03
+Nodes (53): Absence, absences, absencesReducerBuilder, _applyLoaded, futureAbsences, _loaded, _parseAbsence, _parseAbsences (+45 more)
 
 ### Community 158 - "ui_test.dart"
 Cohesion: 0.07
@@ -1167,8 +1148,8 @@ Cohesion: 0.07
 Nodes (25): _body, build, count, _Course, _courseGap, CourseMaterialsPageNew, courses, createState (+17 more)
 
 ### Community 161 - "announcement_poll_test.dart"
-Cohesion: 0.08
-Nodes (22): build, child, enabled, hideWhenEmpty, iconSize, onPressed, repository, schoolUnread (+14 more)
+Cohesion: 0.14
+Nodes (11): _close, done, _drive, _id, main, _pumpDetail, pumpWidget, repository (+3 more)
 
 ### Community 162 - "diagnostics_service_test.dart"
 Cohesion: 0.07
@@ -1180,39 +1161,39 @@ Nodes (24): _choose, ensureVisible, _Fixture, json, main, _optionA, _optionB, pa
 
 ### Community 164 - "server_poll_page.dart"
 Cohesion: 0.07
-Nodes (27): ServerPolls, action, build, _build, _confirm, _controller, createState, dispose (+19 more)
+Nodes (28): ServerPoll, ServerPolls, action, build, _build, _confirm, _controller, createState (+20 more)
 
 ### Community 165 - "package:dr/actions/login_actions.dart"
-Cohesion: 0.06
-Nodes (15): build, RequestPassResetContainer, appReducerBuilder, _config, _loggingIn, _mountState, _noInternet, _setUrl (+7 more)
+Cohesion: 0.12
+Nodes (6): appReducerBuilder, _config, _loggingIn, _mountState, _noInternet, _setUrl
 
 ### Community 166 - "local_data_inventory_test.dart"
 Cohesion: 0.07
 Nodes (26): answer, attachments, baseAddress, cacheKeys, demoMode, downloads, expectCachesGone, expectOutsideLeftAlone (+18 more)
 
 ### Community 167 - "export_new_design_test.dart"
-Cohesion: 0.07
-Nodes (26): ExportFormat, amoled, create, ensureVisible, fail, format, languageCode, loadFailed (+18 more)
+Cohesion: 0.04
+Nodes (46): UnexpectedLogoutException, authentication, channel, main, messenger, observer, promptCount, refreshCount (+38 more)
 
-### Community 168 - "grades_page.dart"
-Cohesion: 0.06
-Nodes (31): accent, aspectRatio, _Bar, build, caption, _cardPadding, child, color (+23 more)
+### Community 168 - "tutorial_service.dart"
+Cohesion: 0.12
+Nodes (14): _active, _checkingOffer, _chooseDesign, _designAskedThisRun, designChoiceKey, designChoicePending, _legacyPrefix, maybeOffer (+6 more)
 
 ### Community 169 - "reducer/grades.dart"
-Cohesion: 0.06
-Nodes (30): Competence, _addCancelledDescription, _afterAutoRelogin, _cancelledDescriptionLoaded, _containsEarlierSchoolYear, data, _detailsLoaded, false (+22 more)
+Cohesion: 0.04
+Nodes (47): _BasicGrade, Competence, DetailEntry, GradeDetail, Observation, _addCancelledDescription, _afterAutoRelogin, _cancelledDescriptionLoaded (+39 more)
 
 ### Community 170 - "dart:io"
-Cohesion: 0.04
-Nodes (41): main, main, main, _plugin, _attribute, main, match, _res (+33 more)
+Cohesion: 0.05
+Nodes (30): main, main, _plugin, _attribute, main, match, _res, _strings (+22 more)
 
 ### Community 171 - "reminder_sync.dart"
 Cohesion: 0.07
 Nodes (24): assessments, attach, debounce, dispose, _hadSession, _inputs, isOpenHomework, link (+16 more)
 
-### Community 172 - "wrapper_login_test.dart"
-Cohesion: 0.07
-Nodes (21): ParseException, class, id, main, charset, class, currentUserId, main (+13 more)
+### Community 172 - "parse_webpage_test.dart"
+Cohesion: 0.18
+Nodes (9): ParseException, charset, class, currentUserId, main, name, redirectSource, source (+1 more)
 
 ### Community 173 - "auth_search_and_fit_test.dart"
 Cohesion: 0.07
@@ -1227,16 +1208,16 @@ Cohesion: 0.08
 Nodes (20): ReminderNotificationService, assessmentMinute, assessments, build, createState, days, enabled, exams (+12 more)
 
 ### Community 176 - "sidebar.dart"
-Cohesion: 0.12
-Nodes (13): build, confirmed, confirmRemoveAccount, _confirmRemoveCurrentAccount, currentSelected, l10n, onDrawerExpansionChange, otherAccounts (+5 more)
+Cohesion: 0.07
+Nodes (18): build, confirmed, confirmRemoveAccount, _confirmRemoveCurrentAccount, currentSelected, l10n, onDrawerExpansionChange, otherAccounts (+10 more)
 
 ### Community 177 - "grade_calculator_new.dart"
 Cohesion: 0.12
 Nodes (17): colorGrades, _GradeRow, _GradeRows, _NewGradeCalculatorView, _NewGradePanel, _NewGradePanelState, _NewImportPanel, onAdd (+9 more)
 
 ### Community 178 - "support/test_harness.dart"
-Cohesion: 0.15
-Nodes (5): buildFont, ExportTtfFont, prepare, _Utf16Cmap, main
+Cohesion: 0.20
+Nodes (4): buildFont, ExportTtfFont, prepare, _Utf16Cmap
 
 ### Community 179 - "reminder_notifications_test.dart"
 Cohesion: 0.08
@@ -1251,12 +1232,12 @@ Cohesion: 0.08
 Nodes (24): email, showAbsences, showCalendar, showCertificate, showChangeEmail, showDebug, showEditCalendarSubjectNicks, showEditCalendarSubstituteSettings (+16 more)
 
 ### Community 182 - "school_notification_background.dart"
-Cohesion: 0.05
-Nodes (36): _diagnostics, onError, onRequest, onResponse, _response, DiagnosticsService, _android, background (+28 more)
+Cohesion: 0.08
+Nodes (21): _android, background, cancel, feed, fetch, fetchAll, future, initialize (+13 more)
 
 ### Community 183 - "school_proxy.dart"
-Cohesion: 0.07
-Nodes (26): DiagnosticsInterceptor, _clearClient, clearProxyCookies, _fromCloudflareInstead, isProxiedSchoolHost, isProxyQuotaResponse, newProxySlot, onError (+18 more)
+Cohesion: 0.08
+Nodes (24): _clearClient, clearProxyCookies, _fromCloudflareInstead, isProxiedSchoolHost, isProxyQuotaResponse, newProxySlot, onError, onRequest (+16 more)
 
 ### Community 184 - "middleware/messages.dart"
 Cohesion: 0.08
@@ -1267,12 +1248,12 @@ Cohesion: 0.08
 Nodes (20): DiagnosticsNavigatorObserver, _afterRootChange, destinationForPath, destinationKeys, didPop, didPush, didRemove, hasPendingDestination (+12 more)
 
 ### Community 186 - "external_links.dart"
-Cohesion: 0.07
-Nodes (27): _closingBrackets, end, _foreignScheme, hashCode, hasScheme, launchExternalLink, linkCaption, _linkInText (+19 more)
+Cohesion: 0.08
+Nodes (24): _closingBrackets, end, _foreignScheme, hashCode, hasScheme, launchExternalLink, linkCaption, _linkInText (+16 more)
 
 ### Community 187 - "grade_forecast.dart"
-Cohesion: 0.06
-Nodes (31): assign, _copyIntoAccount, _deleteQuietly, discard, ensureQuarantined, _equalEntries, exams, files (+23 more)
+Cohesion: 0.04
+Nodes (44): adopt, dropLegacyStudyData, globalSettingsPreferenceKey, legacyStudyData, load, _readStored, save, SettingsPersistenceService (+36 more)
 
 ### Community 188 - "server_notification_store.dart"
 Cohesion: 0.08
@@ -1326,41 +1307,41 @@ Nodes (18): error, errors, key, keys, log, logs, main, stacks (+10 more)
 Cohesion: 0.09
 Nodes (21): PrivacyController, PrivacyDecision, analyticsCollection, calls, controller, crashCollection, deleteReports, existing (+13 more)
 
-### Community 201 - "launch_animation_test.dart"
-Cohesion: 0.10
-Nodes (15): build, child, splash, SplashScreen, _SplashWidget, _App, build, _fullRun (+7 more)
+### Community 201 - "system_pages_new_design_test.dart"
+Cohesion: 0.05
+Nodes (30): GlassRimBorder, _App, build, _fullRun, main, navigator, _overlay, _pumpFor (+22 more)
 
 ### Community 202 - "String?"
-Cohesion: 0.09
-Nodes (19): account, addAccount, build, _closingFirst, _confirmLogout, _confirmRemoveAccount, icon, label (+11 more)
+Cohesion: 0.05
+Nodes (33): All Android widgets, Home-screen preparation widgets, iOS signing and verification, PlanningWidgets, actions, build, content, InfoDialog (+25 more)
 
 ### Community 203 - "_"
 Cohesion: 0.10
 Nodes (20): CalendarSelection, _, build, CalendarContainer, _calendarDays, CalendarViewModel, clockRevision, currentDays (+12 more)
 
 ### Community 204 - "export_test.dart"
-Cohesion: 0.10
-Nodes (13): name, saveInBrowser, day, de, exportFixture, fail, main, name (+5 more)
+Cohesion: 0.07
+Nodes (23): AuthenticatedBytesUnavailable, CourseMaterialsLoadException, ExportEmptyException, ExportTooLargeException, SchoolNotificationAuthenticationRequired, _StaleCursor, ServerNotificationSchemaException, ClassRegisterLoadException (+15 more)
 
 ### Community 205 - "grade_history.dart"
 Cohesion: 0.10
 Nodes (19): Semester, asOf, _averagesBySubject, change, compareGradeSemesters, current, currentAverage, currentSemester (+11 more)
 
 ### Community 206 - "request_pass_reset.dart"
-Cohesion: 0.06
-Nodes (28): main, main, main, attachmentsRoot, baseAddress, demoMode, _document, _exam (+20 more)
+Cohesion: 0.08
+Nodes (25): attachmentsRoot, baseAddress, demoMode, _document, _exam, failedReads, failing, failingKey (+17 more)
 
 ### Community 207 - "account_switch_test.dart"
-Cohesion: 0.08
-Nodes (23): absence, AbsenceFormPanel, AbsenceGroupWidget, _AbsenceJustificationSubmission, actions, build, children, createState (+15 more)
+Cohesion: 0.05
+Nodes (39): AbsenceGroupContainer, _AbsenceGroupViewModel, AbsencesViewModel, build, canJustify, duration, fromTo, group (+31 more)
 
 ### Community 208 - "utils.cpp"
 Cohesion: 0.13
 Nodes (4): wWinMain(), CreateAndAttachConsole(), GetCommandLineArguments(), Utf8FromUtf16()
 
-### Community 209 - "homework_summary_page_new.dart"
-Cohesion: 0.06
-Nodes (27): AboutAppDialog, build, _link, version, HomeworkSummaryDocument, HomeworkSummaryEntry, HomeworkSummaryWeek, _body (+19 more)
+### Community 209 - "grades_semester_membership_test.dart"
+Cohesion: 0.14
+Nodes (12): _setConfig, _byName, current, _detail, _load, main, null, requests (+4 more)
 
 ### Community 210 - "server_notification_config.dart"
 Cohesion: 0.10
@@ -1371,12 +1352,12 @@ Cohesion: 0.11
 Nodes (16): build, colorGrades, competenceStarsScale, favoriteSubjects, from, ignoredSubjectsForAverage, noInternet, semester (+8 more)
 
 ### Community 212 - "package:flutter/foundation.dart"
-Cohesion: 0.06
-Nodes (25): environment, HostPlatform, isAndroid, isIOS, isLinux, isMacOS, isWindows, pathSeparator (+17 more)
+Cohesion: 0.10
+Nodes (16): _active, containsKey, delete, deleteAll, DemoEntry, isDemoPath, path, read (+8 more)
 
-### Community 213 - "course_materials_refresh_test.dart"
-Cohesion: 0.07
-Nodes (23): CourseMaterialsIncompleteException, _art, cachedTitles, calendar, _course, courses, lessons, main (+15 more)
+### Community 213 - "package:dr/middleware/middleware.dart"
+Cohesion: 0.03
+Nodes (49): CourseMaterialOpenResult, CourseMaterialsIncompleteException, first, last, main, _entry, main, _art (+41 more)
 
 ### Community 214 - "dashboard_card_layout.dart"
 Cohesion: 0.10
@@ -1390,13 +1371,13 @@ Nodes (19): AccountScope, category, dataDeletionActive, deletedBy, deleteForAcco
 Cohesion: 0.10
 Nodes (17): _dateOnly, defaultDemoDate, _demoMode, demoSchoolYearEnd, demoSchoolYearStart, initialize, isDemoMode, isWithinDemoSchoolYear (+9 more)
 
-### Community 217 - "DateTime"
-Cohesion: 0.08
-Nodes (22): encode, fetchedAt, fingerprint, fingerprintForPagePayload, fromPayload, list, _normalizeJson, PagePayloadCacheService (+14 more)
+### Community 217 - "package:dr/diagnostics_service.dart"
+Cohesion: 0.05
+Nodes (34): ClassRegisterCacheService, ClassRegisterPayloadSnapshot, encode, fetchedAt, fingerprint, fingerprintForPayload, fromPayload, load (+26 more)
 
 ### Community 218 - "server_notification_links_before_polls.dart"
-Cohesion: 0.11
-Nodes (18): _alphabeticTld, every, ExternalNotificationLink, _hostLabel, InternalNotificationLink, labels, routeKey, ServerNotificationLink (+10 more)
+Cohesion: 0.13
+Nodes (14): _alphabeticTld, every, _hostLabel, labels, routeKey, ServerNotificationLink, serverNotificationRouteKeys, tld (+6 more)
 
 ### Community 219 - "committed_deleteable.dart"
 Cohesion: 0.12
@@ -1408,43 +1389,43 @@ Nodes (15): ExportFile, input, main, record, _syntheticExport, app, boundaryKey,
 
 ### Community 221 - "server_polls.dart"
 Cohesion: 0.07
-Nodes (24): ServerPoll, _api, _baseUri, _changed, dispose, _disposed, installationId, language (+16 more)
+Nodes (23): _api, _baseUri, _changed, dispose, _disposed, installationId, language, load (+15 more)
 
 ### Community 222 - "calendar_actions.dart"
-Cohesion: 0.07
-Nodes (25): CalendarLoadedPayload, completedSchoolYear, config, data, enabled, fileAvailable, implements, load (+17 more)
+Cohesion: 0.08
+Nodes (20): CalendarLoadedPayload, completedSchoolYear, config, data, enabled, fileAvailable, implements, load (+12 more)
 
 ### Community 223 - "storage_read_failure_test.dart"
 Cohesion: 0.07
 Nodes (26): actions, build, createState, dispose, initState, _load, _reload, _summary (+18 more)
 
 ### Community 224 - "calendar_week_container.dart"
-Cohesion: 0.11
-Nodes (17): build, CalendarWeekContainer, CalendarWeekViewModel, clockRevision, colorBackground, DayCallback, days, favoriteSubject (+9 more)
+Cohesion: 0.07
+Nodes (25): build, CalendarWeekContainer, CalendarWeekViewModel, clockRevision, colorBackground, DayCallback, days, favoriteSubject (+17 more)
 
 ### Community 225 - "package:dr/ui/glass_surface.dart"
-Cohesion: 0.11
-Nodes (16): actionIcon, actionLabel, build, ErrorPage, _goHome, messageKey, newDesignChosen, onAction (+8 more)
+Cohesion: 0.05
+Nodes (32): AboutAppDialog, build, _link, version, _, build, columns, DashboardColumns (+24 more)
 
 ### Community 226 - "auth_redesign_test.dart"
-Cohesion: 0.07
-Nodes (18): build, PassResetContainer, AuthMessage, capturePreview, ensureVisible, field, layouts, loadPreviewFonts (+10 more)
+Cohesion: 0.10
+Nodes (14): build, PassResetContainer, AuthMessage, capturePreview, ensureVisible, field, layouts, loadPreviewFonts (+6 more)
 
 ### Community 227 - "app_popup_button.dart"
 Cohesion: 0.11
 Nodes (19): AppPopupButton, AppPopupButtonEntry, _AppPopupButtonState, borderRadius, build, createState, enabled, entries (+11 more)
 
 ### Community 228 - "glass_segmented_control.dart"
-Cohesion: 0.06
-Nodes (27): AppStatusColors, AccentPicker, _AccentSwatch, build, label, onSelected, onTap, scheme (+19 more)
+Cohesion: 0.03
+Nodes (49): AccentPicker, _AccentSwatch, build, label, onSelected, onTap, scheme, selected (+41 more)
 
-### Community 229 - "dart:convert"
-Cohesion: 0.06
-Nodes (29): adopt, dropLegacyStudyData, globalSettingsPreferenceKey, legacyStudyData, load, _readStored, save, SettingsPersistenceService (+21 more)
+### Community 229 - "account_switch_test.dart"
+Cohesion: 0.05
+Nodes (33): SettingsState, build, RequestPassResetContainer, account, AccountWrapper, async, config, demoMode (+25 more)
 
-### Community 230 - "support.dart"
-Cohesion: 0.08
-Nodes (24): api, baseUri, client, contractText, failReads, failWrites, fixture, fixtureText (+16 more)
+### Community 230 - "calendar_card_container.dart"
+Cohesion: 0.15
+Nodes (11): build, CalendarCardContainer, CalendarCardViewModel, day, hashCode, hour, hourIndex, noInternet (+3 more)
 
 ### Community 231 - "request_pass_reset.dart"
 Cohesion: 0.09
@@ -1466,44 +1447,44 @@ Nodes (15): 10. UI and UX Quality, 11. Security and Data Integrity, 12. Git and 
 Cohesion: 0.12
 Nodes (16): actions, AnalyticsSchema, dataSources, duration, durations, events, features, gradeCount (+8 more)
 
-### Community 236 - "Exception"
+### Community 236 - "host_platform.dart"
 Cohesion: 0.15
-Nodes (12): AuthenticatedBytesUnavailable, CourseMaterialsLoadException, ExportEmptyException, ExportTooLargeException, SchoolNotificationAuthenticationRequired, _StaleCursor, ServerNotificationSchemaException, ClassRegisterLoadException (+4 more)
+Nodes (9): environment, HostPlatform, isAndroid, isIOS, isLinux, isMacOS, isWindows, pathSeparator (+1 more)
 
 ### Community 237 - "server_notification_links_before_polls.dart"
-Cohesion: 0.20
-Nodes (8): cell, createExportCsv, fieldValue, fromList, keys, lines, localizedField, value
+Cohesion: 0.13
+Nodes (10): cell, createExportCsv, fieldValue, fromList, keys, lines, localizedField, value (+2 more)
 
-### Community 238 - "package:flutter/services.dart"
-Cohesion: 0.09
-Nodes (14): channel, main, messenger, channel, handle, items, _Keychain, main (+6 more)
+### Community 238 - "school_notification_keychain_test.dart"
+Cohesion: 0.22
+Nodes (6): channel, handle, items, _Keychain, main, _matches
 
 ### Community 239 - "session.dart"
 Cohesion: 0.12
 Nodes (15): capture, currentAccountScope, _currentWrapper, ensureCurrent, generation, sendBytes, _sessionGeneration, StaleSessionException (+7 more)
 
 ### Community 240 - "package:flutter/material.dart"
-Cohesion: 0.07
-Nodes (29): all, amoled, _card, date, _day, _detailHeader, _exam, _expectNoBlurBelowHeader (+21 more)
+Cohesion: 0.04
+Nodes (40): build, calendarView, ExamCalendarContainer, all, amoled, _card, date, _day (+32 more)
 
 ### Community 241 - "bool get"
 Cohesion: 0.09
 Nodes (20): AppSubjectTranslationController, _enabled, load, setEnabled, _subjectTranslationEnabledPreferenceKey, build, currentSelected, drawerInitiallyFullyExpanded (+12 more)
 
 ### Community 242 - "school_proxy_test.dart"
-Cohesion: 0.12
-Nodes (10): bytes, hex, randomUuidV4, source, SchoolProxyUnavailable, close, fetch, main (+2 more)
+Cohesion: 0.20
+Nodes (6): SchoolProxyUnavailable, close, fetch, main, origin, slot
 
-### Community 243 - "grades_new_design_test.dart"
-Cohesion: 0.03
-Nodes (49): CourseMaterialOpenResult, build, NewGradesPageContainer, NewGradesViewModel, GradeEntryRow, amoled, _coursePayload, _courses (+41 more)
+### Community 243 - "package:dio/dio.dart"
+Cohesion: 0.18
+Nodes (8): _diagnostics, DiagnosticsInterceptor, onError, onRequest, onResponse, _response, DiagnosticsService, SchoolProxyInterceptor
 
 ### Community 244 - "grades_format.dart"
 Cohesion: 0.10
 Nodes (17): AppLocalizations, _AppLocalizationsDelegate, of, average, category, change, estimate, grade (+9 more)
 
 ### Community 245 - "linkified_text.dart"
-Cohesion: 0.14
+Cohesion: 0.15
 Nodes (13): build, createState, didUpdateWidget, dispose, _disposeRecognizers, initState, LinkifiedText, _LinkifiedTextState (+5 more)
 
 ### Community 246 - "committed_deleteable.dart"
@@ -1514,9 +1495,9 @@ Nodes (22): AddSubject, _AddSubjectState, availableSubjects, focusNode, icon, on
 Cohesion: 0.11
 Nodes (18): _cached, _load, obtain, PollInstallationId, pollInstallationIdKey, PollStorage, pollVotesKey, PollVoteStore (+10 more)
 
-### Community 248 - "login_page.dart"
-Cohesion: 0.12
-Nodes (14): build, _collectionEquality, error, hashCode, LoginCallback, LoginPage, LoginPageViewModel, operator (+6 more)
+### Community 248 - "List"
+Cohesion: 0.09
+Nodes (20): ListIntersperse, launched, main, _body, launched, launches, _links, main (+12 more)
 
 ### Community 249 - "homework_filter.dart"
 Cohesion: 0.12
@@ -1527,7 +1508,7 @@ Cohesion: 0.10
 Nodes (21): allTeachers, _applySubstituteTeachersUpdate, _expandedSubstituteSubjects, lockedSubjects, _newSubjectRow, _removeTeacher, _showAddTeacherDialog, _showSubstituteSubjects (+13 more)
 
 ### Community 251 - "sidebar_collapsed_test.dart"
-Cohesion: 0.09
+Cohesion: 0.10
 Nodes (21): _academic, _allowAll, build, _confirmAge, createState, _custom, _details, _diagnostics (+13 more)
 
 ### Community 252 - "ui/pass_reset.dart"
@@ -1542,25 +1523,25 @@ Nodes (19): _classRegisterCacheKey, _courseMaterialsCacheKey, _homeworkSummaryCa
 Cohesion: 0.11
 Nodes (18): ServerPollOption, ServerNotification, ServerNotificationPage, ServerNotificationType, ServerNotificationPollPolicy, ServerNotificationCache, ServerNotificationRecord, LegacyStudySummary (+10 more)
 
-### Community 255 - "grade_average.dart"
-Cohesion: 0.22
-Nodes (8): countsTowardAverage, denominator, numerator, rounded, roundedGradeAverage, sum, weight, weightedGradeAverage
+### Community 255 - "certificate_container.dart"
+Cohesion: 0.18
+Nodes (8): baseUrl, build, CertificateContainer, hashCode, html, lastFetched, noInternet, operator
 
-### Community 256 - "biometric_app_lock_overlay.dart"
-Cohesion: 0.13
-Nodes (15): AppLockSync, _AppLockSyncState, BiometricAppLockOverlay, _BiometricAppLockOverlayState, build, child, createState, didUpdateWidget (+7 more)
+### Community 256 - "biometric_app_lock_overlay_test.dart"
+Cohesion: 0.06
+Nodes (29): AppLockSync, _AppLockSyncState, BiometricAppLockOverlay, _BiometricAppLockOverlayState, build, child, createState, didUpdateWidget (+21 more)
 
 ### Community 257 - "export_container.dart"
 Cohesion: 0.14
 Nodes (14): actions, build, createState, ExportContainer, failed, _HydratedExport, _HydratedExportState, initialCategory (+6 more)
 
-### Community 258 - "homework_filter_container.dart"
-Cohesion: 0.12
-Nodes (11): allTypes, build, currentBlacklist, HomeworkBlacklistCallback, HomeworkFilterContainer, HomeworkFilterVM, onShowEmptyDaysChanged, showEmptyDays (+3 more)
+### Community 258 - "welcome_dialog.dart"
+Cohesion: 0.20
+Nodes (10): build, createState, dispose, _forkProject, _forkProjectLink, _originalProject, _originalProjectLink, showWelcomeDialog (+2 more)
 
-### Community 259 - "serializers.dart"
-Cohesion: 0.13
-Nodes (11): _BasicGrade, DetailEntry, GradeDetail, Observation, DateTimeSerializer, deserialize, serialize, serializers (+3 more)
+### Community 259 - "DateTime?"
+Cohesion: 0.22
+Nodes (8): add, MakeUtc, now, parse, stripTime, subtract, tryParse, UtcDateTime
 
 ### Community 260 - "ui/school_notification_opt_in_test.dart"
 Cohesion: 0.07
@@ -1578,13 +1559,17 @@ Nodes (8): AutocompleteOptions, borderRadius, build, displayStringForOption, max
 Cohesion: 0.15
 Nodes (12): _deleteAllNotifications, _deleteNotification, _loadNotifications, _notificationsMiddleware, refreshSchoolNotificationFeed, _rememberViewedSchoolNotifications, _runCoalescedLoad, send (+4 more)
 
+### Community 264 - "MainActivity.kt"
+Cohesion: 0.09
+Nodes (3): MainActivity, Findings, _Workmanager
+
 ### Community 265 - "ui/certificate.dart"
 Cohesion: 0.15
 Nodes (6): CertificateViewModel, build, Certificate, vm, main, school
 
-### Community 266 - "class_register_cache.dart"
-Cohesion: 0.12
-Nodes (16): ClassRegisterCacheService, ClassRegisterPayloadSnapshot, encode, fetchedAt, fingerprint, fingerprintForPayload, fromPayload, load (+8 more)
+### Community 266 - "Fake"
+Cohesion: 0.22
+Nodes (5): AppLocalizationsContext, _Native, _FakeContext, _Busy, _Transaction
 
 ### Community 267 - "dashboard_items.dart"
 Cohesion: 0.13
@@ -1592,7 +1577,7 @@ Nodes (14): DashboardConfiguration, DashboardItem, DashboardItemWidth, defaultDa
 
 ### Community 268 - "package:dr/i18n/app_localizations.dart"
 Cohesion: 0.04
-Nodes (47): accent, build, _CreditCard, CreditEntry, credits, _CreditsHeader, CreditsPage, entries (+39 more)
+Nodes (41): SubjectTheme, build, DebugPageContainer, DebugPageWidget, build, config, GradesChartLegendEntry, name (+33 more)
 
 ### Community 269 - "reducer/login.dart"
 Cohesion: 0.10
@@ -1619,8 +1604,8 @@ Cohesion: 0.17
 Nodes (9): buildProfilePictureUrl, cachedProfilePicture, cacheProfilePicture, forgetProfilePictures, normalizedBaseUrl, normalizedPicture, _pictures, profilePictureRetries (+1 more)
 
 ### Community 276 - "grade_colors.dart"
-Cohesion: 0.18
-Nodes (7): build, cancelled, colorized, gradeColor, hundredths, style, text
+Cohesion: 0.17
+Nodes (8): build, cancelled, colorized, GradeBadge, gradeColor, hundredths, style, text
 
 ### Community 277 - "package:dio/dio.dart"
 Cohesion: 0.18
@@ -1632,23 +1617,23 @@ Nodes (10): _currentLocalDataAccount, localDataInventory, _preferenceEntry, remo
 
 ### Community 279 - "Map"
 Cohesion: 0.12
-Nodes (13): normalized, _normalizeSchoolUrl, null, schoolNameForUrl, schools, failReads, failWrites, forget (+5 more)
+Nodes (12): bytes, hex, randomUuidV4, source, failReads, failWrites, forget, main (+4 more)
 
 ### Community 280 - "server_notification_links_before_polls.dart"
-Cohesion: 0.13
-Nodes (14): _alphabeticTld, every, _hostLabel, labels, routeKey, ServerNotificationLink, serverNotificationRouteKeys, tld (+6 more)
+Cohesion: 0.11
+Nodes (18): ExternalNotificationLink, InternalNotificationLink, _alphabeticTld, every, ExternalNotificationLink, _hostLabel, InternalNotificationLink, labels (+10 more)
 
-### Community 281 - "subject_swatch_picker.dart"
-Cohesion: 0.14
-Nodes (13): build, color, current, label, onSelected, onTap, _PaletteHeader, selected (+5 more)
+### Community 281 - "package:dr/theme/app_palette.dart"
+Cohesion: 0.04
+Nodes (41): accent, build, _CreditCard, CreditEntry, credits, _CreditsHeader, CreditsPage, entries (+33 more)
 
 ### Community 282 - "school_notification_engine_test.dart"
-Cohesion: 0.15
-Nodes (12): SchoolNotificationEngine, SchoolNotificationPreferences, account, baseline, delivered, disk, engine, event (+4 more)
+Cohesion: 0.10
+Nodes (16): SchoolNotificationEngine, SchoolNotificationPreferences, build, catalogs, _grade, main, account, baseline (+8 more)
 
-### Community 283 - "android_widget_service_test.dart"
-Cohesion: 0.18
-Nodes (8): AndroidWidgetPlatformBridge, loggedIn, main, planningSnapshots, RecordingWidgetBridge, refreshWidgets, snapshots, writePlanningSnapshot
+### Community 283 - "dart:convert"
+Cohesion: 0.07
+Nodes (17): SchoolNotificationKeychain, MemorySecureStorage, loggedIn, main, planningSnapshots, refreshWidgets, snapshots, writePlanningSnapshot (+9 more)
 
 ### Community 284 - "certificate_image_factory.dart"
 Cohesion: 0.18
@@ -1658,21 +1643,21 @@ Nodes (11): _addFavorite, _favorite, favoriteSubjects, _FavoriteSubjectsSettings
 Cohesion: 0.06
 Nodes (24): FlutterWindow::OnCreate(), Win32Window::Destroy(), Win32Window::GetClientArea(), Win32Window::GetHandle(), Win32Window::OnCreate(), Win32Window::Show(), EnableFullDpiSupportIfAvailable(), EnableNonClientDpiScaling (+16 more)
 
-### Community 286 - "Future"
-Cohesion: 0.20
-Nodes (8): _config, loggedIn, main, requests, send, _signedInWithoutConfig, signIn, _subject
+### Community 286 - "biometric_app_lock_android_test.dart"
+Cohesion: 0.22
+Nodes (6): BiometricAppLockSetupException, calls, channel, controller, main, messenger
 
 ### Community 287 - "Personal school notifications — Issue #82"
 Cohesion: 0.20
 Nodes (9): Account opt-in (2026-10-25), Accounts, credentials and settings, Background execution, authentication and retries, Delivery semantics and navigation, Event identities, persistence and states, Foreground/background behavior, Limits and verification, Personal school notifications — Issue #82 (+1 more)
 
-### Community 288 - "sidebar_collapsed_test.dart"
-Cohesion: 0.20
-Nodes (4): main, _noopDrawerCallback, _noopSelectAccount, _noopVoidCallback
+### Community 288 - "reducer/notifications.dart"
+Cohesion: 0.25
+Nodes (6): _delete, _deleteAll, _loaded, _markMessageAsRead, notificationsReducerBuilder, _parseNotifications
 
 ### Community 289 - "reminder_link.dart"
-Cohesion: 0.18
-Nodes (10): build, createState, DashboardCustomizeDialog, _DashboardCustomizeDialogState, _failed, initState, items, _save (+2 more)
+Cohesion: 0.13
+Nodes (12): build, createState, DashboardCustomizeDialog, _DashboardCustomizeDialogState, _failed, initState, items, _save (+4 more)
 
 ### Community 290 - "Issue #23 – Crash, load-time and memory triage"
 Cohesion: 0.11
@@ -1682,13 +1667,21 @@ Nodes (18): Final status, Fix plan (impact × effort), G1 – Crash reports lose
 Cohesion: 0.09
 Nodes (6): FlutterWindow::OnDestroy(), FlutterWindow, flutter_controller_, FlutterWindow::FlutterWindow(), project_, Win32Window::OnDestroy()
 
+### Community 292 - "privacy_test_mocks.dart"
+Cohesion: 0.25
+Nodes (5): crashlyticsPrefix, initializeCore, messenger, mockPrivacyPlugins, _PrivacyFirebaseCore
+
+### Community 293 - "app_language.dart"
+Cohesion: 0.40
+Nodes (4): AppLanguage, code, fromCode, fromLocale
+
 ### Community 294 - "AppLocalizations"
 Cohesion: 0.20
 Nodes (9): hasScheme, host, _leadingScheme, normalizeReminderLink, _otherScheme, text, toString, uri (+1 more)
 
-### Community 295 - "home_page_content.dart"
-Cohesion: 0.22
-Nodes (6): HomePageContentViewModel, account, build, DrawerCallback, HomePageContent, vm
+### Community 295 - "package:url_launcher/url_launcher.dart"
+Cohesion: 0.40
+Nodes (3): deleteAccountUrl, openLegalLink, privacyPolicyUrl
 
 ### Community 296 - "calendar_sync_page.dart"
 Cohesion: 0.29
@@ -1703,12 +1696,12 @@ Cohesion: 0.40
 Nodes (4): _certificateMiddleware, _loadCertificate, _syncCertificateLanguageToApp, _runCoalescedLoad
 
 ### Community 299 - "high_login_test.dart"
-Cohesion: 0.05
-Nodes (35): count, decoded, number, parseCompetenceList, parseCompetenceMap, parseStarCount, parseStarScale, toInt (+27 more)
+Cohesion: 0.11
+Nodes (19): calendarRequests, close, config, configFailure, configGate, configPage, configRequested, credentialFailure (+11 more)
 
 ### Community 300 - "app_language.dart"
-Cohesion: 0.17
-Nodes (9): AppLanguageController, _appLanguagePreferenceKey, _language, load, setLanguage, AppLanguage, code, fromCode (+1 more)
+Cohesion: 0.29
+Nodes (5): AppLanguageController, _appLanguagePreferenceKey, _language, load, setLanguage
 
 ### Community 301 - "school_api_endpoints.dart"
 Cohesion: 0.40
@@ -1738,17 +1731,13 @@ Nodes (51): _addCourseMaterialSources, candidates, courseMaterialCoursesFromPayl
 Cohesion: 0.20
 Nodes (7): baseUrl, CertificateImageFactory, imageProviderFromFileUri, imageProviderFromNetwork, resolveCertificateImageUri, uri, _GlassCertificateFactory
 
-### Community 326 - "_ImportGrades"
-Cohesion: 0.25
-Nodes (4): build, iconSize, NotificationIconContainer, style
+### Community 326 - "server_notification_bell.dart"
+Cohesion: 0.11
+Nodes (15): build, iconSize, NotificationIconContainer, style, build, child, enabled, hideWhenEmpty (+7 more)
 
 ### Community 327 - "shell_routing_test.dart"
 Cohesion: 0.05
 Nodes (31): build, ChangeEmailContainer, codiceFiscale, _loaded, _parseProfile, profileReducerBuilder, replace, _sendNotificationEmails (+23 more)
-
-### Community 330 - "_FitOrGrow"
-Cohesion: 0.08
-Nodes (21): authentication, channel, main, messenger, observer, promptCount, refreshCount, _android (+13 more)
 
 ### Community 331 - "my_application_activate"
 Cohesion: 0.29
@@ -1756,7 +1745,7 @@ Nodes (4): register_file_open_portal(), my_application_activate(), my_applicatio
 
 ### Community 333 - "dart:convert"
 Cohesion: 0.06
-Nodes (24): canonicalSchoolServer, fileId, hashCode, operator, server, toString, trimmed, uri (+16 more)
+Nodes (25): _config, loggedIn, main, requests, send, _signedInWithoutConfig, signIn, _subject (+17 more)
 
 ### Community 352 - "Package Dependencies"
 Cohesion: 0.05
@@ -1770,10 +1759,6 @@ Nodes (13): Foundation, PlanningBackground, PlanningRow, PlanningSection, Planni
 Cohesion: 0.33
 Nodes (4): analyticsSchoolIdForUrl, analyticsSchoolIds, matches, normalized
 
-### Community 390 - "_AppLaunchAnimationState"
-Cohesion: 0.40
-Nodes (4): Calendar, _CalendarState, AppLaunchAnimation, _AppLaunchAnimationState
-
 ### Community 391 - "Operation.insert"
 Cohesion: 0.50
 Nodes (3): addRun, _linkPlainAddresses, _textOnlyDelta
@@ -1781,6 +1766,10 @@ Nodes (3): addRun, _linkPlainAddresses, _textOnlyDelta
 ### Community 392 - "Flatpak Build Manifest"
 Cohesion: 0.07
 Nodes (28): env, aarch64, x86_64, append-path, arch, env, prepend-ld-library-path, command (+20 more)
+
+### Community 393 - "package:flutter/foundation.dart"
+Cohesion: 0.09
+Nodes (13): CalendarLoadEvent, logCalendarLoad, verbose, isAndroidPlatform, runtimeTrace, _runtimeTraceClock, current, platform (+5 more)
 
 ### Community 394 - "_ServerNotificationDetailViewState"
 Cohesion: 0.67
@@ -1794,10 +1783,6 @@ Nodes (3): _NewCenter, ServerNotificationCenterPage, _ServerNotificationCenterPa
 Cohesion: 0.07
 Nodes (28): A. Summary, Analytics implementation report — Digitales Register, B. Existing Analytics found before changes, C. Privacy version migration, D. Consent model, E. Age eligibility implementation, F. Firebase Analytics runtime configuration, G. Analytics user identity (+20 more)
 
-### Community 398 - "AnalyticsSink"
-Cohesion: 0.67
-Nodes (3): _FirebaseAnalyticsSink, AnalyticsSink, RecordingSink
-
 ### Community 399 - "Flatpak App Manifest"
 Cohesion: 0.07
 Nodes (27): env, aarch64, x86_64, append-path, arch, env, prepend-ld-library-path, command (+19 more)
@@ -1809,10 +1794,6 @@ Nodes (3): FirebaseTelemetryCollection, TelemetryCollection, FakeCollection
 ### Community 401 - "PrivacyStore"
 Cohesion: 0.67
 Nodes (3): PreferencesPrivacyStore, PrivacyStore, MemoryStore
-
-### Community 402 - "AnalyticsLocalStore"
-Cohesion: 0.67
-Nodes (3): AnalyticsLocalStore, SecureAnalyticsStore, MemoryAnalyticsStore
 
 ### Community 411 - "file_open_portal.cc"
 Cohesion: 0.16
@@ -1827,8 +1808,8 @@ Cohesion: 0.15
 Nodes (11): Built-in Kotlin migration — 2026-10-13, Cause and fix, Files changed in this follow-up, References, Result, Verification, Versions, Dependency diagnosis (+3 more)
 
 ### Community 436 - "Launch Asset Generator"
-Cohesion: 0.09
-Nodes (22): LaunchLogoGeometry, buffer, bytes, canvas, file, _G, _hex, image (+14 more)
+Cohesion: 0.06
+Nodes (27): LaunchLogoGeometry, build, child, splash, SplashScreen, _SplashWidget, buffer, bytes (+19 more)
 
 ### Community 443 - "Requirements matrix"
 Cohesion: 0.10
@@ -1870,9 +1851,9 @@ Nodes (15): Aufbau, Ausgangslage, Beta-Rollout, Breite Fenster, Dashboard-Redesi
 Cohesion: 0.11
 Nodes (16): archive, bytes, create, _csvFiles, ExportSaveDialog, ExportService, extension, l10n (+8 more)
 
-### Community 516 - "package:dr/theme/app_palette.dart"
-Cohesion: 0.03
-Nodes (61): SubjectTheme, build, CalendarCard, CircledLetter, color, content, _ContentItem, formatTime (+53 more)
+### Community 516 - "calendar_card.dart"
+Cohesion: 0.06
+Nodes (28): build, CalendarCard, CircledLetter, color, content, _ContentItem, formatTime, _GlassCalendarCard (+20 more)
 
 ### Community 520 - "Dependency Overrides (Forks)"
 Cohesion: 0.13
@@ -2003,24 +1984,24 @@ Cohesion: 0.50
 Nodes (3): SCHULREGISTER_INSTALL_DIR, test_linux_install.sh script, XDG_DATA_HOME
 
 ## Knowledge Gaps
-- **8483 isolated node(s):** `_DemoStore`, `_TimeObjects`, `_DeadlineTime`, `_CalendarLessonTemplate`, `_DemoSubject` (+8478 more)
-  These have ≤1 connection - possible missing edges or undocumented components. (Counts symbols only; 9684 node(s) total have ≤1 connection when file, concept and rationale nodes are included.)
-- **128 thin communities (<3 nodes) omitted from report** — run `graphify query` to explore isolated nodes.
+- **8500 isolated node(s):** `secureStorage`, `statePersistenceService`, `_lastLocalSaveWarning`, `now`, `last` (+8495 more)
+  These have ≤1 connection - possible missing edges or undocumented components. (Counts symbols only; 9701 node(s) total have ≤1 connection when file, concept and rationale nodes are included.)
+- **109 thin communities (<3 nodes) omitted from report** — run `graphify query` to explore isolated nodes.
 
 ## Suggested Questions
 _Questions this graph is uniquely positioned to answer:_
 
-- **Why does `StatelessWidget` connect `Intro Illustrations & Grade Stats` to `Settings Page Logic`, `Auth Layout & Tokens`, `package:dr/theme/app_palette.dart`, `package:flutter_test/flutter_test.dart`, `Login & Accounts UI`, `exam_calendar_new.dart`, `exam_calendar_page.dart`, `Design Tokens (Glass)`, `package:dr/app_state.dart`, `Class Register Page`, `center_new_design_test.dart`, `absences_page.dart`, `Calendar Week View`, `profile_new_design_test.dart`, `Server Notification Center`, `homework_summary_new_design_test.dart`, `Certificate Page`, `Glass Page Layout`, `Compact Day List`, `Grades Subject List`, `Absence Group Container`, `return`, `new_design_test.dart`, `server_notification_center_new.dart`, `settings_page.dart`, `settings_subpages_new_design_test.dart`, `homework_summary_page.dart`, `server_notification_popup.dart`, `app_navigation.dart`, `main.dart`, `ui/calendar.dart`, `sorted_grades_widget.dart`, `ui/messages.dart`, `messages_new.dart`, `package:flutter_built_redux/flutter_built_redux.dart`, `grades_page.dart`, `profile_new.dart`, `dashboard_event_banner.dart`, `grade_calculator.dart`, `ui/network_protocol.dart`, `package:flutter_test/flutter_test.dart`, `intro_tour.dart`, `calendar_detail.dart`, `course_materials_page.dart`, `dashboard_edit_mode.dart`, `middleware/grades.dart`, `absences_new_design_test.dart`, `target_grade_calculator.dart`, `int get`, `glass_page_test.dart`, `export_page_new.dart`, `messages_new_design_test.dart`, `days_container.dart`, `grades_panels.dart`, `grades_overview.dart`, `bool get`, `middleware/calendar.dart`, `analytics.dart`, `dashboard_app_header.dart`, `grades_page_new.dart`, `package:flutter/material.dart`, `school_countdown_overview.dart`, `target_grade_calculator_new.dart`, `course_materials_page_new.dart`, `announcement_poll_test.dart`, `server_poll_page.dart`, `package:dr/actions/login_actions.dart`, `grades_page.dart`, `grades_page_container.dart`, `sidebar.dart`, `grade_calculator_new.dart`, `_`, `dashboard_overview.dart`, `settings_page_new.dart`, `int get`, `launch_animation_test.dart`, `String?`, `_`, `account_switch_test.dart`, `homework_summary_page_new.dart`, `sorted_grades_container.dart`, `calendar_actions.dart`, `calendar_week_container.dart`, `package:dr/ui/glass_surface.dart`, `auth_redesign_test.dart`, `glass_segmented_control.dart`, `bool get`, `grades_new_design_test.dart`, `committed_deleteable.dart`, `login_page.dart`, `export_container.dart`, `homework_filter_container.dart`, `dashboard_customize_dialog.dart`, `ui/certificate.dart`, `package:dr/i18n/app_localizations.dart`, `certificate_new_design_test.dart`, `subject_swatch_picker.dart`, `home_page_content.dart`, `calendar_sync_page.dart`, `_ServerNotificationDetailViewState`, `_ImportGrades`, `shell_routing_test.dart`?**
-  _High betweenness centrality (0.018) - this node is a cross-community bridge._
-- **What connects `_DemoStore`, `_TimeObjects`, `_DeadlineTime` to the rest of the system?**
-  _8483 weakly-connected nodes found - possible documentation gaps or missing edges._
+- **Why does `_` connect `Domain Models (Absences, Homework)` to `App State Selectors`, `int get`, `package:dr/app_state.dart`, `reducer/messages.dart`, `reducer/dashboard.dart`, `grades_actions.dart`, `Homework & Grade Payloads`, `../support/test_harness.dart`, `Day`, `local_reminder_assessments.dart`, `reducer/grades.dart`, `List`, `notification_filter_test.dart`, `account_switch_test.dart`, `package:dr/diagnostics_service.dart`, `calendar_actions.dart`, `calendar_week_container.dart`, `bool get`, `int get`, `Built`, `messages_new_design_test.dart`, `notification_feed.dart`?**
+  _High betweenness centrality (0.032) - this node is a cross-community bridge._
+- **What connects `secureStorage`, `statePersistenceService`, `_lastLocalSaveWarning` to the rest of the system?**
+  _8500 weakly-connected nodes found - possible documentation gaps or missing edges._
 - **Should `middleware/middleware.dart` be split into smaller, more focused modules?**
-  _Cohesion score 0.018140731906346116 - nodes in this community are weakly interconnected._
-- **Why does `_` connect `Design Tokens (Glass)` to `package:dr/theme/app_palette.dart`, `dashboard_customize_dialog.dart`, `bool get`, `package:dr/i18n/app_localizations.dart`, `Design Token Palette`, `analytics.dart`, `Stateful Widget States`, `package:flutter/material.dart`, `profile_picture.dart`, `profile_new_design_test.dart`, `course_materials_page_new.dart`, `Glass Page Layout`, `new_design_test.dart`, `app_navigation.dart`, `app_launch_animation.dart`, `settings_page_new.dart`, `school_notification_settings_test.dart`, `CustomPainter`, `DateTime`, `calendar_actions.dart`, `school_proxy_test.dart`, `@immutable`?**
-  _High betweenness centrality (0.017) - this node is a cross-community bridge._
+  _Cohesion score 0.01918726434855467 - nodes in this community are weakly interconnected._
+- **Why does `SchoolNotificationVisibility` connect `SchoolNotificationVisibility` to `Hintergrundbenachrichtigungen: Übernahme der Referenzarchitektur`?**
+  _High betweenness centrality (0.015) - this node is a cross-community bridge._
 - **Should `Domain Models (Absences, Homework)` be split into smaller, more focused modules?**
   _Cohesion score 0.011904761904761904 - nodes in this community are weakly interconnected._
-- **Why does `_` connect `Domain Models (Absences, Homework)` to `homework_filter_container.dart`, `serializers.dart`, `App State Selectors`, `package:flutter_test/flutter_test.dart`, `reducer/messages.dart`, `bool get`, `package:dr/app_state.dart`, `center_new_design_test.dart`, `package:flutter/material.dart`, `Day`, `local_reminder_assessments.dart`, `reducer/grades.dart`, `List`, `analytics_service.dart`, `dart:convert`, `package:flutter_test/flutter_test.dart`, `HomeworkType`, `calendar_actions.dart`, `state_persistence_service.dart`, `bool get`, `int get`, `Built`, `login_page.dart`, `notification_feed.dart`?**
+- **Why does `MainActivity` connect `MainActivity.kt` to `Start-Animation`, `Biometric App Lock (Android)`?**
   _High betweenness centrality (0.013) - this node is a cross-community bridge._
 - **Should `Settings Page Logic` be split into smaller, more focused modules?**
   _Cohesion score 0.022216913521261348 - nodes in this community are weakly interconnected._

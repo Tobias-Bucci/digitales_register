@@ -102,6 +102,7 @@ import 'package:dr/ui/server_notifications/server_notification_routes.dart';
 import 'package:dr/ui/settings_page_new.dart' show SettingsSheetActions;
 import 'package:dr/ui/system_pages.dart';
 import 'package:dr/ui/two_factor_dialog.dart';
+import 'package:dr/ui/welcome_dialog.dart';
 import 'package:dr/utc_date_time.dart';
 import 'package:dr/util.dart';
 import 'package:dr/web_app/browser_download.dart';
@@ -111,7 +112,6 @@ import 'package:dr/wrapper.dart';
 import 'package:file_picker/file_picker.dart';
 import 'package:flutter/foundation.dart'
     show defaultTargetPlatform, kDebugMode, kIsWeb;
-import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart' hide Action, Notification;
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:image/image.dart' as image;
@@ -863,53 +863,7 @@ Future<void> _checkShowUnmaintainedAlert() async {
 }
 
 Future<void> _showWelcomeDialog() async {
-  await showDialog<void>(
-    context: navigatorKey!.currentContext!,
-    builder: (context) {
-      return InfoDialog(
-        title: Text(tr('about.welcome.title')),
-        content: Text.rich(
-          TextSpan(
-            text: tr('about.welcome.bodyPrefix'),
-            children: [
-              TextSpan(
-                text: "github.com/mideb/digitales_register",
-                style: const TextStyle(color: Colors.blue),
-                recognizer: TapGestureRecognizer()
-                  ..onTap = () {
-                    launchUrl(
-                      Uri.parse("https://github.com/miDeb/digitales_register"),
-                      mode: LaunchMode.externalApplication,
-                    );
-                  },
-              ),
-              TextSpan(text: tr('about.welcome.bodyMiddle')),
-              TextSpan(
-                text: "github.com/Tobias-Bucci/digitales_register",
-                style: const TextStyle(color: Colors.blue),
-                recognizer: TapGestureRecognizer()
-                  ..onTap = () {
-                    launchUrl(
-                      Uri.parse(
-                        "https://github.com/Tobias-Bucci/digitales_register",
-                      ),
-                      mode: LaunchMode.externalApplication,
-                    );
-                  },
-              ),
-              TextSpan(text: tr('about.welcome.bodySuffix')),
-            ],
-          ),
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: Text(tr('common.done')),
-          ),
-        ],
-      );
-    },
-  );
+  await showWelcomeDialog(navigatorKey!.currentContext!);
 }
 
 Future<void> _checkShowPrivacyConsentAlert() async {
