@@ -119,8 +119,10 @@ class Sidebar extends StatelessWidget {
               child: AppPopupButton<int>(
                 selectedValue: 0,
                 expand: true,
+                // 40 px tall, the room the drawer gives its header at the
+                // normal text size (#148).
                 padding:
-                    const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                    const EdgeInsets.symmetric(horizontal: 12, vertical: 7),
                 borderRadius: const BorderRadius.all(Radius.circular(16)),
                 entries: accountEntries,
                 labelBuilder: (_) => username ?? "?",

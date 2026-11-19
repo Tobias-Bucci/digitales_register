@@ -293,15 +293,22 @@ class _CollapsibleSidebarState extends State<CollapsibleSidebar>
         selectedBoxColor: widget.selectedIconBox,
         selected: item.isSelected,
         padding: 8,
+        // The least height: the item grows with a label in large text.
         height: widget.iconSize + 16,
         offsetX: _offsetX,
         titleOpacity: _fraction,
+        leadingSize: widget.iconSize,
         leading: Icon(
           item.icon,
           size: widget.iconSize,
           color: iconColor,
         ),
-        title: Text(item.text),
+        // The tooltip and the semantics keep the whole label.
+        title: Text(
+          item.text,
+          maxLines: 2,
+          overflow: TextOverflow.ellipsis,
+        ),
         textStyle: _textStyle(textColor, widget.textStyle),
         onTap: () {
           if (item.isSelected) return;

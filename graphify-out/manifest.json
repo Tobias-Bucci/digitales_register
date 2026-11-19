@@ -1542,9 +1542,9 @@
     "semantic_hash": ""
   },
   "lib/ui/sidebar.dart": {
-    "mtime": 1795080304.4431086,
-    "seen": 1795080325.0624104,
-    "ast_hash": "a09669610d0dc411f769edcb8f10a154",
+    "mtime": 1795102363.5886505,
+    "seen": 1795102795.1289136,
+    "ast_hash": "83039f8ce2f9f18dddf027bb7cd15552",
     "semantic_hash": ""
   },
   "lib/ui/sorted_grades_widget.dart": {
@@ -3993,6 +3993,12 @@
     "mtime": 1795098605.9003472,
     "seen": 1795098974.5593665,
     "ast_hash": "677ece6e0fbcb1d2d349f08b62f7768a",
+    "semantic_hash": ""
+  },
+  "test/ui/sidebar_text_size_test.dart": {
+    "mtime": 1795102195.9446797,
+    "seen": 1795102795.1291728,
+    "ast_hash": "7fb06af7d87105c812ef62bd722a67fa",
     "semantic_hash": ""
   }
 }
