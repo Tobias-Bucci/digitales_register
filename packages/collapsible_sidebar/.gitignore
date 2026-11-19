@@ -29,6 +29,8 @@
 .pub-cache/
 .pub/
 build/
+# A package does not pin its dependencies: the app's pubspec.lock does.
+pubspec.lock
 
 # Android related
 **/android/**/gradle-wrapper.jar
