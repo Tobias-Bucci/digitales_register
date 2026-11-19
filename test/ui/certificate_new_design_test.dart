@@ -275,8 +275,9 @@ void main() {
         final card = tester.getRect(find.byKey(const Key('certificate-card')));
         expect(header.top, DesignTokens.gutter);
         expect(card.width, lessThanOrEqualTo(DesignTokens.contentMaxWidth));
-        expect(card.left, header.left);
-        expect(card.right, header.right);
+        // Centered below the header, which is as wide on every page (#140).
+        expect(card.width, lessThanOrEqualTo(DesignTokens.contentMaxWidth));
+        expect(card.center.dx, closeTo(header.center.dx, 0.5));
         expect(tester.takeException(), isNull);
       });
     }

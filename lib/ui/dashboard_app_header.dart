@@ -45,7 +45,7 @@ class DashboardAppHeader extends StatelessWidget
     this.onDismissNewEntries,
   });
 
-  static const double height = 56;
+  static const double height = GlassHeaderMetrics.height;
   static const double newEntriesHeight = 48;
 
   final double? floatingMaxWidth;
@@ -81,11 +81,18 @@ class DashboardAppHeader extends StatelessWidget
     final theme = Theme.of(context);
     final scheme = theme.colorScheme;
     final appName = l10n.text('login.appTitle');
+    final floating = floatingMaxWidth != null;
     final content = SizedBox(
       height: height,
       child: Padding(
-        padding: EdgeInsets.symmetric(
-          horizontal: floatingMaxWidth == null ? DesignTokens.gutter : 14,
+        // The notification button is always last.
+        padding: EdgeInsetsDirectional.only(
+          start: floating
+              ? GlassHeaderMetrics.floatingContentInset
+              : GlassHeaderMetrics.contentInset,
+          end: floating
+              ? GlassHeaderMetrics.floatingButtonInset
+              : GlassHeaderMetrics.buttonInset,
         ),
         child: Row(
           children: [
@@ -171,8 +178,9 @@ class DashboardAppHeader extends StatelessWidget
             children: [
               content,
               _NewEntriesStrip(
-                horizontalPadding:
-                    floatingMaxWidth == null ? DesignTokens.gutter : 14,
+                horizontalPadding: floating
+                    ? GlassHeaderMetrics.floatingRowInset
+                    : GlassHeaderMetrics.rowInset,
                 onShow: onShowNewEntries,
                 onDismiss: dismiss,
               ),
@@ -184,6 +192,28 @@ class DashboardAppHeader extends StatelessWidget
       child: band,
     );
   }
+}
+
+/// The metrics every header of the new design shares: the one of the
+/// dashboard and [GlassPageHeader] of every other page, so that the top bar
+/// does not change between pages (#140).
+abstract final class GlassHeaderMetrics {
+  /// The height of the row with the title, the logo and the buttons.
+  static const double height = 56;
+
+  /// From the edge of the header to its first text or logo, in a band from
+  /// edge to edge and in a floating header.
+  static const double contentInset = 16;
+  static const double floatingContentInset = 20;
+
+  /// From the edge of the header to a button at either end: the back button
+  /// at the start, the last action at the end.
+  static const double buttonInset = 4;
+  static const double floatingButtonInset = 8;
+
+  /// From the edge of the header to a second row below the title row.
+  static const double rowInset = DesignTokens.gutter;
+  static const double floatingRowInset = 14;
 }
 
 /// The glass of a page header: a band from edge to edge, or with

@@ -67,10 +67,8 @@ class _NewExamCalendarView extends StatelessWidget {
         surfaceKey: const Key('exam-calendar-app-header'),
         title: l10n.text('exam.title'),
         titleWidget: const CalendarViewSwitcher(exams: true),
-        floatingMaxWidth: glassHeaderFloatingWidth(
-          MediaQuery.sizeOf(context).width,
-          twoColumns: true,
-        ),
+        floatingMaxWidth:
+            glassHeaderFloatingWidth(MediaQuery.sizeOf(context).width),
         actions: [
           HeaderDiscButton(
             key: const Key('exam-timeline-view'),
@@ -1037,10 +1035,8 @@ class _NewExamWeekView extends StatelessWidget {
     final currentMonday = _mondayOf(now);
     // By the window, like every page, so that the header floats
     // wherever the rail is shown (#139).
-    final floatingMaxWidth = glassHeaderFloatingWidth(
-      MediaQuery.sizeOf(context).width,
-      twoColumns: true,
-    );
+    final floatingMaxWidth =
+        glassHeaderFloatingWidth(MediaQuery.sizeOf(context).width);
     final side = floatingMaxWidth == null ? 6.0 : DesignTokens.gutter;
     return GlassPage(
       scrolls: false,

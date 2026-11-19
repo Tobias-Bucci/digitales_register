@@ -48,7 +48,8 @@ import 'package:dr/ui/dashboard_app_header.dart';
 import 'package:dr/ui/dashboard_columns.dart';
 import 'package:dr/ui/dialog.dart';
 import 'package:dr/ui/favorite_subject_filter.dart';
-import 'package:dr/ui/glass_page.dart' show GlassPanel;
+import 'package:dr/ui/glass_page.dart'
+    show GlassPanel, glassHeaderFloatingWidth;
 import 'package:dr/ui/glass_surface.dart';
 import 'package:dr/ui/grade_colors.dart';
 import 'package:dr/ui/last_fetched_overlay.dart';
@@ -625,11 +626,8 @@ class _DaysWidgetState extends State<DaysWidget> {
       onDismissNewEntries: _targets.isNotEmpty || _focused.isNotEmpty
           ? () => _markVisibleAsSeen(visibleDays)
           : null,
-      floatingMaxWidth: width < tabletLayoutBreakpoint
-          ? null
-          : DashboardColumns.forWindow(width) == null
-              ? DesignTokens.contentMaxWidth
-              : DashboardColumns.maxWidth,
+      // The same as on every other page (#140).
+      floatingMaxWidth: glassHeaderFloatingWidth(width),
     );
   }
 

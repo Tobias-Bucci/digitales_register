@@ -57,18 +57,13 @@ extension _NewCenter on _ServerNotificationCenterPageState {
       builder: (context, constraints) {
         final twoPanes = constraints.maxWidth >= _twoPaneWidth;
         _openInitialPage(twoPanes: twoPanes);
-        final floating =
-            glassHeaderFloatingWidth(MediaQuery.sizeOf(context).width);
         return GlassPage(
           header: GlassPageHeader(
             surfaceKey: const Key('notification-center-header'),
             title: title,
-            // Above both panes, as wide as they are.
-            floatingMaxWidth: floating == null
-                ? null
-                : twoPanes
-                    ? DashboardColumns.maxWidth
-                    : floating,
+            // In the same place as on every other page (#140).
+            floatingMaxWidth:
+                glassHeaderFloatingWidth(MediaQuery.sizeOf(context).width),
             actions: [
               HeaderDiscButton(
                 tooltip: l10n.text('appNotifications.refresh'),

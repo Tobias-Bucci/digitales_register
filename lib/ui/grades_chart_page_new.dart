@@ -53,7 +53,7 @@ class GradesChartPageNew extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final width = MediaQuery.sizeOf(context).width;
-    final floatingWidth = glassHeaderFloatingWidth(width, twoColumns: true);
+    final floatingWidth = glassHeaderFloatingWidth(width);
     return StoreConnection<AppState, AppActions, _ChartPageViewModel>(
       connect: (state) => (
         hasGrades: appSelectors

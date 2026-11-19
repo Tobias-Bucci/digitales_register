@@ -43,15 +43,13 @@ import 'package:responsive_scaffold/responsive_scaffold.dart';
 /// The width of the floating header in a window [windowWidth] wide, or null
 /// below 720 px, where the header is a band from edge to edge.
 ///
-/// The header lines up with the content below it: [twoColumns] is for a page
-/// with a [GlassColumnsBody] (or the dashboard), which is 1220 px wide from
-/// 1080 px on. Every other page keeps the readable width of 840 px.
-double? glassHeaderFloatingWidth(
-  double windowWidth, {
-  bool twoColumns = false,
-}) {
+/// It depends on the window alone, so that the header keeps its place and
+/// width from page to page (#140): the readable width of 840 px, and from
+/// 1080 px on the 1220 px of two columns ([GlassColumnsBody], the dashboard).
+/// A page with one column keeps it centered below.
+double? glassHeaderFloatingWidth(double windowWidth) {
   if (windowWidth < tabletLayoutBreakpoint) return null;
-  if (twoColumns && DashboardColumns.forWindow(windowWidth) != null) {
+  if (DashboardColumns.forWindow(windowWidth) != null) {
     return DashboardColumns.maxWidth;
   }
   return DesignTokens.contentMaxWidth;
@@ -66,7 +64,8 @@ double? glassHeaderFloatingWidth(
 /// [bottom] row.
 ///
 /// Pass [floatingMaxWidth] from [glassHeaderFloatingWidth], so that the header
-/// floats on wide windows and lines up with the body.
+/// floats on wide windows in the same place on every page. Its insets are
+/// those of [GlassHeaderMetrics], which the dashboard header shares.
 class GlassPageHeader extends StatelessWidget implements PreferredSizeWidget {
   const GlassPageHeader({
     super.key,
@@ -82,7 +81,7 @@ class GlassPageHeader extends StatelessWidget implements PreferredSizeWidget {
   });
 
   /// The height of the title row.
-  static const double height = 56;
+  static const double height = GlassHeaderMetrics.height;
 
   /// What [control] leaves to the title, for very large text.
   static const double minTitleWidth = 56;
@@ -166,8 +165,15 @@ class GlassPageHeader extends StatelessWidget implements PreferredSizeWidget {
     final control = this.control;
     final titleWidget = this.titleWidget;
     final trailing = actions.isNotEmpty || control != null;
-    final start = back ? (_floating ? 8.0 : 4.0) : (_floating ? 20.0 : 16.0);
-    final end = trailing ? (_floating ? 8.0 : 4.0) : (_floating ? 20.0 : 16.0);
+    double inset(bool button) => _floating
+        ? (button
+            ? GlassHeaderMetrics.floatingButtonInset
+            : GlassHeaderMetrics.floatingContentInset)
+        : (button
+            ? GlassHeaderMetrics.buttonInset
+            : GlassHeaderMetrics.contentInset);
+    final start = inset(back);
+    final end = inset(trailing);
     final titleRow = SizedBox(
       height: height,
       child: Padding(
@@ -253,7 +259,9 @@ class GlassPageHeader extends StatelessWidget implements PreferredSizeWidget {
                   height: bottom.preferredSize.height,
                   child: Padding(
                     padding: EdgeInsets.symmetric(
-                      horizontal: _floating ? 14 : DesignTokens.gutter,
+                      horizontal: _floating
+                          ? GlassHeaderMetrics.floatingRowInset
+                          : GlassHeaderMetrics.rowInset,
                     ),
                     child: bottom,
                   ),
@@ -408,7 +416,7 @@ class GlassListBody extends StatelessWidget {
 /// phone and stays in place; the list scrolls up to the edge of the window.
 /// Below 1080 px [side] comes first in one [GlassListBody].
 ///
-/// Give its header `glassHeaderFloatingWidth(width, twoColumns: true)`.
+/// Its header floats at the same `glassHeaderFloatingWidth` as any other.
 class GlassColumnsBody extends StatelessWidget {
   const GlassColumnsBody({
     super.key,

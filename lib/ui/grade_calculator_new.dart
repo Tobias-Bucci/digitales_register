@@ -112,10 +112,7 @@ class _NewGradeCalculatorView extends StatelessWidget {
         header: GlassPageHeader(
           surfaceKey: const Key('grade-calculator-header'),
           title: l10n.text('gradeCalculator.title'),
-          floatingMaxWidth: glassHeaderFloatingWidth(
-            width,
-            twoColumns: grades.isNotEmpty,
-          ),
+          floatingMaxWidth: glassHeaderFloatingWidth(width),
           // The welcome card already offers the target calculator, so the
           // header only does once there are grades (#115).
           actions: [

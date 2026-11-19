@@ -539,10 +539,8 @@ class _CalendarState extends State<Calendar> with TickerProviderStateMixin {
     final reduceMotion = _reduceMotion(context);
     // By the window, like every page, so that the header floats wherever the
     // rail is shown (#139).
-    final floatingMaxWidth = glassHeaderFloatingWidth(
-      MediaQuery.sizeOf(context).width,
-      twoColumns: true,
-    );
+    final floatingMaxWidth =
+        glassHeaderFloatingWidth(MediaQuery.sizeOf(context).width);
     final chevronOpacity =
         reduceMotion ? kAlwaysCompleteAnimation : _chevronOpacityAnimation;
     final rangeOpacity =

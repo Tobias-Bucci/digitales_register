@@ -16,6 +16,7 @@ import 'package:dr/ui/glass_surface.dart';
 import 'package:dr/ui/reminder_settings.dart';
 import 'package:dr/ui/settings_page_new.dart';
 import 'package:dr/ui/subject_swatch_picker.dart';
+import 'package:dr/ui/dashboard_columns.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 
@@ -369,9 +370,10 @@ void main() {
         final header = tester.getRect(_key('settings-app-header'));
         final card = tester.getRect(find.byType(GlassCard).first);
         expect(header.top, DesignTokens.gutter);
-        expect(header.width, lessThanOrEqualTo(DesignTokens.contentMaxWidth));
-        expect(card.left, header.left);
-        expect(card.right, header.right);
+        expect(header.width, lessThanOrEqualTo(DashboardColumns.maxWidth));
+        // Centered below the header, which is as wide on every page (#140).
+        expect(card.width, lessThanOrEqualTo(DesignTokens.contentMaxWidth));
+        expect(card.center.dx, closeTo(header.center.dx, 0.5));
         expect(card.top, greaterThanOrEqualTo(header.bottom));
         expect(tester.takeException(), isNull);
       });

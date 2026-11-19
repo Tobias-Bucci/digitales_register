@@ -149,7 +149,7 @@ class GradesPageNew extends StatelessWidget {
         semester: page.showSemester,
         onSemesterChanged: callbacks.changeSemester,
         onShowHistory: () => _showHistory(context),
-        floatingMaxWidth: glassHeaderFloatingWidth(width, twoColumns: true),
+        floatingMaxWidth: glassHeaderFloatingWidth(width),
       ),
       loading: page.loading,
       body: Builder(builder: (context) => _body(context, wide: wide)),

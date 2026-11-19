@@ -11,6 +11,7 @@ import 'package:dr/ui/app_navigation.dart';
 import 'package:dr/ui/extras_page.dart';
 import 'package:dr/ui/glass_page.dart';
 import 'package:dr/ui/glass_surface.dart';
+import 'package:dr/ui/dashboard_columns.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -248,9 +249,10 @@ void main() {
             tester.getRect(find.byKey(const Key('extras-app-header')));
         final entry = tester.getRect(_entry('extras-class-register'));
         expect(header.top, DesignTokens.gutter);
-        expect(header.width, lessThanOrEqualTo(DesignTokens.contentMaxWidth));
-        expect(entry.left, header.left);
-        expect(entry.right, header.right);
+        expect(header.width, lessThanOrEqualTo(DashboardColumns.maxWidth));
+        // Centered below the header, which is as wide on every page (#140).
+        expect(entry.width, lessThanOrEqualTo(DesignTokens.contentMaxWidth));
+        expect(entry.center.dx, closeTo(header.center.dx, 0.5));
         expect(entry.top, greaterThanOrEqualTo(header.bottom));
         expect(tester.takeException(), isNull);
       });

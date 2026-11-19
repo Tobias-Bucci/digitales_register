@@ -312,7 +312,8 @@ verwendet; ihr Aussehen hat sich dadurch nicht geändert.
 | --- | --- |
 | `GlassPage` | Rahmen: Glas-Kopfzeile, Akzentschleier, Text bis 200 %, Ladebalken unter der Kopfzeile. `scrolls: false` für einen Inhalt, der nicht als Ganzes scrollt. |
 | `GlassPageHeader` | Kopfzeile auf `GlassHeaderShell`: Titel (Überschrift, wird kleiner statt abgeschnitten), `titleWidget`, `control`, `actions`, zweite Zeile `bottom`. |
-| `glassHeaderFloatingWidth` | Breite der schwebenden Kopfzeile: unter 720 px keine, sonst 840 px, mit `twoColumns` ab 1080 px 1220 px. |
+| `glassHeaderFloatingWidth` | Breite der schwebenden Kopfzeile, nur vom Fenster abhängig und damit auf jeder Seite gleich (#140): unter 720 px keine (Band), sonst 840 px, ab 1080 px 1220 px. Eine einspaltige Seite steht mittig darunter. |
+| `GlassHeaderMetrics` | Gemeinsame Maße aller Kopfzeilen, auch der des Dashboards (`lib/ui/dashboard_app_header.dart`): Höhe 56, erstes Element (Titel, Logo) 16 / schwebend 20 vom Rand, Knöpfe an beiden Enden 4 / 8, zweite Zeile 12 / 14. |
 | `GlassListBody` | Liste in Lesebreite (840 px) unter der Kopfzeile und über der Leiste; `.builder` für lange Listen. |
 | `GlassColumnsBody` | Seitenspalte neben der Liste ab 1080 px, darunter beide untereinander. |
 | `GlassStateCard` | Meldung statt Inhalt (leer, offline, Fehler), mit optionaler Aktion. |

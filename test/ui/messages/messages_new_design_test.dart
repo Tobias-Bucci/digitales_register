@@ -20,6 +20,7 @@ import 'package:dr/ui/glass_surface.dart';
 import 'package:dr/ui/messages.dart';
 import 'package:dr/ui/messages_new.dart';
 import 'package:dr/utc_date_time.dart';
+import 'package:dr/ui/dashboard_columns.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:mocktail/mocktail.dart';
@@ -547,9 +548,10 @@ void main() {
         final header = tester.getRect(_header);
         final entry = tester.getRect(_entry(1));
         expect(header.top, DesignTokens.gutter);
-        expect(header.width, lessThanOrEqualTo(DesignTokens.contentMaxWidth));
-        expect(entry.left, header.left);
-        expect(entry.right, header.right);
+        expect(header.width, lessThanOrEqualTo(DashboardColumns.maxWidth));
+        // Centered below the header, which is as wide on every page (#140).
+        expect(entry.width, lessThanOrEqualTo(DesignTokens.contentMaxWidth));
+        expect(entry.center.dx, closeTo(header.center.dx, 0.5));
         expect(entry.top, greaterThanOrEqualTo(header.bottom));
         // The full names of the folders fit here (the test font is wider
         // than Roboto, so only the wide window is sure to fit them).

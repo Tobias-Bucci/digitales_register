@@ -84,7 +84,7 @@ class _AbsencesPageNewState extends State<AbsencesPageNew> {
         surfaceKey: const Key('absences-app-header'),
         titleKey: const Key('absences-header-title'),
         title: l10n.text('absences.title'),
-        floatingMaxWidth: glassHeaderFloatingWidth(width, twoColumns: true),
+        floatingMaxWidth: glassHeaderFloatingWidth(width),
       ),
       body: Builder(builder: _body),
     );

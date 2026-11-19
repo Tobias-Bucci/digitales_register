@@ -108,10 +108,8 @@ class ExportNewView extends StatelessWidget {
         surfaceKey: const Key('export-app-header'),
         titleKey: const Key('export-header-title'),
         title: t('title'),
-        floatingMaxWidth: glassHeaderFloatingWidth(
-          MediaQuery.sizeOf(context).width,
-          twoColumns: true,
-        ),
+        floatingMaxWidth:
+            glassHeaderFloatingWidth(MediaQuery.sizeOf(context).width),
         actions: [
           if (onReload != null)
             HeaderDiscButton(

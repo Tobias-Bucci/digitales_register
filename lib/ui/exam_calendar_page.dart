@@ -165,7 +165,9 @@ class _ExamCalendarPageState extends State<ExamCalendarPage> {
       ),
     ];
     return Scaffold(
-      appBar: AppBar(title: title, actions: actions),
+      // A page of the sidebar: the same bar as the others, without a back
+      // button beside the sidebar (#140).
+      appBar: ResponsiveAppBar(title: title, actions: actions),
       body: _timeline
           ? ExamTimeline(
               assessments: upcoming,

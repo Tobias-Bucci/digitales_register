@@ -18,6 +18,7 @@ import 'package:dr/ui/glass_page.dart';
 import 'package:dr/ui/glass_surface.dart';
 import 'package:dr/ui/network_protocol_page.dart';
 import 'package:dr/ui/privacy_data_details_page.dart';
+import 'package:dr/ui/dashboard_columns.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 
@@ -307,7 +308,7 @@ void main() {
         await _pumpPage(tester, widget, size: const Size(1280, 800));
         final rect = tester.getRect(_key(header));
         expect(rect.top, DesignTokens.gutter);
-        expect(rect.width, lessThanOrEqualTo(DesignTokens.contentMaxWidth));
+        expect(rect.width, lessThanOrEqualTo(DashboardColumns.maxWidth));
         expect(tester.takeException(), isNull);
       });
     }

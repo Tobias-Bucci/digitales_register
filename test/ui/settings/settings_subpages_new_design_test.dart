@@ -434,8 +434,9 @@ void main() {
       final header = tester.getRect(_key('settings-detail-app-header'));
       final card = tester.getRect(find.byType(GlassCard).first);
       expect(header.top, DesignTokens.gutter);
-      expect(card.left, header.left);
-      expect(card.right, header.right);
+      // Centered below the header, which is as wide on every page (#140).
+      expect(card.width, lessThanOrEqualTo(DesignTokens.contentMaxWidth));
+      expect(card.center.dx, closeTo(header.center.dx, 0.5));
       expect(card.top, greaterThanOrEqualTo(header.bottom));
     });
 

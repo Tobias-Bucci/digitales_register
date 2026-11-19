@@ -28,12 +28,11 @@ class _TestPage extends StatelessWidget {
     required this.body,
     this.bottom,
     this.scrolls = true,
-    this.twoColumns = false,
   });
 
   final Widget body;
   final PreferredSizeWidget? bottom;
-  final bool scrolls, twoColumns;
+  final bool scrolls;
 
   @override
   Widget build(BuildContext context) => GlassPage(
@@ -42,10 +41,8 @@ class _TestPage extends StatelessWidget {
           surfaceKey: const Key('test-header'),
           titleKey: const Key('test-title'),
           title: 'Testseite',
-          floatingMaxWidth: glassHeaderFloatingWidth(
-            MediaQuery.sizeOf(context).width,
-            twoColumns: twoColumns,
-          ),
+          floatingMaxWidth:
+              glassHeaderFloatingWidth(MediaQuery.sizeOf(context).width),
           actions: [
             HeaderDiscButton(
               key: const Key('test-action'),
@@ -163,19 +160,13 @@ void main() {
       semantics.dispose();
     });
 
-    test('floats from 720 px and lines up with the body', () {
+    // The same on every page, whatever its body (#140).
+    test('floats from 720 px, as wide as two columns from 1080 px', () {
       expect(glassHeaderFloatingWidth(719), isNull);
       expect(glassHeaderFloatingWidth(720), DesignTokens.contentMaxWidth);
-      expect(glassHeaderFloatingWidth(1920), DesignTokens.contentMaxWidth);
-      expect(glassHeaderFloatingWidth(719, twoColumns: true), isNull);
-      expect(
-        glassHeaderFloatingWidth(1000, twoColumns: true),
-        DesignTokens.contentMaxWidth,
-      );
-      expect(
-        glassHeaderFloatingWidth(1280, twoColumns: true),
-        DashboardColumns.maxWidth,
-      );
+      expect(glassHeaderFloatingWidth(1000), DesignTokens.contentMaxWidth);
+      expect(glassHeaderFloatingWidth(1280), DashboardColumns.maxWidth);
+      expect(glassHeaderFloatingWidth(1920), DashboardColumns.maxWidth);
     });
 
     for (final (width, floating) in const [(719.0, false), (720.0, true)]) {
@@ -307,13 +298,13 @@ void main() {
       final tile = tester.getRect(find.byKey(const ValueKey('tile-0')));
       final header = tester.getRect(find.byKey(const Key('test-header')));
       expect(tile.width, lessThanOrEqualTo(DesignTokens.contentMaxWidth));
-      expect(tile.left, header.left);
-      expect(tile.right, header.right);
+      // Centered below the header, which is as wide on every page (#140).
+      expect(header.width, greaterThan(tile.width));
+      expect(tile.center.dx, closeTo(header.center.dx, 0.5));
     });
 
     testWidgets('two columns from 1080 px, one below', (tester) async {
       Widget page() => _TestPage(
-            twoColumns: true,
             body: GlassColumnsBody(
               listKey: const Key('test-list'),
               side: const SizedBox(height: 100, key: Key('test-side')),
@@ -343,7 +334,6 @@ void main() {
       await _pumpPage(
         tester,
         _TestPage(
-          twoColumns: true,
           body: GlassColumnsBody(
             side: const SizedBox(height: 100, key: Key('test-side')),
             main: Column(children: _tiles(1)),

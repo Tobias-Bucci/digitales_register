@@ -21,6 +21,7 @@ import 'package:dr/ui/extras_page.dart';
 import 'package:dr/ui/glass_page.dart';
 import 'package:dr/ui/glass_surface.dart';
 import 'package:dr/ui/readable_content.dart';
+import 'package:dr/ui/dashboard_columns.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:responsive_scaffold/responsive_scaffold.dart';
@@ -464,9 +465,10 @@ void main() {
         final header = tester.getRect(_key('course-materials-app-header'));
         final card = tester.getRect(find.byType(GlassCard).first);
         expect(header.top, DesignTokens.gutter);
-        expect(header.width, lessThanOrEqualTo(DesignTokens.contentMaxWidth));
-        expect(card.left, header.left);
-        expect(card.right, header.right);
+        expect(header.width, lessThanOrEqualTo(DashboardColumns.maxWidth));
+        // Centered below the header, which is as wide on every page (#140).
+        expect(card.width, lessThanOrEqualTo(DesignTokens.contentMaxWidth));
+        expect(card.center.dx, closeTo(header.center.dx, 0.5));
       });
     }
 
