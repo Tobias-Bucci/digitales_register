@@ -23,6 +23,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 import '../../support/test_harness.dart';
+import 'credits_page_test.dart' show creditsThanks, expectNoPersonCard;
 
 const _phone = Size(412, 900);
 
@@ -359,6 +360,36 @@ void main() {
         expect(find.text(l10n.text('credits.title')), findsOneWidget);
         expect(find.textContaining('credits.'), findsNothing);
         expect(tester.takeException(), isNull);
+        expect(
+          find.descendant(
+            of: find.byType(GlassCard),
+            matching: find.text(creditsThanks[code]!),
+          ),
+          findsOneWidget,
+        );
+        expectNoPersonCard();
+      });
+    }
+
+    for (final (name, size) in const [
+      ('narrow phone', Size(320, 640)),
+      ('wide window', Size(1280, 800)),
+    ]) {
+      testWidgets('credits fit a $name at text scale 2', (tester) async {
+        tester.platformDispatcher.textScaleFactorTestValue = 2;
+        addTearDown(tester.platformDispatcher.clearTextScaleFactorTestValue);
+        await _pumpPage(
+          tester,
+          const CreditsPage(),
+          state: _state(languageCode: 'lld'),
+          size: size,
+        );
+        expect(tester.takeException(), isNull);
+        final text = tester.getRect(find.text(creditsThanks['lld']!));
+        final page = tester.getRect(find.byType(CreditsPage));
+        expect(text.width, lessThanOrEqualTo(560));
+        expect((text.center.dx - page.center.dx).abs(), lessThan(1));
+        expectNoPersonCard();
       });
     }
   });

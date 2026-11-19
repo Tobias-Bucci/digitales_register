@@ -8,6 +8,25 @@ import 'package:flutter_test/flutter_test.dart';
 
 import '../../support/test_harness.dart';
 
+/// The general thank-you of the page (#152), which thanks nobody by name.
+const creditsThanks = {
+  'de': 'Danke für euer Feedback, eure Zeit, eure Ideen und eure '
+      'Unterstützung. Ohne euch wäre diese App nicht das, was sie heute ist.',
+  'en': 'Thank you for your feedback, your time, your ideas and your support. '
+      'Without you, this app would not be what it is today.',
+  'it': 'Grazie per il vostro feedback, il vostro tempo, le vostre idee e il '
+      'vostro sostegno. Senza di voi questa app non sarebbe quella che è oggi.',
+  'lld': 'Dilan por vost feedback, vost tëmp, vostes idees y vost sostëgn. '
+      "Zënza de vos ne foss chësta app nia chël ch'ara é encö.",
+};
+
+/// No card of a single person: no avatar with initials, no name.
+void expectNoPersonCard() {
+  expect(find.byType(CircleAvatar), findsNothing);
+  expect(find.textContaining('Gabriel'), findsNothing);
+  expect(find.text('GA'), findsNothing);
+}
+
 void main() {
   setUp(bootstrapTestEnvironment);
   tearDown(resetTestState);
@@ -41,8 +60,9 @@ void main() {
     await tester.tap(tile);
     await tester.pumpAndSettle();
     expect(find.byType(CreditsPage), findsOneWidget);
-    expect(find.text('Gabriel Albarello'), findsOneWidget);
-    expect(find.text('GA'), findsOneWidget);
+    expect(find.text('Thank you!'), findsOneWidget);
+    expect(find.text(creditsThanks['en']!), findsOneWidget);
+    expectNoPersonCard();
   });
 
   for (final language in AppLanguage.values) {
@@ -73,9 +93,45 @@ void main() {
         );
         await settleFor(tester);
         expect(tester.takeException(), isNull);
-        expect(find.text('Gabriel Albarello'), findsOneWidget);
+        expect(find.text(creditsThanks[language.code]!), findsOneWidget);
+        expect(find.byIcon(Icons.favorite_rounded), findsOneWidget);
+        expect(
+          find.descendant(
+            of: find.byType(Card),
+            matching: find.text(creditsThanks[language.code]!),
+          ),
+          findsOneWidget,
+        );
+        expectNoPersonCard();
         expect(find.textContaining('credits.'), findsNothing);
       });
     }
+  }
+
+  for (final (name, size) in [
+    ('narrow phone', const Size(320, 640)),
+    ('wide window', const Size(1280, 800)),
+  ]) {
+    testWidgets('legacy credits fit a $name at text scale 2', (tester) async {
+      tester.view.physicalSize = size;
+      tester.view.devicePixelRatio = 1;
+      addTearDown(tester.view.reset);
+      tester.platformDispatcher.textScaleFactorTestValue = 2;
+      addTearDown(tester.platformDispatcher.clearTextScaleFactorTestValue);
+      await pumpApp(
+        tester,
+        store: createStore(
+          initialState: AppState(
+            (b) => b.settingsState.languageCode = AppLanguage.lld.code,
+          ),
+        ),
+        home: const CreditsPage(),
+      );
+      await settleFor(tester);
+      expect(tester.takeException(), isNull);
+      final text = tester.getRect(find.text(creditsThanks['lld']!));
+      expect(text.width, lessThanOrEqualTo(560));
+      expect((text.center.dx - size.width / 2).abs(), lessThan(1));
+    });
   }
 }
