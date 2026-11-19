@@ -3,7 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:quill_delta/quill_delta.dart';
 import 'package:url_launcher/url_launcher.dart';
 
-class QuillDeltaViewer extends StatelessWidget {
+class QuillDeltaViewer extends StatefulWidget {
   /// The document delta to be rendered
   final Delta delta;
 
@@ -13,10 +13,9 @@ class QuillDeltaViewer extends StatelessWidget {
 
   const QuillDeltaViewer({Key? key, required this.delta, this.onLinkTap})
       : super(key: key);
+
   @override
-  Widget build(BuildContext context) {
-    return render(removeLastNewline(isolateLines(delta)), context);
-  }
+  State<QuillDeltaViewer> createState() => _QuillDeltaViewerState();
 
   /// Splits all operations at newlines
   /// Newlines will be at the end of operations
@@ -72,6 +71,60 @@ class QuillDeltaViewer extends StatelessWidget {
       return operation;
     }
   }
+}
+
+/// Owns the tap recognizers of the links: one per link of the text, made
+/// once, reused when only the theme changes, and disposed when the text
+/// changes or the widget goes away.
+class _QuillDeltaViewerState extends State<QuillDeltaViewer> {
+  final _recognizers = <TapGestureRecognizer>[];
+  var _nextRecognizer = 0;
+
+  /// What [build] shows, until the text or the theme changes.
+  Widget? _content;
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    _content = null;
+  }
+
+  @override
+  void didUpdateWidget(QuillDeltaViewer oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (!identical(oldWidget.delta, widget.delta) &&
+        oldWidget.delta != widget.delta) {
+      // The old spans are replaced in this frame, before any tap.
+      _disposeRecognizers();
+      _content = null;
+    }
+  }
+
+  @override
+  void dispose() {
+    _disposeRecognizers();
+    super.dispose();
+  }
+
+  void _disposeRecognizers() {
+    for (final recognizer in _recognizers) {
+      recognizer.dispose();
+    }
+    _recognizers.clear();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    var content = _content;
+    if (content == null) {
+      _nextRecognizer = 0;
+      content = _content = render(
+        widget.removeLastNewline(widget.isolateLines(widget.delta)),
+        context,
+      );
+    }
+    return content;
+  }
 
   Widget render(List<Operation> ops, BuildContext context) {
     final reversed = ops.reversed.toList();
@@ -107,7 +160,7 @@ class QuillDeltaViewer extends StatelessWidget {
         renderedBlock = true;
       } else {
         if (renderedBlock) {
-          op = removeTrailingNewline(op);
+          op = widget.removeTrailingNewline(op);
         }
         spans.add(renderText(op, context));
         renderedBlock = false;
@@ -137,7 +190,8 @@ class QuillDeltaViewer extends StatelessWidget {
     }
     final text = Text.rich(
       TextSpan(
-        children: removeLastNewline(ops)
+        children: widget
+            .removeLastNewline(ops)
             .map(
               (e) => renderText(e, context),
             )
@@ -171,7 +225,6 @@ class QuillDeltaViewer extends StatelessWidget {
       strike = op.attributes!["strike"] == true;
       underline = op.attributes!["underline"] == true;
     }
-    final isLink = link != null;
 
     final text = op.stringData;
 
@@ -183,23 +236,35 @@ class QuillDeltaViewer extends StatelessWidget {
         decoration: TextDecoration.combine(
           [
             if (strike) TextDecoration.lineThrough,
-            if (underline) TextDecoration.underline,
+            // A link is underlined, so it is not told apart by color alone.
+            if (underline || link != null) TextDecoration.underline,
           ],
         ),
-        color: isLink ? Theme.of(context).colorScheme.secondary : null,
+        color: link != null ? Theme.of(context).colorScheme.primary : null,
       ),
-      recognizer: isLink
-          ? (TapGestureRecognizer()
-            ..onTap = () {
-              final open = onLinkTap;
-              if (open != null) {
-                open(link!);
-              } else {
-                launchUrl(Uri.parse(link!));
-              }
-            })
-          : null,
+      recognizer: link == null ? null : _recognizerFor(link),
     );
+  }
+
+  /// The recognizer of the next link of the text. The links come in the same
+  /// order on every build of the same text, so a recognizer made for an
+  /// earlier build of it leads to the same [link].
+  TapGestureRecognizer _recognizerFor(String link) {
+    if (_nextRecognizer < _recognizers.length) {
+      return _recognizers[_nextRecognizer++];
+    }
+    final recognizer = TapGestureRecognizer()
+      ..onTap = () {
+        final open = widget.onLinkTap;
+        if (open != null) {
+          open(link);
+        } else {
+          launchUrl(Uri.parse(link));
+        }
+      };
+    _recognizers.add(recognizer);
+    _nextRecognizer++;
+    return recognizer;
   }
 }
 
