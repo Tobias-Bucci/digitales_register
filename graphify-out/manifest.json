@@ -1224,9 +1224,9 @@
     "semantic_hash": "3f8b18267874aa61d33fe107e4f26b87"
   },
   "lib/ui/grade_calculator.dart": {
-    "mtime": 1794932475.0270312,
-    "seen": 1795080325.062358,
-    "ast_hash": "120a0b40ce189891d9e699d3f4cf0bb1",
+    "mtime": 1795120388.3204043,
+    "seen": 1795120574.9755795,
+    "ast_hash": "d6fd231ed3529d2b882a6802ef15a94d",
     "semantic_hash": ""
   },
   "lib/ui/grade_calculator_new.dart": {
@@ -1524,9 +1524,9 @@
     "semantic_hash": "68054a378d8b6006f6ef5bb867ce8f21"
   },
   "lib/ui/server_notifications/server_notification_visuals.dart": {
-    "mtime": 1795119454.1334014,
-    "seen": 1795120024.6387491,
-    "ast_hash": "b669a135489341a697321195cc9747d9",
+    "mtime": 1795120405.0542974,
+    "seen": 1795120574.9756277,
+    "ast_hash": "2d059057cd148ea84c874884808511e8",
     "semantic_hash": ""
   },
   "lib/ui/settings_page_new.dart": {
@@ -1572,9 +1572,9 @@
     "semantic_hash": ""
   },
   "lib/ui/target_grade_calculator.dart": {
-    "mtime": 1794932475.0431283,
-    "seen": 1795080325.0624144,
-    "ast_hash": "5e6733b01f24a4eb1f1190989cd357bd",
+    "mtime": 1795120405.0542974,
+    "seen": 1795120574.975643,
+    "ast_hash": "89184a807f3745dcdf4eae44ddb06d27",
     "semantic_hash": ""
   },
   "lib/ui/target_grade_calculator_new.dart": {
@@ -1980,9 +1980,9 @@
     "semantic_hash": ""
   },
   "test/grade_parse_test.dart": {
-    "mtime": 1774738722.0,
-    "seen": 1795080325.0624845,
-    "ast_hash": "004839edd13f963b62d76a4a45e3ac4d",
+    "mtime": 1795120388.3213928,
+    "seen": 1795120574.9757266,
+    "ast_hash": "4e6c12d280839049ae448279bc1a1e0d",
     "semantic_hash": ""
   },
   "test/grade_weight_policy_test.dart": {
@@ -4002,21 +4002,27 @@
     "semantic_hash": ""
   },
   "test/server_notifications/school_notification_icon_test.dart": {
-    "mtime": 1795119490.5831823,
-    "seen": 1795120024.638925,
-    "ast_hash": "0d7e367b68db3a6b8db4d65fdafa0e85",
-    "semantic_hash": ""
-  },
-  "lib/ui/server_notifications/school_notification_grade.dart": {
-    "mtime": 1795119419.001586,
-    "seen": 1795120024.638743,
-    "ast_hash": "2275aa6b6d1532889eb62db83d0d41bd",
+    "mtime": 1795120405.0552971,
+    "seen": 1795120574.9758155,
+    "ast_hash": "4467ef44e23fd3ee36e7bdc7ffd5c82c",
     "semantic_hash": ""
   },
   "test/server_notifications/school_notification_grade_test.dart": {
-    "mtime": 1795119490.5811768,
-    "seen": 1795120024.6389234,
-    "ast_hash": "ae87e8105cbd7a12c7e27028b2d3394a",
+    "mtime": 1795120388.3551466,
+    "seen": 1795120574.9758143,
+    "ast_hash": "24ca89c02f8cbc4343e2725539827d47",
+    "semantic_hash": ""
+  },
+  "lib/grades/grade_notation.dart": {
+    "mtime": 1795120388.3204043,
+    "seen": 1795120574.9754357,
+    "ast_hash": "59d0a537ea319e9e92b069574c40e61d",
+    "semantic_hash": ""
+  },
+  "lib/school_notification_grade.dart": {
+    "mtime": 1795120389.3785262,
+    "seen": 1795120574.9755027,
+    "ast_hash": "08b24deb166d40868a5e04c79c74520b",
     "semantic_hash": ""
   }
 }

@@ -1,9 +1,9 @@
 import 'dart:math' as math;
 
+import 'package:dr/school_notification_grade.dart';
 import 'package:dr/theme/app_palette.dart';
 import 'package:dr/theme_controller.dart';
 import 'package:dr/ui/grade_colors.dart';
-import 'package:dr/ui/server_notifications/school_notification_grade.dart';
 import 'package:dr/ui/server_notifications/server_notification_visuals.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';

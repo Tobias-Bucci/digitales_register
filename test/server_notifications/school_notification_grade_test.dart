@@ -1,5 +1,5 @@
 import 'package:dr/data.dart';
-import 'package:dr/ui/server_notifications/school_notification_grade.dart';
+import 'package:dr/school_notification_grade.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 import '../support/fixtures.dart';

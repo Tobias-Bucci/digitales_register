@@ -4,10 +4,10 @@ import 'package:dr/dashboard_events.dart'
     show DashboardEventKind, dashboardEventKindOf;
 import 'package:dr/data.dart' show Notification, formatGradeFromInt;
 import 'package:dr/i18n/app_localizations.dart';
+import 'package:dr/school_notification_grade.dart';
 import 'package:dr/server_notifications/server_notification_models.dart';
 import 'package:dr/ui/grade_colors.dart';
 import 'package:dr/ui/grades_format.dart';
-import 'package:dr/ui/server_notifications/school_notification_grade.dart';
 import 'package:flutter/material.dart' hide Notification;
 import 'package:intl/intl.dart';
 import 'package:responsive_scaffold/responsive_scaffold.dart';

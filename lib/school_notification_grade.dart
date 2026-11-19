@@ -18,7 +18,7 @@
 import 'package:dr/dashboard_events.dart'
     show DashboardEventKind, dashboardEventKindOf;
 import 'package:dr/data.dart' show Notification;
-import 'package:dr/ui/grade_calculator.dart' show tryParseFormattedGrade;
+import 'package:dr/grades/grade_notation.dart' show tryParseFormattedGrade;
 import 'package:html/parser.dart' as html;
 
 /// The grade a new-grade entry of the school's feed announces (#153).

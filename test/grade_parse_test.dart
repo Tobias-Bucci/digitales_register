@@ -1,4 +1,4 @@
-import 'package:dr/ui/grade_calculator.dart';
+import 'package:dr/grades/grade_notation.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 void main() {

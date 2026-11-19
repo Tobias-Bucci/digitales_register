@@ -23,6 +23,7 @@ import 'package:dr/analytics_service.dart';
 import 'package:dr/app_state.dart';
 import 'package:dr/data.dart';
 import 'package:dr/grades/grade_average.dart';
+import 'package:dr/grades/grade_notation.dart';
 import 'package:dr/i18n/app_localizations.dart';
 import 'package:dr/ui/dashboard_app_header.dart';
 import 'package:dr/ui/dialog.dart';
@@ -40,87 +41,6 @@ import 'package:responsive_scaffold/responsive_scaffold.dart';
 import 'package:tuple/tuple.dart';
 
 part 'grade_calculator_new.dart';
-
-bool isGradeInRange(int grade) {
-  return grade >= 0 && grade <= 1000;
-}
-
-int? tryParseFormattedGrade(String grade) {
-  bool matchesWholeInput(RegExpMatch? match) {
-    return match != null && match.start == 0 && match.end == match.input.length;
-  }
-
-  final accurate = RegExp(r"(\d+)(?:[.,](\d{1,2}))?").firstMatch(grade);
-  if (matchesWholeInput(accurate)) {
-    final major = accurate!.group(1)!;
-    final minor = accurate.group(2);
-    final majorParsed = int.tryParse(major);
-    if (majorParsed == null) {
-      return null;
-    }
-    var minorParsed = minor != null ? int.tryParse(minor) : 0;
-    if (minorParsed == null) {
-      return null;
-    }
-    if (minor?.length == 1) {
-      // parse .5 as 50/100
-      minorParsed *= 10;
-    }
-    final combinedGrade = majorParsed * 100 + minorParsed;
-    if (!isGradeInRange(combinedGrade)) {
-      return null;
-    }
-    return combinedGrade;
-  }
-
-  final less = RegExp(r"(\d+)-").firstMatch(grade);
-  if (matchesWholeInput(less)) {
-    final lessParsed = int.tryParse(less!.group(1)!);
-    if (lessParsed == null) {
-      return null;
-    }
-    final combinedGrade = lessParsed * 100 - 25;
-    if (!isGradeInRange(combinedGrade)) {
-      return null;
-    }
-    return combinedGrade;
-  }
-
-  final more = RegExp(r"(\d+)\+").firstMatch(grade);
-  if (matchesWholeInput(more)) {
-    final moreParsed = int.tryParse(more!.group(1)!);
-    if (moreParsed == null) {
-      return null;
-    }
-    final combinedGrade = moreParsed * 100 + 25;
-    if (!isGradeInRange(combinedGrade)) {
-      return null;
-    }
-    return combinedGrade;
-  }
-
-  final between = RegExp(r"(\d+)[-/](\d+)").firstMatch(grade);
-  if (matchesWholeInput(between)) {
-    final startParsed = int.tryParse(between!.group(1)!);
-    if (startParsed == null) {
-      return null;
-    }
-    final endParsed = int.tryParse(between.group(2)!);
-    if (endParsed == null) {
-      return null;
-    }
-    if (endParsed != startParsed + 1) {
-      return null;
-    }
-    final combinedGrade = startParsed * 100 + 50;
-    if (!isGradeInRange(combinedGrade)) {
-      return null;
-    }
-    return combinedGrade;
-  }
-
-  return null;
-}
 
 /// The weighted average of [grades] in hundredths, rounded as everywhere else,
 /// or null without any weight.
