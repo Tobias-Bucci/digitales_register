@@ -20,6 +20,7 @@ import 'package:dr/app_state.dart';
 import 'package:dr/data.dart';
 import 'package:dr/grades/grade_average.dart';
 import 'package:dr/reminders/local_reminder_assessments.dart';
+import 'package:dr/school_notification_grade.dart';
 import 'package:dr/utc_date_time.dart';
 
 enum DashboardEventKind { grade, message, absence, observation, general }
@@ -181,19 +182,30 @@ DashboardEvent _eventOfNotification(AppState state, Notification notification) {
         ? null
         : _gradeInGradesState(state.gradesState, objectId) ??
             _gradeOnDashboard(state, objectId);
-    if (match != null) {
-      final gradeText = match.gradeHundredths == null
-          ? null
-          : formatGradeFromInt(match.gradeHundredths);
-      final averages = _averages(match, state.gradesState.semester);
+    // The text is what the school sent and always carries subject, kind and
+    // grade (#154). The loaded grade, when there is one, adds its name, the
+    // subject to open and the averages.
+    final text = schoolNotificationGradeOf(notification);
+    if (match != null || text != null) {
+      final hundredths =
+          text != null ? text.hundredths : match!.gradeHundredths;
+      // Averages that leave out another value would not describe this grade.
+      final averages = match != null &&
+              (text == null || text.hundredths == match.gradeHundredths)
+          ? _averages(match, state.gradesState.semester)
+          : (null, null);
       return DashboardEvent(
         kind: kind,
         time: notification.timeSent,
-        description: match.description,
-        subject: match.subject,
-        gradeText: gradeText,
-        gradeHundredths: match.gradeHundredths,
-        gradePercent: gradePercentOf(match.gradeHundredths),
+        description: match?.description ?? text!.kind,
+        subject: match?.subject ?? text!.subject,
+        gradeText: text != null
+            ? text.display
+            : hundredths == null
+                ? null
+                : formatGradeFromInt(hundredths),
+        gradeHundredths: hundredths,
+        gradePercent: gradePercentOf(hundredths),
         averageBefore: averages.$1,
         averageAfter: averages.$2,
         notification: notification,

@@ -130,15 +130,23 @@ void main() {
     Notification entry(String? type, String title, {String? subTitle}) =>
         buildNotification(type: type, title: title, subTitle: subTitle);
 
-    test('reads grades only, in any letter case', () {
+    test('reads the text whatever the type; callers check it', () {
       const text = 'Neue Bewertung "Deutsch" "Test" "8"';
-      for (final type in ['grade', 'Grade', 'GRADE']) {
+      for (final type in ['grade', 'GRADE', null, 'message']) {
         expect(schoolNotificationGradeOf(entry(type, text))?.hundredths, 800,
-            reason: type);
-      }
-      for (final type in [null, 'absence', 'message', 'observation', 'x']) {
-        expect(schoolNotificationGradeOf(entry(type, text)), isNull,
             reason: '$type');
+      }
+    });
+
+    test('shows the grade as the grades page writes it', () {
+      for (final (value, display) in [
+        ('7½', '7/8'),
+        ('8-', '8-'),
+        ('10', '10'),
+        ('gut', 'gut'),
+      ]) {
+        expect(parseSchoolNotificationGrade('"Fach" "Test" "$value"')?.display,
+            display);
       }
     });
 

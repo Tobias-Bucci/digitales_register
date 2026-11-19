@@ -2,7 +2,7 @@ import 'dart:math' as math;
 
 import 'package:dr/dashboard_events.dart'
     show DashboardEventKind, dashboardEventKindOf;
-import 'package:dr/data.dart' show Notification, formatGradeFromInt;
+import 'package:dr/data.dart' show Notification;
 import 'package:dr/i18n/app_localizations.dart';
 import 'package:dr/school_notification_grade.dart';
 import 'package:dr/server_notifications/server_notification_models.dart';
@@ -160,7 +160,10 @@ class SchoolNotificationIcon extends StatelessWidget {
   }) : this(
           key: key,
           type: notification.type,
-          grade: schoolNotificationGradeOf(notification),
+          grade: dashboardEventKindOf(notification.type) ==
+                  DashboardEventKind.grade
+              ? schoolNotificationGradeOf(notification)
+              : null,
           colorGrades: colorGrades,
           size: size,
         );
@@ -178,9 +181,7 @@ class SchoolNotificationIcon extends StatelessWidget {
   /// The grade as the grades page writes it, or as the register wrote it
   /// when the app cannot read it.
   String _gradeText(BuildContext context, SchoolNotificationGrade grade) {
-    final hundredths = grade.hundredths;
-    if (hundredths == null) return grade.text;
-    final text = formatGradeFromInt(hundredths);
+    final text = grade.display;
     return text.contains(',') && ResponsiveNavigationScope.isActive(context)
         ? GradesFormat.of(context).grade(text)
         : text;

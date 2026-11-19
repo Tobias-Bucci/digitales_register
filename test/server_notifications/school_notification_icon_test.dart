@@ -8,6 +8,7 @@ import 'package:dr/ui/server_notifications/server_notification_visuals.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 
+import '../support/fixtures.dart';
 import '../support/test_harness.dart';
 
 Future<void> _pumpIcon(
@@ -121,6 +122,30 @@ void main() {
         );
         expect(_inIcon(find.byIcon(Icons.school_outlined)), findsOneWidget);
         expect(_inIcon(find.byType(Text)), findsNothing);
+      });
+    }
+
+    for (final (type, icon) in [
+      ('grade', null),
+      ('GRADE', null),
+      ('message', Icons.school_outlined),
+      ('absence', Icons.schedule_rounded),
+      (null, Icons.school_outlined),
+    ]) {
+      testWidgets('of an entry of the type "$type"', (tester) async {
+        await _pumpIcon(
+          tester,
+          SchoolNotificationIcon.of(buildNotification(
+            type: type,
+            title: 'Neue Bewertung "Fach" "Test" "8"',
+          )),
+        );
+        if (icon == null) {
+          expect(_inIcon(find.text('8')), findsOneWidget);
+        } else {
+          expect(_inIcon(find.byIcon(icon)), findsOneWidget);
+          expect(_inIcon(find.byType(Text)), findsNothing);
+        }
       });
     }
 

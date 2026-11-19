@@ -15,9 +15,7 @@
 // You should have received a copy of the GNU General Public License
 // along with digitales_register.  If not, see <http://www.gnu.org/licenses/>.
 
-import 'package:dr/dashboard_events.dart'
-    show DashboardEventKind, dashboardEventKindOf;
-import 'package:dr/data.dart' show Notification;
+import 'package:dr/data.dart' show Notification, formatGradeFromInt;
 import 'package:dr/grades/grade_notation.dart' show tryParseFormattedGrade;
 import 'package:html/parser.dart' as html;
 
@@ -43,6 +41,13 @@ class SchoolNotificationGrade {
   /// Its value, or null for a short grade the app cannot read, such as "gut",
   /// which is shown as written and without a colour.
   final int? hundredths;
+
+  /// The grade as the grades page writes it ("7½" becomes "7/8"), or as the
+  /// register wrote it when the app cannot read it.
+  String get display {
+    final hundredths = this.hundredths;
+    return hundredths == null ? text : formatGradeFromInt(hundredths);
+  }
 }
 
 /// Any of the quotes the register may use, straight, typographic or angle.
@@ -87,14 +92,11 @@ SchoolNotificationGrade? parseSchoolNotificationGrade(String? text) {
 final _read = Expando<Object>('school notification grade');
 const _noGrade = Object();
 
-/// The grade [notification] announces, from its title or, failing that, its
-/// second line; null when it is no grade or its text has none. Read once per
-/// entry. Reading never depends on the feed, so an entry that was read and
-/// left the feed keeps its grade.
+/// The grade the text of [notification] announces, from its title or, failing
+/// that, its second line; null when the text has none. Read once per entry.
+/// Reading never depends on the feed, so an entry that was read and left the
+/// feed keeps its grade. Callers check that the entry is a new grade.
 SchoolNotificationGrade? schoolNotificationGradeOf(Notification notification) {
-  if (dashboardEventKindOf(notification.type) != DashboardEventKind.grade) {
-    return null;
-  }
   final known = _read[notification];
   if (known != null) {
     return identical(known, _noGrade) ? null : known as SchoolNotificationGrade;
