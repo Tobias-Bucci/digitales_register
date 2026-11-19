@@ -1,7 +1,12 @@
 import 'dart:math' as math;
 
+import 'package:dr/dashboard_events.dart'
+    show DashboardEventKind, dashboardEventKindOf;
+import 'package:dr/data.dart' show formatGradeFromInt;
+import 'package:dr/grades/grade_category.dart';
 import 'package:dr/i18n/app_localizations.dart';
 import 'package:dr/server_notifications/server_notification_models.dart';
+import 'package:dr/theme/app_palette.dart';
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 
@@ -129,27 +134,83 @@ class ServerNotificationTypeIcon extends StatelessWidget {
 }
 
 /// Marks an entry of the school's feed, next to [ServerNotificationTypeIcon]s.
+///
+/// What it shows follows the entry's [type] (#153): a clock for absences, the
+/// grade itself for a new grade, and the school for everything else. A grade
+/// whose value is not known shows the icon of the grades instead of a number.
+/// Decorative for screen readers, because the text next to it says the same.
 class SchoolNotificationIcon extends StatelessWidget {
-  const SchoolNotificationIcon({super.key, this.size = 40});
+  const SchoolNotificationIcon({
+    super.key,
+    this.type,
+    this.gradeHundredths,
+    this.colorGrades = true,
+    this.size = 40,
+  });
 
+  /// The type of the feed entry, such as `grade` or `absence`, in any case.
+  final String? type;
+
+  /// The value of the grade, for entries of the type `grade` only.
+  final int? gradeHundredths;
+
+  /// Whether the grade takes the colour of its grade, as the grade badges do.
+  final bool colorGrades;
   final double size;
 
   @override
   Widget build(BuildContext context) {
     final scheme = Theme.of(context).colorScheme;
+    final kind = dashboardEventKindOf(type);
+    final grade = kind == DashboardEventKind.grade ? gradeHundredths : null;
+    final (background, foreground) =
+        switch (colorGrades && grade != null ? gradeCategory(grade) : null) {
+      GradeCategory.failing => (scheme.errorContainer, scheme.onErrorContainer),
+      GradeCategory.satisfactory => (
+          scheme.warningContainer,
+          scheme.onWarningContainer
+        ),
+      GradeCategory.good => (
+          scheme.successContainer,
+          scheme.onSuccessContainer
+        ),
+      null => (scheme.secondaryContainer, scheme.onSecondaryContainer),
+    };
     return ExcludeSemantics(
       child: Container(
         width: size,
         height: size,
+        padding: grade == null ? null : EdgeInsets.all(size * 0.12),
         decoration: BoxDecoration(
-          color: scheme.secondaryContainer,
+          color: background,
           borderRadius: BorderRadius.circular(size * 0.3),
         ),
-        child: Icon(
-          Icons.school_outlined,
-          size: size * 0.55,
-          color: scheme.onSecondaryContainer,
-        ),
+        child: grade != null
+            // Long values and large text shrink to fit instead of being cut.
+            ? Center(
+                child: FittedBox(
+                  fit: BoxFit.scaleDown,
+                  child: Text(
+                    formatGradeFromInt(grade),
+                    maxLines: 1,
+                    softWrap: false,
+                    style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                          color: foreground,
+                          fontWeight: FontWeight.w700,
+                          height: 1,
+                        ),
+                  ),
+                ),
+              )
+            : Icon(
+                switch (kind) {
+                  DashboardEventKind.absence => Icons.schedule_rounded,
+                  DashboardEventKind.grade => Icons.auto_graph_rounded,
+                  _ => Icons.school_outlined,
+                },
+                size: size * 0.55,
+                color: foreground,
+              ),
       ),
     );
   }

@@ -19,6 +19,7 @@ import 'package:built_collection/built_collection.dart';
 import 'package:dr/actions/app_actions.dart';
 import 'package:dr/analytics_service.dart';
 import 'package:dr/app_state.dart';
+import 'package:dr/dashboard_events.dart';
 import 'package:dr/data.dart';
 import 'package:dr/middleware/middleware.dart';
 import 'package:dr/notification_feed.dart';
@@ -27,7 +28,7 @@ import 'package:dr/ui/server_notifications/server_notification_center.dart';
 import 'package:dr/utc_date_time.dart';
 import 'package:flutter/material.dart' hide Notification;
 import 'package:flutter_built_redux/flutter_built_redux.dart';
-import 'package:tuple/tuple.dart';
+import 'package:responsive_scaffold/responsive_scaffold.dart';
 
 /// The notification center of the signed-in app, with both sources.
 class NotificationPageContainer extends StatelessWidget {
@@ -45,15 +46,17 @@ class NotificationPageContainer extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return StoreConnection<AppState, AppActions,
-        Tuple3<BuiltList<Notification>, UtcDateTime?, bool>>(
+    return StoreConnection<AppState, AppActions, _SchoolFeedState>(
       builder: (context, vm, actions) {
+        // Each entry is looked up once per build, also for an entry that
+        // reading has taken out of the feed.
+        final grades = <int, int?>{};
         return ServerNotificationCenterPage(
           initialSchoolId: focusSchoolId,
           initialId: focusAppId,
           school: SchoolNotificationFeed(
-            notifications: vm.item1.toList(),
-            noInternet: vm.item3,
+            notifications: vm.notifications.toList(),
+            noInternet: vm.noInternet,
             onMarkRead: actions.notificationsActions.delete.call,
             onMarkAllRead: actions.notificationsActions.deleteAll.call,
             onOpenMessage: (id) {
@@ -61,7 +64,16 @@ class NotificationPageContainer extends StatelessWidget {
                   'notification_opened', {'notification_type': 'general'});
               actions.routingActions.showMessage(id);
             },
-            lastFetched: vm.item2,
+            lastFetched: vm.lastFetched,
+            gradeOf: (item) => grades.putIfAbsent(
+              item.id,
+              () => notificationGradeHundredths(item,
+                  grades: vm.grades, days: vm.days),
+            ),
+            // Each design follows its own setting, as its grade lists do.
+            colorGrades: ResponsiveNavigationScope.isActive(context)
+                ? vm.colorGradesNew
+                : vm.colorGradesLegacy,
           ),
           onRefresh: () => Future.wait([
             serverNotifications.refresh(),
@@ -69,13 +81,29 @@ class NotificationPageContainer extends StatelessWidget {
           ]),
         );
       },
-      connect: (state) {
-        return Tuple3(
-          state.notificationState.notifications ?? BuiltList<Notification>(),
-          state.notificationState.lastFetched,
-          state.noInternet,
-        );
-      },
+      connect: (state) => (
+        notifications:
+            state.notificationState.notifications ?? BuiltList<Notification>(),
+        lastFetched: state.notificationState.lastFetched,
+        noInternet: state.noInternet,
+        grades: state.gradesState,
+        days: state.dashboardState.allDays,
+        colorGradesNew: !state.settingsState.gradeColorsTurnedOff,
+        colorGradesLegacy: state.settingsState.colorGrades,
+      ),
     );
   }
 }
+
+/// What the notification center reads from the state. The grades and the
+/// dashboard give the values of announced grades; both are immutable, so an
+/// unchanged state compares equal at once.
+typedef _SchoolFeedState = ({
+  BuiltList<Notification> notifications,
+  UtcDateTime? lastFetched,
+  bool noInternet,
+  GradesState grades,
+  BuiltList<Day>? days,
+  bool colorGradesNew,
+  bool colorGradesLegacy,
+});

@@ -115,6 +115,8 @@ extension _NewCenter on _ServerNotificationCenterPageState {
         ? SchoolNotificationDetailView(
             key: ValueKey(_keyOfSchool(selectedSchool.id)),
             notification: selectedSchool,
+            gradeHundredths: widget.school?.gradeOf(selectedSchool),
+            colorGrades: widget.school?.colorGrades ?? true,
             onShown: _markSchoolRead,
           )
         : selectedId == null
@@ -191,7 +193,8 @@ class _NewNotificationList extends StatelessWidget {
       SchoolFeedEntry(notification: final item) => _NewSchoolTile(
           key: ValueKey(_keyOfSchool(item.id)),
           item: item,
-          noInternet: school!.noInternet,
+          icon: _schoolIconOf(item, school!),
+          noInternet: school.noInternet,
           selected: _keyOfSchool(item.id) == selectedKey,
           onTap: () => onOpen(entry),
           onMarkRead: () => school.onMarkRead(item),
@@ -674,6 +677,7 @@ class _NewSchoolTile extends StatelessWidget {
   const _NewSchoolTile({
     super.key,
     required this.item,
+    required this.icon,
     required this.noInternet,
     required this.selected,
     required this.onTap,
@@ -681,6 +685,7 @@ class _NewSchoolTile extends StatelessWidget {
   });
 
   final Notification item;
+  final SchoolNotificationIcon icon;
   final bool noInternet;
   final bool selected;
   final VoidCallback onTap;
@@ -692,7 +697,7 @@ class _NewSchoolTile extends StatelessWidget {
     final subTitle = item.subTitle;
     final color = Theme.of(context).colorScheme.onSurfaceVariant;
     return _NewFeedTile(
-      leading: const SchoolNotificationIcon(),
+      leading: icon,
       label: l10n.text('notifications.sourceSchool'),
       title: item.title,
       body: subTitle == null || subTitle.isEmpty ? null : subTitle,
@@ -901,9 +906,10 @@ extension _NewAppDetail on _ServerNotificationDetailViewState {
 }
 
 class _NewSchoolDetail extends StatelessWidget {
-  const _NewSchoolDetail({required this.notification});
+  const _NewSchoolDetail({required this.notification, required this.icon});
 
   final Notification notification;
+  final SchoolNotificationIcon icon;
 
   @override
   Widget build(BuildContext context) {
@@ -912,7 +918,7 @@ class _NewSchoolDetail extends StatelessWidget {
     final item = notification;
     final subTitle = item.subTitle;
     return _NewDetailFrame(
-      icon: const SchoolNotificationIcon(size: 36),
+      icon: icon,
       source: l10n.text('notifications.sourceSchool'),
       title: item.title,
       children: [

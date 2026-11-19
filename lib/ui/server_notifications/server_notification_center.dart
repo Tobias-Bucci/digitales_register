@@ -56,6 +56,17 @@ String _keyOfSchool(int id) => 'school-$id';
 bool _opensMessage(Notification item) =>
     item.type == 'message' && item.objectId != null;
 
+/// The icon of a school entry: by its type, with the value of a grade (#153).
+SchoolNotificationIcon _schoolIconOf(
+  Notification item,
+  SchoolNotificationFeed school,
+) =>
+    SchoolNotificationIcon(
+      type: item.type,
+      gradeHundredths: school.gradeOf(item),
+      colorGrades: school.colorGrades,
+    );
+
 /// Asks before the final step, then hides [id] on this device for good.
 Future<bool> confirmServerNotificationDismissal(
   BuildContext context,
@@ -192,9 +203,13 @@ class _ServerNotificationCenterPageState
       });
       return;
     }
+    final school = widget.school!;
     unawaited(Navigator.of(context).push(_route((_) =>
         SchoolNotificationDetailPage(
-            notification: item, onShown: _markSchoolRead))));
+            notification: item,
+            gradeHundredths: school.gradeOf(item),
+            colorGrades: school.colorGrades,
+            onShown: _markSchoolRead))));
   }
 
   void _openEntry(NotificationFeedEntry entry, {required bool twoPanes}) =>
@@ -302,6 +317,8 @@ class _ServerNotificationCenterPageState
                       ? SchoolNotificationDetailView(
                           key: ValueKey(_keyOfSchool(selectedSchool.id)),
                           notification: selectedSchool,
+                          gradeHundredths: school?.gradeOf(selectedSchool),
+                          colorGrades: school?.colorGrades ?? true,
                           onShown: _markSchoolRead,
                         )
                       : selectedId == null
@@ -443,7 +460,8 @@ class _NotificationList extends StatelessWidget {
                       _SchoolNotificationTile(
                         key: ValueKey(_keyOfSchool(item.id)),
                         item: item,
-                        noInternet: school!.noInternet,
+                        icon: _schoolIconOf(item, school!),
+                        noInternet: school.noInternet,
                         selected: _keyOfSchool(item.id) == selectedKey,
                         onTap: () => onOpen(entry),
                         onMarkRead: () => school.onMarkRead(item),
@@ -824,6 +842,7 @@ class _SchoolNotificationTile extends StatelessWidget {
   const _SchoolNotificationTile({
     super.key,
     required this.item,
+    required this.icon,
     required this.noInternet,
     required this.selected,
     required this.onTap,
@@ -831,6 +850,7 @@ class _SchoolNotificationTile extends StatelessWidget {
   });
 
   final Notification item;
+  final SchoolNotificationIcon icon;
   final bool noInternet;
   final bool selected;
   final VoidCallback onTap;
@@ -842,7 +862,7 @@ class _SchoolNotificationTile extends StatelessWidget {
     final subTitle = item.subTitle;
     final color = Theme.of(context).colorScheme.onSurfaceVariant;
     return _FeedTile(
-      leading: const SchoolNotificationIcon(),
+      leading: icon,
       label: l10n.text('notifications.sourceSchool'),
       title: item.title,
       body: subTitle == null || subTitle.isEmpty ? null : subTitle,
@@ -1077,16 +1097,22 @@ class SchoolNotificationDetailPage extends StatelessWidget {
   const SchoolNotificationDetailPage({
     super.key,
     required this.notification,
+    this.gradeHundredths,
+    this.colorGrades = true,
     this.onShown,
   });
 
   final Notification notification;
+  final int? gradeHundredths;
+  final bool colorGrades;
   final ValueChanged<Notification>? onShown;
 
   @override
   Widget build(BuildContext context) {
     final view = SchoolNotificationDetailView(
       notification: notification,
+      gradeHundredths: gradeHundredths,
+      colorGrades: colorGrades,
       onShown: onShown,
     );
     if (ResponsiveNavigationScope.isActive(context)) {
@@ -1108,10 +1134,17 @@ class SchoolNotificationDetailView extends StatefulWidget {
   const SchoolNotificationDetailView({
     super.key,
     required this.notification,
+    this.gradeHundredths,
+    this.colorGrades = true,
     this.onShown,
   });
 
   final Notification notification;
+
+  /// The value of the grade it announces, for its icon (#153). Held here, as
+  /// reading the entry takes it out of the feed.
+  final int? gradeHundredths;
+  final bool colorGrades;
 
   /// Null while it cannot be marked read, as offline.
   final ValueChanged<Notification>? onShown;
@@ -1133,8 +1166,14 @@ class _SchoolNotificationDetailViewState
 
   @override
   Widget build(BuildContext context) {
+    final icon = SchoolNotificationIcon(
+      type: widget.notification.type,
+      gradeHundredths: widget.gradeHundredths,
+      colorGrades: widget.colorGrades,
+      size: 36,
+    );
     if (ResponsiveNavigationScope.isActive(context)) {
-      return _NewSchoolDetail(notification: widget.notification);
+      return _NewSchoolDetail(notification: widget.notification, icon: icon);
     }
     final theme = Theme.of(context);
     final l10n = context.l10n;
@@ -1154,7 +1193,7 @@ class _SchoolNotificationDetailViewState
           children: [
             Row(
               children: [
-                const SchoolNotificationIcon(size: 36),
+                icon,
                 const SizedBox(width: 12),
                 Expanded(
                   child: Text(l10n.text('notifications.sourceSchool'),

@@ -333,6 +333,24 @@ class _DemoStore {
           'timeSent': _isoDateTime(_today()),
           'read': false,
         },
+        // A new grade and an absence, as the school's feed announces them
+        // (#153). The objectId of a grade is the id of the grade itself.
+        <String, dynamic>{
+          'id': 4002,
+          'kind': 'grade',
+          'type': 'grade',
+          'objectId': 301,
+          'timeSent': _isoDateTime(_today().subtract(const Duration(days: 2))),
+          'read': false,
+        },
+        <String, dynamic>{
+          'id': 4003,
+          'kind': 'absence',
+          'type': 'absence',
+          'objectId': null,
+          'timeSent': _isoDateTime(_today().subtract(const Duration(days: 2))),
+          'read': false,
+        },
       ],
     };
   }
@@ -856,12 +874,16 @@ class _DemoStore {
           'id': notification['id'] as int,
           'title': switch (notification['kind']) {
             'localMode' => _text('notificationLocalModeTitle'),
+            'grade' => _text('notificationGradeTitle'),
+            'absence' => _text('notificationAbsenceTitle'),
             _ => _text('messageFallbackSubject'),
           },
           'type': notification['type'] as String,
           'objectId': notification['objectId'] as int?,
           'subTitle': switch (notification['kind']) {
             'localMode' => _text('notificationLocalModeSubtitle'),
+            'grade' => 'Inglese',
+            'absence' => _text('notificationAbsenceSubtitle'),
             _ => '',
           },
           'timeSent': notification['timeSent'] as String,
@@ -2580,6 +2602,24 @@ const Map<String, Map<String, String>> _demoTranslations =
     'en': 'This account works fully offline and locally.',
     'it': 'Questo account funziona interamente in locale.',
     'lld': 'Chësc account laora daldöt local.',
+  },
+  'notificationGradeTitle': {
+    'de': 'Neue Bewertung',
+    'en': 'New grade',
+    'it': 'Nuova valutazione',
+    'lld': 'Nöia valutaziun',
+  },
+  'notificationAbsenceTitle': {
+    'de': 'Neue Absenz',
+    'en': 'New absence',
+    'it': 'Nuova assenza',
+    'lld': 'Nöia assënza',
+  },
+  'notificationAbsenceSubtitle': {
+    'de': '2 Stunden',
+    'en': '2 hours',
+    'it': '2 ore',
+    'lld': '2 ores',
   },
   'certificateHeading': {
     'de': 'Demo-Zeugnis',

@@ -1,6 +1,8 @@
 import 'dart:async';
 
 import 'package:built_collection/built_collection.dart';
+import 'package:built_redux/built_redux.dart';
+import 'package:dr/actions/app_actions.dart';
 import 'package:dr/app_state.dart';
 import 'package:dr/container/days_container.dart';
 import 'package:dr/container/notifications_page_container.dart';
@@ -282,6 +284,14 @@ void main() {
       expect(find.text('Schule'), findsWidgets);
       expect(find.byType(ServerNotificationTypeIcon), findsNWidgets(2));
       expect(find.byType(SchoolNotificationIcon), findsNWidgets(2));
+      // A general entry and a message keep the school's icon (#153).
+      expect(
+        find.descendant(
+          of: find.byType(SchoolNotificationIcon),
+          matching: find.byIcon(Icons.school_outlined),
+        ),
+        findsNWidgets(2),
+      );
       // Every school entry is unread, and both announcements are.
       expect(find.byKey(const Key('server-notification-unread-dot')),
           findsNWidgets(4));
@@ -707,6 +717,94 @@ void main() {
       });
     }
   });
+
+  group('icons of the school entries (#153)', () {
+    final items = [
+      ..._schoolItems,
+      buildNotification(
+        id: 3,
+        title: 'Neue Bewertung',
+        type: 'grade',
+        objectId: 42,
+        timeSent: UtcDateTime(2026, 10, 21, 8),
+      ),
+      buildNotification(
+        id: 4,
+        title: 'Absenz',
+        subTitle: '2 Stunden',
+        type: 'Absence',
+        timeSent: UtcDateTime(2026, 10, 21, 7),
+      ),
+      buildNotification(
+        id: 5,
+        title: 'Bewertung ohne Wert',
+        type: 'grade',
+        objectId: 99,
+        timeSent: UtcDateTime(2026, 10, 21, 6),
+      ),
+    ];
+    SchoolNotificationFeed feed() => SchoolNotificationFeed(
+          notifications: items,
+          noInternet: false,
+          onMarkRead: (_) {},
+          onMarkAllRead: () {},
+          onOpenMessage: (_) {},
+          gradeOf: (item) => item.objectId == 42 ? 850 : null,
+        );
+    Finder iconOf(Finder entry, Finder matching) => find.descendant(
+          of: find.descendant(
+              of: entry, matching: find.byType(SchoolNotificationIcon)),
+          matching: matching,
+        );
+
+    for (final newDesign in [true, false]) {
+      final design = newDesign ? 'new design' : 'legacy';
+      testWidgets('in the list, $design', (tester) async {
+        final repository = await _repository(tester, []);
+        await _pumpCenter(tester, repository,
+            school: feed(), newDesign: newDesign);
+
+        expect(iconOf(_schoolEntry(3), find.text('8/9')), findsOneWidget);
+        expect(iconOf(_schoolEntry(4), find.byIcon(Icons.schedule_rounded)),
+            findsOneWidget);
+        expect(iconOf(_schoolEntry(5), find.byIcon(Icons.auto_graph_rounded)),
+            findsOneWidget);
+        expect(iconOf(_schoolEntry(1), find.byIcon(Icons.school_outlined)),
+            findsOneWidget);
+        expect(iconOf(_schoolEntry(2), find.byIcon(Icons.school_outlined)),
+            findsOneWidget);
+        expect(tester.takeException(), isNull);
+      });
+
+      for (final (size, twoPanes) in [(_phone, false), (_wide, true)]) {
+        final layout = twoPanes ? 'two panes' : 'phone';
+        testWidgets('in the detail, $design, $layout', (tester) async {
+          final repository = await _repository(tester, []);
+          await _pumpCenter(tester, repository,
+              school: feed(), newDesign: newDesign, size: size);
+          final detail = find.byType(SchoolNotificationDetailView);
+          Finder inDetail(Finder matching) => find.descendant(
+                of: find.descendant(
+                    of: detail, matching: find.byType(SchoolNotificationIcon)),
+                matching: matching,
+              );
+
+          await tester.tap(find.text('Absenz'));
+          await _settle(tester);
+          expect(inDetail(find.byIcon(Icons.schedule_rounded)), findsOneWidget);
+
+          if (!twoPanes) {
+            await tester.tap(find.byType(BackButton).last);
+            await _settle(tester);
+          }
+          await tester.tap(find.text('Neue Bewertung'));
+          await _settle(tester);
+          expect(inDetail(find.text('8/9')), findsOneWidget);
+          expect(tester.takeException(), isNull);
+        });
+      }
+    }
+  });
 }
 
 /// The app as signed in, with the shell of [newDesign] and the school's feed,
@@ -714,10 +812,12 @@ void main() {
 /// popup, the bell and the center share.
 var _singletonSynced = false;
 
-Future<void> _pumpShell(
+Future<Store<AppState, AppStateBuilder, AppActions>> _pumpShell(
   WidgetTester tester, {
   Size size = _phone,
   bool newDesign = true,
+  List<Notification>? school,
+  void Function(AppStateBuilder b)? update,
 }) async {
   tester.view.physicalSize = size;
   tester.view.devicePixelRatio = 1;
@@ -732,13 +832,17 @@ Future<void> _pumpShell(
   serverNotifications.isLoggedIn = () => true;
   addTearDown(() => serverNotifications.isLoggedIn = () => false);
   final store = createStore(
-    initialState: _state().rebuild((b) => b.notificationState
-      ..notifications = ListBuilder<Notification>(_schoolItems)
-      ..lastFetched = UtcDateTime(2026, 10, 22, 7)),
+    initialState: _state().rebuild((b) {
+      b.notificationState
+        ..notifications = ListBuilder<Notification>(school ?? _schoolItems)
+        ..lastFetched = UtcDateTime(2026, 10, 22, 7);
+      update?.call(b);
+    }),
     newDesign: newDesign,
   );
   await pumpApp(tester, store: store, home: DaysContainer());
   await settleFor(tester);
+  return store;
 }
 
 Finder get _centers =>
@@ -822,6 +926,56 @@ void _shellTests() {
       expect(_centers, findsOneWidget);
       expect(find.byType(ServerNotificationDetailPage), findsOneWidget);
     });
+
+    for (final (size, twoPanes) in [(_phone, false), (_wide, true)]) {
+      final layout = twoPanes ? 'two panes' : 'phone';
+      testWidgets('a grade from the app state stays after reading, $layout',
+          (tester) async {
+        final store = await _pumpShell(
+          tester,
+          size: size,
+          school: [
+            buildNotification(
+              id: 3,
+              title: 'Neue Bewertung',
+              type: 'grade',
+              objectId: 42,
+            ),
+          ],
+          update: (b) => b.gradesState.subjects = ListBuilder<Subject>([
+            buildSubject(name: 'Mathematik', grades: {
+              Semester.first: BuiltList<GradeDetail>([
+                buildGradeDetail(id: 42, date: fixtureNow, grade: 1000),
+              ]),
+            }),
+          ]),
+        );
+
+        expect(showNotificationCenterInShell(), isTrue);
+        await _settle(tester);
+        final icon = find.descendant(
+          of: _schoolEntry(3),
+          matching: find.byType(SchoolNotificationIcon),
+        );
+        expect(find.descendant(of: icon, matching: find.text('10')),
+            findsOneWidget);
+
+        await tester.tap(find.text('Neue Bewertung'));
+        await _settle(tester);
+        // Showing it marks it read, which takes it out of the feed.
+        expect(store.state.notificationState.notifications, isEmpty);
+        expect(
+          find.descendant(
+            of: find.descendant(
+              of: find.byType(SchoolNotificationDetailView),
+              matching: find.byType(SchoolNotificationIcon),
+            ),
+            matching: find.text('10'),
+          ),
+          findsOneWidget,
+        );
+      });
+    }
 
     testWidgets('signed out there is no shell to open it in', (tester) async {
       serverNotifications.isLoggedIn = () => false;
