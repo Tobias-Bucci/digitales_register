@@ -609,8 +609,11 @@ class _MessageWidgetState extends State<MessageWidget> {
               if (widget.message.showReply == true &&
                   widget.message.needsResponse == true) ...[
                 const Divider(),
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                // Side by side while they fit; with large text the second
+                // goes below the first instead of out of the screen.
+                Wrap(
+                  alignment: WrapAlignment.spaceEvenly,
+                  runSpacing: 8.0,
                   children: [
                     ElevatedButton(
                       style: ElevatedButton.styleFrom(

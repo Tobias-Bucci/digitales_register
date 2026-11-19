@@ -1,16 +1,16 @@
 # Graph Report - digitales_register  (2026-11-19)
 
 ## Corpus Check
-- 662 files · ~562,529 words
+- 662 files · ~562,751 words
 - Verdict: corpus is large enough that graph structure adds value.
 
 ## Summary
-- 13231 nodes · 21250 edges · 458 communities (365 shown, 93 thin omitted)
+- 13231 nodes · 21251 edges · 458 communities (365 shown, 93 thin omitted)
 - Extraction: 100% EXTRACTED · 0% INFERRED · 0% AMBIGUOUS · INFERRED: 24 edges (avg confidence: 0.88)
 - Token cost: 0 input · 0 output
 
 ## Graph Freshness
-- Built from commit: `4ed6f9aa`
+- Built from commit: `1fc839bf`
 - Run `git rev-parse HEAD` and compare to check if the graph is stale.
 - Run `graphify update .` after code changes (no API cost).
 
@@ -1950,17 +1950,17 @@ Nodes (3): SCHULREGISTER_INSTALL_DIR, test_linux_install.sh script, XDG_DATA_HOM
 ## Suggested Questions
 _Questions this graph is uniquely positioned to answer:_
 
-- **Why does `_` connect `_` to `package:flutter/material.dart`, `return`, `package:dr/i18n/app_localizations.dart`, `server_notification_api.dart`, `absence.dart`, `Map`, `package:dr/theme/app_palette.dart`?**
-  _High betweenness centrality (0.030) - this node is a cross-community bridge._
+- **Why does `_` connect `Domain Models (Absences, Homework)` to `package:dr/diagnostics_service.dart`, `App State Selectors`, `package:dr/app_state.dart`, `reducer/messages.dart`, `package:dr/i18n/app_localizations.dart`, `package:dr/app_state.dart`, `grades_actions.dart`, `local_reminder_assessments.dart`, `reducer/grades.dart`, `return`, `grade_statistics.dart`, `sidebar_container.dart`, `calendar_actions.dart`, `calendar_week_container.dart`, `homework_filter.dart`, `int get`, `login_page.dart`, `grades_page_container.dart`, `Built`, `package:dr/app_state.dart`, `notification_feed.dart`, `serializers.dart`?**
+  _High betweenness centrality (0.022) - this node is a cross-community bridge._
 - **What connects `_MessageFolder`, `_CachedMessageDelta`, `_MessageBody` to the rest of the system?**
   _8531 weakly-connected nodes found - possible documentation gaps or missing edges._
 - **Should `middleware.dart` be split into smaller, more focused modules?**
   _Cohesion score 0.017208158926317187 - nodes in this community are weakly interconnected._
-- **Why does `_` connect `Design Tokens (Glass)` to `package:dr/diagnostics_service.dart`, `dashboard_customize_dialog.dart`, `package:dr/i18n/app_localizations.dart`, `Design Token Palette`, `analytics.dart`, `Stateful Widget States`, `grades_page_new.dart`, `profile_picture.dart`, `Map`, `shell_routing_test.dart`, `package:dr/theme/app_palette.dart`, `course_materials_page_new.dart`, `Glass Page Layout`, `exam_calendar_new_design_test.dart`, `new_design_test.dart`, `app_launch_animation.dart`, `settings_page_new.dart`, `Widget?`, `CustomPainter`, `calendar_actions.dart`, `assessment_reminders_test.dart`, `package:flutter/material.dart`, `int get`, `@immutable`?**
-  _High betweenness centrality (0.030) - this node is a cross-community bridge._
+- **Why does `StatelessWidget` connect `Intro Illustrations & Grade Stats` to `Settings Page Logic`, `Auth Layout & Tokens`, `calendar_card.dart`, `package:dr/app_state.dart`, `Login & Accounts UI`, `exam_calendar_new.dart`, `exam_calendar_page.dart`, `Design Tokens (Glass)`, `Class Register Page`, `absences_page.dart`, `Calendar Week View`, `shell_routing_test.dart`, `Server Notification Center`, `course_materials_new_design_test.dart`, `Certificate Page`, `Glass Page Layout`, `Compact Day List`, `Grades Subject List`, `Absence Group Container`, `new_design_test.dart`, `return`, `settings_page.dart`, `settings_subpages_new_design_test.dart`, `homework_summary_page.dart`, `server_notification_popup.dart`, `app_navigation.dart`, `main.dart`, `grades_new_design_test.dart`, `ui/calendar.dart`, `sorted_grades_widget.dart`, `ui/messages.dart`, `messages_new.dart`, `notification_filter_test.dart`, `profile_new.dart`, `server_notification_center_new.dart`, `dashboard_event_banner.dart`, `grade_calculator.dart`, `ui/network_protocol.dart`, `sidebar_container.dart`, `intro_tour.dart`, `calendar_detail.dart`, `course_materials_page.dart`, `dashboard_edit_mode.dart`, `middleware/grades.dart`, `package:flutter/material.dart`, `absences_new_design_test.dart`, `target_grade_calculator.dart`, `grades_page_container.dart`, `grades_overview.dart`, `export_page_new.dart`, `package:dr/app_state.dart`, `days_container.dart`, `grades_panels.dart`, `glass_segmented_control.dart`, `bool get`, `middleware/calendar.dart`, `analytics.dart`, `dashboard_app_header.dart`, `grades_page_new.dart`, `school_countdown_overview.dart`, `target_grade_calculator_new.dart`, `course_materials_page_new.dart`, `notification_filter_test.dart`, `server_poll_page.dart`, `fixed_links_test.dart`, `sidebar.dart`, `grade_calculator_new.dart`, `grades_page_container.dart`, `_`, `dashboard_overview.dart`, `settings_page_new.dart`, `int get`, `Widget?`, `_`, `sorted_grades_container.dart`, `calendar_actions.dart`, `calendar_week_container.dart`, `system_pages.dart`, `grades_page.dart`, `dart:convert`, `int get`, `certificate_container.dart`, `package:dr/app_clock.dart`, `login_page.dart`, `absence.dart`, `committed_deleteable.dart`, `homework_filter.dart`, `export_container.dart`, `dashboard_customize_dialog.dart`, `ui/certificate.dart`, `package:dr/i18n/app_localizations.dart`, `certificate_new_design_test.dart`, `grade_colors.dart`, `home_page_content.dart`, `package:dr/theme/app_palette.dart`, `_ServerNotificationDetailViewState`, `_`, `calendar_sync_page.dart`, `double?`, `Launch Asset Generator`?**
+  _High betweenness centrality (0.020) - this node is a cross-community bridge._
 - **Should `Domain Models (Absences, Homework)` be split into smaller, more focused modules?**
   _Cohesion score 0.011904761904761904 - nodes in this community are weakly interconnected._
-- **Why does `_` connect `Domain Models (Absences, Homework)` to `package:dr/diagnostics_service.dart`, `App State Selectors`, `package:dr/app_state.dart`, `reducer/messages.dart`, `package:dr/i18n/app_localizations.dart`, `package:dr/app_state.dart`, `grades_actions.dart`, `local_reminder_assessments.dart`, `reducer/grades.dart`, `return`, `grade_statistics.dart`, `sidebar_container.dart`, `calendar_actions.dart`, `calendar_week_container.dart`, `homework_filter.dart`, `int get`, `login_page.dart`, `grades_page_container.dart`, `Built`, `package:dr/app_state.dart`, `notification_feed.dart`, `serializers.dart`?**
-  _High betweenness centrality (0.022) - this node is a cross-community bridge._
+- **Why does `_` connect `Design Tokens (Glass)` to `package:dr/diagnostics_service.dart`, `dashboard_customize_dialog.dart`, `package:dr/i18n/app_localizations.dart`, `Design Token Palette`, `analytics.dart`, `Stateful Widget States`, `grades_page_new.dart`, `profile_picture.dart`, `Map`, `shell_routing_test.dart`, `package:dr/theme/app_palette.dart`, `course_materials_page_new.dart`, `Glass Page Layout`, `exam_calendar_new_design_test.dart`, `new_design_test.dart`, `app_launch_animation.dart`, `settings_page_new.dart`, `Widget?`, `CustomPainter`, `calendar_actions.dart`, `assessment_reminders_test.dart`, `package:flutter/material.dart`, `int get`, `@immutable`?**
+  _High betweenness centrality (0.017) - this node is a cross-community bridge._
 - **Should `Settings Page Logic` be split into smaller, more focused modules?**
   _Cohesion score 0.017541229385307347 - nodes in this community are weakly interconnected._

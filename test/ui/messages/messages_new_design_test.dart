@@ -1140,6 +1140,71 @@ void main() {
     }
   });
 
+  group('Legacy answer buttons', () {
+    Future<void> showAnswer(
+      WidgetTester tester, {
+      required double width,
+      required double scale,
+      String languageCode = 'de',
+    }) async {
+      await _loadRoboto(tester);
+      tester.platformDispatcher.textScaleFactorTestValue = scale;
+      addTearDown(tester.platformDispatcher.clearTextScaleFactorTestValue);
+      await _pumpMessages(
+        tester,
+        newDesign: false,
+        size: Size(width, 900),
+        state: _state(languageCode: languageCode),
+        page: _page(_Calls(), state: _messagesState(showMessage: 1)),
+      );
+    }
+
+    for (final width in [320.0, 411.0]) {
+      for (final scale in [1.0, 2.0, 3.0]) {
+        testWidgets('fit $width px at text size $scale', (tester) async {
+          await showAnswer(tester, width: width, scale: scale);
+
+          expect(tester.takeException(), isNull);
+          final body = tester.getRect(find.byType(MessageWidget).first);
+          for (final button in tester
+              .widgetList<ElevatedButton>(find.byType(ElevatedButton))) {
+            final rect = tester.getRect(find.byWidget(button));
+            expect(rect.left, greaterThanOrEqualTo(body.left - 0.5));
+            expect(rect.right, lessThanOrEqualTo(body.right + 0.5));
+          }
+        });
+      }
+    }
+
+    for (final code in const ['en', 'it', 'lld']) {
+      testWidgets('fit 320 px in $code at text size 2', (tester) async {
+        await showAnswer(tester, width: 320, scale: 2, languageCode: code);
+
+        expect(tester.takeException(), isNull);
+      });
+    }
+
+    testWidgets('stay side by side at the normal size', (tester) async {
+      final calls = _Calls();
+      await _loadRoboto(tester);
+      await _pumpMessages(
+        tester,
+        newDesign: false,
+        size: const Size(411, 900),
+        page: _page(calls, state: _messagesState(showMessage: 1)),
+      );
+
+      final agree = tester.getRect(find.text('Stimme zu'));
+      final disagree = tester.getRect(find.text('Stimme nicht zu'));
+      expect(agree.center.dy, moreOrLessEquals(disagree.center.dy));
+      expect(agree.right, lessThan(disagree.left));
+
+      await tester.tap(find.text('Stimme nicht zu'));
+      await tester.pump();
+      expect(calls.replies, ['not_agree']);
+    });
+  });
+
   group('languages', () {
     for (final code in const ['de', 'it', 'en', 'lld']) {
       testWidgets('in $code', (tester) async {

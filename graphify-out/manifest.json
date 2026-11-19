@@ -1374,9 +1374,9 @@
     "semantic_hash": ""
   },
   "lib/ui/messages.dart": {
-    "mtime": 1795099403.4347274,
-    "seen": 1795099596.679807,
-    "ast_hash": "15a3eddcbaff15536a69aede3590d2c3",
+    "mtime": 1795099643.2393415,
+    "seen": 1795099822.2938874,
+    "ast_hash": "7ebb0aa90f31fe612f9ad4d7f59fcbbc",
     "semantic_hash": ""
   },
   "lib/ui/messages_new.dart": {
@@ -2844,9 +2844,9 @@
     "semantic_hash": ""
   },
   "test/ui/messages/messages_new_design_test.dart": {
-    "mtime": 1795099359.0795565,
-    "seen": 1795099596.680078,
-    "ast_hash": "a68526abb6fc97f845bf787c8d1d218a",
+    "mtime": 1795099624.3460686,
+    "seen": 1795099822.2941487,
+    "ast_hash": "8fb939142f5ff5e936cb8a9261da6beb",
     "semantic_hash": ""
   },
   "test/ui/messages/messages_test.dart": {
