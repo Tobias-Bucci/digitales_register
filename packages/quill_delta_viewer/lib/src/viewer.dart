@@ -7,7 +7,12 @@ class QuillDeltaViewer extends StatelessWidget {
   /// The document delta to be rendered
   final Delta delta;
 
-  const QuillDeltaViewer({Key? key, required this.delta}) : super(key: key);
+  /// Opens a link the user tapped. Without it, the link is handed to the
+  /// platform as it is.
+  final void Function(String link)? onLinkTap;
+
+  const QuillDeltaViewer({Key? key, required this.delta, this.onLinkTap})
+      : super(key: key);
   @override
   Widget build(BuildContext context) {
     return render(removeLastNewline(isolateLines(delta)), context);
@@ -186,7 +191,12 @@ class QuillDeltaViewer extends StatelessWidget {
       recognizer: isLink
           ? (TapGestureRecognizer()
             ..onTap = () {
-              launchUrl(Uri.parse(link!));
+              final open = onLinkTap;
+              if (open != null) {
+                open(link!);
+              } else {
+                launchUrl(Uri.parse(link!));
+              }
             })
           : null,
     );

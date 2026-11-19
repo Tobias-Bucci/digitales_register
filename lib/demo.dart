@@ -85,6 +85,51 @@ Future<void> resetDemoStoreForTest() async {
 
 final _DemoStore _demoStore = _DemoStore();
 
+/// The course materials of the demo account, as the server sends a course,
+/// with the class and subject it was found for. Links only: the demo has no
+/// files to download. They show the kinds of links schools use (#141).
+const List<(Map<String, Object?>, Map<String, Object?>)> demoCourseMaterials = [
+  (
+    {'classId': 1, 'subjectId': 7, 'subjectName': 'Informatica'},
+    {
+      'id': 901,
+      'course': {'id': 901, 'title': 'Informatica 4B'},
+      'topics': [
+        {
+          'id': 9011,
+          'courseContentId': 901,
+          'title': 'Diagramma di Gantt',
+          'number': 1,
+          'entries': [
+            {
+              'id': 90111,
+              'courseContentId': 901,
+              'type': 'link',
+              'link': 'https://it.wikipedia.org/wiki/Diagramma_di_Gantt',
+              'title': 'Wikipedia: Diagramma di Gantt',
+              'hidden': 0,
+              'number': 1,
+              'lastmodified': '2025-10-06 08:00:00',
+              'typeName': 'Link',
+            },
+            {
+              'id': 90112,
+              'courseContentId': 901,
+              'type': 'link',
+              'link': 'de.wikipedia.org/wiki/Gantt-Diagramm',
+              'title': '',
+              'hidden': 0,
+              'number': 2,
+              'lastmodified': '2025-10-06 08:05:00',
+              'typeName': 'Link',
+            },
+          ],
+        },
+      ],
+    },
+  ),
+];
+
 class _DemoStore {
   // Bump this whenever the bundled demo data changes materially.  This keeps a
   // previously persisted short demo from masking the complete school-year demo.

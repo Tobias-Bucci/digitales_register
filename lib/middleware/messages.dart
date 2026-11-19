@@ -186,17 +186,8 @@ Future<void> _openFile(
 ) async {
   await next(action);
   if (action.payload.isLink) {
-    final link = action.payload.link;
-    if (link == null) {
-      return;
-    }
-    final launched = await launchUrl(
-      Uri.parse(link),
-      mode: LaunchMode.externalApplication,
-    );
-    if (!launched) {
-      showSnackBar(tr('navigation.linkOpenFailed'));
-    }
+    // Only web addresses open; a failure is shown (#141).
+    await openExternalLink(action.payload.link);
     return;
   }
 

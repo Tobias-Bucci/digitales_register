@@ -18,6 +18,7 @@
 import 'dart:async';
 
 import 'package:dr/course_materials.dart';
+import 'package:dr/external_links.dart';
 import 'package:dr/i18n/app_localizations.dart';
 import 'package:dr/main.dart';
 import 'package:dr/middleware/middleware.dart';
@@ -642,6 +643,9 @@ class _CourseEntryTile extends StatelessWidget {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final scheme = theme.colorScheme;
+    final title = entry.displayTitle;
+    // Where a link leads, so that it can be told apart from a file (#141).
+    final leadsTo = entry.isLink ? linkCaption(title, entry.linkTarget) : null;
     return Padding(
       padding: const EdgeInsets.only(bottom: 8),
       child: Material(
@@ -672,12 +676,19 @@ class _CourseEntryTile extends StatelessWidget {
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Text(entry.title, style: theme.textTheme.bodyMedium),
+                      Text(title, style: theme.textTheme.bodyMedium),
                       const SizedBox(height: 3),
                       Wrap(
                         spacing: 8,
                         runSpacing: 2,
                         children: [
+                          if (leadsTo != null)
+                            Text(
+                              leadsTo,
+                              style: theme.textTheme.bodySmall?.copyWith(
+                                color: scheme.primary,
+                              ),
+                            ),
                           if (entry.typeName.isNotEmpty)
                             Text(
                               entry.typeName,

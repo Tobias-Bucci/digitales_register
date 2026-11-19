@@ -63,6 +63,7 @@ import 'package:dr/container/profile_container.dart';
 import 'package:dr/container/settings_page.dart';
 import 'package:dr/course_materials.dart';
 import 'package:dr/data.dart';
+import 'package:dr/demo.dart' show demoCourseMaterials;
 import 'package:dr/diagnostics_service.dart';
 import 'package:dr/external_links.dart';
 import 'package:dr/host_platform.dart';

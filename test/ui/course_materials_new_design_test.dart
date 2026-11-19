@@ -8,6 +8,7 @@ import 'package:dr/container/days_container.dart';
 import 'package:dr/container/extras_page_container.dart';
 import 'package:dr/course_materials.dart';
 import 'package:dr/data.dart';
+import 'package:dr/external_links.dart';
 import 'package:dr/i18n/app_localizations.dart';
 import 'package:dr/main.dart' show scaffoldKey;
 import 'package:dr/middleware/middleware.dart';
@@ -587,6 +588,116 @@ void main() {
           l10n.text('courseMaterials.title'),
         );
         expect(tester.takeException(), isNull);
+      });
+    }
+  });
+
+  // #141: links are visible with where they lead, and open in the browser.
+  group('links', () {
+    List<CourseMaterialCourse> linkCourses() => [
+          CourseMaterialCourse.fromJson(
+            {
+              'id': 20,
+              'course': {'id': 20, 'title': 'Links course'},
+              'topics': [
+                {
+                  'id': 200,
+                  'courseContentId': 20,
+                  'title': 'Web',
+                  'entries': [
+                    {
+                      'id': 2001,
+                      'courseContentId': 20,
+                      'type': 'link',
+                      'link': 'https://www.example.org/lesson',
+                      'title': 'Erklärvideo',
+                      'number': 1,
+                    },
+                    {
+                      'id': 2002,
+                      'courseContentId': 20,
+                      'type': 'url',
+                      'link': 'school.example.it/x',
+                      'title': '',
+                      'number': 2,
+                    },
+                    {
+                      'id': 2003,
+                      'courseContentId': 20,
+                      'type': 'link',
+                      'link': '',
+                      'title': 'Kaputt',
+                      'number': 3,
+                    },
+                  ],
+                },
+              ],
+            },
+            CourseMaterialSource.fromJson(
+              {'classId': 1, 'subjectId': 4, 'subjectName': 'Informatik'},
+            ),
+          ),
+        ];
+
+    for (final newDesign in [true, false]) {
+      final design = newDesign ? 'new design' : 'Legacy';
+      testWidgets('$design shows links with where they lead', (tester) async {
+        await _pump(
+          tester,
+          newDesign: newDesign,
+          page: CourseMaterialsPage(
+            key: UniqueKey(),
+            loader: () async => linkCourses(),
+          ),
+        );
+        await tester.tap(find.text('Web'));
+        await settleFor(tester);
+
+        expect(find.text('Erklärvideo'), findsOneWidget);
+        expect(find.textContaining('www.example.org'), findsOneWidget);
+        // Without a title, the address is the name.
+        expect(find.text('school.example.it/x'), findsOneWidget);
+        final linkIcon =
+            newDesign ? Icons.link_rounded : Icons.open_in_new_outlined;
+        expect(find.byIcon(linkIcon), findsNWidgets(3));
+        expect(find.byIcon(Icons.insert_drive_file_outlined), findsNothing);
+      });
+
+      testWidgets('$design opens a link, and tells when one cannot open',
+          (tester) async {
+        final launched = <Uri>[];
+        externalLinkLauncherOverride = (uri) async {
+          launched.add(uri);
+          return true;
+        };
+        addTearDown(() => externalLinkLauncherOverride = null);
+        await _pump(
+          tester,
+          newDesign: newDesign,
+          page: CourseMaterialsPage(
+            key: UniqueKey(),
+            loader: () async => linkCourses(),
+          ),
+        );
+        await tester.tap(find.text('Web'));
+        await settleFor(tester);
+
+        await tester.tap(find.text('Erklärvideo'));
+        await settleFor(tester);
+        await tester.tap(find.text('school.example.it/x'));
+        await settleFor(tester);
+        expect(launched, [
+          Uri.parse('https://www.example.org/lesson'),
+          Uri.parse('https://school.example.it/x'),
+        ]);
+
+        await tester.tap(find.text('Kaputt'));
+        await settleFor(tester);
+        expect(launched, hasLength(2));
+        expect(
+          find.text('Material konnte nicht geöffnet werden.'),
+          findsOneWidget,
+        );
       });
     }
   });

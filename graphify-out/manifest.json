@@ -414,10 +414,10 @@
     "semantic_hash": "0652b9c721b96c8bd8298fd6041b235a"
   },
   "lib/course_materials.dart": {
-    "mtime": 1795074254.7777798,
-    "seen": 1795075850.260918,
-    "ast_hash": "9a6326268849dbf2073832bd70c5e2b4",
-    "semantic_hash": "9a6326268849dbf2073832bd70c5e2b4"
+    "mtime": 1795076275.0185347,
+    "seen": 1795076700.4934397,
+    "ast_hash": "2d1a45dae0ba3864e4cb00777edc9553",
+    "semantic_hash": ""
   },
   "lib/dashboard_events.dart": {
     "mtime": 1795074254.7787793,
@@ -438,9 +438,9 @@
     "semantic_hash": ""
   },
   "lib/demo.dart": {
-    "mtime": 1795074254.7807796,
-    "seen": 1795075850.2609212,
-    "ast_hash": "9b7fc9c7d90896329a2d8c904f22b40a",
+    "mtime": 1795076521.0336854,
+    "seen": 1795076700.4934442,
+    "ast_hash": "ca9e3a2bb92bdde2fc28f2c9cae1d80d",
     "semantic_hash": ""
   },
   "lib/desktop.dart": {
@@ -498,9 +498,9 @@
     "semantic_hash": "c47b376962d092dae64c725f7ea6f75e"
   },
   "lib/external_links.dart": {
-    "mtime": 1795074254.7862902,
-    "seen": 1795075850.2609303,
-    "ast_hash": "ec68c4edf854b1f517bf45d31520c6b4",
+    "mtime": 1795076275.0185347,
+    "seen": 1795076700.493454,
+    "ast_hash": "71c55099f58ea7171b19922aa7ba3c9b",
     "semantic_hash": ""
   },
   "lib/host_platform.dart": {
@@ -582,15 +582,15 @@
     "semantic_hash": ""
   },
   "lib/middleware/messages.dart": {
-    "mtime": 1795074254.800681,
-    "seen": 1795075850.2609515,
-    "ast_hash": "17d5c9b62ac67976565c633788f97428",
-    "semantic_hash": "17d5c9b62ac67976565c633788f97428"
+    "mtime": 1795076388.5682077,
+    "seen": 1795076700.493477,
+    "ast_hash": "47c7a4493576608ac46c86a135b2919d",
+    "semantic_hash": ""
   },
   "lib/middleware/middleware.dart": {
-    "mtime": 1795075456.2360358,
-    "seen": 1795075850.2609522,
-    "ast_hash": "8a3ff170ebd89a2c57ab7d187c3ac7e2",
+    "mtime": 1795076433.457296,
+    "seen": 1795076700.4934778,
+    "ast_hash": "e60fe68b8739716c7749ba949c669d51",
     "semantic_hash": ""
   },
   "lib/middleware/notifications.dart": {
@@ -1092,15 +1092,15 @@
     "semantic_hash": ""
   },
   "lib/ui/course_materials_page.dart": {
-    "mtime": 1795074254.8625157,
-    "seen": 1795075850.2610455,
-    "ast_hash": "3a703e4aab5379f008049e9b6326fdbd",
+    "mtime": 1795076491.6282225,
+    "seen": 1795076700.493581,
+    "ast_hash": "25ce59425d96cecebd04ab0225e6b6c2",
     "semantic_hash": ""
   },
   "lib/ui/course_materials_page_new.dart": {
-    "mtime": 1795074254.8625157,
-    "seen": 1795075850.2610462,
-    "ast_hash": "ee3a699e9ed4ac96d316990dc5a6e6c9",
+    "mtime": 1795076491.6322227,
+    "seen": 1795076700.4935818,
+    "ast_hash": "9436da14794c809f9a5c8b9f61f250b4",
     "semantic_hash": ""
   },
   "lib/ui/credits_page.dart": {
@@ -1374,9 +1374,9 @@
     "semantic_hash": ""
   },
   "lib/ui/messages.dart": {
-    "mtime": 1795074254.8960323,
-    "seen": 1795075850.261089,
-    "ast_hash": "72a8b5e1b67da96358267bdf5f2126e5",
+    "mtime": 1795076388.5682077,
+    "seen": 1795076700.4936273,
+    "ast_hash": "f7b27d633958404d2f755aab62d4008a",
     "semantic_hash": ""
   },
   "lib/ui/messages_new.dart": {
@@ -2670,9 +2670,9 @@
     "semantic_hash": ""
   },
   "test/ui/course_materials_new_design_test.dart": {
-    "mtime": 1795074256.27347,
-    "seen": 1795075850.2612996,
-    "ast_hash": "938ac3dac8bc98633129fc48f53a0668",
+    "mtime": 1795076246.8996894,
+    "seen": 1795076700.4938507,
+    "ast_hash": "ce86086fa6afb020cdbb6aa943bb7f25",
     "semantic_hash": ""
   },
   "test/ui/dashboard/absences_card_test.dart": {
@@ -3090,9 +3090,9 @@
     "semantic_hash": ""
   },
   "lib/middleware/course_materials.dart": {
-    "mtime": 1795074254.7979746,
-    "seen": 1795075850.2609463,
-    "ast_hash": "66b95ba4de2a3663aa838b32d5de3ed4",
+    "mtime": 1795076413.1648395,
+    "seen": 1795076700.4934711,
+    "ast_hash": "0753d7e33f41ced3d2391d30459150b1",
     "semantic_hash": ""
   },
   "lib/middleware/downloads.dart": {
@@ -3951,6 +3951,18 @@
     "mtime": 1795075456.265561,
     "seen": 1795075850.261333,
     "ast_hash": "4887bf63f7ed0079feea5a75ce72374f",
+    "semantic_hash": ""
+  },
+  "test/course_material_links_test.dart": {
+    "mtime": 1795076491.67793,
+    "seen": 1795076700.4937189,
+    "ast_hash": "64faddf3522ee5775eb29c09bd8c936e",
+    "semantic_hash": ""
+  },
+  "test/ui/messages/message_links_test.dart": {
+    "mtime": 1795076491.6854408,
+    "seen": 1795076700.4938786,
+    "ast_hash": "06565e537c3d3a3287a77fbbe527c55c",
     "semantic_hash": ""
   }
 }

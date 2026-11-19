@@ -62,7 +62,11 @@ Future<PagePayloadSnapshot<List<Map<String, dynamic>>>?>
 Future<List<CourseMaterialCourse>> _loadCourseMaterialsRemote(
     _Session session) async {
   if (session.wrapper.demoMode) {
-    return const <CourseMaterialCourse>[];
+    return [
+      for (final (source, course) in demoCourseMaterials)
+        CourseMaterialCourse.fromJson(
+            course, CourseMaterialSource.fromJson(source)),
+    ];
   }
 
   final discovery = await _loadCurrentCourseMaterialSources(session);
@@ -239,12 +243,8 @@ Future<CourseMaterialOpenResult> openCourseMaterialEntryWithStatus(
       'hasFile': entry.file != null,
     });
     if (entry.isLink) {
-      final link = entry.link;
-      if (link == null || link.trim().isEmpty) {
-        return failed;
-      }
-      return await launchUrl(Uri.parse(link),
-              mode: LaunchMode.externalApplication)
+      // Only web addresses open; the page tells the user when this fails.
+      return await launchExternalLink(entry.linkTarget)
           ? CourseMaterialOpenResult.opened
           : failed;
     }

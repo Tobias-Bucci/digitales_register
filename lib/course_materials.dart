@@ -17,6 +17,7 @@
 
 import 'dart:convert';
 
+import 'package:dr/external_links.dart';
 import 'package:dr/util.dart';
 
 class CourseMaterialsLoadException implements Exception {
@@ -271,7 +272,32 @@ class CourseMaterialEntry {
   final String lastModified;
   final String typeName;
 
-  bool get isLink => type == 'link';
+  bool get _hasFile => file?.trim().isNotEmpty ?? false;
+
+  /// A link opens in the browser instead of being downloaded: an entry of
+  /// the type "link", and any entry without a file that has an address. The
+  /// server's name for the type is not relied on alone (#141).
+  bool get isLink => type == 'link' || (!_hasFile && linkTarget != null);
+
+  /// The address as the teacher typed it: the link of the entry or, without
+  /// one, the first web address in its title. Null for a file, and for a
+  /// link without any address. Whether it may be opened decides
+  /// [parseExternalLink].
+  String? get linkTarget {
+    if (_hasFile && type != 'link') return null;
+    final typed = link?.trim();
+    if (typed != null && typed.isNotEmpty) return typed;
+    for (final segment in splitTextLinks(title)) {
+      if (segment.uri != null) return segment.text;
+    }
+    return null;
+  }
+
+  /// The name to show: the title, or for a link without one its address.
+  String get displayTitle {
+    if (title.trim().isNotEmpty) return title;
+    return linkTarget ?? originalName;
+  }
 
   String get uniqueName {
     final name = originalName.isNotEmpty ? originalName : file ?? '$title.bin';

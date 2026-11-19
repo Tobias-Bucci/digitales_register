@@ -24,6 +24,7 @@ import 'package:dr/app_state.dart';
 import 'package:dr/container/export_container.dart';
 import 'package:dr/data.dart';
 import 'package:dr/export/export_data.dart';
+import 'package:dr/external_links.dart';
 import 'package:dr/i18n/app_localizations.dart';
 import 'package:dr/theme/app_palette.dart';
 import 'package:dr/ui/animated_linear_progress_indicator.dart';
@@ -660,7 +661,8 @@ Widget renderMessage(Message message) {
       hasEmbeds ? 'messages.body.unsupported' : 'messages.body.empty',
     );
   }
-  final viewer = QuillDeltaViewer(delta: text);
+  // Only web addresses open, and a failure is shown (#141).
+  final viewer = QuillDeltaViewer(delta: text, onLinkTap: openExternalLink);
   if (!hasEmbeds) return viewer;
   return Column(
     crossAxisAlignment: CrossAxisAlignment.start,

@@ -18,6 +18,7 @@
 import 'dart:async';
 
 import 'package:dr/course_materials.dart';
+import 'package:dr/external_links.dart';
 import 'package:dr/i18n/app_localizations.dart';
 import 'package:dr/ui/dashboard_app_header.dart';
 import 'package:dr/ui/glass_page.dart';
@@ -472,7 +473,11 @@ class _Entry extends StatelessWidget {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final scheme = theme.colorScheme;
+    final title = entry.displayTitle;
+    // Where a link leads, so that it can be told apart from a file (#141).
+    final leadsTo = entry.isLink ? linkCaption(title, entry.linkTarget) : null;
     final facts = [
+      if (leadsTo != null) leadsTo,
       if (entry.typeName.isNotEmpty) entry.typeName,
       if (entry.lastModified.isNotEmpty) entry.lastModified,
     ];
@@ -483,7 +488,7 @@ class _Entry extends StatelessWidget {
       child: Semantics(
         button: true,
         enabled: !opening,
-        label: [entry.title, ...facts].join(', '),
+        label: [title, ...facts].join(', '),
         onTap: onTap,
         excludeSemantics: true,
         child: InkWell(
@@ -519,7 +524,7 @@ class _Entry extends StatelessWidget {
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        Text(entry.title, style: theme.textTheme.bodyMedium),
+                        Text(title, style: theme.textTheme.bodyMedium),
                         if (facts.isNotEmpty)
                           Text(
                             facts.join(' · '),

@@ -122,20 +122,25 @@ List<TextLinkSegment> splitTextLinks(String text) {
 @visibleForTesting
 Future<bool> Function(Uri uri)? externalLinkLauncherOverride;
 
+/// Opens [link] in the system browser, if [parseExternalLink] accepts it.
+/// False if it is not a web address or the browser could not open it; the
+/// caller tells the user.
+Future<bool> launchExternalLink(String? link) async {
+  final uri = parseExternalLink(link);
+  if (uri == null) return false;
+  try {
+    final launcher = externalLinkLauncherOverride;
+    return launcher != null
+        ? await launcher(uri)
+        : await launchUrl(uri, mode: LaunchMode.externalApplication);
+  } catch (_) {
+    return false;
+  }
+}
+
 /// Opens [link] in the system browser and tells the user if that fails.
 Future<bool> openExternalLink(String? link) async {
-  final uri = parseExternalLink(link);
-  var opened = false;
-  if (uri != null) {
-    try {
-      final launcher = externalLinkLauncherOverride;
-      opened = launcher != null
-          ? await launcher(uri)
-          : await launchUrl(uri, mode: LaunchMode.externalApplication);
-    } catch (_) {
-      opened = false;
-    }
-  }
+  final opened = await launchExternalLink(link);
   if (!opened) showSnackBar(tr('navigation.linkOpenFailed'));
   return opened;
 }
