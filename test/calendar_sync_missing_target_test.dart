@@ -148,8 +148,11 @@ void main() {
 
   testWidgets('changing the language reports the missing calendar',
       (tester) async {
-    final store =
-        createStore(initialState: enabledState(), withMiddleware: true);
+    // A language change in the settings, with a signed-in account.
+    final store = createStore(
+        initialState:
+            enabledState().rebuild((b) => b.loginState.loggedIn = true),
+        withMiddleware: true);
     await pumpApp(tester, store: store, home: const Scaffold());
     await tester
         .runAsync(() => store.actions.settingsActions.setLanguage('en'));

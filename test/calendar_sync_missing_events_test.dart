@@ -297,7 +297,10 @@ void main() {
     testWidgets('a reconcile started in the settings reports missing events',
         (tester) async {
       await detectMissing(tester);
-      final store = createStore(initialState: twoTasks, withMiddleware: true);
+      // A language change in the settings, with a signed-in account.
+      final store = createStore(
+          initialState: twoTasks.rebuild((b) => b.loginState.loggedIn = true),
+          withMiddleware: true);
       await pumpApp(tester, store: store, home: const Scaffold());
       await tester
           .runAsync(() => store.actions.settingsActions.setLanguage('en'));

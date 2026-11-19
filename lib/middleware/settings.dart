@@ -593,7 +593,13 @@ Future<void> _setLanguage(
       }
     }
   }
-  if (api.state.settingsState.calendarSyncEnabled && isAndroidPlatform) {
+  // Only with the data of a signed-in account: the start applies the
+  // language before the sign-in, when every tracked event would look obsolete
+  // and be deleted, only to be created again after the first load (#151).
+  if (api.state.settingsState.calendarSyncEnabled &&
+      isAndroidPlatform &&
+      api.state.loginState.loggedIn &&
+      api.state.dashboardState.allDays != null) {
     await _reconcileCalendarSyncAndReport(api.state);
   }
 }

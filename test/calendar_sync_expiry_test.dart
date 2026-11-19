@@ -18,6 +18,8 @@
 // Past and ticked-off entries leave the device calendar (#138).
 
 import 'package:built_collection/built_collection.dart';
+import 'package:built_redux/built_redux.dart';
+import 'package:dr/actions/app_actions.dart';
 import 'package:dr/actions/dashboard_actions.dart';
 import 'package:dr/app_state.dart';
 import 'package:dr/calendar_sync_service.dart';
@@ -288,6 +290,58 @@ void main() {
     await pumpUntil(tester, () => deletedIds.isNotEmpty);
 
     expect(deletedIds, <int>[1000]);
+  });
+
+  group('the language applied at the start', () {
+    Store<AppState, AppStateBuilder, AppActions> storeWith(AppState state) {
+      final mockWrapper = MockWrapper();
+      when(() => mockWrapper.noInternet).thenReturn(false);
+      when(() => mockWrapper.url).thenReturn('https://example.com');
+      when(() => mockWrapper.user).thenReturn('user');
+      when(() => mockWrapper.lastInteraction).thenReturn(DateTime.now());
+      wrapper = mockWrapper;
+      return createStore(initialState: state, withMiddleware: true);
+    }
+
+    testWidgets('before the sign-in deletes no synced event (#151)',
+        (tester) async {
+      final deletedIds = <int>[];
+      CalendarSyncService.upsertEventOverride = (_) async => 1000;
+      CalendarSyncService.deleteEventOverride =
+          (id) async => deletedIds.add(id);
+      await tester.runAsync(() => CalendarSyncService.reconcile(
+          stateWith(homework: <Homework>[reminder()], loggedIn: true)));
+
+      // The state at the start: the settings, but no account and no data yet.
+      final store = storeWith(
+          AppState((b) => b.settingsState.calendarSyncEnabled = true));
+      await pumpApp(tester, store: store, home: const Scaffold());
+      await tester
+          .runAsync(() => store.actions.settingsActions.setLanguage('de'));
+      await pumpUntil(tester, () => deletedIds.isNotEmpty);
+
+      expect(deletedIds, isEmpty);
+    });
+
+    testWidgets('with the data of a signed-in account still reconciles',
+        (tester) async {
+      final deletedIds = <int>[];
+      CalendarSyncService.upsertEventOverride = (_) async => 1000;
+      CalendarSyncService.deleteEventOverride =
+          (id) async => deletedIds.add(id);
+      await tester.runAsync(() => CalendarSyncService.reconcile(
+          stateWith(homework: <Homework>[reminder()], loggedIn: true)));
+
+      // The reminder was ticked off meanwhile.
+      final store = storeWith(stateWith(
+          homework: <Homework>[reminder(checked: true)], loggedIn: true));
+      await pumpApp(tester, store: store, home: const Scaffold());
+      await tester
+          .runAsync(() => store.actions.settingsActions.setLanguage('de'));
+      await pumpUntil(tester, () => deletedIds.isNotEmpty);
+
+      expect(deletedIds, <int>[1000]);
+    });
   });
 
   testWidgets('ticking off an exam removes its event right away',

@@ -201,6 +201,8 @@ void main() {
         b.settingsState
           ..calendarSyncEnabled = true
           ..languageCode = 'de';
+        // A language change in the settings, with a signed-in account.
+        b.loginState.loggedIn = true;
         b.dashboardState.allDays = ListBuilder<Day>(<Day>[
           buildDay(
             date: UtcDateTime(2026, 4, 10),
