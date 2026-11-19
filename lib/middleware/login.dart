@@ -272,7 +272,7 @@ Future<void> _login(
         await fail(
           LoginFailedPayload((b) => b..cause = unsupportedMessage),
         );
-        _showUserTypeNotSupported(url);
+        showUserTypeNotSupported(url);
         return;
       }
 
@@ -667,11 +667,14 @@ AppState _emptyAppStateKeepingSettings(AppState state) {
       b.settingsState.replace(StudyData.empty.applyTo(state.settingsState)));
 }
 
-void _showUserTypeNotSupported(String url) {
+/// The page for accounts that are neither students nor parents, with a button
+/// to the website of the school at [url].
+@visibleForTesting
+void showUserTypeNotSupported(String url) {
   navigatorKey?.currentState?.push(
     MaterialPageRoute<void>(
       builder: (context) => UserTypeUnsupportedPage(
-        onOpenWebsite: () => launchUrl(Uri.parse(url)),
+        onOpenWebsite: () => openExternalLink(url),
       ),
     ),
   );

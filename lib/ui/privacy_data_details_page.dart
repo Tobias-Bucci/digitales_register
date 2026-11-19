@@ -1,10 +1,10 @@
 import 'package:dr/analytics_service.dart';
+import 'package:dr/external_links.dart';
 import 'package:dr/i18n/app_localizations.dart';
 import 'package:dr/ui/glass_page.dart';
 import 'package:dr/ui/glass_surface.dart';
 import 'package:flutter/material.dart';
 import 'package:responsive_scaffold/responsive_scaffold.dart';
-import 'package:url_launcher/url_launcher.dart';
 
 class PrivacyDataDetailsPage extends StatelessWidget {
   const PrivacyDataDetailsPage({super.key});
@@ -36,15 +36,12 @@ class PrivacyDataDetailsPage extends StatelessWidget {
     'rights': Icons.gavel_outlined,
   };
 
-  void _openContact() =>
-      launchUrl(Uri(scheme: 'mailto', path: 'buccitobias774@gmail.com'),
-          mode: LaunchMode.externalApplication);
+  void _openContact() => openMailTo('buccitobias774@gmail.com');
 
   void _openFirebasePrivacy() {
     AnalyticsService.product
         .event('external_action', {'action_type': 'open_privacy_policy'});
-    launchUrl(Uri.parse('https://firebase.google.com/support/privacy'),
-        mode: LaunchMode.externalApplication);
+    openExternalLink('https://firebase.google.com/support/privacy');
   }
 
   /// Inside the shell of the new design. From the consent dialog, on the root

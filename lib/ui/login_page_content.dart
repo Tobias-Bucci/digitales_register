@@ -22,6 +22,7 @@ import 'dart:math' as math;
 import 'package:collection/collection.dart';
 import 'package:dr/analytics_service.dart';
 import 'package:dr/container/login_page.dart';
+import 'package:dr/external_links.dart';
 import 'package:dr/i18n/app_localizations.dart';
 import 'package:dr/legal_links.dart';
 import 'package:dr/theme/auth_tokens.dart';
@@ -33,7 +34,6 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:fuzzy/fuzzy.dart';
 import 'package:tuple/tuple.dart';
-import 'package:url_launcher/url_launcher.dart';
 
 typedef LoginCallback = void Function(String user, String pass, String url);
 typedef ChangePassCallback = void Function(
@@ -480,11 +480,11 @@ class _LoginPageContentState extends State<LoginPageContent>
   }
 
   Future<void> _sendFeedback() async {
-    await launchUrl(Uri.https(
+    await openExternalLink(Uri.https(
       'docs.google.com',
       '/forms/d/e/1FAIpQLSdvhDufKHMVh4FzAUj5FiaGUjc8ma1DbD3NkRRHdWr4eE16hg/viewform',
       <String, String>{'usp': 'pp_url', 'entry.804572866': appVersion},
-    ));
+    ).toString());
   }
 
   Widget _schoolField(AppLocalizations l10n) {
@@ -1385,9 +1385,9 @@ class _LegalLinks extends StatefulWidget {
 
 class _LegalLinksState extends State<_LegalLinks> {
   late final _privacy = TapGestureRecognizer()
-    ..onTap = () => openLegalLink(privacyPolicyUrl);
+    ..onTap = () => openExternalLink(privacyPolicyUrl);
   late final _delete = TapGestureRecognizer()
-    ..onTap = () => openLegalLink(deleteAccountUrl);
+    ..onTap = () => openExternalLink(deleteAccountUrl);
 
   @override
   void dispose() {

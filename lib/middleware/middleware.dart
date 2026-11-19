@@ -121,7 +121,6 @@ import 'package:mutex/mutex.dart';
 import 'package:open_file/open_file.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
-import 'package:url_launcher/url_launcher.dart';
 
 part 'absences.dart';
 part 'analytics.dart';
@@ -257,13 +256,9 @@ NextActionHandler _errorMiddleware(
                       : e is ParseException
                           ? 'error.parse'
                           : 'error.generic',
-                  onContact: () async {
-                    await launchUrl(
-                      Uri.parse(
-                        "https://docs.google.com/forms/d/e/1FAIpQLScTmSAZzj0bjwX_8IHVx9dVTTVrncJJpZo_D20dF7mrnU_zdQ/viewform",
-                      ),
-                    );
-                  },
+                  onContact: () => openExternalLink(
+                    "https://docs.google.com/forms/d/e/1FAIpQLScTmSAZzj0bjwX_8IHVx9dVTTVrncJJpZo_D20dF7mrnU_zdQ/viewform",
+                  ),
                 ),
               ),
             );

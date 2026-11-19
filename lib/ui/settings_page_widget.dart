@@ -26,6 +26,7 @@ import 'package:dr/container/dashboard_overview.dart';
 import 'package:dr/container/export_container.dart';
 import 'package:dr/container/settings_page.dart';
 import 'package:dr/demo.dart';
+import 'package:dr/external_links.dart';
 import 'package:dr/i18n/app_language.dart';
 import 'package:dr/i18n/app_localizations.dart';
 import 'package:dr/legal_links.dart';
@@ -55,7 +56,6 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:responsive_scaffold/responsive_scaffold.dart';
-import 'package:url_launcher/url_launcher.dart';
 
 part 'settings/calendar_sync_page.dart';
 part 'settings/favorite_subjects_page.dart';
@@ -602,20 +602,7 @@ class _SettingsPageWidgetState extends State<SettingsPageWidget> {
   }
 
   Future<void> _openPlayStoreReview() async {
-    final marketUri = Uri.parse(
-      'market://details?id=$_playStorePackageId&showAllReviews=true',
-    );
-    final webUri = Uri.https(
-      'play.google.com',
-      '/store/apps/details',
-      {'id': _playStorePackageId},
-    );
-
-    if (await canLaunchUrl(marketUri)) {
-      await launchUrl(marketUri, mode: LaunchMode.externalApplication);
-      return;
-    }
-    await launchUrl(webUri, mode: LaunchMode.externalApplication);
+    await openPlayStoreReviews(_playStorePackageId);
   }
 
   String _favoriteSubjectsSummary(AppLocalizations l10n) {
@@ -1249,14 +1236,14 @@ class _SettingsPageWidgetState extends State<SettingsPageWidget> {
             leading: const Icon(Icons.privacy_tip_outlined),
             title: Text(l10n.text('legal.privacyPolicy')),
             trailing: const Icon(Icons.open_in_new),
-            onTap: () => openLegalLink(privacyPolicyUrl),
+            onTap: () => openExternalLink(privacyPolicyUrl),
           ),
           ListTile(
             key: const Key('settings-delete-account'),
             leading: const Icon(Icons.person_remove_outlined),
             title: Text(l10n.text('legal.deleteAccount')),
             trailing: const Icon(Icons.open_in_new),
-            onTap: () => openLegalLink(deleteAccountUrl),
+            onTap: () => openExternalLink(deleteAccountUrl),
           ),
         ],
       );
@@ -1305,13 +1292,9 @@ class _SettingsPageWidgetState extends State<SettingsPageWidget> {
           leading: const Icon(Icons.feedback),
           title: Text(l10n.text('settings.advanced.feedback')),
           trailing: const Icon(Icons.open_in_new),
-          onTap: () async {
-            await launchUrl(
-              Uri.parse(
-                "https://docs.google.com/forms/d/e/1FAIpQLSdvhDufKHMVh4FzAUj5FiaGUjc8ma1DbD3NkRRHdWr4eE16hg/viewform?usp=pp_url&entry.804572866=${Uri.encodeQueryComponent(appVersion)}",
-              ),
-            );
-          },
+          onTap: () => openExternalLink(
+            "https://docs.google.com/forms/d/e/1FAIpQLSdvhDufKHMVh4FzAUj5FiaGUjc8ma1DbD3NkRRHdWr4eE16hg/viewform?usp=pp_url&entry.804572866=${Uri.encodeQueryComponent(appVersion)}",
+          ),
         ),
         if (isAndroidPlatform)
           ListTile(
@@ -1324,16 +1307,16 @@ class _SettingsPageWidgetState extends State<SettingsPageWidget> {
           leading: const Icon(Icons.code),
           trailing: const Icon(Icons.open_in_new),
           title: Text(l10n.text('settings.advanced.sourceFork')),
-          onTap: () => launchUrl(
-            Uri.parse("https://github.com/Tobias-Bucci/digitales_register"),
+          onTap: () => openExternalLink(
+            "https://github.com/Tobias-Bucci/digitales_register",
           ),
         ),
         ListTile(
           leading: const Icon(Icons.code),
           trailing: const Icon(Icons.open_in_new),
           title: Text(l10n.text('settings.advanced.sourceOriginal')),
-          onTap: () => launchUrl(
-            Uri.parse("https://github.com/miDeb/digitales_register"),
+          onTap: () => openExternalLink(
+            "https://github.com/miDeb/digitales_register",
           ),
         ),
         ListTile(

@@ -119,9 +119,30 @@ List<TextLinkSegment> splitTextLinks(String text) {
   return segments;
 }
 
-/// Replaces the system browser in tests.
+/// Replaces the system browser and the mail app in tests.
 @visibleForTesting
 Future<bool> Function(Uri uri)? externalLinkLauncherOverride;
+
+/// The window of the web app that a web address opens in: a new tab, so the
+/// app stays open. The other platforms ignore it.
+const _newTab = '_blank';
+
+/// Opens [uri] in the app the system chooses for it. False if none could.
+/// Only for addresses this file has checked or built itself.
+Future<bool> _launch(Uri uri, {String? webWindowName}) async {
+  try {
+    final launcher = externalLinkLauncherOverride;
+    return launcher != null
+        ? await launcher(uri)
+        : await launchUrl(
+            uri,
+            mode: LaunchMode.externalApplication,
+            webOnlyWindowName: webWindowName,
+          );
+  } catch (_) {
+    return false;
+  }
+}
 
 /// Opens [link] in the system browser, if [parseExternalLink] accepts it.
 /// False if it is not a web address or the browser could not open it; the
@@ -129,19 +150,46 @@ Future<bool> Function(Uri uri)? externalLinkLauncherOverride;
 Future<bool> launchExternalLink(String? link) async {
   final uri = parseExternalLink(link);
   if (uri == null) return false;
-  try {
-    final launcher = externalLinkLauncherOverride;
-    return launcher != null
-        ? await launcher(uri)
-        : await launchUrl(uri, mode: LaunchMode.externalApplication);
-  } catch (_) {
-    return false;
-  }
+  return _launch(uri, webWindowName: _newTab);
 }
 
 /// Opens [link] in the system browser and tells the user if that fails.
 Future<bool> openExternalLink(String? link) async {
   final opened = await launchExternalLink(link);
-  if (!opened) showSnackBar(tr('navigation.linkOpenFailed'));
+  if (!opened) _showLinkOpenFailed();
   return opened;
 }
+
+/// A plain e-mail address: nothing that would add recipients, a subject or a
+/// text to the e-mail.
+final _mailAddress =
+    RegExp(r'^[A-Za-z0-9._%+-]+@[A-Za-z0-9-]+(\.[A-Za-z0-9-]+)+$');
+
+/// Starts an e-mail to [address] in the mail app and tells the user if that
+/// fails. Only for the app's own fixed addresses: text from outside the app
+/// goes through [openExternalLink], which opens web addresses only.
+Future<bool> openMailTo(String address) async {
+  final opened = _mailAddress.hasMatch(address) &&
+      // No window name: the web app leaves the choice to the browser, which
+      // opens a mail link in the same tab where it must (Safari).
+      await _launch(Uri(scheme: 'mailto', path: address));
+  if (!opened) _showLinkOpenFailed();
+  return opened;
+}
+
+/// Opens the reviews of the app [packageId] in the Play Store app, or its page
+/// on the Play Store website if the Store app is missing or cannot open it.
+/// Tells the user if neither opens.
+Future<bool> openPlayStoreReviews(String packageId) async {
+  final storeApp = Uri.parse(
+    'market://details?id=${Uri.encodeQueryComponent(packageId)}'
+    '&showAllReviews=true',
+  );
+  if (await _launch(storeApp)) return true;
+  return openExternalLink(
+    Uri.https('play.google.com', '/store/apps/details', {'id': packageId})
+        .toString(),
+  );
+}
+
+void _showLinkOpenFailed() => showSnackBar(tr('navigation.linkOpenFailed'));

@@ -1,3 +1,4 @@
+import 'package:dr/external_links.dart';
 import 'package:dr/i18n/app_localizations.dart';
 import 'package:dr/legal_links.dart';
 import 'package:dr/ui/glass_surface.dart' show GlassRimBorder;
@@ -16,7 +17,7 @@ class AboutAppDialog extends StatelessWidget {
         title: Text(title),
         subtitle: subtitle == null ? null : Text(subtitle),
         trailing: const Icon(Icons.open_in_new, size: 18),
-        onTap: () => openLegalLink(url),
+        onTap: () => openExternalLink(url),
       );
 
   @override
