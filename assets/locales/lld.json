@@ -1143,7 +1143,7 @@
   "polls.open": "Daür l'enrescida",
   "polls.openUntil": "Vodé fin ai {date}",
   "polls.closedAt": "Fenida ai {date}",
-  "polls.hint": "N vot por aparat, anonim. Do ne pós nia plü mudé to vot.",
+  "polls.hint": "N vot por aparat, zënza inom y zënza account. Do ne pós nia plü mudé to vot.",
   "polls.options": "Respostes",
   "polls.vote": "Vodé",
   "polls.confirmTitle": "Vodé por “{option}”?",

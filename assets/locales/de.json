@@ -1143,7 +1143,7 @@
   "polls.open": "Zur Umfrage",
   "polls.openUntil": "Abstimmen bis {date}",
   "polls.closedAt": "Beendet am {date}",
-  "polls.hint": "Eine Stimme pro Gerät, anonym. Deine Wahl lässt sich danach nicht mehr ändern.",
+  "polls.hint": "Eine Stimme pro Gerät, ohne Namen und ohne Konto. Deine Wahl lässt sich danach nicht mehr ändern.",
   "polls.options": "Antworten",
   "polls.vote": "Abstimmen",
   "polls.confirmTitle": "Für „{option}“ stimmen?",

@@ -67,7 +67,7 @@ A sentence for `linux/*.metainfo.xml` or the store listing, if polls are
 mentioned:
 
 > Take part in short polls from the app's announcements: one vote per device,
-> anonymous, without a school account.
+> without your name or a school account.
 
 Privacy note, if the listing has one:
 

@@ -190,7 +190,9 @@ void main() {
         expect(find.text('Welche Funktion wünschst du dir als Nächstes?'),
             findsOneWidget);
         expect(find.byKey(const Key('poll-hint')), findsOneWidget);
-        expect(find.textContaining('Eine Stimme pro Gerät, anonym'),
+        expect(
+            find.textContaining(
+                'Eine Stimme pro Gerät, ohne Namen und ohne Konto'),
             findsOneWidget);
         // No result before this device voted.
         expect(find.byKey(const Key('poll-results')), findsNothing);

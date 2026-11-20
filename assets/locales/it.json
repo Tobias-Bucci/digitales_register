@@ -1143,7 +1143,7 @@
   "polls.open": "Apri il sondaggio",
   "polls.openUntil": "Si vota fino al {date}",
   "polls.closedAt": "Concluso il {date}",
-  "polls.hint": "Un voto per dispositivo, in forma anonima. Dopo non potrai più cambiare la tua scelta.",
+  "polls.hint": "Un voto per dispositivo, senza nome né account. Dopo non potrai più cambiare la tua scelta.",
   "polls.options": "Risposte",
   "polls.vote": "Vota",
   "polls.confirmTitle": "Votare per «{option}»?",

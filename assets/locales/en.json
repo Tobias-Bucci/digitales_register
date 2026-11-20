@@ -1143,7 +1143,7 @@
   "polls.open": "Open poll",
   "polls.openUntil": "Voting until {date}",
   "polls.closedAt": "Ended on {date}",
-  "polls.hint": "One vote per device, anonymous. You cannot change your choice afterwards.",
+  "polls.hint": "One vote per device, without your name or account. You cannot change your choice afterwards.",
   "polls.options": "Answers",
   "polls.vote": "Vote",
   "polls.confirmTitle": "Vote for “{option}”?",
