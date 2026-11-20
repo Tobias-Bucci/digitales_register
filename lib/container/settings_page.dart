@@ -31,6 +31,7 @@ import 'package:dr/theme_controller.dart';
 import 'package:dr/ui/legacy_study_data_tile.dart';
 import 'package:dr/ui/settings_page_widget.dart';
 import 'package:dr/util.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_built_redux/flutter_built_redux.dart';
 
@@ -39,6 +40,11 @@ const DeepCollectionEquality _settingsViewModelEquality =
 
 /// A page of the settings that other pages open directly.
 enum SettingsShortcut { grades, subjectNicks, substituteTeachers }
+
+/// The debug menu exists in debug builds only (#161). It used to appear for
+/// the user name "debug" in every build.
+@visibleForTesting
+bool settingsDebugMenuAvailable = kDebugMode;
 
 class SettingsPageContainer extends StatelessWidget {
   const SettingsPageContainer({super.key, this.shortcut});
@@ -78,7 +84,9 @@ class SettingsPageContainer extends StatelessWidget {
             onSetDashboardDeduplicateEntries:
                 actions.settingsActions.deduplicateDashboardEntries.call,
             onShowProfile: actions.routingActions.showProfile.call,
-            onShowDebug: actions.routingActions.showDebug.call,
+            onShowDebug: settingsDebugMenuAvailable
+                ? actions.routingActions.showDebug.call
+                : null,
             onSetIgnoreForGradesAverage: (list) => actions.settingsActions
                 .ignoreSubjectsForAverage(BuiltList(list)),
             onSetFavoriteSubjects: (list) =>

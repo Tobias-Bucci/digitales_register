@@ -1623,7 +1623,7 @@ class SchoolNotificationService extends ChangeNotifier
           accountKey(server, user) != account) {
         return unavailable();
       }
-      if (user == 'demo' || user == 'debug') return null;
+      if (user == 'demo') return null;
       final uri = Uri.tryParse(server);
       if (uri == null ||
           uri.scheme != 'https' ||

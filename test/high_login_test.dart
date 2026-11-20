@@ -40,6 +40,7 @@ class LoginAdapter implements HttpClientAdapter {
   bool malformedCredentials = false;
   Exception? credentialFailure;
   int loginRequests = 0;
+  final signInUsers = <Object?>[];
   int calendarRequests = 0;
   final configGate = Completer<void>();
   final configRequested = Completer<void>();
@@ -50,6 +51,8 @@ class LoginAdapter implements HttpClientAdapter {
     if (options.path.contains('api/calendar/student')) calendarRequests++;
     if (options.path.endsWith('api/auth/login')) {
       loginRequests++;
+      final data = options.data;
+      signInUsers.add(data is Map ? data['username'] : null);
       if (credentialFailure != null) throw credentialFailure!;
       return ResponseBody.fromString(
           malformedCredentials ? '{' : jsonEncode({'loggedIn': !rejected}), 200,
@@ -98,6 +101,24 @@ void main() {
     await Future<void>.delayed(Duration.zero);
     expect(store.state.loginState.loggedIn, isTrue);
     expect(adapter.calendarRequests, 0);
+  });
+
+  test('the user name "debug" is sent as typed, like any other (#161)',
+      () async {
+    final session = TestLoginWrapper()..safeMode = false;
+    final adapter = LoginAdapter()..configGate.complete();
+    session.dio.httpClientAdapter = adapter;
+    middleware.wrapper = session;
+    addTearDown(() => session.logout(hard: true));
+    final store = createStore(withMiddleware: true);
+    await store.actions.loginActions.login(LoginPayload((b) => b
+      ..user = 'debug'
+      ..pass = 'password'
+      ..url = testServerUrl
+      ..fromStorage = false));
+    expect(adapter.signInUsers, ['debug']);
+    expect(session.user, 'debug');
+    expect(store.state.loginState.username, 'debug');
   });
 
   test('middleware catches unexpected initialization errors exactly once',

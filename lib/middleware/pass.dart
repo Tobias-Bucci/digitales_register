@@ -47,9 +47,7 @@ Future<void> _savePass(MiddlewareApi<AppState, AppStateBuilder, AppActions> api,
     return;
   }
 
-  // If the user is logged in as 'debug', save 'debug' instead of the mapped username ('stbuctob').
-  final userToSave =
-      api.state.loginState.username == 'debug' ? 'debug' : wrapper.user;
+  final userToSave = wrapper.user;
   final login = decodeStoredLogin(await secureStorage.read(key: 'login'));
   final otherAccounts = (login['otherAccounts'] as List? ?? <Object?>[])
       .where((dynamic account) =>

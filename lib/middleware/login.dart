@@ -168,8 +168,6 @@ Future<void> _login(
         action.payload.pass == 'demo' &&
         rawUrl.isEmpty;
 
-    final isDebugLogin = action.payload.user == 'debug';
-    final actualUser = isDebugLogin ? 'stbuctob' : action.payload.user;
     final url = isDemoLogin ? '' : fixupUrl(rawUrl);
     if (!isDemoLogin && Uri.parse(url).scheme != 'https') {
       final httpsRequired = await _loginText('login.httpsRequired');
@@ -216,7 +214,7 @@ Future<void> _login(
         () => api.actions.loginActions.loggedIn(
           LoggedInPayload(
             (b) => b
-              ..username = action.payload.user // Keep displaying "debug"
+              ..username = action.payload.user
               ..fromStorage = true
               ..offlineOnly = true
               ..keepShowingLoadingIndicator = true,
@@ -239,7 +237,7 @@ Future<void> _login(
     final signedIn =
         await startupTimeline.step<bool>('p4_online_sign_in', () async {
       result = await loginWrapper.login(
-        actualUser, // Send 'stbuctob' if it was a debug login
+        action.payload.user,
         action.payload.pass,
         null,
         url,
@@ -272,16 +270,10 @@ Future<void> _login(
         return;
       }
 
-      // We logged in with 'stbuctob', but if it was the debug login,
-      // we want the app state to retain 'debug' as the username
-      final recordedUsername =
-          action.payload.user == 'debug' ? 'debug' : wrapper.user;
-
       await api.actions.loginActions.loggedIn(
         LoggedInPayload(
           (b) => b
-            ..username =
-                recordedUsername // Use the override instead of wrapper.user
+            ..username = wrapper.user
             ..fromStorage = action.payload.fromStorage
             ..secondaryOnlineLogin = offlineLogin,
         ),

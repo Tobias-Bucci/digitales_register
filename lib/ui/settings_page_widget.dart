@@ -115,7 +115,9 @@ class SettingsPageWidget extends StatefulWidget {
   final OnSettingChanged<List<String>> onSetIgnoreForGradesAverage;
   final OnSettingChanged<List<String>> onSetFavoriteSubjects;
   final VoidCallback onShowProfile;
-  final VoidCallback onShowDebug;
+
+  /// Null hides the button to the debug menu.
+  final VoidCallback? onShowDebug;
   final SettingsViewModel vm;
   final AppThemePreference currentThemePreference;
   final Future<void> Function(DateTime? date) onSetSimulatedDate;
@@ -1377,7 +1379,7 @@ class _SettingsPageWidgetState extends State<SettingsPageWidget> {
     if (ResponsiveNavigationScope.isActive(context)) {
       return SettingsPageNew(
         sections: sections,
-        onShowDebug: widget.vm.username == 'debug' ? widget.onShowDebug : null,
+        onShowDebug: widget.onShowDebug,
       );
     }
     return Scaffold(
@@ -1397,7 +1399,7 @@ class _SettingsPageWidgetState extends State<SettingsPageWidget> {
             if (index > 0) const SizedBox(height: 16),
             section,
           ],
-          if (widget.vm.username == 'debug')
+          if (widget.onShowDebug != null)
             Padding(
               padding: const EdgeInsets.only(top: 16),
               child: ElevatedButton(

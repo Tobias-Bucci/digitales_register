@@ -180,7 +180,7 @@ void main() {
           reason: key,
         );
       }
-      expect(_key('settings-debug-button'), findsNothing);
+      // The debug menu belongs to debug builds only; see the tests below.
     });
 
     testWidgets('the headings and the title are headings', (tester) async {
@@ -224,11 +224,23 @@ void main() {
       expect(store.state.settingsState.amoledMode, isFalse);
     });
 
-    testWidgets('the debug user gets a glass button', (tester) async {
-      await _pumpSettings(tester, state: _state(username: 'debug'));
+    testWidgets('debug builds get a glass button to the debug menu',
+        (tester) async {
+      await _pumpSettings(tester, state: _state(username: 'user'));
 
       final button = _key('settings-debug-button');
       expect(button, findsOneWidget);
+      expect(find.byType(ElevatedButton), findsNothing);
+    });
+
+    testWidgets('release builds have no debug menu, whatever the user name',
+        (tester) async {
+      // The user name "debug" used to unlock it in release builds (#161).
+      settingsDebugMenuAvailable = false;
+      addTearDown(() => settingsDebugMenuAvailable = true);
+      await _pumpSettings(tester, state: _state(username: 'debug'));
+
+      expect(_key('settings-debug-button'), findsNothing);
       expect(find.byType(ElevatedButton), findsNothing);
     });
 
