@@ -58,8 +58,6 @@ class _Session {
     );
   }
 
-
-
   final Wrapper wrapper;
   final AccountScope scope;
   final int generation;

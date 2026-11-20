@@ -359,7 +359,8 @@ void main() {
 
       await tester.enterText(find.byKey(input), '-1.5a');
 
-      expect(tester.widget<TextField>(find.byKey(input)).controller!.text, '15');
+      expect(
+          tester.widget<TextField>(find.byKey(input)).controller!.text, '15');
     });
 
     testWidgets('a day can be removed, but not the last one', (tester) async {
@@ -367,7 +368,8 @@ void main() {
 
       for (final day in [3, 2]) {
         await tester.tap(
-          find.descendant(of: chip(day), matching: find.byTooltip('Tag entfernen')),
+          find.descendant(
+              of: chip(day), matching: find.byTooltip('Tag entfernen')),
         );
         await tester.pumpAndSettle();
         expect(chip(day), findsNothing);
@@ -414,8 +416,8 @@ void main() {
       }
       expect(find.text('Mo'), findsOneWidget);
       expect(find.text('So'), findsOneWidget);
-      expect(tester.getTopLeft(day(1)).dx,
-          lessThan(tester.getTopLeft(day(2)).dx));
+      expect(
+          tester.getTopLeft(day(1)).dx, lessThan(tester.getTopLeft(day(2)).dx));
     });
 
     testWidgets('are only shown while the reminder is on', (tester) async {
@@ -468,10 +470,12 @@ void main() {
       await pump(tester, _Host(service: service(), enabled: true));
 
       expect(
-        tester.getSemantics(find.descendant(
-          of: day(1),
-          matching: find.byType(Semantics),
-        ).first),
+        tester.getSemantics(find
+            .descendant(
+              of: day(1),
+              matching: find.byType(Semantics),
+            )
+            .first),
         matchesSemantics(
           label: 'Montag',
           isSelected: true,

@@ -25,11 +25,8 @@ import 'package:flutter_built_redux/flutter_built_redux.dart';
 class NetworkProtocolContainer extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
-    return StoreConnection<
-      AppState,
-      AppActions,
-      BuiltList<NetworkProtocolItem>
-    >(
+    return StoreConnection<AppState, AppActions,
+        BuiltList<NetworkProtocolItem>>(
       builder: (context, vm, actions) {
         return NetworkProtocol(items: vm.toList());
       },

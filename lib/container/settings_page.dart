@@ -192,9 +192,8 @@ class SettingsPageContainer extends StatelessWidget {
                 actions.dashboardActions.refresh(),
               ]);
             },
-            legacyStudyData: vm.demoMode
-                ? null
-                : LegacyStudyDataTile(actions: actions),
+            legacyStudyData:
+                vm.demoMode ? null : LegacyStudyDataTile(actions: actions),
           ),
         );
       },
@@ -275,8 +274,7 @@ class SettingsViewModel {
             state.settingsState.substituteDetectionEnabled,
         calendarSyncEnabled = state.settingsState.calendarSyncEnabled,
         mensaReminderEnabled = state.settingsState.mensaReminderEnabled,
-        mensaReminderMinuteOfDay =
-            state.settingsState.mensaReminderMinuteOfDay,
+        mensaReminderMinuteOfDay = state.settingsState.mensaReminderMinuteOfDay,
         mensaReminderUrl = state.settingsState.mensaReminderUrl,
         mensaReminderWeekdays =
             state.settingsState.mensaReminderWeekdays.toList(),

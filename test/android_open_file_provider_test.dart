@@ -22,9 +22,9 @@ void main() {
   });
 
   test('viewers get read access only through the viewing intent', () {
-    final source = File(
-            '$_plugin/java/com/crazecoder/openfile/OpenFilePlugin.java')
-        .readAsStringSync();
+    final source =
+        File('$_plugin/java/com/crazecoder/openfile/OpenFilePlugin.java')
+            .readAsStringSync();
     expect(source, isNot(contains('FLAG_GRANT_WRITE_URI_PERMISSION')));
     expect(source, isNot(contains('grantUriPermission(')));
     expect(source, contains('Intent.FLAG_GRANT_READ_URI_PERMISSION'));

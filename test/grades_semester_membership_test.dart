@@ -138,8 +138,8 @@ void main() {
       () async {
     final store = createStore();
     await _load(store, Semester.first, [_subject(2, 'Shared')]);
-    await _load(store, Semester.second,
-        [_subject(2, 'Shared', date: '2026-03-01')]);
+    await _load(
+        store, Semester.second, [_subject(2, 'Shared', date: '2026-03-01')]);
     await store.actions.gradesActions.detailsLoaded(
       SubjectDetailLoadedPayload(
         (b) => b
@@ -210,8 +210,8 @@ void main() {
   test('a semester without grades does not trigger a school year reset',
       () async {
     final store = createStore();
-    await _load(store, Semester.first,
-        [_subject(1, 'First-only', date: '2025-11-01')]);
+    await _load(
+        store, Semester.first, [_subject(1, 'First-only', date: '2025-11-01')]);
     await _load(store, Semester.second, [
       {
         'subject': {'id': 2, 'name': 'Empty'},

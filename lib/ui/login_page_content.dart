@@ -1403,8 +1403,8 @@ class _LegalLinksState extends State<_LegalLinks> {
         .textTheme
         .bodySmall
         ?.copyWith(fontSize: 13, height: 1.4, color: widget.muted);
-    final link = TextStyle(
-        color: widget.color, decoration: TextDecoration.underline);
+    final link =
+        TextStyle(color: widget.color, decoration: TextDecoration.underline);
     return Text.rich(
       key: const Key('login-legal-links'),
       TextSpan(style: base, children: [

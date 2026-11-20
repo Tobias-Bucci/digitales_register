@@ -60,13 +60,12 @@ void main() {
 
       expect(reminders.map((r) => r.weekday), [1, 2, 3, 4, 5]);
       expect(reminders.map((r) => r.id).toSet(), hasLength(5));
-      expect(reminders.map((r) => r.payload),
-          everyElement(mensaReminderPayload));
+      expect(
+          reminders.map((r) => r.payload), everyElement(mensaReminderPayload));
     });
 
     test('only the chosen weekdays, each with its own stable id', () {
-      final reminders =
-          planReminders(_state(weekdays: [7, 1, 3, 3, 9]), l10n);
+      final reminders = planReminders(_state(weekdays: [7, 1, 3, 3, 9]), l10n);
 
       expect(reminders.map((r) => r.weekday), [1, 3, 7]);
       expect(
@@ -242,8 +241,7 @@ void main() {
       expect(restored.assessmentReminderMinuteOfDay, 18 * 60);
     });
 
-    test('older settings without the new choices get their defaults',
-        () async {
+    test('older settings without the new choices get their defaults', () async {
       // Saved by the version before #128: reminders on, nothing chosen yet.
       final saved = serializers.serialize(SettingsState((b) => b
         ..mensaReminderEnabled = true

@@ -247,8 +247,7 @@ Future<void> handleAndroidWidgetLaunchDestination(
   if (deferUntilLogin) {
     switch (destination) {
       case AndroidWidgetLaunchDestination.homework:
-        await actions.loginActions
-            .addAfterLoginCallback(showDashboardHome);
+        await actions.loginActions.addAfterLoginCallback(showDashboardHome);
         return;
       case AndroidWidgetLaunchDestination.grades:
         await actions.loginActions

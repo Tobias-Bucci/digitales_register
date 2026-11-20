@@ -95,13 +95,15 @@ class ReminderNotificationService {
   /// Called with the payload of a tapped reminder.
   Future<void> Function(String? payload)? onTap;
 
-  ReminderBackend get backend => _backendOverride ?? reminderBackendForPlatform();
+  ReminderBackend get backend =>
+      _backendOverride ?? reminderBackendForPlatform();
 
   /// Whether reminders are shown only while the app is open.
   bool get onlyWhileRunning => backend == ReminderBackend.whileRunning;
 
   /// Whether the user can be sent to a system page to allow notifications.
-  bool get canOpenSystemSettings => HostPlatform.isAndroid || HostPlatform.isIOS;
+  bool get canOpenSystemSettings =>
+      HostPlatform.isAndroid || HostPlatform.isIOS;
 
   Future<void> openSystemSettings() => schoolNotifications.openSystemSettings();
 
@@ -115,8 +117,7 @@ class ReminderNotificationService {
       const MethodChannel('dr/school_notifications')
           .invokeMethod<String>('timeZone');
 
-  Future<void> _initialize() =>
-      _initialized ??=
+  Future<void> _initialize() => _initialized ??=
           _initializePlugin().catchError((Object error, StackTrace stack) {
         // Optional functionality: the next sync may try again.
         _initialized = null;
@@ -291,8 +292,7 @@ class ReminderNotificationService {
   Future<void> _showDue() => _mutex.protect(() async {
         final now = _clock();
         final due = _whileRunning.where((r) => !r.at.isAfter(now)).toList();
-        _whileRunning =
-            _whileRunning.where((r) => r.at.isAfter(now)).toList();
+        _whileRunning = _whileRunning.where((r) => r.at.isAfter(now)).toList();
         _armTimer();
         for (final reminder in due) {
           try {

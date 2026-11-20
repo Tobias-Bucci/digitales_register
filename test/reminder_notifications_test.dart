@@ -45,11 +45,11 @@ class _Native extends Fake implements FlutterLocalNotificationsPlugin {
   }
 
   @override
-  Future<List<PendingNotificationRequest>> pendingNotificationRequests() async =>
-      [
-        for (final id in scheduled.keys)
-          PendingNotificationRequest(id, null, null, null),
-      ];
+  Future<List<PendingNotificationRequest>>
+      pendingNotificationRequests() async => [
+            for (final id in scheduled.keys)
+              PendingNotificationRequest(id, null, null, null),
+          ];
 
   @override
   Future<void> show({
@@ -123,7 +123,8 @@ void main() {
     late ReminderNotificationService service;
     setUp(() => service = create(ReminderBackend.systemRepeating));
 
-    test('schedules a one-time reminder at the exact moment, without exact alarms',
+    test(
+        'schedules a one-time reminder at the exact moment, without exact alarms',
         () async {
       final at = DateTime(2026, 3, 12, 18);
       await service.sync([_once(1, at)]);
@@ -210,7 +211,8 @@ void main() {
       expect(native.scheduled.keys, [1]);
     });
 
-    test('keeps the soonest reminders within the limit of the system', () async {
+    test('keeps the soonest reminders within the limit of the system',
+        () async {
       await service.sync([
         for (var i = 0; i < maxPendingReminders + 5; i++)
           _once(i, DateTime(2026, 7, 1).subtract(Duration(days: i))),
@@ -453,8 +455,9 @@ void main() {
           DateTime(2026, 3, 11, 7, 30));
       expect(nextWeeklyOccurrence(tuesday, DateTime.monday, 7, 30),
           DateTime(2026, 3, 16, 7, 30));
-      expect(nextWeeklyOccurrence(DateTime(2026, 12, 30, 20), DateTime.friday,
-              7, 30),
+      expect(
+          nextWeeklyOccurrence(
+              DateTime(2026, 12, 30, 20), DateTime.friday, 7, 30),
           DateTime(2027, 1, 1, 7, 30));
     });
 
@@ -469,7 +472,8 @@ void main() {
     });
 
     test('ids are stable and differ per key', () {
-      expect(reminderNotificationId(['a', 1]), reminderNotificationId(['a', 1]));
+      expect(
+          reminderNotificationId(['a', 1]), reminderNotificationId(['a', 1]));
       expect(reminderNotificationId(['a', 1]),
           isNot(reminderNotificationId(['a', 2])));
       expect(reminderNotificationId('a'), lessThan(1 << 31));

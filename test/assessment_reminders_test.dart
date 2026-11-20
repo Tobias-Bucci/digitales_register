@@ -106,7 +106,8 @@ void main() {
   group('reminder times', () {
     test('counts back calendar days and uses the fixed time', () {
       expect(
-        [3, 2, 1].map((days) => assessmentReminderTime(examDate, days, 18 * 60)),
+        [3, 2, 1]
+            .map((days) => assessmentReminderTime(examDate, days, 18 * 60)),
         [
           DateTime(2026, 4, 17, 18),
           DateTime(2026, 4, 18, 18),
@@ -384,7 +385,11 @@ void main() {
     });
 
     test('is empty while the switch is off', () {
-      expect(plan(_state([_day(examDate, [_test(1)])], enabled: false)), isEmpty);
+      expect(
+          plan(_state([
+            _day(examDate, [_test(1)])
+          ], enabled: false)),
+          isEmpty);
     });
 
     test('ignores entries that are no assessments', () {
@@ -422,14 +427,16 @@ void main() {
     });
 
     test('a test deleted on the server has no reminders', () {
-      final deleted = _day(examDate, []).rebuild(
-          (b) => b.deletedHomework.add(_test(1).rebuild((h) => h.deleted = true)));
+      final deleted = _day(examDate, []).rebuild((b) =>
+          b.deletedHomework.add(_test(1).rebuild((h) => h.deleted = true)));
 
       expect(plan(_state([deleted])), isEmpty);
     });
 
     test('does not plan what has passed', () {
-      final state = _state([_day(examDate, [_test(1)])]);
+      final state = _state([
+        _day(examDate, [_test(1)])
+      ]);
 
       expect(
         plan(state, now: DateTime(2026, 4, 18, 19)).map((r) => r.at),
@@ -441,14 +448,18 @@ void main() {
     });
 
     test('a reminder at this very evening is still planned before 18:00', () {
-      final state = _state([_day(examDate, [_test(1)])]);
+      final state = _state([
+        _day(examDate, [_test(1)])
+      ]);
 
       expect(plan(state, now: DateTime(2026, 4, 19, 17, 59)), hasLength(1));
     });
 
     test('follows the configured days', () {
       final reminders = plan(_state(
-        [_day(examDate, [_test(1)])],
+        [
+          _day(examDate, [_test(1)])
+        ],
         reminderDays: [5],
       ));
 
@@ -457,7 +468,9 @@ void main() {
 
     test('uses the chosen time', () {
       final reminder = plan(_state(
-        [_day(examDate, [_test(1)])],
+        [
+          _day(examDate, [_test(1)])
+        ],
         reminderDays: [1],
         minute: 7 * 60 + 5,
       )).single;
@@ -466,7 +479,9 @@ void main() {
     });
 
     test('whether a time has passed depends on the chosen time', () {
-      final days = [_day(examDate, [_test(1)])];
+      final days = [
+        _day(examDate, [_test(1)])
+      ];
       final now = DateTime(2026, 4, 19, 12);
 
       expect(plan(_state(days, minute: 11 * 60), now: now), isEmpty);
@@ -474,7 +489,9 @@ void main() {
     });
 
     test('a new time keeps the ids, so that it replaces the reminders', () {
-      final days = [_day(examDate, [_test(1)])];
+      final days = [
+        _day(examDate, [_test(1)])
+      ];
       final before = plan(_state(days));
       final after = plan(_state(days, minute: 7 * 60));
 
@@ -483,7 +500,9 @@ void main() {
     });
 
     test('a moved test keeps its ids, so that it replaces its reminders', () {
-      final before = plan(_state([_day(examDate, [_test(1)])]));
+      final before = plan(_state([
+        _day(examDate, [_test(1)])
+      ]));
       final after = plan(_state([
         _day(UtcDateTime(2026, 4, 22), [_test(1)]),
       ]));
@@ -493,7 +512,9 @@ void main() {
     });
 
     test('a changed subject changes the text of the same reminder', () {
-      final before = plan(_state([_day(examDate, [_test(1)])])).first;
+      final before = plan(_state([
+        _day(examDate, [_test(1)])
+      ])).first;
       final after = plan(_state([
         _day(examDate, [_test(1, subject: 'Latein')]),
       ])).first;
@@ -504,7 +525,9 @@ void main() {
 
     test('planning twice gives the same reminders, so nothing is rescheduled',
         () {
-      final state = _state([_day(examDate, [_test(1)])]);
+      final state = _state([
+        _day(examDate, [_test(1)])
+      ]);
 
       expect(plan(state).map((r) => r.fingerprint()),
           plan(state).map((r) => r.fingerprint()));
@@ -519,14 +542,18 @@ void main() {
     });
 
     test('accounts do not share reminders', () {
-      final days = [_day(examDate, [_test(1)])];
+      final days = [
+        _day(examDate, [_test(1)])
+      ];
 
       expect(plan(_state(days)).first.id,
           isNot(plan(_state(days, user: 'sibling')).first.id));
     });
 
     test('names the type and the subject, but no teacher text', () {
-      final reminders = plan(_state([_day(examDate, [_test(1)])]));
+      final reminders = plan(_state([
+        _day(examDate, [_test(1)])
+      ]));
 
       expect(reminders.map((r) => r.title),
           ['In 3 Tagen: Test', 'In 2 Tagen: Test', 'Morgen: Test']);
@@ -556,7 +583,11 @@ void main() {
     test('is translated', () async {
       final italian = await AppLocalizations.load(const Locale('it'));
       final reminder = planReminders(
-        _state([_day(examDate, [_test(1)])], reminderDays: [2]),
+        _state([
+          _day(examDate, [_test(1)])
+        ], reminderDays: [
+          2
+        ]),
         italian,
         now: monday,
       ).single;
@@ -568,7 +599,11 @@ void main() {
       appClock.setDemoMode(true);
       addTearDown(() => appClock.setDemoMode(false));
 
-      expect(plan(_state([_day(examDate, [_test(1)])])), isEmpty);
+      expect(
+          plan(_state([
+            _day(examDate, [_test(1)])
+          ])),
+          isEmpty);
     });
   });
 
@@ -624,14 +659,20 @@ void main() {
 
     test('newly loaded tests are planned', () async {
       sync.attach(states.stream, _state(const []));
-      states.add(_state([_day(future, [_test(1)])]));
+      states.add(_state([
+        _day(future, [_test(1)])
+      ]));
       await settle();
 
       expect(syncs.single, hasLength(3));
     });
 
     test('a test that disappears is removed', () async {
-      sync.attach(states.stream, _state([_day(future, [_test(1)])]));
+      sync.attach(
+          states.stream,
+          _state([
+            _day(future, [_test(1)])
+          ]));
       states.add(_state(const []));
       await settle();
 
@@ -644,7 +685,9 @@ void main() {
       ('homework', (days) => _state(days, homework: true)),
     ]) {
       test('switching $name plans again', () async {
-        final days = [_day(future, [_test(1)])];
+        final days = [
+          _day(future, [_test(1)])
+        ];
         sync.attach(states.stream, _state(days));
         states.add(change(days));
         await settle();
@@ -654,7 +697,9 @@ void main() {
     }
 
     test('changed days plan again', () async {
-      final days = [_day(future, [_test(1)])];
+      final days = [
+        _day(future, [_test(1)])
+      ];
       sync.attach(states.stream, _state(days));
       states.add(_state(days, reminderDays: [1]));
       await settle();
@@ -663,7 +708,9 @@ void main() {
     });
 
     test('a changed time plans again', () async {
-      final days = [_day(future, [_test(1)])];
+      final days = [
+        _day(future, [_test(1)])
+      ];
       sync.attach(states.stream, _state(days));
       states.add(_state(days, minute: 7 * 60));
       await settle();
@@ -672,7 +719,9 @@ void main() {
     });
 
     test('another account plans again', () async {
-      final days = [_day(future, [_test(1)])];
+      final days = [
+        _day(future, [_test(1)])
+      ];
       sync.attach(states.stream, _state(days));
       states.add(_state(days, user: 'sibling'));
       await settle();

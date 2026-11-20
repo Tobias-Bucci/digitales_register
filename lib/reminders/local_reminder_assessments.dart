@@ -43,10 +43,10 @@ class LocalReminderAssessment {
   final String name;
 
   String get serverTypeName => switch (type) {
-    LocalReminderAssessmentType.test => 'Test',
-    LocalReminderAssessmentType.classwork => 'Schularbeit',
-    LocalReminderAssessmentType.exam => 'Prüfung',
-  };
+        LocalReminderAssessmentType.test => 'Test',
+        LocalReminderAssessmentType.classwork => 'Schularbeit',
+        LocalReminderAssessmentType.exam => 'Prüfung',
+      };
 
   String get displayTitle => serverTypeName;
 
@@ -100,10 +100,10 @@ const _localReminderAssessmentCommands = <String, LocalReminderAssessmentType>{
 
 const _defaultLocalReminderAssessmentCommands =
     <LocalReminderAssessmentType, String>{
-      LocalReminderAssessmentType.test: 'test',
-      LocalReminderAssessmentType.classwork: 'cw',
-      LocalReminderAssessmentType.exam: 'exam',
-    };
+  LocalReminderAssessmentType.test: 'test',
+  LocalReminderAssessmentType.classwork: 'cw',
+  LocalReminderAssessmentType.exam: 'exam',
+};
 
 final Expando<List<String>> _sortedSubjectCache = Expando<List<String>>(
   'localReminderAssessmentSortedSubjects',
@@ -131,9 +131,8 @@ LocalReminderAssessment? parseLocalReminderAssessment(
   final period = int.tryParse(match.group(2) ?? '');
   final remainder = (match.group(3) ?? '').trim();
   final subject = _findMatchingSubject(remainder, knownSubjects);
-  final name = subject == null
-      ? remainder
-      : remainder.substring(subject.length).trim();
+  final name =
+      subject == null ? remainder : remainder.substring(subject.length).trim();
 
   return LocalReminderAssessment(
     type: type,
@@ -292,18 +291,17 @@ List<CalendarDay> calendarDaysForWeekWithLocalReminderAssessments(
     }
   }
 
-  final result =
-      dates
-          .map(
-            (date) => _mergeLocalReminderAssessmentsIntoCalendarDay(
-              state,
-              date,
-              state.calendarState.days[date],
-            ),
-          )
-          .whereType<CalendarDay>()
-          .toList()
-        ..sort((a, b) => a.date.compareTo(b.date));
+  final result = dates
+      .map(
+        (date) => _mergeLocalReminderAssessmentsIntoCalendarDay(
+          state,
+          date,
+          state.calendarState.days[date],
+        ),
+      )
+      .whereType<CalendarDay>()
+      .toList()
+    ..sort((a, b) => a.date.compareTo(b.date));
   return result;
 }
 

@@ -15,7 +15,8 @@ class _Keychain {
   bool _matches(String key, Map options) {
     final item = items[key];
     final accessible = options['accessibility'];
-    return item != null && (accessible == null || item.accessible == accessible);
+    return item != null &&
+        (accessible == null || item.accessible == accessible);
   }
 
   Future<Object?> handle(MethodCall call) async {

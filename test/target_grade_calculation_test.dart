@@ -183,8 +183,7 @@ void main() {
         () => calculateTargetGrades(
           existingGrades: [grade(8)],
           targetGrade: 800,
-          futureWeights:
-              List<int>.filled(maximumFutureAssessments + 1, 1),
+          futureWeights: List<int>.filled(maximumFutureAssessments + 1, 1),
         ),
         throwsArgumentError,
       );
@@ -230,9 +229,9 @@ void main() {
             targetGrade: target,
             futureWeights: weights,
           );
-          final totalWeight = existing.fold<int>(
-                  0, (sum, e) => sum + e.weightPercentage) +
-              weights.fold<int>(0, (sum, w) => sum + w);
+          final totalWeight =
+              existing.fold<int>(0, (sum, e) => sum + e.weightPercentage) +
+                  weights.fold<int>(0, (sum, w) => sum + w);
           final existingScore = existing.fold<int>(
               0, (sum, e) => sum + e.grade * e.weightPercentage);
           final required = target * totalWeight - existingScore;

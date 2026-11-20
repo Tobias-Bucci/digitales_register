@@ -233,8 +233,8 @@ class StudyDataMigration {
 
     await _step('copy-files');
     final copies = <String, String>{};
-    final rewritten = await _rewriteAttachments(
-        quarantine.attachments, scope, copies);
+    final rewritten =
+        await _rewriteAttachments(quarantine.attachments, scope, copies);
     final candidates = StudyData(
       progress: quarantine.progress,
       notes: quarantine.notes,
@@ -352,7 +352,8 @@ class StudyDataMigration {
       final sourceHash = await _hash(source);
       for (var attempt = 0; attempt < 50; attempt++) {
         final candidate = attempt == 0 ? name : 'm${attempt}_$name';
-        final target = File('${folder.path}${HostPlatform.pathSeparator}$candidate');
+        final target =
+            File('${folder.path}${HostPlatform.pathSeparator}$candidate');
         if (await FileSystemEntity.isLink(target.path)) continue;
         if (await target.exists()) {
           // An earlier run copied it already.

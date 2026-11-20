@@ -17,8 +17,8 @@ void main() {
   String legacyRow(AppLanguage language, int count) {
     final texts = l10n[language]!;
     return texts.text('studyData.legacy.setting.subtitle',
-        args: texts.legacyStudyCounts(
-            exams: count, notes: count, files: count));
+        args:
+            texts.legacyStudyCounts(exams: count, notes: count, files: count));
   }
 
   test('the older learning data use singular and plural forms', () {
@@ -46,8 +46,8 @@ void main() {
     };
     for (final language in AppLanguage.values) {
       for (final count in [0, 1, 2]) {
-        expect(legacyRow(language, count),
-            startsWith(expected[language]![count]),
+        expect(
+            legacyRow(language, count), startsWith(expected[language]![count]),
             reason: '${language.code}, $count');
       }
     }
@@ -66,8 +66,7 @@ void main() {
         startsWith('Zugeordnet: 1 Notiz, 1 Datei. Für 1 Prüfung hat'));
   });
 
-  test('skipped grades and hidden subjects use singular and plural forms',
-      () {
+  test('skipped grades and hidden subjects use singular and plural forms', () {
     const expected = <AppLanguage, List<String>>{
       AppLanguage.de: [
         '1 Eintrag ohne Zahlenwert wurde nicht importiert',

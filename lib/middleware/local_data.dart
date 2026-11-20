@@ -138,8 +138,8 @@ final LocalDataInventory localDataInventory = LocalDataInventory([
     id: 'schoolNotificationState',
     category: LocalDataCategory.appOwnedCache,
     deletedBy: {LocalDataTrigger.removeAccount},
-    deleteFor: (account) => schoolNotificationOperation(
-        () => schoolNotifications.forgetAccount(
+    deleteFor: (account) => schoolNotificationOperation(() =>
+        schoolNotifications.forgetAccount(
             account.scope.server, account.scope.user!)),
   ),
   // The random identifier usage analytics uses for the account (only there
@@ -181,6 +181,6 @@ Future<void> _deleteCurrentAccountData(
 ) async {
   final account = _currentLocalDataAccount(state);
   if (account == null) return;
-  await statePersistenceService
-      .runExclusive(() => localDataInventory.deleteForAccount(account, trigger));
+  await statePersistenceService.runExclusive(
+      () => localDataInventory.deleteForAccount(account, trigger));
 }

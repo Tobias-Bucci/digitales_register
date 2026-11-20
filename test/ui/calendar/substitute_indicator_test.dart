@@ -69,7 +69,8 @@ void main() {
     );
     await settleFor(tester);
 
-    final decoratedBox = tester.widget<DecoratedBox>(find.byType(DecoratedBox).last);
+    final decoratedBox =
+        tester.widget<DecoratedBox>(find.byType(DecoratedBox).last);
     final decoration = decoratedBox.decoration as BoxDecoration;
     final border = decoration.border! as Border;
     expect(border.right, isNot(BorderSide.none));

@@ -35,7 +35,8 @@ String _normalizeSchoolUrl(String? url) {
 }
 
 const Map<String, String> schools = {
-  "Landesberufsschule für das Gastgewerbe Savoy": "https://savoy.digitalesregister.it",
+  "Landesberufsschule für das Gastgewerbe Savoy":
+      "https://savoy.digitalesregister.it",
   "Kunstgymnasium und Landesberufsschule Cademia":
       "https://cademia.digitalesregister.it",
   "Cusanus Gymnasium Bruneck": "https://cusanus-gymnasium.digitalesregister.it",

@@ -104,7 +104,8 @@ void main() {
     resetTestState();
   });
 
-  test('backgrounding the app stops every Wrapper instance, not just the newest',
+  test(
+      'backgrounding the app stops every Wrapper instance, not just the newest',
       () {
     final old = Wrapper();
     final current = Wrapper();
@@ -115,8 +116,7 @@ void main() {
     expect(old.isAppInForeground, isFalse);
   });
 
-  test('retiring a session ends its timer, credentials and requests',
-      () async {
+  test('retiring a session ends its timer, credentials and requests', () async {
     final session = await school.signIn();
     expect(session.sessionRefreshScheduled, isTrue);
     final slow = session.send('api/slow');
@@ -163,13 +163,10 @@ void main() {
     school.holdLogin = Completer<void>();
     var configLoaded = 0;
     final session = Wrapper(allowInsecureConnections: true);
-    final login = session.login('user', 'pass', null, school.url,
-        logout: () {},
+    final login = session.login('user', 'pass', null, school.url, logout: () {},
         configLoaded: () async {
-          configLoaded++;
-        },
-        relogin: () {},
-        addProtocolItem: (_) {});
+      configLoaded++;
+    }, relogin: () {}, addProtocolItem: (_) {});
     await Future<void>.delayed(const Duration(milliseconds: 100));
 
     session.retire();

@@ -83,8 +83,8 @@ void main() {
     });
 
     test('contains neither school nor user name', () {
-      final id = AccountScope('https://school.example.org', 'maxmustermann')
-          .fileId;
+      final id =
+          AccountScope('https://school.example.org', 'maxmustermann').fileId;
       expect(id, isNot(contains('school')));
       expect(id, isNot(contains('maxmustermann')));
     });

@@ -85,8 +85,8 @@ final settingsReducerBuilder = NestedReducerBuilder<AppState, AppStateBuilder,
   ..add(SettingsActionsNames.assessmentReminderDays, _assessmentReminderDays)
   ..add(SettingsActionsNames.assessmentReminderMinuteOfDay,
       _assessmentReminderMinuteOfDay)
-  ..add(SettingsActionsNames.mensaReminderMinuteOfDay,
-      _mensaReminderMinuteOfDay)
+  ..add(
+      SettingsActionsNames.mensaReminderMinuteOfDay, _mensaReminderMinuteOfDay)
   ..add(SettingsActionsNames.mensaReminderUrl, _mensaReminderUrl)
   ..add(SettingsActionsNames.mensaReminderWeekdays, _mensaReminderWeekdays)
   ..add(SettingsActionsNames.calendarSyncCalendarId, _calendarSyncCalendarId)

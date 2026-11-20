@@ -276,8 +276,7 @@ void main() {
     await settle(tester);
 
     expect(find.text('Older study notes without an account'), findsOneWidget);
-    expect(
-        find.text('1 exam (1 note, 1 file). Tap to assign or delete them.'),
+    expect(find.text('1 exam (1 note, 1 file). Tap to assign or delete them.'),
         findsOneWidget);
     expect(find.textContaining('private old note'), findsNothing);
 

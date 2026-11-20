@@ -78,8 +78,7 @@ void main() {
     expect(store.state.loginState.otherAccounts, <String>['kept-user']);
   });
 
-  test('removing an account entered with the browser login address',
-      () async {
+  test('removing an account entered with the browser login address', () async {
     const user = 'removed-user';
     // Copying the address of the web app's login page leaves a trailing
     // slash in the saved URL.
@@ -108,8 +107,7 @@ void main() {
     final store = createStore(initialState: AppState(), withMiddleware: true);
     await store.actions.loginActions.removeAccount(0);
 
-    expect(await secureStorage.read(key: escapeKey(accountStorageKey)),
-        isNull);
+    expect(await secureStorage.read(key: escapeKey(accountStorageKey)), isNull);
     expect(prefs.getString('courseMaterials:$accountStorageKey'), isNull);
   });
 

@@ -51,15 +51,14 @@ class CalendarCardContainer extends StatelessWidget {
       connect: (state) {
         final CalendarDay? mergedDay =
             calendarDayWithLocalReminderAssessments(state, day) ??
-            state.calendarState.days[day];
+                state.calendarState.days[day];
         // A refresh can remove this row (or the whole day) before the parent
         // list is rebuilt without it; the projection must not index past it.
         if (mergedDay == null || hourIndex >= mergedDay.hours.length) {
           return null;
         }
         final CalendarHour hour = mergedDay.hours[hourIndex];
-        final theme =
-            state.settingsState.subjectThemes[hour.subject] ??
+        final theme = state.settingsState.subjectThemes[hour.subject] ??
             SubjectTheme(
               (SubjectThemeBuilder b) => b
                 ..color = Colors.grey.toARGB32()
@@ -68,8 +67,7 @@ class CalendarCardContainer extends StatelessWidget {
         return CalendarCardViewModel(
           hour: hour,
           theme: theme,
-          selected:
-              state.calendarState.selection?.date == day &&
+          selected: state.calendarState.selection?.date == day &&
               state.calendarState.selection?.hour == hour.fromHour,
           noInternet: state.noInternet,
         );
