@@ -717,51 +717,11 @@ Future<void> _start(
   if (openWebDestination != null) {
     await api.actions.loginActions.addAfterLoginCallback(openWebDestination);
   }
-  if (action.payload != null) {
-    await api.actions.setUrl(action.payload!.origin);
-    final parameters = action.payload!.queryParameters;
-    switch (parameters["semesterWechsel"]) {
-      case "1":
-        await api.actions.loginActions.addAfterLoginCallback(
-          () => api.actions.gradesActions.setSemester(Semester.first),
-        );
-      case "2":
-        await api.actions.loginActions.addAfterLoginCallback(
-          () => api.actions.gradesActions.setSemester(Semester.second),
-        );
-    }
-    switch (action.payload!.path) {
-      case "":
-      case "/":
-      case "/v2/":
-        break;
-      case "/v2/login":
-        if (parameters["resetmail"] == "true") {
-          final email = parameters["email"];
-          final token = parameters["token"];
-          await api.actions.routingActions.showPassReset(
-            ShowPassResetPayload(
-              (b) => b
-                ..token = token
-                ..email = email,
-            ),
-          );
-          return;
-        }
-        if (parameters["username"] != null) {
-          await api.actions.loginActions.setUsername(parameters["username"]!);
-        }
-        if (parameters["redirect"] != null) {
-          await redirectAfterLogin(
-            parameters["redirect"]!.replaceFirst("#", ""),
-            api,
-          );
-        }
-      default:
-        showSnackBar(tr('navigation.linkOpenFailed'));
-    }
-    await redirectAfterLogin(action.payload!.fragment, api);
-  }
+  // A link in the payload is ignored. The app has no VIEW intent filter
+  // since 6af36da4, so nothing legitimate delivers one, but Android up to
+  // 12 hands explicit VIEW intents to the exported activity anyway, and a
+  // link used to replace the school address and delete the saved
+  // password (#158).
   final widgetDestination =
       await AndroidWidgetPlatformBridge().consumeLaunchDestination();
   if (widgetDestination != null) {
@@ -772,39 +732,6 @@ Future<void> _start(
     );
   }
   await api.actions.load();
-}
-
-Future<void> redirectAfterLogin(
-  String location,
-  MiddlewareApi<AppState, AppStateBuilder, AppActions> api,
-) async {
-  switch (location) {
-    case "":
-    case "dashboard/student":
-      break;
-    case "student/absences":
-      await api.actions.loginActions.addAfterLoginCallback(
-        api.actions.routingActions.showAbsences.call,
-      );
-    case "calendar/student":
-      await api.actions.loginActions.addAfterLoginCallback(
-        api.actions.routingActions.showCalendar.call,
-      );
-    case "student/subjects":
-      await api.actions.loginActions.addAfterLoginCallback(
-        api.actions.routingActions.showGrades.call,
-      );
-    case "student/certificate":
-      await api.actions.loginActions.addAfterLoginCallback(
-        api.actions.routingActions.showCertificate.call,
-      );
-    case "message/list":
-      await api.actions.loginActions.addAfterLoginCallback(
-        api.actions.routingActions.showMessages.call,
-      );
-    default:
-      showSnackBar(tr('navigation.linkOpenFailed'));
-  }
 }
 
 bool _popAll() {

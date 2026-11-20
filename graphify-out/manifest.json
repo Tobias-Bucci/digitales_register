@@ -534,9 +534,9 @@
     "semantic_hash": ""
   },
   "lib/main.dart": {
-    "mtime": 1795110016.4633162,
-    "seen": 1795110035.9962258,
-    "ast_hash": "7ed5e2d95da2a0ac34fdefc2d0d4a520",
+    "mtime": 1795202073.0444183,
+    "seen": 1795202242.2557688,
+    "ast_hash": "f1e4a1f3f50b2d9b5abce426c0ae5aaa",
     "semantic_hash": ""
   },
   "lib/middleware/absences.dart": {
@@ -588,9 +588,9 @@
     "semantic_hash": ""
   },
   "lib/middleware/middleware.dart": {
-    "mtime": 1795110016.467856,
-    "seen": 1795110035.9962468,
-    "ast_hash": "2543bcfad097706fed296feedbaa543c",
+    "mtime": 1795202003.6751919,
+    "seen": 1795202242.255781,
+    "ast_hash": "112e47da7a434c84324a349f67c1bcc6",
     "semantic_hash": ""
   },
   "lib/middleware/notifications.dart": {
@@ -2436,9 +2436,9 @@
     "semantic_hash": ""
   },
   "test/startup_offline_first_test.dart": {
-    "mtime": 1794513313.4668903,
-    "seen": 1795080325.0625505,
-    "ast_hash": "825cfbd8ba4f2f430559484ec9b4672f",
+    "mtime": 1795201947.7000914,
+    "seen": 1795202242.2561164,
+    "ast_hash": "e9f2b60e5fa84320e627497b9d08ada9",
     "semantic_hash": ""
   },
   "test/startup_timeline_test.dart": {

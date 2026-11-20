@@ -40,7 +40,6 @@ import 'package:dr/container/request_pass_reset_container.dart';
 import 'package:dr/container/settings_page.dart';
 import 'package:dr/desktop.dart';
 import 'package:dr/diagnostics_service.dart';
-import 'package:dr/host_platform.dart';
 import 'package:dr/i18n/app_language.dart';
 import 'package:dr/i18n/app_localizations.dart';
 import 'package:dr/middleware/middleware.dart';
@@ -74,13 +73,11 @@ import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:flutter_web_plugins/url_strategy.dart';
 import 'package:responsive_scaffold/responsive_scaffold.dart';
 import 'package:shared_preferences/shared_preferences.dart';
-import 'package:uni_links/uni_links.dart';
 
 GlobalKey<NavigatorState>? navigatorKey;
 GlobalKey<NavigatorState> nestedNavKey = GlobalKey();
 GlobalKey<ResponsiveScaffoldState<Pages>>? scaffoldKey;
 GlobalKey<ScaffoldMessengerState>? scaffoldMessengerKey;
-StreamSubscription<Uri?>? _uriLinkSubscription;
 SettingsState _startupSettingsState = SettingsState();
 
 // Actions are now global (although this doesn't seem to be the case in the official example).
@@ -236,15 +233,6 @@ Future<void> _initializeAfterFirstFrame({
 
   onSchoolProxyUnavailable = _showSchoolProxyUnavailable;
 
-  Uri? uri;
-  if (HostPlatform.isAndroid) {
-    uri = await getInitialUri();
-    await _uriLinkSubscription?.cancel();
-    _uriLinkSubscription = uriLinkStream.listen((event) async {
-      await store.actions.start(event);
-    });
-  }
-
   schoolNotifications.refresh = () async {
     if (store.state.loginState.loggedIn && !store.state.noInternet) {
       await refreshSchoolNotificationFeed(store.actions);
@@ -344,7 +332,7 @@ Future<void> _initializeAfterFirstFrame({
       detail: 'startupMs=${startupStopwatch.elapsedMilliseconds}');
   reminderSync.attach(store.nextState, store.state);
   await startupTimeline.step(
-      'p3_p4_start_action', () => store.actions.start(uri));
+      'p3_p4_start_action', () => store.actions.start(null));
   runtimeTrace('AppStartup', 'login-end',
       durationMs: loginTimer.elapsedMilliseconds);
   _showKeyringFallbackNotice();

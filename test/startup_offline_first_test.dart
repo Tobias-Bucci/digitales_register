@@ -118,6 +118,28 @@ void main() {
     expect(store.state.noInternet, isTrue);
   });
 
+  test('a link from another app cannot replace the school or the saved login',
+      () async {
+    // Android delivers explicit VIEW intents to the exported activity even
+    // without an intent filter (up to Android 12). Such a link used to become
+    // the school address, which deleted the saved password (#158).
+    final (_, server) = await _savedLogin();
+    server.release.complete();
+    final store = createStore(withMiddleware: true);
+
+    await store.actions
+        .start(Uri.parse('https://attacker.example/v2/login?username=victim'));
+
+    expect(store.state.url, testServerUrl);
+    expect(store.state.loginState.loggedIn, isTrue);
+    expect(store.state.loginState.username, isNot('victim'));
+    final saved = jsonDecode(
+            (middleware.secureStorage as TestSecureStorage).storage['login']!)
+        as Map<String, dynamic>;
+    expect(saved['url'], testServerUrl);
+    expect(saved['pass'], 'password');
+  });
+
   test('without a saved login the gate opens for the login page', () async {
     await bootstrapTestEnvironment();
     appLaunchGate.resetForTest();
