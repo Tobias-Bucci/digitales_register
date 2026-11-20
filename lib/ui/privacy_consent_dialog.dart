@@ -64,11 +64,14 @@ class _PrivacyConsentDialogState extends State<_PrivacyConsentDialog> {
   bool _saving = false;
   bool _failed = false;
   late bool _custom = widget.management;
-  late bool _diagnostics = !AnalyticsService.hasCurrentConsent ||
+  // Without a current decision every optional purpose starts off: consent
+  // must be an active choice, never a pre-set switch (#155). An existing
+  // decision shows what it allows.
+  late bool _diagnostics = AnalyticsService.hasCurrentConsent &&
       AnalyticsService.privacy.decision.diagnosticsAllowed;
-  late bool _usage = !AnalyticsService.hasCurrentConsent ||
+  late bool _usage = AnalyticsService.hasCurrentConsent &&
       AnalyticsService.privacy.decision.analyticsAllowed;
-  late bool _academic = !AnalyticsService.hasCurrentConsent ||
+  late bool _academic = AnalyticsService.hasCurrentConsent &&
       AnalyticsService.privacy.decision.academicStatsAllowed;
 
   /// Whether saving would switch on a purpose that is not allowed now.
@@ -156,6 +159,29 @@ class _PrivacyConsentDialogState extends State<_PrivacyConsentDialog> {
         _academic = before.$3;
       });
     }
+  }
+
+  /// "Allow all" and "Required data only" always look alike. In the custom
+  /// view "Save" is the main action, so both step back to outlined buttons.
+  Widget _choiceButton({
+    required Key key,
+    required String label,
+    required VoidCallback? onPressed,
+  }) {
+    final child = Text(label, textAlign: TextAlign.center);
+    if (_custom) {
+      return OutlinedButton(key: key, onPressed: onPressed, child: child);
+    }
+    return FilledButton.tonal(
+        key: key,
+        style: FilledButton.styleFrom(
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+            textStyle: Theme.of(context)
+                .textTheme
+                .labelLarge
+                ?.copyWith(fontWeight: FontWeight.w700)),
+        onPressed: onPressed,
+        child: child);
   }
 
   void _details() {
@@ -367,33 +393,20 @@ class _PrivacyConsentDialogState extends State<_PrivacyConsentDialog> {
                                 label: Text(l10n.text('privacyConsent.save'),
                                     textAlign: TextAlign.center)),
                             const SizedBox(height: 8),
-                            OutlinedButton(
-                                onPressed: _saving ? null : _allowAll,
-                                child: Text(
-                                    l10n.text('privacyConsent.acceptAll'),
-                                    textAlign: TextAlign.center)),
-                          ] else
-                            FilledButton.icon(
-                                style: FilledButton.styleFrom(
-                                    padding: const EdgeInsets.symmetric(
-                                        horizontal: 16, vertical: 14),
-                                    textStyle: theme.textTheme.labelLarge
-                                        ?.copyWith(
-                                            fontWeight: FontWeight.w700)),
-                                onPressed: _saving ? null : _allowAll,
-                                icon: const Icon(Icons.check_circle_outline,
-                                    size: 20),
-                                label: Text(
-                                    l10n.text('privacyConsent.acceptAll'),
-                                    textAlign: TextAlign.center)),
-                          const SizedBox(height: 4),
-                          TextButton(
+                          ],
+                          // Refusing is as easy and as visible as accepting:
+                          // the same kind of button, the same style (#155).
+                          _choiceButton(
+                              key: const Key('privacy-accept-all'),
+                              label: l10n.text('privacyConsent.acceptAll'),
+                              onPressed: _saving ? null : _allowAll),
+                          const SizedBox(height: 8),
+                          _choiceButton(
+                              key: const Key('privacy-required-only'),
+                              label: l10n.text('privacyConsent.necessaryOnly'),
                               onPressed: _saving
                                   ? null
-                                  : () => _save(requiredOnly: true),
-                              child: Text(
-                                  l10n.text('privacyConsent.necessaryOnly'),
-                                  textAlign: TextAlign.center)),
+                                  : () => _save(requiredOnly: true)),
                           if (_saving) const LinearProgressIndicator(),
                         ])),
               ]),

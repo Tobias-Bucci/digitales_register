@@ -2214,27 +2214,27 @@
     "semantic_hash": ""
   },
   "test/privacy_dialog_layout_test.dart": {
-    "mtime": 1794932475.0521781,
-    "seen": 1795080325.0625188,
-    "ast_hash": "dc4bea7cf4379dfff0011c8b2512c608",
+    "mtime": 1795192374.5395017,
+    "seen": 1795192636.1255314,
+    "ast_hash": "abd18affb6927fbad5437d0a0d6bfe0d",
     "semantic_hash": ""
   },
   "test/privacy_granular_ui_test.dart": {
-    "mtime": 1794932475.053178,
-    "seen": 1795080325.0625198,
-    "ast_hash": "850ce351ae289651adbc9b26bee2cc4c",
+    "mtime": 1795192427.9391918,
+    "seen": 1795192636.1255324,
+    "ast_hash": "6169fec502bee1d18209ae49e934a191",
     "semantic_hash": ""
   },
   "test/privacy_ui_test.dart": {
-    "mtime": 1794932475.053683,
-    "seen": 1795080325.0625205,
-    "ast_hash": "88cd4cd1234758f678852bf1ec02a18a",
+    "mtime": 1795192375.395954,
+    "seen": 1795192636.125533,
+    "ast_hash": "027df7e6d719adf918562b85c10b9e60",
     "semantic_hash": ""
   },
   "test/privacy_update_ui_test.dart": {
-    "mtime": 1794932475.053683,
-    "seen": 1795080325.0625215,
-    "ast_hash": "36d926a42a7b60c8274ba1ae985c3333",
+    "mtime": 1795192375.4023526,
+    "seen": 1795192636.1255343,
+    "ast_hash": "e73dac999dd424b5e737691d61ebe001",
     "semantic_hash": ""
   },
   "test/product_analytics_test.dart": {
@@ -3180,9 +3180,9 @@
     "semantic_hash": ""
   },
   "lib/ui/privacy_consent_dialog.dart": {
-    "mtime": 1794932475.0361226,
-    "seen": 1795080325.062386,
-    "ast_hash": "4cdc56ede40477421b5eb76a15a36903",
+    "mtime": 1795192448.2175689,
+    "seen": 1795192636.125377,
+    "ast_hash": "b50c2c378cc289b5c35e0a05c5653913",
     "semantic_hash": ""
   },
   "lib/ui/settings/calendar_sync_page.dart": {
@@ -3810,9 +3810,9 @@
     "semantic_hash": ""
   },
   "docs/PRIVACY_IMPLEMENTATION.md": {
-    "mtime": 1794073984.083152,
-    "seen": 1795080325.0626898,
-    "ast_hash": "8fd28c06114f5b467b2603d9a4ed639a",
+    "mtime": 1795192616.2608993,
+    "seen": 1795192636.125725,
+    "ast_hash": "b563c781acc54af482dff21a01aa6ca3",
     "semantic_hash": ""
   },
   "docs/SCHOOL_NOTIFICATIONS.md": {

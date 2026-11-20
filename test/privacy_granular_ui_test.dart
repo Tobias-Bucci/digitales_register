@@ -67,8 +67,10 @@ void main() {
           .toList();
       expect(switches[0].onChanged, isNotNull);
       expect(switches[1].onChanged, isNotNull);
-      expect(switches[2].onChanged, isNotNull);
-      expect(switches.every((tile) => tile.value), true);
+      // Academic statistics need usage analytics, which starts off.
+      expect(switches[2].onChanged, isNull);
+      // A first decision starts with every optional purpose off (#155).
+      expect(switches.every((tile) => !tile.value), true);
       expect(find.text('Altersberechtigung'), findsNothing);
       await tester.ensureVisible(find.byType(SwitchListTile).at(1));
       await tester.tap(find.byType(SwitchListTile).at(1));
@@ -81,13 +83,13 @@ void main() {
       await tester.tap(find.byKey(const Key('privacy-age-confirm')));
       await tester.pumpAndSettle();
       final decision = AnalyticsService.privacy.decision;
-      expect(decision.diagnosticsAllowed, true);
-      expect(decision.analyticsAllowed, false);
+      expect(decision.diagnosticsAllowed, false);
+      expect(decision.analyticsAllowed, true);
       expect(decision.academicStatsAllowed, false);
       expect(decision.serialize(), isNot(contains('ageEligibility')));
     });
   });
-  testWidgets('save accepts all initial defaults without enabling before save',
+  testWidgets('saving the untouched choices allows no optional purpose',
       (tester) async {
     await tester.runAsync(() async {
       await open(tester);
@@ -99,13 +101,29 @@ void main() {
       expect(AnalyticsService.hasCurrentConsent, false);
       await tester.tap(find.text('Auswahl speichern'));
       await tester.pumpAndSettle();
-      // Switching a purpose on asks for the age confirmation (Art. 2-quinquies
-      // D.Lgs. 196/2003).
-      expect(find.byKey(const Key('privacy-age-confirm')), findsOneWidget);
-      await tester.tap(find.byKey(const Key('privacy-age-confirm')));
-      await tester.pumpAndSettle();
-      expect(AnalyticsService.privacy.decision.allOptionalAllowed, true);
+      // Nothing was switched on, so there is no age question either.
+      expect(find.byKey(const Key('privacy-age-confirm')), findsNothing);
       expect(find.byType(Dialog), findsNothing);
+      expect(AnalyticsService.hasCurrentConsent, true);
+      final decision = AnalyticsService.privacy.decision;
+      expect(decision.diagnosticsAllowed, false);
+      expect(decision.analyticsAllowed, false);
+      expect(decision.academicStatsAllowed, false);
+      expect(AnalyticsService.privacy.sdkReady, false);
+    });
+  });
+  testWidgets('refusing looks exactly like accepting', (tester) async {
+    await tester.runAsync(() async {
+      await open(tester);
+      final acceptAll = find.byKey(const Key('privacy-accept-all'));
+      final requiredOnly = find.byKey(const Key('privacy-required-only'));
+      expect(tester.widget(acceptAll).runtimeType,
+          tester.widget(requiredOnly).runtimeType);
+      expect(tester.widget<ButtonStyleButton>(acceptAll).style,
+          tester.widget<ButtonStyleButton>(requiredOnly).style);
+      expect(tester.getSize(acceptAll), tester.getSize(requiredOnly));
+      await tester.tap(requiredOnly);
+      await tester.pumpAndSettle();
     });
   });
   testWidgets('allow all asks for the age confirmation, then saves',
@@ -113,10 +131,9 @@ void main() {
     await tester.runAsync(() async {
       await open(tester);
       expect(
-          find.ancestor(
-              of: find.text('Alle optionalen Daten erlauben'),
-              matching:
-                  find.byWidgetPredicate((widget) => widget is FilledButton)),
+          find.descendant(
+              of: find.byKey(const Key('privacy-accept-all')),
+              matching: find.text('Alle optionalen Daten erlauben')),
           findsOneWidget);
       await tester.tap(find.text('Alle optionalen Daten erlauben'));
       await tester.pumpAndSettle();
@@ -148,16 +165,14 @@ void main() {
       expect(AnalyticsService.privacy.decision.analyticsAllowed, false);
       expect(AnalyticsService.privacy.decision.academicStatsAllowed, false);
       // Close the dialog, so that the next test opens a new one.
-      await tester
-          .tap(find.widgetWithText(TextButton, 'Nur erforderliche Daten'));
+      await tester.tap(find.byKey(const Key('privacy-required-only')));
       await tester.pumpAndSettle();
     });
   });
   testWidgets('necessary only asks no age', (tester) async {
     await tester.runAsync(() async {
       await open(tester);
-      await tester
-          .tap(find.widgetWithText(TextButton, 'Nur erforderliche Daten'));
+      await tester.tap(find.byKey(const Key('privacy-required-only')));
       await tester.pumpAndSettle();
       expect(find.byKey(const Key('privacy-age-confirm')), findsNothing);
       expect(find.byType(Dialog), findsNothing);
@@ -172,30 +187,22 @@ void main() {
       await tester.ensureVisible(find.text('Auswahl anpassen'));
       await tester.tap(find.text('Auswahl anpassen'));
       await tester.pumpAndSettle();
-      await tester.ensureVisible(find.byType(SwitchListTile).at(1));
-      await tester.ensureVisible(find.byType(SwitchListTile).at(1));
-      await tester.tap(find.byType(SwitchListTile).at(1));
-      await tester.pumpAndSettle();
-      expect(
-          tester
-              .widget<SwitchListTile>(find.byType(SwitchListTile).at(2))
-              .value,
-          false);
-      await tester.ensureVisible(find.byType(SwitchListTile).at(1));
-      await tester.tap(find.byType(SwitchListTile).at(1));
-      await tester.pumpAndSettle();
-      await tester.ensureVisible(find.byType(SwitchListTile).at(2));
-      await tester.ensureVisible(find.byType(SwitchListTile).at(2));
-      await tester.tap(find.byType(SwitchListTile).at(2));
-      await tester.pumpAndSettle();
-      await tester.ensureVisible(find.byType(SwitchListTile).at(1));
-      await tester.tap(find.byType(SwitchListTile).at(1));
-      await tester.pumpAndSettle();
-      expect(
-          tester
-              .widget<SwitchListTile>(find.byType(SwitchListTile).at(2))
-              .value,
-          false);
+      SwitchListTile tile(int index) =>
+          tester.widget<SwitchListTile>(find.byType(SwitchListTile).at(index));
+      Future<void> toggle(int index) async {
+        await tester.ensureVisible(find.byType(SwitchListTile).at(index));
+        await tester.tap(find.byType(SwitchListTile).at(index));
+        await tester.pumpAndSettle();
+      }
+
+      // Academic statistics need usage analytics.
+      expect(tile(2).onChanged, isNull);
+      await toggle(1);
+      await toggle(2);
+      expect(tile(2).value, true);
+      await toggle(1);
+      expect(tile(2).value, false);
+      await toggle(0);
       await tester.tap(find.text('Auswahl speichern'));
       await tester.pumpAndSettle();
       // Switching a purpose on asks for the age confirmation (Art. 2-quinquies
@@ -205,6 +212,7 @@ void main() {
       await tester.pumpAndSettle();
       expect(AnalyticsService.privacy.decision.diagnosticsAllowed, true);
       expect(AnalyticsService.privacy.decision.analyticsAllowed, false);
+      expect(AnalyticsService.privacy.decision.academicStatsAllowed, false);
     });
   });
 }

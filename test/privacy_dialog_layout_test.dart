@@ -55,9 +55,13 @@ void main() {
             await tester.pumpAndSettle();
             await tester.tap(find.text('open'));
             await tester.pumpAndSettle();
-            final buttons =
-                find.byWidgetPredicate((widget) => widget is FilledButton);
+            final buttons = find.byKey(const Key('privacy-accept-all'));
             expect(buttons, findsOneWidget);
+            expect(
+                tester
+                    .getRect(find.byKey(const Key('privacy-required-only')))
+                    .bottom,
+                lessThanOrEqualTo(size.height));
             expect(
                 tester.getRect(buttons).bottom, lessThanOrEqualTo(size.height));
             expect(tester.takeException(), isNull);

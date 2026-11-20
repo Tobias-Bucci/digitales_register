@@ -66,8 +66,7 @@ void main() {
     await tester.tap(find.byType(BackButton));
     await tester.pumpAndSettle();
     expect(find.text('Alle optionalen Daten erlauben'), findsOneWidget);
-    await tester
-        .tap(find.widgetWithText(TextButton, 'Nur erforderliche Daten'));
+    await tester.tap(find.byKey(const Key('privacy-required-only')));
     await tester.pumpAndSettle();
     expect(AnalyticsService.hasCurrentConsent, true);
     expect(AnalyticsService.statisticsEnabled, false);
