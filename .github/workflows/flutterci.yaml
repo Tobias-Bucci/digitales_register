@@ -1,4 +1,4 @@
-name: Linux release builds
+name: CI
 
 on:
   push:
@@ -13,6 +13,59 @@ permissions:
   contents: read
 
 jobs:
+  checks:
+    name: Format, analyze and test
+    # The suite is developed and green on Windows. On a Linux host about 20
+    # tests still assume Windows behaviour (#172), so it runs on Windows.
+    runs-on: windows-latest
+    defaults:
+      run:
+        shell: bash
+    steps:
+      - uses: actions/checkout@v4
+      - name: Set up Flutter
+        run: |
+          git clone --depth 1 --branch 3.47.7 https://github.com/flutter/flutter.git "$RUNNER_TEMP/flutter"
+          echo "$RUNNER_TEMP/flutter/bin" >> "$GITHUB_PATH"
+          "$RUNNER_TEMP/flutter/bin/flutter" --version
+      - name: Get packages and generate code
+        run: |
+          flutter pub get
+          dart run build_runner build --delete-conflicting-outputs
+      - name: Check formatting
+        run: dart format --output=none --set-exit-if-changed lib test tool
+      - name: Analyze
+        run: flutter analyze
+      - name: Test
+        # The live notification-server contract tests skip themselves
+        # without DR_NOTIFICATIONS_E2E_URL.
+        run: flutter test
+
+  android-debug:
+    name: Android debug build
+    runs-on: ubuntu-22.04
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "17"
+      - name: Set up Flutter
+        run: |
+          git clone --depth 1 --branch 3.47.7 https://github.com/flutter/flutter.git "$RUNNER_TEMP/flutter"
+          echo "$RUNNER_TEMP/flutter/bin" >> "$GITHUB_PATH"
+          "$RUNNER_TEMP/flutter/bin/flutter" --version
+      - name: Get packages and generate code
+        run: |
+          flutter pub get
+          dart run build_runner build --delete-conflicting-outputs
+      - name: Build
+        # Compiles the native code of the forks in packages/ (workmanager,
+        # biometric storage, file picker, FlutterFire). A debug build needs
+        # no signing key, no google-services.json and uploads nothing to
+        # Crashlytics; a release build would.
+        run: flutter build apk --debug
+
   build-linux:
     name: Linux ${{ matrix.arch }}
     strategy:
@@ -36,7 +89,7 @@ jobs:
       - name: Set up Flutter on the native architecture
         # Git bootstrap downloads the matching Linux Dart SDK on both architectures.
         run: |
-          git clone --depth 1 --branch 3.47.2 https://github.com/flutter/flutter.git "$RUNNER_TEMP/flutter"
+          git clone --depth 1 --branch 3.47.7 https://github.com/flutter/flutter.git "$RUNNER_TEMP/flutter"
           echo "$RUNNER_TEMP/flutter/bin" >> "$GITHUB_PATH"
           "$RUNNER_TEMP/flutter/bin/flutter" --version
       - name: Build and validate release packages
@@ -71,7 +124,7 @@ jobs:
       - uses: actions/checkout@v4
       - name: Set up Flutter
         run: |
-          git clone --depth 1 --branch 3.47.2 https://github.com/flutter/flutter.git "$RUNNER_TEMP/flutter"
+          git clone --depth 1 --branch 3.47.7 https://github.com/flutter/flutter.git "$RUNNER_TEMP/flutter"
           echo "$RUNNER_TEMP/flutter/bin" >> "$GITHUB_PATH"
           "$RUNNER_TEMP/flutter/bin/flutter" --version
       - name: Test the package

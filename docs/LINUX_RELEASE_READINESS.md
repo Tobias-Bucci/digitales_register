@@ -20,7 +20,7 @@ an x64 archive to ARM64, or mix library directories between architectures.
 
 ## Build prerequisites
 
-Use a Linux desktop build host with Flutter **3.47.2**, Git and Python 3.
+Use a Linux desktop build host with Flutter **3.47.7**, Git and Python 3.
 The CI uses native `ubuntu-22.04` and `ubuntu-22.04-arm` runners so both
 packages have the same distribution baseline. Build on the oldest supported
 distribution: packages built on newer distributions may require newer glibc,
