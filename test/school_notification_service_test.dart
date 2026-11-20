@@ -140,6 +140,7 @@ void main() {
   final shown = <String>[];
   final texts = <(String?, String?)>[];
   final styles = <StyleInformation?>[];
+  final visibilities = <NotificationVisibility?>[];
   DidReceiveNotificationResponseCallback? tapHandler;
   const server = 'https://school.example';
   const user = 'student';
@@ -159,6 +160,7 @@ void main() {
     shown.clear();
     texts.clear();
     styles.clear();
+    visibilities.clear();
     when(() => native.initialize(
             settings: any(named: 'settings'),
             onDidReceiveNotificationResponse:
@@ -186,6 +188,10 @@ void main() {
               as NotificationDetails)
           .android
           ?.styleInformation);
+      visibilities.add((invocation.namedArguments[#notificationDetails]
+              as NotificationDetails)
+          .android
+          ?.visibility);
     });
     service = SchoolNotificationService(
         platformSupported: true,
@@ -1350,6 +1356,8 @@ void main() {
         ]);
         expect(texts, [expected]);
         expect(styles.single, isA<BigTextStyleInformation>());
+        // Subject and grade never show on a locked Android screen (#157).
+        expect(visibilities.single, NotificationVisibility.secret);
         expect(SchoolNotificationDestination.decode(shown.single)?.category,
             SchoolNotificationCategory.grade);
       });
@@ -1365,6 +1373,8 @@ void main() {
       await run();
       expect(texts, [('New grade', 'A new assessment has been published.')]);
       expect(styles.single, isNull);
+      // The generic text may appear on the lock screen.
+      expect(visibilities.single, NotificationVisibility.private);
       // Homework is on, so only the hourly future dashboard is added.
       expect(paths(api), [
         'api/auth/login',

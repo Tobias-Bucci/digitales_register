@@ -1418,9 +1418,12 @@ class SchoolNotificationService extends ChangeNotifier
                 // Default importance: sound and shade entry, no heads-up for
                 // a school update.
                 category: AndroidNotificationCategory.event,
-                // The lock screen follows the system's "hide sensitive
-                // content" setting; with details off the text is generic.
-                visibility: NotificationVisibility.private,
+                // Subject and grade never reach a secure lock screen (#157):
+                // with details the notification is secret there; the
+                // generic text of details off may show.
+                visibility: preferences.details
+                    ? NotificationVisibility.secret
+                    : NotificationVisibility.private,
                 styleInformation: content.lines.isNotEmpty
                     ? InboxStyleInformation(content.lines,
                         contentTitle: content.title)

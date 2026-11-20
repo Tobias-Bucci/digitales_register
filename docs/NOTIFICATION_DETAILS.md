@@ -93,9 +93,11 @@ New per-account setting **Show details in notifications**:
   (they agreed to "values stay hidden") until they enable it;
 - accounts that opt in now get details on; the opt-in text says so;
 - off → the exact previous generic texts, on every screen including the lock
-  screen. Android notifications stay `VISIBILITY_PRIVATE`, so the system setting
-  "hide sensitive content" also hides details on the lock screen; on iOS the
-  system "Show previews" setting applies.
+  screen (`VISIBILITY_PRIVATE`);
+- on → on Android the notification is `VISIBILITY_SECRET`, so a secure lock
+  screen shows nothing of it, whatever the system's "hide sensitive content"
+  setting (#157); on iOS the system "Show previews" setting applies (default:
+  when unlocked).
 
 ### Reliability
 

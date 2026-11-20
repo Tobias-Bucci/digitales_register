@@ -804,9 +804,9 @@
     "semantic_hash": ""
   },
   "lib/school_notification_service.dart": {
-    "mtime": 1795212425.2909129,
-    "seen": 1795212603.2201357,
-    "ast_hash": "ba61e44cce9ba1c031dcfd0fb2c81977",
+    "mtime": 1795212786.0692205,
+    "seen": 1795212990.2141778,
+    "ast_hash": "09bb00f0dcfcc93df94f767442a1a37c",
     "semantic_hash": ""
   },
   "lib/school_proxy.dart": {
@@ -2322,9 +2322,9 @@
     "semantic_hash": ""
   },
   "test/school_notification_service_test.dart": {
-    "mtime": 1794829004.553228,
-    "seen": 1795080325.0625346,
-    "ast_hash": "1fffc0c0fda27c2da3947f92211e67ef",
+    "mtime": 1795212771.164263,
+    "seen": 1795212990.21445,
+    "ast_hash": "f31c2a667ed6cfb58028cb12cd8b0ebb",
     "semantic_hash": ""
   },
   "test/school_preparation_widget_test.dart": {
@@ -3786,9 +3786,9 @@
     "semantic_hash": ""
   },
   "docs/NOTIFICATION_DETAILS.md": {
-    "mtime": 1794829083.5667582,
-    "seen": 1795080325.0626864,
-    "ast_hash": "ce3a158b6539962bfc124a018860d04e",
+    "mtime": 1795212830.4207778,
+    "seen": 1795212990.214624,
+    "ast_hash": "b813c47706c795bc046774f1ffcd99c5",
     "semantic_hash": ""
   },
   "docs/ONBOARDING_REDESIGN.md": {
@@ -3804,9 +3804,9 @@
     "semantic_hash": ""
   },
   "docs/PRIVACY_DATA_INVENTORY.md": {
-    "mtime": 1795191495.8909097,
-    "seen": 1795191679.4158697,
-    "ast_hash": "d0078dc307c1d86f8d1489c0522792ee",
+    "mtime": 1795212835.202878,
+    "seen": 1795212990.2146268,
+    "ast_hash": "e523bff3c792d6a110c2c2d3cc5ac79b",
     "semantic_hash": ""
   },
   "docs/PRIVACY_IMPLEMENTATION.md": {
