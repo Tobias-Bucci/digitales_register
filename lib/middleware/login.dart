@@ -266,6 +266,8 @@ Future<void> _login(
     if (signedIn) {
       if (!wrapper.config.isStudentOrParent) {
         wrapper.logout(hard: true);
+        // This account can never use the app: do not sign in with it again.
+        await api.actions.savePassActions.delete();
         final unsupportedMessage = await _loginText(
           'login.userTypeUnsupported.message',
         );
@@ -310,6 +312,12 @@ Future<void> _login(
           await api.actions.setUrl(url);
           return;
         }
+      }
+      // Only a password the server rejected is forgotten (#159). A server
+      // error, an unreadable page or a session that ended right after the
+      // sign-in says nothing about the password; the next start tries again.
+      if (wrapper.error == 'login.credentialsRejected') {
+        await api.actions.savePassActions.delete();
       }
       final failureMessage = (await _loadMiddlewareLocalizations(api.state))
           .requestError(wrapper.error);
@@ -381,8 +389,8 @@ Future<void> _loginFailed(
   Action<LoginFailedPayload> action,
 ) async {
   await next(action);
-
-  await api.actions.savePassActions.delete();
+  // The saved password is deleted where the cause is known to be a rejected
+  // password (see _login), not for every failure.
   await api.actions.routingActions.showLogin();
 }
 

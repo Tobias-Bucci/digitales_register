@@ -217,6 +217,56 @@ void main() {
     });
   }
 
+  // Only a rejected password may delete the saved one (#159). A server error
+  // or a page the app cannot read says nothing about the password.
+  for (final mode in ['server error', 'unreadable config', 'rejected']) {
+    test('a failed sign-in from storage keeps the saved password: $mode',
+        () async {
+      await bootstrapTestEnvironment(storage: {
+        'login': jsonEncode({
+          'user': 'user',
+          'pass': 'password',
+          'url': testServerUrl,
+          'otherAccounts': <Object>[],
+        }),
+      });
+      final adapter = LoginAdapter()
+        ..rejected = mode == 'rejected'
+        ..configFailure = switch (mode) {
+          'server error' => DioException(
+              requestOptions: RequestOptions(path: 'config'),
+              type: DioExceptionType.badResponse,
+              response: Response(
+                  requestOptions: RequestOptions(path: 'config'),
+                  statusCode: 500)),
+          'unreadable config' => '<html>maintenance</html>',
+          _ => null,
+        };
+      adapter.configGate.complete();
+      final session = TestLoginWrapper()..safeMode = false;
+      session.dio.httpClientAdapter = adapter;
+      middleware.wrapper = session;
+      addTearDown(() => session.logout(hard: true));
+      final store = createStore(withMiddleware: true);
+
+      await store.actions.loginActions.login(LoginPayload((b) => b
+        ..user = 'user'
+        ..pass = 'password'
+        ..url = testServerUrl
+        ..fromStorage = true));
+
+      expect(store.state.loginState.errorMsg, isNotEmpty);
+      final saved = jsonDecode(
+          (middleware.secureStorage as TestSecureStorage).storage['login']!);
+      if (mode == 'rejected') {
+        expect(saved['pass'], isNull);
+      } else {
+        expect(saved['user'], 'user');
+        expect(saved['pass'], 'password');
+      }
+    });
+  }
+
   test('stored credentials retain offline access after config network failure',
       () async {
     final adapter = LoginAdapter()
