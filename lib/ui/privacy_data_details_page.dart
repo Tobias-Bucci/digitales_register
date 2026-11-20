@@ -14,6 +14,8 @@ class PrivacyDataDetailsPage extends StatelessWidget {
     'choice': Icons.tune,
     'required': Icons.lock_outline,
     'local': Icons.storage_outlined,
+    'schoolNotifications': Icons.notifications_outlined,
+    'widgets': Icons.widgets_outlined,
     'appNotifications': Icons.campaign_outlined,
     'cloudflare': Icons.cloud_queue_outlined,
     'basis': Icons.check_circle_outline,

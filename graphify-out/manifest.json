@@ -444,10 +444,10 @@
     "semantic_hash": ""
   },
   "lib/desktop.dart": {
-    "mtime": 1794680042.3160918,
-    "seen": 1795080325.062219,
-    "ast_hash": "f2a0a54cb39a608e1941d0a0017c9d3b",
-    "semantic_hash": "f2a0a54cb39a608e1941d0a0017c9d3b"
+    "mtime": 1795213155.7365797,
+    "seen": 1795213323.599162,
+    "ast_hash": "da97a319067893142208b4bd1611f99f",
+    "semantic_hash": ""
   },
   "lib/diagnostics_network.dart": {
     "mtime": 1790792811.655982,
@@ -1422,9 +1422,9 @@
     "semantic_hash": ""
   },
   "lib/ui/privacy_data_details_page.dart": {
-    "mtime": 1795110016.4846137,
-    "seen": 1795110035.9965968,
-    "ast_hash": "5f928426545c3471b3434e02af39f63f",
+    "mtime": 1795213135.446265,
+    "seen": 1795213323.5993445,
+    "ast_hash": "830ab2029e6ff885225a13310b3542b7",
     "semantic_hash": ""
   },
   "lib/ui/profile.dart": {
@@ -2226,9 +2226,9 @@
     "semantic_hash": ""
   },
   "test/privacy_ui_test.dart": {
-    "mtime": 1795192375.395954,
-    "seen": 1795192636.125533,
-    "ast_hash": "027df7e6d719adf918562b85c10b9e60",
+    "mtime": 1795213127.7773218,
+    "seen": 1795213323.5994916,
+    "ast_hash": "291225d77505d663fae22b756951d281",
     "semantic_hash": ""
   },
   "test/privacy_update_ui_test.dart": {
@@ -3804,9 +3804,9 @@
     "semantic_hash": ""
   },
   "docs/PRIVACY_DATA_INVENTORY.md": {
-    "mtime": 1795212835.202878,
-    "seen": 1795212990.2146268,
-    "ast_hash": "e523bff3c792d6a110c2c2d3cc5ac79b",
+    "mtime": 1795213165.1762135,
+    "seen": 1795213323.59968,
+    "ast_hash": "4cbf1b4acf2b9af11a4be4b1afcbf574",
     "semantic_hash": ""
   },
   "docs/PRIVACY_IMPLEMENTATION.md": {

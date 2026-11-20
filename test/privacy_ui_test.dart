@@ -1,3 +1,6 @@
+import 'dart:convert';
+import 'dart:io';
+
 import 'package:dr/analytics_service.dart';
 import 'package:dr/i18n/app_localizations.dart';
 import 'package:dr/ui/privacy_consent_dialog.dart';
@@ -27,6 +30,30 @@ Widget app(Widget home,
 
 void main() {
   setUp(mockPrivacyPlugins);
+
+  // #162: the in-app details describe what the app does in the background
+  // and outside the app, and promise nothing the code does not do.
+  test('privacy details cover notifications and widgets in every language', () {
+    expect(PrivacyDataDetailsPage.sections.keys,
+        containsAll(['schoolNotifications', 'widgets']));
+    for (final language in ['de', 'en', 'it', 'lld']) {
+      final texts =
+          jsonDecode(File('assets/locales/$language.json').readAsStringSync())
+              as Map<String, dynamic>;
+      for (final section in PrivacyDataDetailsPage.sections.keys) {
+        for (final part in ['title', 'body']) {
+          expect(texts['privacyDetails.$section.$part'], isNotEmpty,
+              reason: '$language privacyDetails.$section.$part');
+        }
+      }
+    }
+    final en = jsonDecode(File('assets/locales/en.json').readAsStringSync())
+        as Map<String, dynamic>;
+    // Crashlytics has no user ID, so the ID cannot find diagnostics data.
+    expect(
+        en['privacySettings.technicalId.hint'], isNot(contains('diagnostics')));
+    expect(en['desktop.keyringUnavailable'], isNot(contains('protected')));
+  });
   testWidgets(
       'details preserve unresolved choice; required-only closes once; settings can reopen',
       (tester) async {

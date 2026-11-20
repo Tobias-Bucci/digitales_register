@@ -138,12 +138,15 @@ class DesktopSecureStorage extends secure_storage.FlutterSecureStorage {
       {String? key}) async {
     key ??= base64UrlEncode(Hive.generateSecureKey());
     final temporary = File("${keyFile.path}.tmp");
-    await temporary.writeAsString(key, flush: true);
+    // Restrict the file while it is still empty, so the key is never readable
+    // by others, not even for a moment under a permissive umask (#162).
+    await temporary.writeAsString('', flush: true);
     final chmod = await Process.run('chmod', ['600', temporary.path]);
     if (chmod.exitCode != 0) {
       await temporary.delete();
       return null;
     }
+    await temporary.writeAsString(key, flush: true);
     await temporary.rename(keyFile.path);
     await _noticeKeyringFallback(homeDirectory);
     return key;
