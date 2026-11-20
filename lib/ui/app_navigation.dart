@@ -153,13 +153,17 @@ const appNavigationBarExtent = appNavigationBarHeight + _barBottomGap + 8;
 
 typedef DestinationCallback = void Function(AppDestination destination);
 
+// The item's tooltip already names the count; a badge label of its own would
+// make Android read only the bare number for the item.
 Widget _withBadge(BuildContext context, Widget icon, int count) => count == 0
     ? icon
-    : Badge.count(
-        count: count,
-        backgroundColor: Theme.of(context).colorScheme.error,
-        textColor: Theme.of(context).colorScheme.onError,
-        child: icon,
+    : ExcludeSemantics(
+        child: Badge.count(
+          count: count,
+          backgroundColor: Theme.of(context).colorScheme.error,
+          textColor: Theme.of(context).colorScheme.onError,
+          child: icon,
+        ),
       );
 
 String _destinationLabel(

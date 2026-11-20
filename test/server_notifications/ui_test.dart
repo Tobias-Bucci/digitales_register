@@ -118,9 +118,10 @@ void main() {
       final repository = await filled(tester, [item(), item(id: b)]);
       await pumpBell(tester, repository);
       expect(find.text('2'), findsOneWidget);
+      // No label of its own: Android would otherwise read only "2".
       expect(
         tester.getSemantics(find.byType(IconButton)),
-        containsSemantics(tooltip: 'App-Mitteilungen, 2 ungelesen'),
+        containsSemantics(label: '', tooltip: 'App-Mitteilungen, 2 ungelesen'),
       );
       semantics.dispose();
     });

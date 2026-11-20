@@ -1790,6 +1790,27 @@ void main() {
       );
     });
 
+    testWidgets('screen readers hear the destination, not the bare count',
+        (tester) async {
+      final semantics = tester.ensureSemantics();
+      await _pumpDashboard(
+        tester,
+        _dashboardState(notifications: [
+          buildNotification(id: 1, type: 'message', objectId: 1),
+          buildNotification(id: 2, type: 'message', objectId: 2),
+        ]),
+      );
+
+      // The tooltip already says "Mitteilungen, 2 ungelesen". A badge label
+      // of its own would make Android read only "2" for the item.
+      expect(
+        tester.getSemantics(
+            find.byKey(const ValueKey('app-navigation-messages'))),
+        containsSemantics(label: '', tooltip: 'Mitteilungen, 2 ungelesen'),
+      );
+      semantics.dispose();
+    });
+
     testWidgets('a wide window gets a rail with the same destinations',
         (tester) async {
       await _pumpDashboard(tester, _dashboardState(),

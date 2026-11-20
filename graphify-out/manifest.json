@@ -990,9 +990,9 @@
     "semantic_hash": ""
   },
   "lib/ui/app_navigation.dart": {
-    "mtime": 1795190981.105908,
-    "seen": 1795190992.564867,
-    "ast_hash": "c4e0f3195113c8edda7795fc834a56e7",
+    "mtime": 1795191161.015771,
+    "seen": 1795191172.0241563,
+    "ast_hash": "6675e118c8db7afef0f34b5bfc2c950b",
     "semantic_hash": ""
   },
   "lib/ui/app_popup_button.dart": {
@@ -1494,10 +1494,10 @@
     "semantic_hash": ""
   },
   "lib/ui/server_notifications/server_notification_bell.dart": {
-    "mtime": 1795190981.1069078,
-    "seen": 1795190992.5649486,
-    "ast_hash": "ecb11363a4cd1a6a64c613a02291657e",
-    "semantic_hash": "ecb11363a4cd1a6a64c613a02291657e"
+    "mtime": 1795191161.0167706,
+    "seen": 1795191172.0242417,
+    "ast_hash": "01acc8a1bb5e37c4bb2fa5d4917e83b9",
+    "semantic_hash": ""
   },
   "lib/ui/server_notifications/server_notification_center.dart": {
     "mtime": 1795119476.039738,
@@ -2202,8 +2202,8 @@
     "semantic_hash": ""
   },
   "test/polls/server_poll_page_test.dart": {
-    "mtime": 1795190981.108908,
-    "seen": 1795190992.5650816,
+    "mtime": 1795191160.8531382,
+    "seen": 1795191172.0243843,
     "ast_hash": "38515fe142ab7b1069544e78522afa29",
     "semantic_hash": ""
   },
@@ -2406,9 +2406,9 @@
     "semantic_hash": ""
   },
   "test/server_notifications/ui_test.dart": {
-    "mtime": 1795190981.1100714,
-    "seen": 1795190992.5651155,
-    "ast_hash": "c0b732873e5a2ef9d7d35c3c51e97691",
+    "mtime": 1795191161.069656,
+    "seen": 1795191172.024419,
+    "ast_hash": "eeb1a0e50979926754eb5fd83ba9c3e7",
     "semantic_hash": ""
   },
   "test/session_boundary_test.dart": {
@@ -2736,9 +2736,9 @@
     "semantic_hash": ""
   },
   "test/ui/dashboard/new_design_test.dart": {
-    "mtime": 1795190981.1110897,
-    "seen": 1795190992.5651681,
-    "ast_hash": "0fcafeebdd5c2f7151c116c8d73e7caf",
+    "mtime": 1795191161.0716548,
+    "seen": 1795191172.0244741,
+    "ast_hash": "4f7f4f790b8a9ba8e6ab2998fc87120d",
     "semantic_hash": ""
   },
   "test/ui/dashboard/school_countdown_overview_test.dart": {
@@ -3804,8 +3804,8 @@
     "semantic_hash": ""
   },
   "docs/PRIVACY_DATA_INVENTORY.md": {
-    "mtime": 1795190981.0807986,
-    "seen": 1795190992.5652733,
+    "mtime": 1795191160.850122,
+    "seen": 1795191172.0245833,
     "ast_hash": "d0175dee1d4a33fdcd5e4692b91a8b81",
     "semantic_hash": ""
   },
@@ -3852,8 +3852,8 @@
     "semantic_hash": ""
   },
   "docs/STORE_PRIVACY_POLLS.md": {
-    "mtime": 1795190981.0807986,
-    "seen": 1795190992.565281,
+    "mtime": 1795191160.851122,
+    "seen": 1795191172.0245917,
     "ast_hash": "06e2ae2f9cede473332841d178732e13",
     "semantic_hash": ""
   },

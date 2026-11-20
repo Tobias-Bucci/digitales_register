@@ -63,12 +63,16 @@ class ServerNotificationBell extends StatelessWidget {
           onPressed: onPressed ??
               () => showServerNotificationCenter(Navigator.of(context),
                   repository: source),
-          icon: Badge(
-            isLabelVisible: unread > 0,
-            label: Text(unread > 99 ? '99+' : '$unread'),
-            child: Icon(unread > 0
-                ? Icons.notifications_active_outlined
-                : Icons.notifications_none_rounded),
+          // The tooltip names the count; a badge label of its own would make
+          // Android read only the bare number for the button.
+          icon: ExcludeSemantics(
+            child: Badge(
+              isLabelVisible: unread > 0,
+              label: Text(unread > 99 ? '99+' : '$unread'),
+              child: Icon(unread > 0
+                  ? Icons.notifications_active_outlined
+                  : Icons.notifications_none_rounded),
+            ),
           ),
         );
       },
