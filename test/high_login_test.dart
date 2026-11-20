@@ -267,6 +267,67 @@ void main() {
     });
   }
 
+  // With a saved password, a failed re-login during a session used to leave
+  // the app signed in while every request returned nothing (#160).
+  for (final mode in ['server error', 'rejected']) {
+    test('a failed re-login during a session leads to the login page: $mode',
+        () async {
+      await bootstrapTestEnvironment(storage: {
+        'login': jsonEncode({
+          'user': 'user',
+          'pass': 'password',
+          'url': testServerUrl,
+          'otherAccounts': <Object>[],
+        }),
+      });
+      final adapter = LoginAdapter()..configGate.complete();
+      final session = TestLoginWrapper()..safeMode = false;
+      session.dio.httpClientAdapter = adapter;
+      middleware.wrapper = session;
+      addTearDown(() => session.logout(hard: true));
+      final store = createStore(withMiddleware: true);
+      await store.actions.loginActions.login(LoginPayload((b) => b
+        ..user = 'user'
+        ..pass = 'password'
+        ..url = testServerUrl
+        ..fromStorage = true));
+      expect(store.state.loginState.loggedIn, isTrue);
+
+      // The school server now refuses the session.
+      if (mode == 'rejected') {
+        adapter.rejected = true;
+      } else {
+        adapter.configFailure = DioException(
+            requestOptions: RequestOptions(path: 'config'),
+            type: DioExceptionType.badResponse,
+            response: Response(
+                requestOptions: RequestOptions(path: 'config'),
+                statusCode: 500));
+      }
+      expect(
+          await session.send('api/student/dashboard/dashboard',
+              forceRelogin: true),
+          isNull);
+      for (var i = 0; i < 50 && store.state.loginState.loggedIn; i++) {
+        await pumpEventQueue();
+      }
+      await pumpEventQueue();
+
+      expect(store.state.loginState.loggedIn, isFalse);
+      expect(store.state.loginState.errorMsg, isNotEmpty);
+      final saved = jsonDecode(
+          (middleware.secureStorage as TestSecureStorage).storage['login']!);
+      if (mode == 'rejected') {
+        expect(saved['pass'], isNull);
+      } else {
+        // The account stays on the device and signs in again with one tap.
+        expect(saved['user'], 'user');
+        expect(saved['pass'], 'password');
+        expect(store.state.loginState.otherAccounts, contains('user'));
+      }
+    });
+  }
+
   test('stored credentials retain offline access after config network failure',
       () async {
     final adapter = LoginAdapter()

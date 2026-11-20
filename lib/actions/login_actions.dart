@@ -131,6 +131,13 @@ abstract class LogoutPayload
       _$LogoutPayload;
   LogoutPayload._();
 
+  @BuiltValueHook(initializeBuilder: true)
+  static void _defaults(LogoutPayloadBuilder b) => b.sessionLost = false;
+
   bool get hard;
   bool get forced;
+
+  /// The session ended without the user signing out (#160). Personal school
+  /// notifications stay switched on: the user did not choose to sign out.
+  bool get sessionLost;
 }

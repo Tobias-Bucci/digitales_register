@@ -57,7 +57,7 @@ Future<void> _logout(
     }
   }
 
-  if (action.payload.hard) {
+  if (action.payload.hard && !action.payload.sessionLost) {
     await schoolNotificationOperation(schoolNotifications.deactivate);
   }
   if (action.payload.hard &&
@@ -246,13 +246,7 @@ Future<void> _login(
         logout: () {
           // A response from an account we have left must not log out the new one.
           if (!identical(wrapper, loginWrapper)) return;
-          unawaited(api.actions.loginActions.logout(
-            LogoutPayload(
-              (b) => b
-                ..hard = api.state.settingsState.noPasswordSaving
-                ..forced = true,
-            ),
-          ));
+          unawaited(_sessionLost(api, loginWrapper));
         },
         configLoaded: () => api.actions.setConfig(wrapper.config),
         relogin: api.actions.loginActions.automaticallyReloggedIn.call,
@@ -340,6 +334,42 @@ Future<void> _login(
         ..username = action.payload.user),
     );
   }
+}
+
+/// The session wrapper gave up: a re-login failed, or the server ended the
+/// session of an account without a saved password. The wrapper has already
+/// dropped its credentials, so every request would quietly return nothing
+/// while the app still looked signed in (#160). Sign out visibly instead and
+/// say why on the login page.
+Future<void> _sessionLost(
+  MiddlewareApi<AppState, AppStateBuilder, AppActions> api,
+  Wrapper session,
+) async {
+  final rejected = session.error == 'login.credentialsRejected';
+  final username = api.state.loginState.username;
+  final passwordSaved = !api.state.settingsState.noPasswordSaving;
+  // Without a saved password the logout is the same as before. With one, the
+  // account stays on the device, marked as signed out, and its school
+  // notifications stay on, unless the server rejected the password (#159);
+  // then it is forgotten as before.
+  await api.actions.loginActions.logout(
+    LogoutPayload(
+      (b) => b
+        ..hard = true
+        ..forced = !passwordSaved || rejected
+        ..sessionLost = passwordSaved && !rejected,
+    ),
+  );
+  final l10n = await _loadMiddlewareLocalizations(api.state);
+  await api.actions.loginActions.loginFailed(
+    LoginFailedPayload(
+      (b) => b
+        ..cause = rejected
+            ? l10n.requestError(session.error)
+            : l10n.text('error.session')
+        ..username = username,
+    ),
+  );
 }
 
 Future<void> _changePass(
