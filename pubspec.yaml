@@ -175,7 +175,7 @@ msix_config:
   # Partner Center identity and publisher data are intentionally supplied from
   # tool/microsoft_store.local.psd1 by the Store build script, not Git.
   # Microsoft Store requires the fourth (revision) component to be zero.
-  msix_version: 1.17.48.0
+  msix_version: 2.0.57.0
   logo_path: assets/index.png
   trim_logo: false
   architecture: x64
@@ -183,4 +183,4 @@ msix_config:
   languages: de-de, it-it, en-us
   store: true
   output_path: build/windows/msix
-  output_name: Schulregister-Suedtirol-1.17.48.0-x64
+  output_name: Schulregister-Suedtirol-2.0.57.0-x64
