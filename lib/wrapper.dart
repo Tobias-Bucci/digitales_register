@@ -306,6 +306,9 @@ class Wrapper {
     if (user == 'demo' && pass == 'demo' && (url?.trim().isEmpty ?? true)) {
       demoMode = true;
       appClock.setDemoMode(true);
+      // The demo needs no network; an earlier failed sign-in must not leave
+      // its pages in the offline state.
+      noInternet = false;
       this.url = '';
       _loggedIn = Future.value(true);
       this.user = user;

@@ -236,9 +236,12 @@ class _DemoStore {
         return _archiveMessage(args);
       case 'student/certificate':
         return _buildCertificateHtml();
-      default:
-        return null;
     }
+    // The homework summary carries a cache-busting timestamp.
+    if (url.startsWith('vorstand/homework&klasse')) {
+      return _buildHomeworkSummaryHtml();
+    }
+    return null;
   }
 
   dynamic handleUpload(
@@ -1057,6 +1060,59 @@ class _DemoStore {
       </tbody>
     </table>
   </div>
+</div>
+''';
+  }
+
+  /// The class homework overview in the shape of the register's page: one
+  /// table per week, from this week on for four weeks.
+  String _buildHomeworkSummaryHtml() {
+    const escape = HtmlEscape();
+    final today = _today();
+    final firstMonday = today.subtract(Duration(days: today.weekday - 1));
+    final headers = [
+      _text('homeworkSummaryDate'),
+      _text('homeworkSummarySubject'),
+      _text('homeworkSummaryType'),
+      _text('homeworkSummaryName'),
+    ].map((header) => '<th>${escape.convert(header)}</th>').join();
+    final weeks = StringBuffer();
+    for (var week = 0; week < 4; week++) {
+      final monday = firstMonday.add(Duration(days: 7 * week));
+      final nextMonday = monday.add(const Duration(days: 7));
+      final events = _demoDashboardEvents
+          .where((event) =>
+              event.subject != null &&
+              !event.date.isBefore(monday) &&
+              event.date.isBefore(nextMonday) &&
+              (event.homework ||
+                  (event.type == 'gradeGroup' && _showsAssessment(event))))
+          .toList()
+        ..sort((a, b) => a.date.compareTo(b.date));
+      final rows = events.map((event) {
+        final cells = [
+          DateFormat('dd/MM').format(event.date),
+          event.subject!,
+          _localizeDashboardTitle(event.title),
+          event.subtitle,
+        ].map((cell) => '<td>${escape.convert(cell)}</td>').join();
+        return '<tr>$cells</tr>';
+      }).join();
+      final weekTitle = _text('homeworkSummaryWeek')
+          .replaceAll('{date}', DateFormat('d/M/yyyy').format(monday));
+      weeks.write('''
+    <h3>${escape.convert(weekTitle)}</h3>
+    <table class="summary-table">
+      <thead><tr>$headers</tr></thead>
+      $rows
+    </table>
+''');
+    }
+    return '''
+<div id="classSummary">
+  <div class="summary">
+    <h1 class="h1">${escape.convert(_text('homeworkSummaryTitle'))}</h1>
+$weeks  </div>
 </div>
 ''';
   }
@@ -2675,6 +2731,42 @@ const Map<String, Map<String, String>> _demoTranslations =
     'en': 'Grade',
     'it': 'Voto',
     'lld': 'Pro',
+  },
+  'homeworkSummaryTitle': {
+    'de': 'Hausaufgaben Übersicht - Demo',
+    'en': 'Homework overview - Demo',
+    'it': 'Panoramica compiti - Demo',
+    'lld': 'Prospet di compić - Demo',
+  },
+  'homeworkSummaryWeek': {
+    'de': 'Woche vom {date}',
+    'en': 'Week of {date}',
+    'it': 'Settimana del {date}',
+    'lld': 'Edema dl {date}',
+  },
+  'homeworkSummaryDate': {
+    'de': 'Datum',
+    'en': 'Date',
+    'it': 'Data',
+    'lld': 'Data',
+  },
+  'homeworkSummarySubject': {
+    'de': 'Fach',
+    'en': 'Subject',
+    'it': 'Materia',
+    'lld': 'Dicipina',
+  },
+  'homeworkSummaryType': {
+    'de': 'Art',
+    'en': 'Type',
+    'it': 'Tipo',
+    'lld': 'Sort',
+  },
+  'homeworkSummaryName': {
+    'de': 'Name',
+    'en': 'Name',
+    'it': 'Nome',
+    'lld': 'Inom',
   },
   'certificateAverage': {
     'de': 'Durchschnitt',

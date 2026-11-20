@@ -1,4 +1,6 @@
+import 'package:dr/app_clock.dart';
 import 'package:dr/demo.dart';
+import 'package:dr/ui/homework_summary_page.dart';
 import 'package:dr/wrapper.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:intl/intl.dart';
@@ -34,6 +36,24 @@ void main() {
     expect(await wrapper.loggedIn, isTrue);
     expect(wrapper.user, 'demo');
     expect(wrapper.url, '');
+  });
+
+  test('demo login after a failed offline sign-in is not offline', () async {
+    final wrapper = Wrapper()..noInternet = true;
+
+    await wrapper.login(
+      'demo',
+      'demo',
+      null,
+      '',
+      logout: () {},
+      configLoaded: () {},
+      relogin: () {},
+      addProtocolItem: (_) {},
+    );
+
+    expect(wrapper.demoMode, isTrue);
+    expect(wrapper.noInternet, isFalse);
   });
 
   test('demo reminders are stored locally and returned by dashboard', () async {
@@ -97,6 +117,26 @@ void main() {
     expect((messages.first as Map<String, Object?>)['subject'], isNotEmpty);
     expect(certificate, contains('Demo-Zeugnis'));
     expect(certificate, contains('Durchschnitt'));
+  });
+
+  test('the demo answers the homework summary with the coming weeks', () async {
+    appClock.setDemoMode(true);
+    addTearDown(() => appClock.setDemoMode(false));
+
+    final html = await getDemoResponse(
+      'vorstand/homework&klasse?_=1760083200000',
+      const <String, Object?>{},
+    );
+
+    expect(html, isA<String>());
+    final document = HomeworkSummaryDocument.parse(html as String);
+    expect(document.title, isNotEmpty);
+    expect(document.weeks, hasLength(4));
+    final entries = [for (final week in document.weeks) ...week.entries];
+    // The default demo day (10 October 2025) has homework and exams ahead.
+    expect(entries, isNotEmpty);
+    expect(entries.every((entry) => entry.subjectText.isNotEmpty), isTrue);
+    expect(entries.every((entry) => entry.primaryText.isNotEmpty), isTrue);
   });
 
   test('archiving a demo message survives reloading the message list',
