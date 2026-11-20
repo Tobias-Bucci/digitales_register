@@ -1,7 +1,7 @@
 # Graph Report - digitales_register  (2026-11-20)
 
 ## Corpus Check
-- 668 files · ~571,083 words
+- 668 files · ~571,120 words
 - Verdict: corpus is large enough that graph structure adds value.
 
 ## Summary
@@ -10,7 +10,7 @@
 - Token cost: 0 input · 0 output
 
 ## Graph Freshness
-- Built from commit: `50095566`
+- Built from commit: `eeb8792d`
 - Run `git rev-parse HEAD` and compare to check if the graph is stale.
 - Run `graphify update .` after code changes (no API cost).
 
@@ -1974,24 +1974,24 @@ Cohesion: 0.50
 Nodes (3): SCHULREGISTER_INSTALL_DIR, test_linux_install.sh script, XDG_DATA_HOME
 
 ## Knowledge Gaps
-- **8611 isolated node(s):** `keychainAnyAccessibility`, `demo`, `hiveBox`, `keyringFallbackNotice`, `_box` (+8606 more)
+- **8611 isolated node(s):** `action`, `adopt`, `androidWidgetSnapshotService`, `api`, `appDirectory` (+8606 more)
   These have ≤1 connection - possible missing edges or undocumented components. (Counts symbols only; 9906 node(s) total have ≤1 connection when file, concept and rationale nodes are included.)
 - **95 thin communities (<3 nodes) omitted from report** — run `graphify query` to explore isolated nodes.
 
 ## Suggested Questions
 _Questions this graph is uniquely positioned to answer:_
 
-- **Why does `_` connect `_` to `dart:math`, `package:dr/app_state.dart`, `small_pages_new_design_test.dart`, `live_contract_test.dart`, `school_notification_grade.dart`, `package:dr/i18n/app_localizations.dart`, `school_notification_icon_test.dart`, `package:flutter/material.dart`, `utils.cpp`, `return`, `new_design_test.dart`, `package:intl/intl.dart`, `Server Notification Center`, `design_choice.dart`, `package:dr/theme/app_palette.dart`?**
+- **Why does `_` connect `Domain Models (Absences, Homework)` to `package:dr/diagnostics_service.dart`, `App State Selectors`, `package:dr/app_state.dart`, `reducer/messages.dart`, `homework_filter_container.dart`, `exam_calendar_new_design_test.dart`, `support/test_harness.dart`, `package:flutter_built_redux/flutter_built_redux.dart`, `local_reminder_assessments.dart`, `reducer/grades.dart`, `notification_filter_test.dart`, `calendar_actions.dart`, `HomeworkType`, `package:flutter/material.dart`, `return`, `package:dr/util.dart`, `ui/school_notification_opt_in_test.dart`, `dashboard_actions.dart`, `login_page.dart`, `Built`, `days_container.dart`, `notification_feed.dart`, `grade_statistics.dart`, `serializers.dart`?**
   _High betweenness centrality (0.031) - this node is a cross-community bridge._
-- **What connects `keychainAnyAccessibility`, `demo`, `hiveBox` to the rest of the system?**
+- **What connects `action`, `adopt`, `androidWidgetSnapshotService` to the rest of the system?**
   _8611 weakly-connected nodes found - possible documentation gaps or missing edges._
 - **Should `middleware.dart` be split into smaller, more focused modules?**
   _Cohesion score 0.01935319582378406 - nodes in this community are weakly interconnected._
-- **Why does `_` connect `Domain Models (Absences, Homework)` to `package:dr/diagnostics_service.dart`, `App State Selectors`, `package:dr/app_state.dart`, `reducer/messages.dart`, `homework_filter_container.dart`, `exam_calendar_new_design_test.dart`, `support/test_harness.dart`, `package:flutter_built_redux/flutter_built_redux.dart`, `local_reminder_assessments.dart`, `reducer/grades.dart`, `notification_filter_test.dart`, `calendar_actions.dart`, `HomeworkType`, `package:flutter/material.dart`, `return`, `package:dr/util.dart`, `ui/school_notification_opt_in_test.dart`, `dashboard_actions.dart`, `login_page.dart`, `Built`, `days_container.dart`, `notification_feed.dart`, `grade_statistics.dart`, `serializers.dart`?**
-  _High betweenness centrality (0.031) - this node is a cross-community bridge._
+- **Why does `_` connect `Design Tokens (Glass)` to `package:dr/diagnostics_service.dart`, `Design Token Palette`, `grades_page_new.dart`, `StatelessWidget`, `profile_picture.dart`, `new_design_test.dart`, `design_choice.dart`, `course_materials_page_new.dart`, `exam_calendar_new_design_test.dart`, `Glass Page Layout`, `dart:math`, `package:dr/i18n/app_localizations.dart`, `app_launch_animation.dart`, `settings_page_new.dart`, `calendar_actions.dart`, `Widget`, `small_pages_new_design_test.dart`, `CustomPainter`, `shell_routing_test.dart`, `@immutable`, `@visibleForTesting`, `exam_timeline.dart`, `package:flutter_test/flutter_test.dart`?**
+  _High betweenness centrality (0.030) - this node is a cross-community bridge._
 - **Should `Domain Models (Absences, Homework)` be split into smaller, more focused modules?**
   _Cohesion score 0.011904761904761904 - nodes in this community are weakly interconnected._
-- **Why does `_` connect `Design Tokens (Glass)` to `package:dr/diagnostics_service.dart`, `Design Token Palette`, `grades_page_new.dart`, `StatelessWidget`, `profile_picture.dart`, `new_design_test.dart`, `design_choice.dart`, `course_materials_page_new.dart`, `exam_calendar_new_design_test.dart`, `Glass Page Layout`, `dart:math`, `package:dr/i18n/app_localizations.dart`, `app_launch_animation.dart`, `settings_page_new.dart`, `calendar_actions.dart`, `Widget`, `small_pages_new_design_test.dart`, `CustomPainter`, `shell_routing_test.dart`, `@immutable`, `@visibleForTesting`, `exam_timeline.dart`, `package:flutter_test/flutter_test.dart`?**
-  _High betweenness centrality (0.028) - this node is a cross-community bridge._
+- **Why does `showUserTypeNotSupported` connect `routing.dart` to `middleware/login.dart`, `@visibleForTesting`?**
+  _High betweenness centrality (0.013) - this node is a cross-community bridge._
 - **Should `Settings Page Logic` be split into smaller, more focused modules?**
   _Cohesion score 0.017857142857142856 - nodes in this community are weakly interconnected._

@@ -13,6 +13,8 @@ finish-args:
   - --socket=wayland
   - --device=dri
   - --share=network
+  # Reminders show desktop notifications while the app runs (#98, #99).
+  - --talk-name=org.freedesktop.Notifications
 
 modules:
   - name: digitales_register
@@ -45,9 +47,9 @@ modules:
     sources:
       - type: git
         url: https://github.com/Tobias-Bucci/digitales_register.git
-        commit: b2d9f367c7f525751de0d591d6cce20bbe422e78
+        commit: eeb8792d0e7f086561ae4e3b13b81b0362d89a19
 
       - type: git
         url: https://github.com/flutter/flutter.git
-        tag: 3.47.6
+        tag: 3.47.7
         dest: flutter

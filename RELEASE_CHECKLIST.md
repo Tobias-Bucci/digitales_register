@@ -4,7 +4,7 @@
 - Check the Changelog
 - Push all changes and check that CI is green
 - Create the release on Github
-- Update the Flathub repo (new version and sha256, check by running `flatpak-builder --user --install --force-clean build-dir io.github.mideb.digitales_register.yaml`)
+- Update the Flathub manifest: set the release commit and the Flutter version in `flatpak-flutter.yml`, regenerate with flatpak-flutter (`flatpak-flutter.py flatpak-flutter.yml`, it rewrites `io.github.tobias_bucci.digitales_register.yml` and `generated/`), check with `flatpak-builder --user --install-deps-from=flathub --force-clean --sandbox --repo=repo build-dir io.github.tobias_bucci.digitales_register.yml`, commit the generated files and copy them to the Flathub repo
 - Confirm the Microsoft Store identity and publisher values in `pubspec.yaml`
 - Build and smoke-test Windows (`flutter build windows --release`)
 - Build the Store MSIX with `.\tool\build_windows_store.ps1`

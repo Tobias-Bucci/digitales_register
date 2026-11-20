@@ -19,7 +19,6 @@ finish-args:
   - --socket=wayland
   - --device=dri
   - --share=network
-  - --talk-name=org.freedesktop.secrets
   - --talk-name=org.freedesktop.Notifications
 modules:
   - name: digitales_register
@@ -37,7 +36,7 @@ modules:
       env:
         PUB_CACHE: /run/build/digitales_register/.pub-cache
     build-commands:
-      - setup-flutter.sh -C .
+      - setup-flutter.sh
       - dart run build_runner build
       - flutter build linux --release --no-pub
       - cp -r $BUNDLE_PATH /app/io.github.tobias_bucci.digitales_register
@@ -49,7 +48,7 @@ modules:
     sources:
       - type: git
         url: https://github.com/Tobias-Bucci/digitales_register.git
-        commit: 9f029917388b147790bc3876e49abb28923fbec4
+        commit: eeb8792d0e7f086561ae4e3b13b81b0362d89a19
       - generated/sources/pubspec.json
     modules:
-      - generated/modules/flutter-sdk-3.47.6.json
+      - generated/modules/flutter-sdk-3.47.7.json
