@@ -850,6 +850,7 @@
   "error.contact": "Contatta lo sviluppatore",
   "error.generic": "Si è verificato un errore tecnico. Puoi segnalarlo tramite il modulo di assistenza. I dati personali non vengono allegati automaticamente.",
   "error.parse": "Non è stato possibile leggere i dati del registro. Riprova o contatta lo sviluppatore.",
+  "error.display": "Questo contenuto non può essere visualizzato.",
   "error.session": "La sessione è scaduta. Accedi di nuovo. Accessi simultanei allo stesso account possono terminare la sessione.",
   "error.saveOffline": "Non salvato perché manca la connessione a Internet.",
   "error.localSave": "Al momento non è stato possibile salvare le modifiche su questo dispositivo. L’app continua a riprovare.",

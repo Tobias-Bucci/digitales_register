@@ -82,16 +82,17 @@ AbsencesState _parseAbsences(Map json) {
     ..percentage = rawStats["percentage"]?.toString().isNotEmpty == true
         ? rawStats["percentage"].toString()
         : null;
-  final absences = (json["absences"] as List).map(_parseAbsence).toList()
-    ..sort((a, b) {
-      final latestA =
-          a.absences.reduce((x, y) => x.date.isAfter(y.date) ? x : y).date;
-      final latestB =
-          b.absences.reduce((x, y) => x.date.isAfter(y.date) ? x : y).date;
-      return latestB.compareTo(latestA);
-    });
-  final futureAbsences =
-      (json["futureAbsences"] as List).map(_parseFutureAbsence);
+  final absences =
+      parseEachSkippingFailures(json["absences"] as List, _parseAbsence)
+        ..sort((a, b) {
+          final latestA =
+              a.absences.reduce((x, y) => x.date.isAfter(y.date) ? x : y).date;
+          final latestB =
+              b.absences.reduce((x, y) => x.date.isAfter(y.date) ? x : y).date;
+          return latestB.compareTo(latestA);
+        });
+  final futureAbsences = parseEachSkippingFailures(
+      json["futureAbsences"] as List, _parseFutureAbsence);
   return AbsencesState(
     (b) => b
       ..statistic = stats

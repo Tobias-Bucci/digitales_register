@@ -850,6 +850,7 @@
   "error.contact": "Contaté le svilupadù",
   "error.generic": "Al é sozedü n error tecnich. Te pos le segnalé cun le formular de assistënza. Dades personales ne vëgn nia ajuntades automatich.",
   "error.parse": "Les dades dl register n’é nia podüdes gnì litës. Pröia d’agof o contateia le svilupadù.",
+  "error.display": "Chësc contegnü ne po nia gnì mostré.",
   "error.session": "La sesciun é scadüda. Va indô ite. Azësc tl medemo tëmp al medemo account po stlüje la sesciun.",
   "error.saveOffline": "Nia salvé, ajache al ne n’é nia na conesciun cun Internet.",
   "error.localSave": "Les mudaziuns n’é momentanamënter nia podüdes gnì salvades sön chësc dispositif. L’app pröa inant.",

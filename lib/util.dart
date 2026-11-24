@@ -210,6 +210,39 @@ O tryParse<O, I>(
   }
 }
 
+/// Parses every element of [items] with [parse] and leaves out the elements
+/// that cannot be parsed.
+///
+/// One malformed entry from the school server should not hide a whole page
+/// (#168). [tryParse] reports each failure to diagnostics. When every element
+/// fails, the format has most likely changed for all of them: the first
+/// failure is rethrown, so the page still shows its error instead of an empty
+/// list.
+///
+/// Use it only for lists that are replaced as a whole. Where the app compares
+/// a list with the previous one (dashboard entries, lessons that the device
+/// calendar sync mirrors), a skipped element would look deleted.
+List<O> parseEachSkippingFailures<O>(
+  Iterable<dynamic> items,
+  O Function(dynamic item) parse,
+) {
+  final parsed = <O>[];
+  ParseException? firstFailure;
+  StackTrace? firstTrace;
+  for (final dynamic item in items) {
+    try {
+      parsed.add(tryParse<O, dynamic>(item, parse));
+    } on ParseException catch (failure, trace) {
+      firstFailure ??= failure;
+      firstTrace ??= trace;
+    }
+  }
+  if (parsed.isEmpty && firstFailure != null) {
+    Error.throwWithStackTrace(firstFailure, firstTrace!);
+  }
+  return parsed;
+}
+
 Never _unexpectedType<T>(dynamic value) {
   assert(T != dynamic);
   assert(value is! T);

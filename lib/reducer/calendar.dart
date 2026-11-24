@@ -241,15 +241,9 @@ CalendarHourBuilder _parseHour(
           (dynamic e) => tryParse(getMap(e)!, _parseHomeworkExam)),
     )
     ..lessonContents = ListBuilder(
-      (lesson["lessonContents"] as List).map<LessonContent>(
-        (dynamic e) => tryParse(
-          getMap(e)!,
-          (Map map) => _parseLessonContent(
-            map,
-            date,
-            oldHour,
-          ),
-        ),
+      parseEachSkippingFailures(
+        lesson["lessonContents"] as List,
+        (dynamic e) => _parseLessonContent(getMap(e)!, date, oldHour),
       ),
     );
 }

@@ -96,8 +96,9 @@ void _updateSubjects(BuiltList<Subject> previousSubjects,
       subjectsBuilder[subjectIdx] = subjectsBuilder[subjectIdx].rebuild(
         (b) => b
           ..gradesAll[semester] = BuiltList(
-            getList(subject["grades"])!.map<GradeAll>(
-              (dynamic g) => tryParse(getMap(g)!, _parseGradeAll),
+            parseEachSkippingFailures(
+              getList(subject["grades"])!,
+              (dynamic g) => _parseGradeAll(getMap(g)!),
             ),
           )
           ..absences[semester] = getInt(subject["absences"]) ?? 0
@@ -112,8 +113,9 @@ void _updateSubjects(BuiltList<Subject> previousSubjects,
             ..gradesAll = MapBuilder(
               {
                 semester: BuiltList<GradeAll>(
-                  getList(subject["grades"])!.map<GradeAll>(
-                    (dynamic g) => tryParse(getMap(g)!, _parseGradeAll),
+                  parseEachSkippingFailures(
+                    getList(subject["grades"])!,
+                    (dynamic g) => _parseGradeAll(getMap(g)!),
                   ),
                 ),
               },
@@ -197,8 +199,11 @@ void _detailsLoaded(GradesState state,
         ? s.rebuild(
             (b) => b
               ..grades[action.payload.semester] = BuiltList(
-                getList(data!["grades"])!.map<GradeDetail>(
-                  (dynamic g) => tryParse(getMap(g)!, _parseGrade).rebuild(
+                parseEachSkippingFailures(
+                  getList(data!["grades"])!,
+                  (dynamic g) => _parseGrade(getMap(g)!),
+                ).map<GradeDetail>(
+                  (g) => g.rebuild(
                     (d) => d
                       // we will also try to load the [cancelledDescription]
                       // again, but for now keep the old one
@@ -211,8 +216,9 @@ void _detailsLoaded(GradesState state,
                 ),
               )
               ..observations[action.payload.semester] = BuiltList(
-                getList(data["observations"])!.map<Observation>(
-                  (dynamic o) => tryParse(getMap(o)!, _parseObservation),
+                parseEachSkippingFailures(
+                  getList(data["observations"])!,
+                  (dynamic o) => _parseObservation(getMap(o)!),
                 ),
               )
               ..lastFetchedDetailed[action.payload.semester] =

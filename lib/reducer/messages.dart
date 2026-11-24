@@ -159,10 +159,8 @@ void _repliedMessage(MessagesState state, Action<ReplyMessagePayload> action,
 }
 
 MessagesState _parseMessages(List json, MessagesState state) {
-  final messages = json
-      .map((dynamic m) =>
-          tryParse(getMap(m), (Map? m) => _parseMessage(m!, state)))
-      .toList();
+  final messages = parseEachSkippingFailures(
+      json, (dynamic m) => _parseMessage(getMap(m)!, state));
   return state.rebuild(
     (b) => b
       ..messages = ListBuilder<Message>(messages)

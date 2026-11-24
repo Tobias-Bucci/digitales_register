@@ -850,6 +850,7 @@
   "error.contact": "Entwickler benachrichtigen",
   "error.generic": "Ein technischer Fehler ist aufgetreten. Du kannst ihn über das Supportformular melden. Persönliche Daten werden nicht automatisch beigefügt.",
   "error.parse": "Die Registerdaten konnten nicht gelesen werden. Bitte versuche es erneut oder kontaktiere den Entwickler.",
+  "error.display": "Dieser Inhalt kann nicht angezeigt werden.",
   "error.session": "Die Sitzung ist abgelaufen. Melde dich erneut an. Gleichzeitige Zugriffe auf dasselbe Konto können die Sitzung beenden.",
   "error.saveOffline": "Nicht gespeichert, weil keine Internetverbindung besteht.",
   "error.localSave": "Deine Änderungen konnten gerade nicht auf diesem Gerät gespeichert werden. Die App versucht es weiter.",
