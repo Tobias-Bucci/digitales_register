@@ -34,7 +34,7 @@ Future<PagePayloadSnapshot<String>?> refreshHomeworkSummaryHtmlPayload() async {
   }
   // The cache key belongs to the account that asks, not to whoever is signed
   // in when the answer arrives.
-  final session = _Session.capture(withStorageKey: true);
+  final session = _Session.capture();
   try {
     // The official frontend sends a Unix timestamp in milliseconds here.
     final timestamp = DateTime.now().millisecondsSinceEpoch;
@@ -67,8 +67,7 @@ Future<ClassRegisterPayloadSnapshot?> loadCachedClassRegisterLessonPayload() {
 Future<ClassRegisterPayloadSnapshot?>
     refreshClassRegisterLessonPayload() async {
   try {
-    return await _refreshClassRegisterLessonPayload(
-        _Session.capture(withStorageKey: true));
+    return await _refreshClassRegisterLessonPayload(_Session.capture());
   } on StaleSessionException {
     return null;
   }
@@ -113,17 +112,17 @@ Future<ClassRegisterPayloadSnapshot?> _refreshClassRegisterLessonPayload(
 
 /// Cache keys use the account of [session] when given (a load in progress),
 /// otherwise whoever is signed in now (a plain read).
-String _storageKeyFor(_Session? session) =>
-    session?.storageKey ?? getStorageKey(wrapper.user, wrapper.loginAddress);
+AccountScope _cacheScopeFor(_Session? session) =>
+    session?.scope ?? currentAccountScope();
 
 String _classRegisterCacheKey([_Session? session]) =>
-    'classRegisterLessons:${_storageKeyFor(session)}';
+    accountCacheKey('classRegisterLessons', _cacheScopeFor(session));
 
 String _courseMaterialsCacheKey([_Session? session]) =>
-    'courseMaterials:${_storageKeyFor(session)}';
+    accountCacheKey('courseMaterials', _cacheScopeFor(session));
 
 String userScopedStorageKey(String namespace) =>
     '$namespace:${getStorageKey(wrapper.user, wrapper.loginAddress)}';
 
 String _homeworkSummaryCacheKey([_Session? session]) =>
-    'homeworkSummary:${_storageKeyFor(session)}';
+    accountCacheKey('homeworkSummary', _cacheScopeFor(session));

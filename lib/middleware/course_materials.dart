@@ -44,7 +44,7 @@ Future<PagePayloadSnapshot<List<Map<String, dynamic>>>?>
 /// complete snapshot.
 Future<PagePayloadSnapshot<List<Map<String, dynamic>>>?>
     refreshCourseMaterialsPayload() async {
-  final session = _Session.capture(withStorageKey: true);
+  final session = _Session.capture();
   try {
     final courses = await _loadCourseMaterialsRemote(session);
     final payload = courseMaterialCoursesToPayload(courses);

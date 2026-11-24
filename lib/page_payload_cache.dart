@@ -16,9 +16,64 @@
 // along with digitales_register.  If not, see <http://www.gnu.org/licenses/>.
 
 import 'dart:convert';
+
+import 'package:dr/account_scope.dart';
 import 'package:dr/diagnostics_service.dart';
 import 'package:dr/local_data_inventory.dart';
+import 'package:dr/middleware/middleware.dart' show secureStorage;
 import 'package:shared_preferences/shared_preferences.dart';
+
+/// The key of the page cache [namespace] of [scope] (#169).
+///
+/// The page caches hold register content, so they are kept in the encrypted
+/// secure storage like the account state. The key names the account only by
+/// [AccountScope.fileId], never by user name or school address.
+String accountCacheKey(String namespace, AccountScope scope) =>
+    '$namespace-v2-${scope.fileId}';
+
+/// The page caches that versions before #169 kept as plain text in
+/// SharedPreferences, under `<namespace>:<user and school>`.
+const legacyPlainCacheNamespaces = [
+  'homeworkSummary',
+  'classRegisterLessons',
+  'courseMaterials',
+];
+
+/// Removes the plain-text page caches of older versions (#169).
+///
+/// They are caches only: each page loads its data again and keeps it in the
+/// encrypted store from then on.
+Future<void> removeLegacyPlainCaches() async {
+  final prefs = await SharedPreferences.getInstance();
+  for (final key in prefs.getKeys().toList()) {
+    if (legacyPlainCacheNamespaces.any((n) => key.startsWith('$n:'))) {
+      await prefs.remove(key);
+    }
+  }
+}
+
+/// Reads the cache [key] from the secure storage; null when there is none or
+/// it cannot be read. A cache that cannot be read is loaded again.
+Future<String?> readAccountCache(String key) async {
+  try {
+    return await secureStorage.read(key: key);
+  } catch (e, stack) {
+    diagnostics.report(e, stack, DiagnosticError.storage);
+    return null;
+  }
+}
+
+/// Writes the cache [key] to the secure storage, unless caches may not be
+/// kept right now (saving of data off, data being deleted).
+Future<void> writeAccountCache(String key, String value) async {
+  if (!localDataPolicy.mayStoreCaches) return;
+  try {
+    await secureStorage.write(key: key, value: value);
+  } catch (e, stack) {
+    diagnostics.report(e, stack, DiagnosticError.storage);
+    rethrow;
+  }
+}
 
 class PagePayloadSnapshot<T> {
   const PagePayloadSnapshot({
@@ -84,8 +139,7 @@ class PagePayloadCacheService {
     String key,
     T? Function(Object? rawPayload) parsePayload,
   ) async {
-    final prefs = await SharedPreferences.getInstance();
-    final raw = prefs.getString(key);
+    final raw = await readAccountCache(key);
     if (raw == null || raw.isEmpty) {
       return null;
     }
@@ -99,19 +153,9 @@ class PagePayloadCacheService {
   }
 
   Future<void> save<T>(String key, PagePayloadSnapshot<T> snapshot) async {
-    // A cache is not kept while saving of data is off or data is deleted.
-    if (!localDataPolicy.mayStoreCaches) return;
-    final prefs = await SharedPreferences.getInstance();
     diagnostics.update('operation', 'save');
-    try {
-      if (!await prefs.setString(key, json.encode(snapshot.toJson()))) {
-        throw StateError('Cache write failed');
-      }
-      diagnostics.safeLog('cache_write');
-    } catch (e, stack) {
-      diagnostics.report(e, stack, DiagnosticError.storage);
-      rethrow;
-    }
+    await writeAccountCache(key, json.encode(snapshot.toJson()));
+    diagnostics.safeLog('cache_write');
   }
 }
 

@@ -44,6 +44,7 @@ import 'package:dr/i18n/app_language.dart';
 import 'package:dr/i18n/app_localizations.dart';
 import 'package:dr/middleware/middleware.dart';
 import 'package:dr/notification_feed.dart';
+import 'package:dr/page_payload_cache.dart';
 import 'package:dr/reducer/reducer.dart';
 import 'package:dr/reminders/reminder_notifications.dart';
 import 'package:dr/reminders/reminder_sync.dart';
@@ -110,7 +111,10 @@ Future<void> main() async {
       'p1_privacy_analytics', () => AnalyticsService.initLich());
   await startupTimeline.step('p1_app_clock', appClock.initialize);
   await _loadStartupUserPreferences();
-  await startupTimeline.step('p1_legacy_cleanup', removeLegacyNotificationData);
+  await startupTimeline.step('p1_legacy_cleanup', () async {
+    await removeLegacyNotificationData();
+    await removeLegacyPlainCaches();
+  });
   final store = Store<AppState, AppStateBuilder, AppActions>(
     appReducerBuilder.build(),
     AppState((b) => b.settingsState.replace(_startupSettingsState)),

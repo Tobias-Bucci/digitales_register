@@ -38,6 +38,24 @@ LocalDataEntry _preferenceEntry(
           _removePreference('$namespace:${account.storageKey}'),
     );
 
+/// A page cache in the secure storage (#169). It also removes a plain-text
+/// copy an older version may have left behind.
+LocalDataEntry _pageCacheEntry(String id, String namespace) => LocalDataEntry(
+      id: id,
+      category: LocalDataCategory.appOwnedCache,
+      deletedBy: {
+        LocalDataTrigger.removeAccount,
+        LocalDataTrigger.deleteData,
+        LocalDataTrigger.stopSaving,
+      },
+      gatedByNoDataSaving: true,
+      deleteFor: (account) async {
+        await secureStorage.delete(
+            key: accountCacheKey(namespace, account.scope));
+        await _removePreference('$namespace:${account.storageKey}');
+      },
+    );
+
 /// The places the app keeps data of an account, and what deletes each.
 ///
 /// Not in the list on purpose: the settings shared by all accounts, the
@@ -54,39 +72,9 @@ final LocalDataInventory localDataInventory = LocalDataInventory([
         secureStorage.delete(key: escapeKey(account.storageKey)),
   ),
   // Caches that make the app faster: not kept while saving is off.
-  _preferenceEntry(
-    'homeworkSummaryCache',
-    'homeworkSummary',
-    category: LocalDataCategory.appOwnedCache,
-    deletedBy: {
-      LocalDataTrigger.removeAccount,
-      LocalDataTrigger.deleteData,
-      LocalDataTrigger.stopSaving,
-    },
-    gated: true,
-  ),
-  _preferenceEntry(
-    'classRegisterCache',
-    'classRegisterLessons',
-    category: LocalDataCategory.appOwnedCache,
-    deletedBy: {
-      LocalDataTrigger.removeAccount,
-      LocalDataTrigger.deleteData,
-      LocalDataTrigger.stopSaving,
-    },
-    gated: true,
-  ),
-  _preferenceEntry(
-    'courseMaterialsCache',
-    'courseMaterials',
-    category: LocalDataCategory.appOwnedCache,
-    deletedBy: {
-      LocalDataTrigger.removeAccount,
-      LocalDataTrigger.deleteData,
-      LocalDataTrigger.stopSaving,
-    },
-    gated: true,
-  ),
+  _pageCacheEntry('homeworkSummaryCache', 'homeworkSummary'),
+  _pageCacheEntry('classRegisterCache', 'classRegisterLessons'),
+  _pageCacheEntry('courseMaterialsCache', 'courseMaterials'),
   // What the user entered or wrote: deleted with the account and when data is
   // deleted, but not when saving of data is turned off.
   _preferenceEntry(

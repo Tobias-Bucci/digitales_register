@@ -6,6 +6,7 @@ import 'package:dr/account_scope.dart';
 import 'package:dr/app_state.dart';
 import 'package:dr/assessment_attachments.dart';
 import 'package:dr/middleware/middleware.dart';
+import 'package:dr/page_payload_cache.dart';
 import 'package:dr/study_data/study_data_service.dart';
 import 'package:dr/util.dart';
 import 'package:dr/wrapper.dart';
@@ -54,6 +55,11 @@ void main() {
     ]) {
       await prefs.setString('$namespace:$accountStorageKey', 'cached-data');
     }
+    final scope = AccountScope(url, user);
+    for (final namespace in legacyPlainCacheNamespaces) {
+      await secureStorage.write(
+          key: accountCacheKey(namespace, scope), value: 'cached-data');
+    }
 
     final store = createStore(
       initialState: AppState(),
@@ -72,6 +78,11 @@ void main() {
       'gradeDeadlineOverrides',
     ]) {
       expect(prefs.getString('$namespace:$accountStorageKey'), isNull);
+    }
+    for (final namespace in legacyPlainCacheNamespaces) {
+      expect(await secureStorage.read(key: accountCacheKey(namespace, scope)),
+          isNull,
+          reason: namespace);
     }
     final login = jsonDecode((await secureStorage.read(key: 'login'))!) as Map;
     expect((login['otherAccounts'] as List).single['user'], 'kept-user');

@@ -121,17 +121,22 @@ void main() {
 
   Future<SharedPreferences> prefs() => SharedPreferences.getInstance();
 
+  // The page caches live in the secure storage, keyed by the account's
+  // fileId (#169).
   List<String> cacheKeys() => [
-        'homeworkSummary:$storageKey',
-        'classRegisterLessons:$storageKey',
-        'courseMaterials:$storageKey',
+        for (final namespace in legacyPlainCacheNamespaces)
+          accountCacheKey(namespace, scope),
       ];
+
+  Future<bool> hasCache(String key) async =>
+      await secureStorage.read(key: key) != null;
 
   /// Puts something into every place the app keeps data of the account.
   Future<void> fillEverything() async {
     final p = await prefs();
     for (final key in cacheKeys()) {
-      await p.setString(key, jsonEncode({'payload': <Object?>[]}));
+      await secureStorage.write(
+          key: key, value: jsonEncode({'payload': <Object?>[]}));
     }
     await p.setString('gradeDeadlineOverrides:$storageKey', '{"count":1}');
     await p.setString('courseMaterialFileVersions:${scope.fileId}', '{}');
@@ -148,9 +153,8 @@ void main() {
   }
 
   Future<void> expectCachesGone() async {
-    final p = await prefs();
     for (final key in cacheKeys()) {
-      expect(p.containsKey(key), isFalse, reason: key);
+      expect(await hasCache(key), isFalse, reason: key);
     }
   }
 
@@ -172,10 +176,10 @@ void main() {
         () async {
       await store.actions.settingsActions.saveNoData(true);
 
-      await pagePayloadCacheService.save('homeworkSummary:$storageKey',
+      await pagePayloadCacheService.save(cacheKeys()[0],
           PagePayloadSnapshot<String>.fromPayload('<html></html>'));
       await classRegisterCacheService.save(
-          'classRegisterLessons:$storageKey',
+          cacheKeys()[1],
           ClassRegisterPayloadSnapshot.fromPayload(
               const <Map<String, dynamic>>[]));
       final refreshed = await refreshHomeworkSummaryHtmlPayload();
@@ -183,6 +187,9 @@ void main() {
       // The page is still shown, it is only not kept.
       expect(refreshed, isNotNull);
       expect(session.sent, isNotEmpty);
+      for (final key in cacheKeys()) {
+        expect(await hasCache(key), isFalse, reason: key);
+      }
       expect((await prefs()).getKeys().where((k) => k.contains(':')), isEmpty);
     });
 
@@ -193,6 +200,9 @@ void main() {
       await refreshClassRegisterLessonPayload();
       await refreshCourseMaterialsPayload();
 
+      for (final key in cacheKeys()) {
+        expect(await hasCache(key), isFalse, reason: key);
+      }
       expect((await prefs()).getKeys().where((k) => k.contains(':')), isEmpty);
     });
 
@@ -202,19 +212,55 @@ void main() {
 
       await refreshHomeworkSummaryHtmlPayload();
 
-      expect(
-          (await prefs()).containsKey('homeworkSummary:$storageKey'), isTrue);
+      expect(await hasCache(cacheKeys()[0]), isTrue);
     });
 
     test('and not after data was deleted, whatever finishes later', () async {
       await store.actions.deleteData();
 
       await refreshHomeworkSummaryHtmlPayload();
-      await pagePayloadCacheService.save('homeworkSummary:$storageKey',
+      await pagePayloadCacheService.save(cacheKeys()[0],
           PagePayloadSnapshot<String>.fromPayload('<html></html>'));
 
+      expect(await hasCache(cacheKeys()[0]), isFalse);
+    });
+  });
+
+  group('page caches (#169)', () {
+    test('are encrypted and their keys name neither user nor school', () {
+      for (final key in cacheKeys()) {
+        expect(key, isNot(contains('max')), reason: key);
+        expect(key, isNot(contains('example')), reason: key);
+        expect(key, contains(scope.fileId), reason: key);
+      }
+    });
+
+    test('a refresh writes the secure storage, not SharedPreferences',
+        () async {
+      await refreshHomeworkSummaryHtmlPayload();
+
+      expect(await hasCache(cacheKeys()[0]), isTrue);
+      expect((await prefs()).getKeys().where((k) => k.contains(':')), isEmpty);
       expect(
-          (await prefs()).containsKey('homeworkSummary:$storageKey'), isFalse);
+          (await loadCachedHomeworkSummaryHtmlPayload())?.payload, isNotNull);
+    });
+
+    test('the plain caches of older versions are removed once', () async {
+      final p = await prefs();
+      for (final namespace in legacyPlainCacheNamespaces) {
+        await p.setString('$namespace:$storageKey', '{}');
+      }
+      await p.setString('gradeDeadlineOverrides:$storageKey', '{}');
+      await p.setString('courseMaterialFileVersions:${scope.fileId}', '{}');
+
+      await removeLegacyPlainCaches();
+
+      for (final namespace in legacyPlainCacheNamespaces) {
+        expect(p.containsKey('$namespace:$storageKey'), isFalse);
+      }
+      expect(p.containsKey('gradeDeadlineOverrides:$storageKey'), isTrue);
+      expect(
+          p.containsKey('courseMaterialFileVersions:${scope.fileId}'), isTrue);
     });
   });
 
@@ -237,12 +283,13 @@ void main() {
 
     test('leaves the caches of another account alone', () async {
       await fillEverything();
-      final other = getStorageKey('anna', session.loginAddress);
-      await (await prefs()).setString('homeworkSummary:$other', '{}');
+      final other =
+          accountCacheKey('homeworkSummary', AccountScope(_school, 'anna'));
+      await secureStorage.write(key: other, value: '{}');
 
       await store.actions.settingsActions.saveNoData(true);
 
-      expect((await prefs()).getString('homeworkSummary:$other'), '{}');
+      expect(await secureStorage.read(key: other), '{}');
     });
   });
 
@@ -282,9 +329,8 @@ void main() {
       final other = AccountScope(_school, 'anna');
       await studyDataService.save(
           other, const StudyData(notes: {'assessment-1': 'anna'}));
-      final otherKey = getStorageKey('anna', session.loginAddress);
-      final p = await prefs();
-      await p.setString('homeworkSummary:$otherKey', '{}');
+      final otherKey = accountCacheKey('homeworkSummary', other);
+      await secureStorage.write(key: otherKey, value: '{}');
       File('${attachments.path}/${other.fileId}/1_a.pdf')
         ..createSync(recursive: true)
         ..writeAsStringSync('anna file');
@@ -292,7 +338,7 @@ void main() {
       await store.actions.deleteData();
 
       expect((await studyDataService.load(other)).notes, isNotEmpty);
-      expect(p.getString('homeworkSummary:$otherKey'), '{}');
+      expect(await secureStorage.read(key: otherKey), '{}');
       expect(File('${attachments.path}/${other.fileId}/1_a.pdf').existsSync(),
           isTrue);
     });
@@ -576,9 +622,9 @@ void main() {
       final source =
           File('lib/middleware/page_payloads.dart').readAsStringSync();
       for (final namespace in [
-        "'homeworkSummary:",
-        "'classRegisterLessons:",
-        "'courseMaterials:",
+        "accountCacheKey('homeworkSummary'",
+        "accountCacheKey('classRegisterLessons'",
+        "accountCacheKey('courseMaterials'",
       ]) {
         expect(source, contains(namespace), reason: namespace);
       }
