@@ -198,4 +198,26 @@ void main() {
     expect(find.textContaining('currently unavailable'), findsOneWidget);
     expect(tester.takeException(), isNull);
   });
+
+  testWidgets('the demo is named instead of "no signed-in account" (#171)',
+      (tester) async {
+    for (final demo in [false, true]) {
+      final service = _SettingsService();
+      addTearDown(service.dispose);
+      final store = createStore(
+          initialState: AppState((b) => b.settingsState.languageCode = 'en'));
+      await pumpApp(tester,
+          store: store,
+          home: Scaffold(
+              body: SingleChildScrollView(
+                  child: SchoolNotificationSettings(
+                      service: service, demoMode: demo))));
+      await tester.pumpAndSettle();
+      expect(find.text('Settings for: Demo'),
+          demo ? findsOneWidget : findsNothing);
+      expect(find.text('Settings for: No signed-in account'),
+          demo ? findsNothing : findsOneWidget);
+      await tester.pumpWidget(const SizedBox());
+    }
+  });
 }

@@ -1412,7 +1412,7 @@ class _SettingsPageWidgetState extends State<SettingsPageWidget> {
         _buildTutorialSection(l10n),
         // The web app has no Firebase, no notifications and no reminders.
         _buildPrivacySection(l10n),
-        if (!kIsWeb) const SchoolNotificationSettings(),
+        if (!kIsWeb) SchoolNotificationSettings(demoMode: widget.vm.demoMode),
         if (!kIsWeb)
           ReminderSettings(
             mensaEnabled: widget.vm.mensaReminderEnabled,

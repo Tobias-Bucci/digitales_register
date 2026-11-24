@@ -75,14 +75,7 @@ Future<ClassRegisterPayloadSnapshot?>
 
 Future<ClassRegisterPayloadSnapshot?> _refreshClassRegisterLessonPayload(
     _Session session) async {
-  if (session.wrapper.demoMode) {
-    final snapshot = ClassRegisterPayloadSnapshot.fromPayload(
-      const <Map<String, dynamic>>[],
-    );
-    await classRegisterCacheService.save(
-        _classRegisterCacheKey(session), snapshot);
-    return snapshot;
-  }
+  // The demo answers both requests locally (lib/demo.dart).
   await session.send(
     'register/student?_=${DateTime.now().millisecondsSinceEpoch}',
     method: 'GET',

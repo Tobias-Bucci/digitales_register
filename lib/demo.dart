@@ -213,6 +213,8 @@ class _DemoStore {
         return _removeFutureAbsence(args);
       case 'api/student/dashboard/absence_reason':
         return _justifyAbsence(args);
+      case 'api/lesson/student':
+        return _buildClassRegisterLessons();
       case 'api/calendar/student':
         return _buildCalendarResponse(args);
       case 'api/profile/get':
@@ -1465,8 +1467,8 @@ $weeks  </div>
       'teachers': <Map<String, Object?>>[
         <String, Object?>{
           'id': 1,
-          'firstName': _text('teacherPlaceholderFirst'),
-          'lastName': _text('teacherPlaceholderLast'),
+          'firstName': _demoTeacherOf(subject.id).$1,
+          'lastName': _demoTeacherOf(subject.id).$2,
         },
       ],
       'teachersToNotify': <Object>[],
@@ -1487,7 +1489,7 @@ $weeks  </div>
       'rooms': <Map<String, Object?>>[
         <String, Object?>{
           'id': 1,
-          'name': _text('roomPlaceholder'),
+          'name': _demoRooms[subject.name] ?? 'Aula 12',
         },
       ],
       'readOnly': true,
@@ -1501,6 +1503,32 @@ $weeks  </div>
       'observations': <Object>[],
       'absenceOpenAbsencesStudents': <Object>[],
     };
+  }
+
+  /// The class register of the demo class: the lessons of the last two weeks,
+  /// each with its topic (#171), so the page shows what it is for.
+  List<Map<String, Object?>> _buildClassRegisterLessons() {
+    final today = _today();
+    final lessons = <Map<String, Object?>>[];
+    for (var back = 0; back < 14; back++) {
+      final date = today.subtract(Duration(days: back));
+      if (!_isVenetoSchoolDay(date)) continue;
+      for (final lesson in _calendarTemplateForWeekday(date.weekday)) {
+        final topics = _demoTopics[lesson.subject] ?? const ['Ripasso'];
+        lessons.add(<String, Object?>{
+          ..._buildCalendarLesson(date, lesson),
+          'lessonTypeName': 'Lezione',
+          'lessonContents': <Map<String, Object?>>[
+            <String, Object?>{
+              'name': topics[(date.day + lesson.period) % topics.length],
+            },
+          ],
+          'signedByOne': true,
+          'hasToBeSigned': true,
+        });
+      }
+    }
+    return lessons;
   }
 
   List<Map<String, Object?>> _calendarHomeworkExamsForLesson(
@@ -1704,7 +1732,7 @@ class _DemoSubject {
         'typeId': 19,
         'typeName': _demoGradeTypeText('Plus', language),
         'cancelled': 0,
-        'created': _demoCreatedText(language, firstDate),
+        'created': _demoCreatedText(language, firstDate, subjectId: id),
         'subjectId': id,
         'classId': 1,
         'studentId': 1,
@@ -1776,7 +1804,7 @@ class _DemoGrade {
       'description': '',
       'date': _dateOnly(date),
       'cancelled': false,
-      'created': _demoCreatedText(language, date),
+      'created': _demoCreatedText(language, date, subjectId: subjectId),
       'subjectId': subjectId,
       'classId': 1,
       'studentId': 1,
@@ -1892,15 +1920,65 @@ String _timestamp(DateTime date) =>
 String _isoDateTime(DateTime date) =>
     DateTime(date.year, date.month, date.day, 8).toIso8601String();
 
-String _demoCreatedText(String language, DateTime date) {
+String _demoCreatedText(String language, DateTime date,
+    {required int subjectId}) {
   final dateText = DateFormat('dd.MM.yyyy').format(date);
+  final (first, last) = _demoTeacherOf(subjectId);
+  final teacher = '$first $last';
   return switch (language) {
-    'en' => 'Entered by Teacher Placeholder on $dateText',
-    'it' => 'Inserito da Docente segnaposto il $dateText',
-    'lld' => 'Inserì da insignante placeholder ai $dateText',
-    _ => 'Von Lehrperson Platzhalter am $dateText eingetragen',
+    'en' => 'Entered by $teacher on $dateText',
+    'it' => 'Inserito da $teacher il $dateText',
+    'lld' => 'Inserì da $teacher ai $dateText',
+    _ => 'Von $teacher am $dateText eingetragen',
   };
 }
+
+/// Invented teachers of the demo class, one per subject (#171). A store
+/// reviewer should see names, not "Teacher Placeholder".
+const _demoTeachers = <int, (String, String)>{
+  1: ('Giulia', 'Ferrari'),
+  2: ('Marco', 'Bianchi'),
+  3: ('Sarah', 'Collins'),
+  4: ('Paolo', 'Moretti'),
+  5: ('Luca', 'Romano'),
+  6: ('Andrea', 'Gallo'),
+  7: ('Elena', 'Costa'),
+  8: ('Davide', 'Conti'),
+  9: ('Martina', 'Ricci'),
+  10: ('Francesca', 'Marino'),
+};
+
+(String, String) _demoTeacherOf(int subjectId) =>
+    _demoTeachers[subjectId] ?? _demoTeachers[1]!;
+
+/// Lesson topics of the demo class register, by subject, in the language
+/// the demo school teaches in.
+const _demoTopics = <String, List<String>>{
+  'Italiano': ['Il Decameron: la cornice', 'Analisi del testo poetico'],
+  'Matematica': ['Limiti di funzioni', 'Esercizi sulle derivate'],
+  'Inglese': ['Reading comprehension', 'Present perfect vs past simple'],
+  'Storia': ['La prima guerra mondiale', 'Il primo dopoguerra'],
+  'Informatica': ['Query SQL con JOIN', 'Normalizzazione delle tabelle'],
+  'Sistemi e reti': ['Indirizzamento IPv4', 'Subnetting'],
+  'TPSIT': ['Thread e concorrenza', 'Socket in Java'],
+  'Gestione progetto': ['Diagramma di Gantt', 'Analisi dei rischi'],
+  'Scienze motorie': ['Pallavolo: il bagher', 'Corsa di resistenza'],
+  'Religione': ['Etica e tecnologia'],
+};
+
+/// Rooms of the demo class, by subject.
+const _demoRooms = <String, String>{
+  'Italiano': 'Aula 12',
+  'Matematica': 'Aula 12',
+  'Inglese': 'Aula 14',
+  'Storia': 'Aula 12',
+  'Informatica': 'Lab 2',
+  'Sistemi e reti': 'Lab 3',
+  'TPSIT': 'Lab 2',
+  'Gestione progetto': 'Aula 14',
+  'Scienze motorie': 'Palestra',
+  'Religione': 'Aula 12',
+};
 
 String _demoGradeTypeText(String value, String language) {
   const translations = <String, Map<String, String>>{
@@ -2791,23 +2869,5 @@ const Map<String, Map<String, String>> _demoTranslations =
     'en': 'Very positive',
     'it': 'Molto positivo',
     'lld': 'Massa positif',
-  },
-  'teacherPlaceholderFirst': {
-    'de': 'Lehrperson',
-    'en': 'Teacher',
-    'it': 'Docente',
-    'lld': 'Insignante',
-  },
-  'teacherPlaceholderLast': {
-    'de': 'Platzhalter',
-    'en': 'Placeholder',
-    'it': 'Segnaposto',
-    'lld': 'Placeholder',
-  },
-  'roomPlaceholder': {
-    'de': 'Raum Platzhalter',
-    'en': 'Room Placeholder',
-    'it': 'Aula segnaposto',
-    'lld': 'Aula placeholder',
   },
 };

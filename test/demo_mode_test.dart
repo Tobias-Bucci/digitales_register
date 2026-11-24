@@ -119,6 +119,28 @@ void main() {
     expect(certificate, contains('Durchschnitt'));
   });
 
+  test('the demo class register lists recent lessons with topics (#171)',
+      () async {
+    appClock.setDemoMode(true);
+    addTearDown(() => appClock.setDemoMode(false));
+
+    final lessons = await getDemoResponse(
+      'api/lesson/student',
+      const <String, Object?>{},
+    ) as List<dynamic>;
+
+    expect(lessons, isNotEmpty);
+    for (final lesson in lessons.cast<Map<String, Object?>>()) {
+      final contents = lesson['lessonContents']! as List<dynamic>;
+      expect(contents, isNotEmpty);
+      final teacher = (lesson['teachers']! as List<dynamic>).single as Map;
+      expect('${teacher['firstName']} ${teacher['lastName']}',
+          isNot(contains('Placeholder')));
+      final room = (lesson['rooms']! as List<dynamic>).single as Map;
+      expect(room['name'], isNot(contains('Placeholder')));
+    }
+  });
+
   test('the demo answers the homework summary with the coming weeks', () async {
     appClock.setDemoMode(true);
     addTearDown(() => appClock.setDemoMode(false));

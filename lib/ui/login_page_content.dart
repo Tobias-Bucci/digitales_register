@@ -25,13 +25,13 @@ import 'package:dr/container/login_page.dart';
 import 'package:dr/external_links.dart';
 import 'package:dr/i18n/app_localizations.dart';
 import 'package:dr/legal_links.dart';
+import 'package:dr/school_search.dart';
 import 'package:dr/theme/auth_tokens.dart';
 import 'package:dr/ui/auth_layout.dart';
 import 'package:dr/util.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
-import 'package:fuzzy/fuzzy.dart';
 import 'package:tuple/tuple.dart';
 
 typedef LoginCallback = void Function(String user, String pass, String url);
@@ -556,13 +556,7 @@ class _LoginPageContentState extends State<LoginPageContent>
             return [textEditingValue.text];
           }
           return [
-            ...Fuzzy(
-              widget.vm.servers.keys.toList(),
-              options: FuzzyOptions<String>(
-                maxPatternLength: 256,
-                tokenize: true,
-              ),
-            ).search(textEditingValue.text).take(15).map((e) => e.item),
+            ...searchSchools(widget.vm.servers.keys, textEditingValue.text),
             otherSchool,
           ];
         },

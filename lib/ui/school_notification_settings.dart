@@ -9,8 +9,16 @@ import 'package:flutter/material.dart';
 import 'package:responsive_scaffold/responsive_scaffold.dart';
 
 class SchoolNotificationSettings extends StatefulWidget {
-  const SchoolNotificationSettings({super.key, this.service});
+  const SchoolNotificationSettings({
+    super.key,
+    this.service,
+    this.demoMode = false,
+  });
   final SchoolNotificationService? service;
+
+  /// The demo account has no saved sign-in, so the service knows no active
+  /// account; the settings then name the demo instead of "no account" (#171).
+  final bool demoMode;
 
   @override
   State<SchoolNotificationSettings> createState() =>
@@ -102,7 +110,9 @@ class _SchoolNotificationSettingsState extends State<SchoolNotificationSettings>
           padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
           child: Text(l10n.text('schoolNotifications.settings.account', args: {
             'account': service.activeAccountLabel ??
-                l10n.text('schoolNotifications.settings.noAccount'),
+                (widget.demoMode
+                    ? l10n.text('settings.demo.section')
+                    : l10n.text('schoolNotifications.settings.noAccount')),
           })),
         ),
         SwitchListTile.adaptive(
