@@ -1,14 +1,25 @@
 import 'dart:io';
 
+import 'package:dr/host_platform.dart';
 import 'package:dr/school_notification_service.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 void main() {
   test('Linux and Windows offer no system notifications', () {
-    expect(schoolNotificationsSupported(),
-        Platform.isAndroid || Platform.isIOS || Platform.isMacOS);
-    if (Platform.isLinux || Platform.isWindows) {
-      expect(SchoolNotificationService().supported, isFalse);
+    final original = HostPlatform.debugOverride;
+    addTearDown(() => HostPlatform.debugOverride = original);
+    for (final os in HostOperatingSystem.values) {
+      HostPlatform.debugOverride = os;
+      final expected = {
+        HostOperatingSystem.android,
+        HostOperatingSystem.iOS,
+        HostOperatingSystem.macOS,
+      }.contains(os);
+      expect(schoolNotificationsSupported(), expected, reason: os.name);
+    }
+    for (final os in [HostOperatingSystem.linux, HostOperatingSystem.windows]) {
+      HostPlatform.debugOverride = os;
+      expect(SchoolNotificationService().supported, isFalse, reason: os.name);
     }
   });
 

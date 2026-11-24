@@ -15,12 +15,10 @@ permissions:
 jobs:
   checks:
     name: Format, analyze and test
-    # The suite is developed and green on Windows. On a Linux host about 20
-    # tests still assume Windows behaviour (#172), so it runs on Windows.
-    runs-on: windows-latest
-    defaults:
-      run:
-        shell: bash
+    # The tests pin HostPlatform to Windows (test/flutter_test_config.dart)
+    # and load Roboto whatever its file case (#172), so they give the same
+    # results on a Linux runner as on a Windows machine.
+    runs-on: ubuntu-22.04
     steps:
       - uses: actions/checkout@v4
       - name: Set up Flutter

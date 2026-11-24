@@ -19,19 +19,16 @@
 // text, long labels wrap to two lines and end with an ellipsis, and nothing
 // is cut. The normal size and the collapsed tablet sidebar stay as they were.
 
-import 'dart:io';
-
 import 'package:collapsible_sidebar/collapsible_sidebar.dart';
 import 'package:dr/app_state.dart';
-import 'package:dr/i18n/app_language.dart';
 import 'package:dr/i18n/app_localizations.dart';
 import 'package:dr/middleware/middleware.dart';
 import 'package:dr/ui/sidebar.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/rendering.dart';
-import 'package:flutter/services.dart' show ByteData, FontLoader;
 import 'package:flutter_test/flutter_test.dart';
 
+import '../support/fonts.dart';
 import '../support/test_harness.dart';
 
 const _labelKeys = [
@@ -47,23 +44,6 @@ const _labelKeys = [
   'sidebar.settings',
   'sidebar.logout',
 ];
-
-/// Real Roboto metrics, so fit checks match an Android phone rather than the
-/// test font's square glyphs (as in test/ui/auth_search_and_fit_test.dart).
-Future<void> _loadRoboto(WidgetTester tester) => tester.runAsync(() async {
-      final root = Platform.environment['FLUTTER_ROOT'] ??
-          File(Platform.resolvedExecutable).parent.parent.parent.parent.path;
-      final fonts = '$root/bin/cache/artifacts/material_fonts';
-      final loader = FontLoader('Roboto');
-      for (final weight in ['regular', 'medium', 'bold']) {
-        final file = File('$fonts/roboto-$weight.ttf');
-        if (file.existsSync()) {
-          loader.addFont(
-              Future.value(ByteData.sublistView(file.readAsBytesSync())));
-        }
-      }
-      await loader.load();
-    });
 
 class _Calls {
   int settings = 0;
@@ -110,7 +90,7 @@ Future<_Calls> _pumpSidebar(
   ThemeMode themeMode = ThemeMode.light,
   bool? expanded,
 }) async {
-  await _loadRoboto(tester);
+  await loadRoboto(tester);
   tester.view.physicalSize = size;
   tester.view.devicePixelRatio = 1;
   addTearDown(tester.view.reset);

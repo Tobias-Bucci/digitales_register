@@ -17,7 +17,7 @@
 
 import 'dart:io' as io show Platform;
 
-import 'package:flutter/foundation.dart' show kIsWeb;
+import 'package:flutter/foundation.dart' show kIsWeb, visibleForTesting;
 
 /// `dart:io`'s [io.Platform], safe to call in the web build.
 ///
@@ -28,13 +28,35 @@ import 'package:flutter/foundation.dart' show kIsWeb;
 // A namespace keeps the call sites readable (HostPlatform.isAndroid).
 // ignore: avoid_classes_with_only_static_members
 abstract final class HostPlatform {
-  static bool get isAndroid => !kIsWeb && io.Platform.isAndroid;
-  static bool get isIOS => !kIsWeb && io.Platform.isIOS;
-  static bool get isMacOS => !kIsWeb && io.Platform.isMacOS;
-  static bool get isWindows => !kIsWeb && io.Platform.isWindows;
-  static bool get isLinux => !kIsWeb && io.Platform.isLinux;
+  /// The operating system the `isX` getters report instead of the real one.
+  ///
+  /// Only tests set it (see `test/flutter_test_config.dart`), so the suite
+  /// takes the same platform paths on every host. File paths, the
+  /// environment and the version still come from the real host.
+  @visibleForTesting
+  static HostOperatingSystem? debugOverride;
+
+  static bool get isAndroid =>
+      _is(HostOperatingSystem.android, () => io.Platform.isAndroid);
+  static bool get isIOS =>
+      _is(HostOperatingSystem.iOS, () => io.Platform.isIOS);
+  static bool get isMacOS =>
+      _is(HostOperatingSystem.macOS, () => io.Platform.isMacOS);
+  static bool get isWindows =>
+      _is(HostOperatingSystem.windows, () => io.Platform.isWindows);
+  static bool get isLinux =>
+      _is(HostOperatingSystem.linux, () => io.Platform.isLinux);
   static String get pathSeparator => kIsWeb ? '/' : io.Platform.pathSeparator;
   static Map<String, String> get environment =>
       kIsWeb ? const <String, String>{} : io.Platform.environment;
   static String get version => kIsWeb ? 'web' : io.Platform.version;
+
+  static bool _is(HostOperatingSystem os, bool Function() real) {
+    if (kIsWeb) return false;
+    final override = debugOverride;
+    return override == null ? real() : override == os;
+  }
 }
+
+/// The native operating systems [HostPlatform] distinguishes.
+enum HostOperatingSystem { android, iOS, macOS, windows, linux }

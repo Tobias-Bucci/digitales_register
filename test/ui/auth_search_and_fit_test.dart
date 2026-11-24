@@ -1,4 +1,3 @@
-import 'dart:io';
 import 'dart:math' as math;
 
 import 'package:dr/app_state.dart';
@@ -7,6 +6,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 
+import '../support/fonts.dart';
 import '../support/test_harness.dart';
 import 'auth_motion_test.dart' show field, host;
 
@@ -75,23 +75,6 @@ ScrollPosition pagePosition(WidgetTester tester) => tester
             matching: find.byType(Scrollable))
         .first)
     .position;
-
-/// Real Roboto metrics, so fit checks match an Android phone rather than the
-/// test font's square glyphs.
-Future<void> loadRoboto(WidgetTester tester) => tester.runAsync(() async {
-      final root = Platform.environment['FLUTTER_ROOT'] ??
-          File(Platform.resolvedExecutable).parent.parent.parent.parent.path;
-      final fonts = '$root/bin/cache/artifacts/material_fonts';
-      final loader = FontLoader('Roboto');
-      for (final weight in ['regular', 'medium', 'bold']) {
-        final file = File('$fonts/roboto-$weight.ttf');
-        if (file.existsSync()) {
-          loader.addFont(
-              Future.value(ByteData.sublistView(file.readAsBytesSync())));
-        }
-      }
-      await loader.load();
-    });
 
 Future<void> pumpPhone(
   WidgetTester tester, {

@@ -1,6 +1,5 @@
 import 'dart:async';
 import 'dart:convert';
-import 'dart:io';
 
 import 'package:badges/badges.dart' as badge;
 import 'package:built_collection/built_collection.dart';
@@ -17,6 +16,7 @@ import 'package:dr/middleware/middleware.dart';
 import 'package:dr/theme/app_palette.dart';
 import 'package:dr/theme_controller.dart';
 import 'package:dr/ui/app_navigation.dart';
+import 'package:dr/ui/dashboard_columns.dart';
 import 'package:dr/ui/export_page.dart';
 import 'package:dr/ui/glass_page.dart';
 import 'package:dr/ui/glass_segmented_control.dart';
@@ -24,16 +24,15 @@ import 'package:dr/ui/glass_surface.dart';
 import 'package:dr/ui/messages.dart';
 import 'package:dr/ui/messages_new.dart';
 import 'package:dr/utc_date_time.dart';
-import 'package:dr/ui/dashboard_columns.dart';
 import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/rendering.dart' show RenderFlex;
-import 'package:flutter/services.dart' show ByteData, FontLoader;
 import 'package:flutter_test/flutter_test.dart';
 import 'package:mocktail/mocktail.dart';
 import 'package:quill_delta_viewer/quill_delta_viewer.dart';
 
 import '../../support/fixtures.dart';
+import '../../support/fonts.dart';
 import '../../support/test_harness.dart';
 
 const _phone = Size(412, 900);
@@ -164,23 +163,6 @@ Future<void> _tap(WidgetTester tester, Finder finder) async {
   await tester.tap(finder);
   await settleFor(tester, duration: const Duration(milliseconds: 500));
 }
-
-/// Real Roboto metrics, so fit checks match an Android phone rather than the
-/// test font's square glyphs (as in test/ui/auth_search_and_fit_test.dart).
-Future<void> _loadRoboto(WidgetTester tester) => tester.runAsync(() async {
-      final root = Platform.environment['FLUTTER_ROOT'] ??
-          File(Platform.resolvedExecutable).parent.parent.parent.parent.path;
-      final fonts = '$root/bin/cache/artifacts/material_fonts';
-      final loader = FontLoader('Roboto');
-      for (final weight in ['regular', 'medium', 'bold']) {
-        final file = File('$fonts/roboto-$weight.ttf');
-        if (file.existsSync()) {
-          loader.addFont(
-              Future.value(ByteData.sublistView(file.readAsBytesSync())));
-        }
-      }
-      await loader.load();
-    });
 
 void main() {
   setUp(() async {
@@ -1019,7 +1001,7 @@ void main() {
       String languageCode = 'de',
       ThemeMode themeMode = ThemeMode.light,
     }) async {
-      await _loadRoboto(tester);
+      await loadRoboto(tester);
       tester.platformDispatcher.textScaleFactorTestValue = scale;
       addTearDown(tester.platformDispatcher.clearTextScaleFactorTestValue);
       await _pumpMessages(
@@ -1147,7 +1129,7 @@ void main() {
       required double scale,
       String languageCode = 'de',
     }) async {
-      await _loadRoboto(tester);
+      await loadRoboto(tester);
       tester.platformDispatcher.textScaleFactorTestValue = scale;
       addTearDown(tester.platformDispatcher.clearTextScaleFactorTestValue);
       await _pumpMessages(
@@ -1186,7 +1168,7 @@ void main() {
 
     testWidgets('stay side by side at the normal size', (tester) async {
       final calls = _Calls();
-      await _loadRoboto(tester);
+      await loadRoboto(tester);
       await _pumpMessages(
         tester,
         newDesign: false,

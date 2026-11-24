@@ -17,6 +17,7 @@ import 'package:flutter/services.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:flutter_test/flutter_test.dart';
 
+import '../support/fonts.dart';
 import '../support/test_harness.dart';
 
 Finder field(String label) => find.byWidgetPredicate(
@@ -1010,19 +1011,13 @@ Future<void> loadPreviewFonts(WidgetTester tester) => tester.runAsync(() async {
         await loader.load();
       }
 
-      final flutterRoot = Platform.environment['FLUTTER_ROOT'];
-      if (flutterRoot != null) {
-        final root = '$flutterRoot/bin/cache/artifacts/material_fonts';
-        final roboto = [
-          for (final weight in ['regular', 'medium', 'bold'])
-            '$root/roboto-$weight.ttf'
-        ];
-        await load('Roboto', roboto);
-        // No SF fonts here; the iOS preview checks layout and controls only.
-        await load('CupertinoSystemText', roboto);
-        await load('CupertinoSystemDisplay', roboto);
-        await load('MaterialIcons', ['$root/materialicons-regular.otf']);
-      }
+      final roboto = [for (final name in robotoFiles) materialFont(name).path];
+      await load('Roboto', roboto);
+      // No SF fonts here; the iOS preview checks layout and controls only.
+      await load('CupertinoSystemText', roboto);
+      await load('CupertinoSystemDisplay', roboto);
+      await load(
+          'MaterialIcons', [materialFont('materialicons-regular.otf').path]);
       const windowsFonts = 'C:/Windows/Fonts';
       await load('Segoe UI', [
         for (final file in ['segoeuil', 'segoeui', 'seguisb', 'segoeuib'])
