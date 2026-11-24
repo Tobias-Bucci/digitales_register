@@ -32,7 +32,6 @@ import 'package:dr/util.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
-import 'package:tuple/tuple.dart';
 
 typedef LoginCallback = void Function(String user, String pass, String url);
 typedef ChangePassCallback = void Function(
@@ -117,7 +116,7 @@ class _LoginPageContentState extends State<LoginPageContent>
   /// keyboard, the header folds away instead of the page scrolling.
   bool _headerCollapsed = false;
   Timer? _headerTimer;
-  Tuple2<String, String?>? selectedPresetServer;
+  (String, String?)? selectedPresetServer;
   @override
   void initState() {
     safeMode = widget.vm.safeMode;
@@ -131,7 +130,7 @@ class _LoginPageContentState extends State<LoginPageContent>
             Uri.parse(entry.value).host == Uri.parse(widget.vm.url!).host,
       );
       if (school != null) {
-        selectedPresetServer = Tuple2(school.key, school.value);
+        selectedPresetServer = (school.key, school.value);
         _schoolController.text = school.key;
       } else {
         _customSchoolSelected = true;
@@ -308,7 +307,7 @@ class _LoginPageContentState extends State<LoginPageContent>
     }
   }
 
-  String get url => selectedPresetServer?.item2 ?? _urlController.text;
+  String get url => selectedPresetServer?.$2 ?? _urlController.text;
 
   String _submitUrl() {
     final username = _usernameController.text.trim();
@@ -378,10 +377,10 @@ class _LoginPageContentState extends State<LoginPageContent>
       if (custom) {
         _useCustomAddress();
       } else {
-        selectedPresetServer = Tuple2(option, widget.vm.servers[option]);
+        selectedPresetServer = (option, widget.vm.servers[option]);
         _customSchoolSelected = false;
         _addressVisible = false;
-        _urlController.text = selectedPresetServer!.item2!;
+        _urlController.text = selectedPresetServer!.$2!;
       }
     });
     // Hand focus on (the keyboard stays up) instead of dropping it, which
@@ -400,7 +399,7 @@ class _LoginPageContentState extends State<LoginPageContent>
   void _onSchoolChanged(String value) {
     _suggestionsOpen.value = value.trim().isNotEmpty;
     final server = widget.vm.servers[value];
-    final preset = server == null ? null : Tuple2(value, server);
+    final preset = server == null ? null : (value, server);
     // Most keystrokes change neither the matched school nor the custom
     // flag; those only update the field (via [_schoolListenable]).
     if (preset == selectedPresetServer && !_customSchoolSelected) return;
@@ -409,7 +408,7 @@ class _LoginPageContentState extends State<LoginPageContent>
       selectedPresetServer = preset;
       if (preset != null) {
         _addressVisible = false;
-        _urlController.text = preset.item2;
+        _urlController.text = preset.$2;
       }
     });
   }
@@ -503,7 +502,7 @@ class _LoginPageContentState extends State<LoginPageContent>
         ),
         fieldViewBuilder:
             (context, textEditingController, focusNode, onFieldSubmitted) {
-          final preset = selectedPresetServer?.item2;
+          final preset = selectedPresetServer?.$2;
           return ListenableBuilder(
             listenable: _schoolListenable,
             builder: (context, _) {

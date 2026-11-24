@@ -23,7 +23,6 @@ import 'package:dr/data.dart';
 import 'package:dr/reminders/local_reminder_assessments.dart';
 import 'package:dr/utc_date_time.dart';
 import 'package:dr/util.dart';
-import 'package:tuple/tuple.dart';
 
 class AppSelectors {
   final _dashboardDaysSelector = _DashboardDaysSelector();
@@ -98,7 +97,7 @@ class SubjectGrades {
   /// Grades from the same day keep their own point (value and type) in server
   /// order instead of overwriting each other, so the chart and its selection
   /// show every assessment.
-  final List<MapEntry<UtcDateTime, Tuple2<int, String>>> grades;
+  final List<MapEntry<UtcDateTime, (int, String)>> grades;
   final String name;
 
   SubjectGrades(this.grades, this.name);
@@ -333,7 +332,7 @@ class _GradesChartSelector {
       final points = [
         for (final grade in grades)
           if (!grade.cancelled && grade.grade != null)
-            MapEntry(grade.date, Tuple2(grade.grade!, grade.type)),
+            MapEntry(grade.date, (grade.grade!, grade.type)),
       ];
       result[SubjectGrades(points, subject.name)] =
           chartSubjectTheme(state, subject.name);

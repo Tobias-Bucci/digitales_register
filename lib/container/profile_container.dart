@@ -21,19 +21,18 @@ import 'package:dr/app_state.dart';
 import 'package:dr/ui/profile.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_built_redux/flutter_built_redux.dart';
-import 'package:tuple/tuple.dart';
 
 class ProfileContainer extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return StoreConnection<AppState, AppActions,
-        Tuple4<bool, ProfileState, String?, bool>>(
+        (bool, ProfileState, String?, bool)>(
       builder: (context, vm, actions) {
         return Profile(
-          profileState: vm.item2,
-          baseUrl: vm.item3,
-          biometricAppLockEnabled: vm.item4,
-          noInternet: vm.item1,
+          profileState: vm.$2,
+          baseUrl: vm.$3,
+          biometricAppLockEnabled: vm.$4,
+          noInternet: vm.$1,
           setSendNotificationEmails:
               actions.profileActions.sendNotificationEmails.call,
           setBiometricAppLockEnabled:
@@ -46,7 +45,7 @@ class ProfileContainer extends StatelessWidget {
         );
       },
       connect: (AppState state) {
-        return Tuple4(
+        return (
           state.noInternet,
           state.profileState,
           state.url,

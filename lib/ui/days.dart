@@ -69,7 +69,6 @@ import 'package:intl/intl.dart';
 import 'package:responsive_scaffold/responsive_scaffold.dart';
 import 'package:scroll_to_index/scroll_to_index.dart';
 import 'package:shared_preferences/shared_preferences.dart';
-import 'package:tuple/tuple.dart';
 
 part 'days/dashboard_header.dart';
 part 'days/day_items.dart';

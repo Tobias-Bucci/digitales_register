@@ -40,18 +40,19 @@ class _FutureAbsenceDialogContainer extends StatelessWidget {
     return StoreConnection<
         AppState,
         AppActions,
-        Tuple4<
-            Map<UtcDateTime, Map<int, String>>,
-            Map<UtcDateTime, Map<int, String>>,
-            Map<int, Map<int, String>>,
-            Map<int, Map<int, String>>>>(
+        (
+          Map<UtcDateTime, Map<int, String>>,
+          Map<UtcDateTime, Map<int, String>>,
+          Map<int, Map<int, String>>,
+          Map<int, Map<int, String>>
+        )>(
       builder: (context, vm, actions) {
         return _FutureAbsenceDialog(
           sheet: sheet,
-          lessonStartTimesByDate: vm.item1,
-          lessonEndTimesByDate: vm.item2,
-          lessonStartTimesByWeekday: vm.item3,
-          lessonEndTimesByWeekday: vm.item4,
+          lessonStartTimesByDate: vm.$1,
+          lessonEndTimesByDate: vm.$2,
+          lessonStartTimesByWeekday: vm.$3,
+          lessonEndTimesByWeekday: vm.$4,
           onLoadCalendarWeek: (date) {
             final monday = toMonday(UtcDateTime.makeUtc(date));
             actions.calendarActions.setCurrentMonday(monday);
@@ -62,11 +63,11 @@ class _FutureAbsenceDialogContainer extends StatelessWidget {
       connect: (state) {
         final lessonTimesByDate = _collectLessonTimesByDate(state);
         final lessonTimesByWeekday = _collectLessonTimesByWeekday(state);
-        return Tuple4(
-          lessonTimesByDate.item1,
-          lessonTimesByDate.item2,
-          lessonTimesByWeekday.item1,
-          lessonTimesByWeekday.item2,
+        return (
+          lessonTimesByDate.$1,
+          lessonTimesByDate.$2,
+          lessonTimesByWeekday.$1,
+          lessonTimesByWeekday.$2,
         );
       },
     );
@@ -535,8 +536,7 @@ class _FutureAbsenceDialogState extends State<_FutureAbsenceDialog> {
 
 /// The start and end time of each lesson hour, by the key [keyOf] gives a
 /// day (its date or its weekday). The earliest day that has a time wins.
-Tuple2<Map<K, Map<int, String>>, Map<K, Map<int, String>>>
-    _collectLessonTimes<K>(
+(Map<K, Map<int, String>>, Map<K, Map<int, String>>) _collectLessonTimes<K>(
   AppState state,
   K Function(CalendarDay day) keyOf,
 ) {
@@ -584,18 +584,22 @@ Tuple2<Map<K, Map<int, String>>, Map<K, Map<int, String>>>
     }
   }
 
-  return Tuple2(lessonStarts, lessonEnds);
+  return (lessonStarts, lessonEnds);
 }
 
-Tuple2<Map<UtcDateTime, Map<int, String>>, Map<UtcDateTime, Map<int, String>>>
-    _collectLessonTimesByDate(AppState state) =>
-        _collectLessonTimes(state, (day) => day.date.stripTime());
+(
+  Map<UtcDateTime, Map<int, String>>,
+  Map<UtcDateTime, Map<int, String>>
+) _collectLessonTimesByDate(AppState state) =>
+    _collectLessonTimes(state, (day) => day.date.stripTime());
 
-Tuple2<Map<int, Map<int, String>>, Map<int, Map<int, String>>>
-    _collectLessonTimesByWeekday(AppState state) =>
-        _collectLessonTimes(state, (day) => day.date.weekday);
+(
+  Map<int, Map<int, String>>,
+  Map<int, Map<int, String>>
+) _collectLessonTimesByWeekday(AppState state) =>
+    _collectLessonTimes(state, (day) => day.date.weekday);
 
-Tuple2<Map<int, Map<int, String>>, Map<int, Map<int, String>>>
+(Map<int, Map<int, String>>, Map<int, Map<int, String>>)
     collectLessonTimesByWeekday(AppState state) {
   return _collectLessonTimesByWeekday(state);
 }

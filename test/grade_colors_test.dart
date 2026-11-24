@@ -6,7 +6,6 @@ import 'package:dr/ui/grades_chart.dart';
 import 'package:dr/utc_date_time.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:tuple/tuple.dart';
 
 void main() {
   test('orange is exactly 5.50 through 5.75 without rounding averages', () {
@@ -27,7 +26,7 @@ void main() {
   test('chart points use grade colors while lines retain subject colors', () {
     final date = UtcDateTime(2026, 10, 23);
     final graphs = {
-      SubjectGrades([MapEntry(date, const Tuple2(575, 'Test'))], 'Mathematik'):
+      SubjectGrades([MapEntry(date, const (575, 'Test'))], 'Mathematik'):
           SubjectTheme((b) => b
             ..color = 0xFF123456
             ..thick = 2),
@@ -38,7 +37,7 @@ void main() {
     expect(colored.fillColorFn!(0)?.g, 0x7C);
     expect(colored.seriesColor?.r, 0x12);
     expect(colored.measureFn(0), 5.75);
-    expect(colored.data.single.value.item1, 575);
+    expect(colored.data.single.value.$1, 575);
     expect(GradesChart.convert(graphs, AppPalette.light).single.fillColorFn,
         isNull);
   });

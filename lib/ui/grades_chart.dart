@@ -27,7 +27,6 @@ import 'package:dr/ui/grade_colors.dart';
 import 'package:dr/utc_date_time.dart';
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
-import 'package:tuple/tuple.dart';
 
 class _Selection {
   final String text;
@@ -45,11 +44,10 @@ class GradesChart extends StatelessWidget {
   /// new design has them. Legacy keeps black, white and grey.
   final bool newDesign;
   final ColorScheme scheme;
-  final List<
-      charts
-      .Series<MapEntry<UtcDateTime, Tuple2<int, String>>, UtcDateTime>> grades;
+  final List<charts.Series<MapEntry<UtcDateTime, (int, String)>, UtcDateTime>>
+      grades;
 
-  final ValueNotifier<Tuple2<UtcDateTime, BuiltList<_Selection>>?> selection =
+  final ValueNotifier<(UtcDateTime, BuiltList<_Selection>)?> selection =
       ValueNotifier(null);
 
   GradesChart({
@@ -79,9 +77,7 @@ class GradesChart extends StatelessWidget {
     return value.clamp(0, 255);
   }
 
-  static List<
-          charts
-          .Series<MapEntry<UtcDateTime, Tuple2<int, String>>, UtcDateTime>>
+  static List<charts.Series<MapEntry<UtcDateTime, (int, String)>, UtcDateTime>>
       convert(Map<SubjectGrades, SubjectTheme> data, ColorScheme scheme,
           {bool colorGrades = false}) {
     return data.entries.where((entry) => entry.value.thick != 0).map(
@@ -90,14 +86,13 @@ class GradesChart extends StatelessWidget {
         final strokeWidth = entry.value.thick;
         final color =
             AppPalette.subjectMarker(Color(entry.value.color), scheme);
-        return charts.Series<MapEntry<UtcDateTime, Tuple2<int, String>>,
-            UtcDateTime>(
+        return charts.Series<MapEntry<UtcDateTime, (int, String)>, UtcDateTime>(
           domainFn: (grade, _) => grade.key,
-          measureFn: (grade, _) => grade.value.item1 / 100,
+          measureFn: (grade, _) => grade.value.$1 / 100,
           data: s.grades,
           fillColorFn: colorGrades
               ? (grade, _) {
-                  final fill = gradeColor(grade.value.item1)!;
+                  final fill = gradeColor(grade.value.$1)!;
                   return charts.Color(
                       r: _channelValue(fill.r),
                       g: _channelValue(fill.g),
@@ -238,8 +233,8 @@ class GradesChart extends StatelessWidget {
                   changedListener: (model) {
                     UtcDateTime? allDate;
                     final selections = model.selectedDatum.map((datum) {
-                      final grade = datum.datum.value.item1 as int;
-                      final type = datum.datum.value.item2 as String;
+                      final grade = datum.datum.value.$1 as int;
+                      final type = datum.datum.value.$2 as String;
                       final subject = datum.series.displayName ?? '';
                       final color = datum.series.colorFn?.call(0) ??
                           charts.MaterialPalette.gray.shadeDefault;
@@ -259,7 +254,7 @@ class GradesChart extends StatelessWidget {
                     }).toBuiltList();
                     final selectedDate = allDate;
                     if (selectedDate != null) {
-                      selection.value = Tuple2(
+                      selection.value = (
                         selectedDate,
                         selections,
                       );
@@ -316,7 +311,7 @@ class GradesChart extends StatelessWidget {
             ),
           ),
           if (isFullscreen)
-            ValueListenableBuilder<Tuple2<UtcDateTime, BuiltList<_Selection>>?>(
+            ValueListenableBuilder<(UtcDateTime, BuiltList<_Selection>)?>(
                 valueListenable: selection,
                 builder: (context, data, _) {
                   return Align(
@@ -324,8 +319,8 @@ class GradesChart extends StatelessWidget {
                     child: Padding(
                       padding: const EdgeInsets.all(32),
                       child: SelectionWidget(
-                        date: data?.item1,
-                        selections: data?.item2,
+                        date: data?.$1,
+                        selections: data?.$2,
                         newDesign: newDesign,
                       ),
                     ),

@@ -30,7 +30,7 @@ dependencies:
     path: packages/collapsible_sidebar/
   collection: ^1.19.1
   cookie_jar: ^4.0.9
-  crypto: 3.0.6
+  crypto: ^3.0.6
   deleteable_tile: ^0.0.1-nullsafety.1
   dio: ^5.9.0
   dio_cookie_manager: ^3.4.0
@@ -52,7 +52,7 @@ dependencies:
     sdk: flutter
   flutter_widget_from_html_core: ^0.17.0
   fuzzy: ^0.5.1
-  hive: ^2.0.0
+  hive_ce: ^2.24.0
   html: ^0.15.6
   http: ^1.2.2
   image: ^4.8.0
@@ -77,9 +77,6 @@ dependencies:
   shared_preferences_platform_interface: ^2.4.2
   sqflite: 2.4.2
   timezone: ^0.11.2
-  tuple: ^2.0.0
-  uni_links:
-    path: packages/uni_links
   url_launcher: ^6.3.2
   workmanager: 0.9.0+3
 

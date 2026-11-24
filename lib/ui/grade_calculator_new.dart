@@ -22,8 +22,8 @@ part of 'grade_calculator.dart';
 
 /// Asks for a new grade in a sheet of glass: the fields and checks of the
 /// dialog of Legacy.
-Future<Tuple2<int, int>?> _showNewGradeSheet(BuildContext context) =>
-    showGlassSheet<Tuple2<int, int>>(
+Future<(int, int)?> _showNewGradeSheet(BuildContext context) =>
+    showGlassSheet<(int, int)>(
       context: context,
       builder: (_) => const _NewGradePanel(),
     );
@@ -79,7 +79,7 @@ class _NewGradePanelState extends State<_NewGradePanel> {
                 FilledButton(
                   key: const Key('grade-calculator-add-confirm'),
                   onPressed: grade != null && weight != null
-                      ? () => Navigator.pop(context, Tuple2(grade, weight))
+                      ? () => Navigator.pop(context, (grade, weight))
                       : null,
                   child: Text(context.t('gradeCalculator.add')),
                 ),

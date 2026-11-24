@@ -38,7 +38,6 @@ import 'package:dr/util.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_built_redux/flutter_built_redux.dart';
 import 'package:responsive_scaffold/responsive_scaffold.dart';
-import 'package:tuple/tuple.dart';
 
 part 'grade_calculator_new.dart';
 
@@ -93,18 +92,18 @@ class _GradeCalculatorState extends State<GradeCalculator> {
   }
 
   Future<void> addGrade() async {
-    final Tuple2<int, int>? grade = ResponsiveNavigationScope.isActive(context)
+    final (int, int)? grade = ResponsiveNavigationScope.isActive(context)
         ? await _showNewGradeSheet(context)
         : await _showNewGradeDialog();
     if (grade != null && mounted) {
       setState(() {
-        grades.add(_Grade(grade: grade.item1, weightPercentage: grade.item2));
+        grades.add(_Grade(grade: grade.$1, weightPercentage: grade.$2));
       });
       await AnalyticsService.logCustomEvent('grade_calculator_added_grade');
     }
   }
 
-  Future<Tuple2<int, int>?> _showNewGradeDialog() {
+  Future<(int, int)?> _showNewGradeDialog() {
     return showDialog(
       context: context,
       builder: (context) {
@@ -147,7 +146,7 @@ class _GradeCalculatorState extends State<GradeCalculator> {
               ElevatedButton(
                 onPressed: grade != null && weight != null
                     ? () {
-                        Navigator.pop(context, Tuple2(grade!, weight!));
+                        Navigator.pop(context, (grade!, weight!));
                       }
                     : null,
                 child: Text(context.t('gradeCalculator.add')),

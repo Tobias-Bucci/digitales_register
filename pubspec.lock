@@ -256,10 +256,10 @@ packages:
     dependency: "direct main"
     description:
       name: crypto
-      sha256: "1e445881f28f22d6140f181e07737b22f1e099a5e1ff94b0af2f9e4a463f4855"
+      sha256: e3626ae6270383c9e3a549f34c9e4cd26c09ae6a9adaab2bf4737a00340efdc4
       url: "https://pub.dev"
     source: hosted
-    version: "3.0.6"
+    version: "3.0.8"
   csslib:
     dependency: transitive
     description:
@@ -611,14 +611,14 @@ packages:
       url: "https://pub.dev"
     source: hosted
     version: "2.3.2"
-  hive:
+  hive_ce:
     dependency: "direct main"
     description:
-      name: hive
-      sha256: "8dcf6db979d7933da8217edcec84e9df1bdb4e4edc7fc77dbd5aa74356d6d941"
+      name: hive_ce
+      sha256: "03ac73b673f98f48d7a3c364bb0b646a88f931240453e0f389ffcc0e18c5379f"
       url: "https://pub.dev"
     source: hosted
-    version: "2.2.3"
+    version: "2.24.0"
   hooks:
     dependency: transitive
     description:
@@ -683,6 +683,14 @@ packages:
       url: "https://pub.dev"
     source: hosted
     version: "1.0.5"
+  isolate_channel:
+    dependency: transitive
+    description:
+      name: isolate_channel
+      sha256: bd56e1bb2787bed914158c2696943dc7254732bfea2c207aafca6bc930580fd4
+      url: "https://pub.dev"
+    source: hosted
+    version: "0.6.2"
   jni:
     dependency: transitive
     description:
@@ -1236,14 +1244,6 @@ packages:
       url: "https://pub.dev"
     source: hosted
     version: "0.11.2"
-  tuple:
-    dependency: "direct main"
-    description:
-      name: tuple
-      sha256: a97ce2013f240b2f3807bcbaf218765b6f301c3eff91092bcfa23a039e7dd151
-      url: "https://pub.dev"
-    source: hosted
-    version: "2.0.2"
   typed_data:
     dependency: transitive
     description:
@@ -1252,22 +1252,6 @@ packages:
       url: "https://pub.dev"
     source: hosted
     version: "1.4.0"
-  uni_links:
-    dependency: "direct main"
-    description:
-      path: "packages/uni_links"
-      relative: true
-    source: path
-    version: "0.5.0"
-  uni_links_platform_interface:
-    dependency: transitive
-    description:
-      path: uni_links_platform_interface
-      ref: modernized
-      resolved-ref: "7d9c079b9b07e2eac5f1d25a08b40e7f0c5c6cf0"
-      url: "https://github.com/miDeb/uni_links.git"
-    source: git
-    version: "1.0.0"
   universal_io:
     dependency: transitive
     description:

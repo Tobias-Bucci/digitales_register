@@ -567,7 +567,7 @@ class ItemWidget extends StatelessWidget {
   }
 }
 
-Future<Tuple2<bool, bool>> _showConfirmDelete(BuildContext context) async {
+Future<(bool, bool)> _showConfirmDelete(BuildContext context) async {
   final l10n = context.l10n;
   var ask = true;
   final delete = await showDialog<bool>(
@@ -597,7 +597,7 @@ Future<Tuple2<bool, bool>> _showConfirmDelete(BuildContext context) async {
       );
     },
   );
-  return Tuple2(delete ?? false, ask);
+  return (delete ?? false, ask);
 }
 
 /// Runs [delete], after asking first if the user wants to be asked.
@@ -609,8 +609,8 @@ Future<void> deleteReminderWithConfirmation(
 }) async {
   if (askWhenDelete) {
     final confirmationResult = await _showConfirmDelete(context);
-    final shouldDelete = confirmationResult.item1;
-    final ask = confirmationResult.item2;
+    final shouldDelete = confirmationResult.$1;
+    final ask = confirmationResult.$2;
     if (shouldDelete == true) {
       if (!ask) {
         setDoNotAskWhenDelete!();

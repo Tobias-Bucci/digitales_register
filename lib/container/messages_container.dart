@@ -22,16 +22,15 @@ import 'package:dr/app_state.dart';
 import 'package:dr/ui/messages.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_built_redux/flutter_built_redux.dart';
-import 'package:tuple/tuple.dart';
 
 class MessagesPageContainer extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
-    return StoreConnection<AppState, AppActions, Tuple2<MessagesState?, bool>>(
+    return StoreConnection<AppState, AppActions, (MessagesState?, bool)>(
       builder: (context, vm, actions) {
         return MessagesPage(
-          state: vm.item1,
-          noInternet: vm.item2,
+          state: vm.$1,
+          noInternet: vm.$2,
           onOpenFile: actions.messagesActions.openFile.call,
           onMarkAsRead: (m) => actions.messagesActions.markAsRead(m.id),
           onArchive: (m) => actions.messagesActions.archiveMessage(m.id),
@@ -41,7 +40,7 @@ class MessagesPageContainer extends StatelessWidget {
         );
       },
       connect: (state) {
-        return Tuple2(state.messagesState, state.noInternet);
+        return (state.messagesState, state.noInternet);
       },
     );
   }

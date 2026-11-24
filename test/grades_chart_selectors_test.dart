@@ -7,7 +7,6 @@ import 'package:dr/theme/app_palette.dart';
 import 'package:dr/ui/grades_chart.dart';
 import 'package:dr/utc_date_time.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:tuple/tuple.dart';
 
 import 'support/fixtures.dart';
 
@@ -56,8 +55,8 @@ void main() {
     final graphs = selectors.chartGraphs(state);
     expect(graphs.keys.single.name, 'Neu');
     expect(graphs.keys.single.grades.single.key, early);
-    expect(graphs.keys.single.grades.single.value.item1, 725);
-    expect(graphs.keys.single.grades.single.value.item2, 'Test');
+    expect(graphs.keys.single.grades.single.value.$1, 725);
+    expect(graphs.keys.single.grades.single.value.$2, 'Test');
     expect(graphs.values.single.color, 0xFF9E9E9E);
     expect(graphs.values.single.thick, 1);
     expect(ChartLegendEntryVM.from(state, 'Neu').config, graphs.values.single);
@@ -138,7 +137,7 @@ void main() {
     }));
     final graphs = selectors.chartGraphs(loaded);
     expect(graphs.keys.single.grades.map((g) => g.key), [early, late]);
-    expect(graphs.keys.single.grades.map((g) => g.value.item1), [725, 850]);
+    expect(graphs.keys.single.grades.map((g) => g.value.$1), [725, 850]);
     expect(selectors.allSubjectsAverage(loaded), '7,88');
     expect(selectors.certificateAverage(loaded), '8,00');
     expect(identical(selectors.chartGraphs(loaded), graphs), isTrue);
@@ -190,9 +189,9 @@ void main() {
     // Both same-day grades stay, in server order, without shifted dates.
     expect(points.map((g) => g.key), [day, day, late]);
     expect(points.map((g) => g.value), [
-      const Tuple2(1000, 'Mündlich'),
-      const Tuple2(400, 'Test'),
-      const Tuple2(850, 'Mündlich'),
+      const (1000, 'Mündlich'),
+      const (400, 'Test'),
+      const (850, 'Mündlich'),
     ]);
 
     final series = GradesChart.convert(graphs, AppPalette.light).single;

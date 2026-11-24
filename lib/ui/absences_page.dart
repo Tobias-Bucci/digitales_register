@@ -33,7 +33,6 @@ import 'package:flutter/material.dart';
 import 'package:flutter_built_redux/flutter_built_redux.dart';
 import 'package:intl/intl.dart';
 import 'package:responsive_scaffold/responsive_scaffold.dart';
-import 'package:tuple/tuple.dart';
 
 part 'absences/absence_statistics.dart';
 part 'absences/future_absence_dialog.dart';

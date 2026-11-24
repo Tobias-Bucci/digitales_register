@@ -18,7 +18,7 @@ import 'package:flutter/services.dart';
 import 'package:flutter/widgets.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
-import 'package:hive/hive.dart';
+import 'package:hive_ce/hive.dart';
 import 'package:mutex/mutex.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -282,6 +282,10 @@ class SchoolNotificationService extends ChangeNotifier
       await _storage.write(key: keyName, value: base64Encode(key));
     }
     // Reopen under the transaction so another engine's writes are visible.
+    // The background worker opens the box from its own isolate; the
+    // transaction lock, not Hive, keeps the engines apart, so hive_ce's
+    // warning about boxes used from several isolates does not apply.
+    HiveLogger.unsafeIsolateWarning = false;
     _history = await Hive.openLazyBox<String>('school_notification_history_v1',
         path: directory.path, encryptionCipher: HiveAesCipher(key));
     try {

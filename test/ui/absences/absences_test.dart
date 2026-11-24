@@ -201,17 +201,17 @@ void main() {
     final lessonTimes = collectLessonTimesByWeekday(state);
 
     expect(
-      lessonTimes.item1[DateTime.monday]!.keys.toList(),
+      lessonTimes.$1[DateTime.monday]!.keys.toList(),
       <int>[1, 2, 3, 4, 5, 6, 7, 8],
     );
     expect(
-      lessonTimes.item1[DateTime.tuesday]!.keys.toList(),
+      lessonTimes.$1[DateTime.tuesday]!.keys.toList(),
       <int>[1, 2, 3, 4, 5, 6],
     );
-    expect(lessonTimes.item1[DateTime.monday]![8], '15:00');
-    expect(lessonTimes.item2[DateTime.monday]![8], '15:50');
-    expect(lessonTimes.item1[DateTime.tuesday]![6], '12:20');
-    expect(lessonTimes.item2[DateTime.tuesday]![6], '13:10');
+    expect(lessonTimes.$1[DateTime.monday]![8], '15:00');
+    expect(lessonTimes.$2[DateTime.monday]![8], '15:50');
+    expect(lessonTimes.$1[DateTime.tuesday]![6], '12:20');
+    expect(lessonTimes.$2[DateTime.tuesday]![6], '13:10');
   });
 
   testWidgets('whole day sends 1 to 20 to the api payload', (tester) async {
