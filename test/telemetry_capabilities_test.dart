@@ -17,6 +17,8 @@ void main() {
     for (final platform in [
       TargetPlatform.windows,
       TargetPlatform.linux,
+      // The policy names Android and iOS only (#162).
+      TargetPlatform.macOS,
       TargetPlatform.fuchsia
     ]) {
       expect(TelemetryCapabilities(platform).supportsAnalytics, false);

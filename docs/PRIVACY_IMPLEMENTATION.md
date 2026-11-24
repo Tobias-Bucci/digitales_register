@@ -42,7 +42,7 @@ Required-only closes the app gate synchronously, disables each SDK independently
 
 ## C. Crashlytics setup
 
-Existing Dart packages resolve to firebase_core 4.11.0, firebase_crashlytics 5.2.4, firebase_analytics 12.4.3. Initialization runs early, is guarded to Android/iOS/macOS, checks native bootstrap readiness, and preserves app operation on SDK failure. Windows/Linux do not invoke Firebase.
+Existing Dart packages resolve to firebase_core 4.11.0, firebase_crashlytics 5.2.4, firebase_analytics 12.4.3. Initialization runs early, is guarded to Android/iOS (`TelemetryCapabilities`; macOS was taken out in #162 because the policy names Android and iOS only), checks native bootstrap readiness, and preserves app operation on SDK failure. Windows/Linux do not invoke Firebase.
 
 Android retains native false collection defaults, disables automatic Analytics screen reporting, removes FirebaseInitProvider eager startup, and uses PrivacyApplication to reset sticky collection overrides before providers can initialize. MainActivity supplies a readiness channel and coarse installer category. The existing Crashlytics Gradle plugin 3.0.2 and Firebase BoM 34.13.0 are retained. Native firebase-crashlytics-ndk was added. Release native symbol upload is enabled, with an optional externally supplied unstripped native library directory.
 

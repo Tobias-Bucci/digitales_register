@@ -17,9 +17,9 @@ class TelemetryCapabilities {
                       ? TargetPlatform.windows
                       : TargetPlatform.linux,
       web: kIsWeb);
+  // Android and iOS only, as the privacy policy says (#162). macOS has no
+  // Firebase configuration; it stays off there even if one is added.
   bool get supportsAnalytics =>
-      !web &&
-      {TargetPlatform.android, TargetPlatform.iOS, TargetPlatform.macOS}
-          .contains(platform);
+      !web && {TargetPlatform.android, TargetPlatform.iOS}.contains(platform);
   bool get supportsCrashlytics => supportsAnalytics;
 }

@@ -14,9 +14,9 @@ void main() {
 
   test('native telemetry adapters work on a supported platform', () async {
     final collection = FirebaseTelemetryCollection(
-      capabilities: const TelemetryCapabilities(TargetPlatform.macOS),
+      capabilities: const TelemetryCapabilities(TargetPlatform.iOS),
     );
-    // Covers the macOS SDK path even when the suite runs on Windows/Linux.
+    // Covers the native SDK path even when the suite runs on Windows/Linux.
     await collection.analyticsCollection(false);
     await collection.crashCollection(false);
     expect(FirebaseCrashlytics.instance.isCrashlyticsCollectionEnabled, false);
