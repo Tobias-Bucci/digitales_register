@@ -383,8 +383,11 @@ class AuthSpacing {
       headerGap: 12,
       field: 10,
       section: 12,
-      button: 10,
-      footer: 12);
+      // The legal links are 48 dp tap targets (#171); smaller gaps above
+      // the button and the footer keep the first-run form on a 360x740
+      // phone without scrolling.
+      button: 8,
+      footer: 8);
 
   /// From roomiest to tightest.
   static const tiers = [comfortable, compact, tight, ultraTight];

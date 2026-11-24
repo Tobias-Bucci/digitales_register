@@ -5,6 +5,7 @@ import 'package:dr/app_state.dart';
 import 'package:dr/container/days_container.dart';
 import 'package:dr/container/settings_page.dart';
 import 'package:dr/data.dart';
+import 'package:dr/i18n/app_language.dart';
 import 'package:dr/i18n/app_localizations.dart';
 import 'package:dr/main.dart' show scaffoldKey;
 import 'package:dr/middleware/middleware.dart';
@@ -118,6 +119,22 @@ void main() {
       expect(find.byType(Card), findsWidgets);
       expect(find.byType(SegmentedButton<bool>), findsOneWidget);
       expect(find.byType(GlassSegmentedControl<bool>), findsNothing);
+    });
+
+    testWidgets('the languages carry their own names in every language (#171)',
+        (tester) async {
+      for (final code in ['en', 'it']) {
+        await _pumpSettings(tester, state: _state(languageCode: code));
+        final dropdown = _key('settings-language-dropdown');
+        await _show(tester, dropdown);
+        final items = tester
+            .widget<DropdownButton<AppLanguage>>(dropdown)
+            .items!
+            .map((item) => (item.child as Text).data);
+        expect(items, ['Deutsch', 'Italiano', 'Ladin', 'English'],
+            reason: code);
+        await tester.pumpWidget(const SizedBox());
+      }
     });
 
     testWidgets('the design segments switch the design', (tester) async {

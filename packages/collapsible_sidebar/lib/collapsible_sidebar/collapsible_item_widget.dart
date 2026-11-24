@@ -79,28 +79,33 @@ class CollapsibleItemWidget extends StatelessWidget {
                     ),
                   ),
                 ),
-                InkWell(
-                  borderRadius: BorderRadius.circular(10),
-                  onTap: onTap,
-                  child: ShaderMask(
-                    shaderCallback: (Rect bounds) {
-                      return ui.Gradient.linear(
-                        Offset(bounds.right - 10, 0),
-                        Offset(bounds.right, 0),
-                        [Colors.white, Colors.white.withAlpha(0)],
-                      );
-                    },
-                    child: Padding(
-                      padding: EdgeInsets.all(padding),
-                      // Wider than the item while the sidebar is collapsed or
-                      // moving; as tall as the content.
-                      child: OverflowBox(
-                        maxWidth: 300,
-                        alignment: Alignment.centerLeft,
-                        fit: OverflowBoxFit.deferToChild,
-                        child: leadingSize == null
-                            ? _centered()
-                            : _besideFirstLine(context, leadingSize!),
+                // A button for screen readers too, not a plain view.
+                Semantics(
+                  button: true,
+                  selected: selected,
+                  child: InkWell(
+                    borderRadius: BorderRadius.circular(10),
+                    onTap: onTap,
+                    child: ShaderMask(
+                      shaderCallback: (Rect bounds) {
+                        return ui.Gradient.linear(
+                          Offset(bounds.right - 10, 0),
+                          Offset(bounds.right, 0),
+                          [Colors.white, Colors.white.withAlpha(0)],
+                        );
+                      },
+                      child: Padding(
+                        padding: EdgeInsets.all(padding),
+                        // Wider than the item while the sidebar is collapsed or
+                        // moving; as tall as the content.
+                        child: OverflowBox(
+                          maxWidth: 300,
+                          alignment: Alignment.centerLeft,
+                          fit: OverflowBoxFit.deferToChild,
+                          child: leadingSize == null
+                              ? _centered()
+                              : _besideFirstLine(context, leadingSize!),
+                        ),
                       ),
                     ),
                   ),

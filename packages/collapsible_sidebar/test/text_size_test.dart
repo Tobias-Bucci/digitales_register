@@ -10,18 +10,29 @@ const _longWord = 'Pruefungskalenderverwaltungsuebersichtsseite';
 const _short = 'Noten';
 
 /// Real Roboto metrics instead of the test font's square glyphs.
+///
+/// The SDK names the files `Roboto-Regular.ttf` on Linux and macOS but
+/// `roboto-regular.ttf` on Windows, so they are matched without case.
 Future<void> _loadRoboto(WidgetTester tester) => tester.runAsync(() async {
       final root = Platform.environment['FLUTTER_ROOT'] ??
-          File(Platform.resolvedExecutable).parent.parent.parent.parent.path;
-      final fonts = '$root/bin/cache/artifacts/material_fonts';
+          File(Platform.resolvedExecutable)
+              .parent
+              .parent
+              .parent
+              .parent
+              .parent
+              .parent
+              .path;
+      final fonts = Directory('$root/bin/cache/artifacts/material_fonts');
       final loader = FontLoader('Roboto');
       for (final weight in ['regular', 'medium', 'bold']) {
-        final file = File('$fonts/roboto-$weight.ttf');
-        if (file.existsSync()) {
-          loader.addFont(
-            Future.value(ByteData.sublistView(file.readAsBytesSync())),
-          );
-        }
+        final file = fonts.listSync().whereType<File>().firstWhere(
+              (f) =>
+                  f.uri.pathSegments.last.toLowerCase() == 'roboto-$weight.ttf',
+            );
+        loader.addFont(
+          Future.value(ByteData.sublistView(file.readAsBytesSync())),
+        );
       }
       await loader.load();
     });
@@ -128,6 +139,29 @@ void main() {
       expect(_tile(tester, _longWord).size, const Size(42, 42));
     });
   }
+
+  testWidgets('items are buttons for screen readers', (tester) async {
+    final semantics = tester.ensureSemantics();
+    await _pump(tester, scale: 1);
+
+    for (final (label, selected) in [(_short, true), (_longWord, false)]) {
+      final node = tester.getSemantics(find.text(label));
+      expect(
+        node,
+        matchesSemantics(
+          label: label,
+          isButton: true,
+          hasTapAction: true,
+          hasSelectedState: true,
+          isSelected: selected,
+          isFocusable: true,
+          hasFocusAction: true,
+        ),
+        reason: label,
+      );
+    }
+    semantics.dispose();
+  });
 
   testWidgets('the icon keeps the whole label as its tooltip', (tester) async {
     await _pump(tester, scale: 3);

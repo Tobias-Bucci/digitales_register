@@ -653,13 +653,6 @@ class _LanguagePicker extends StatelessWidget {
   /// Under text that starts at the side, as in wide windows.
   final bool alignStart;
 
-  static String _name(AppLanguage language) => switch (language) {
-        AppLanguage.de => 'Deutsch',
-        AppLanguage.it => 'Italiano',
-        AppLanguage.lld => 'Ladin',
-        AppLanguage.en => 'English',
-      };
-
   @override
   Widget build(BuildContext context) {
     return Semantics(
@@ -672,7 +665,7 @@ class _LanguagePicker extends StatelessWidget {
         children: [
           for (final language in AppLanguage.values)
             ChoiceChip(
-              label: Text(_name(language)),
+              label: Text(language.nativeName),
               selected: language == selected,
               onSelected: (_) => onSelected(language),
             ),

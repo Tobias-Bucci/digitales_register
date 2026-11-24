@@ -27,6 +27,16 @@ enum AppLanguage {
 
   final String code;
 
+  /// The name of the language in the language itself, the same in every UI
+  /// language: someone who opened the app in a language they do not read
+  /// still finds their own (#171).
+  String get nativeName => switch (this) {
+        AppLanguage.de => 'Deutsch',
+        AppLanguage.it => 'Italiano',
+        AppLanguage.lld => 'Ladin',
+        AppLanguage.en => 'English',
+      };
+
   Locale get locale {
     return switch (this) {
       AppLanguage.de => const Locale('de'),

@@ -34,7 +34,6 @@ import 'package:dr/reducer/reducer.dart';
 import 'package:dr/ui/about_app_dialog.dart';
 import 'package:dr/ui/login_page_content.dart';
 import 'package:dr/ui/privacy_data_details_page.dart';
-import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -375,29 +374,24 @@ void main() {
               onRemoveAccount: (_) {},
             ),
           );
-      await checkLinks(tester, open, {'Send feedback': _feedbackForm},
+      // The legal links are buttons with a full tap target (#171).
+      await checkLinks(
+          tester,
+          open,
+          {
+            'Send feedback': _feedbackForm,
+            'Privacy': privacyPolicyUrl,
+            'Data deletion': deleteAccountUrl,
+          },
           prefixOnly: true);
-
-      // The legal links are parts of one text.
-      for (final (label, address) in [
-        ('Privacy', privacyPolicyUrl),
-        ('Data deletion', deleteAccountUrl),
-      ]) {
-        for (final opens in [true, false]) {
-          browser
-            ..launches.clear()
-            ..opens = (_) => opens;
-          await open();
-          final span = _span(tester, label);
-          (span.recognizer! as TapGestureRecognizer).onTap!();
-          await settle(tester);
-
-          expect(browser.urls, [address], reason: label);
-          expect(find.text(_failed), opens ? findsNothing : findsOneWidget,
-              reason: '$label, opens: $opens');
-          await tester.pumpWidget(const SizedBox());
-          await tester.pumpAndSettle();
-        }
+      for (final label in ['Privacy', 'Data deletion']) {
+        await open();
+        final button = find.ancestor(
+            of: find.text(label), matching: find.byType(TextButton));
+        expect(tester.getSize(button).height, greaterThanOrEqualTo(48),
+            reason: label);
+        expect(tester.getSize(button).width, greaterThanOrEqualTo(48),
+            reason: label);
       }
     });
 
@@ -464,20 +458,4 @@ void main() {
       }
     });
   });
-}
-
-/// The part of a text with a tap recognizer that reads [label].
-TextSpan _span(WidgetTester tester, String label) {
-  for (final text in tester.widgetList<RichText>(find.byType(RichText))) {
-    TextSpan? found;
-    text.text.visitChildren((span) {
-      if (span is TextSpan && span.text == label && span.recognizer != null) {
-        found = span;
-        return false;
-      }
-      return true;
-    });
-    if (found != null) return found!;
-  }
-  throw StateError('No link "$label"');
 }

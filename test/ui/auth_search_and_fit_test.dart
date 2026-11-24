@@ -407,7 +407,7 @@ void main() {
           store: createStore(), home: host(ValueNotifier(AppState()))));
       await tester.pumpAndSettle();
       await tester.tap(field('Benutzername'));
-      await slideKeyboard(tester, 0, 420);
+      await slideKeyboard(tester, 0, 460);
       await tester.testTextInput.receiveAction(TextInputAction.next);
       // Mid-way through the 250 ms reveal the page is still moving.
       await tester.pump();
@@ -419,8 +419,10 @@ void main() {
       // Just into view above the keyboard, not to the top. (Flutter keeps
       // room for the selection handle below the caret, so the gap is a
       // little over the 24 px scroll padding.)
-      const keyboardTop = 844 - 420.0;
+      const keyboardTop = 844 - 460.0;
       final password = tester.getRect(field('Passwort'));
+      // The field was covered: the page had to move.
+      expect(pagePosition(tester).pixels, greaterThan(0));
       expect(password.bottom, lessThanOrEqualTo(keyboardTop - 16));
       expect(password.bottom, greaterThanOrEqualTo(keyboardTop - 56));
       expect(password.top, greaterThan(keyboardTop / 2));

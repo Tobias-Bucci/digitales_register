@@ -1001,23 +1001,13 @@ class _SettingsPageWidgetState extends State<SettingsPageWidget> {
                   widget.onSetLanguage(language);
                 }
               },
+              // Every language in its own name, as in the intro (#171).
               items: [
-                DropdownMenuItem(
-                  value: AppLanguage.de,
-                  child: Text(l10n.text('settings.language.de')),
-                ),
-                DropdownMenuItem(
-                  value: AppLanguage.it,
-                  child: Text(l10n.text('settings.language.it')),
-                ),
-                DropdownMenuItem(
-                  value: AppLanguage.lld,
-                  child: Text(l10n.text('settings.language.lld')),
-                ),
-                DropdownMenuItem(
-                  value: AppLanguage.en,
-                  child: Text(l10n.text('settings.language.en')),
-                ),
+                for (final language in AppLanguage.values)
+                  DropdownMenuItem(
+                    value: language,
+                    child: Text(language.nativeName),
+                  ),
               ],
             ),
           ),
