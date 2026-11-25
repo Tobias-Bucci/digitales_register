@@ -116,7 +116,6 @@ import 'package:flutter/material.dart' hide Action, Notification;
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:image/image.dart' as image;
 import 'package:intl/intl.dart';
-import 'package:mocktail/mocktail.dart';
 import 'package:mutex/mutex.dart';
 import 'package:open_file/open_file.dart';
 import 'package:path_provider/path_provider.dart';
@@ -181,6 +180,12 @@ bool _noInternetRetryInFlight = false;
 @visibleForTesting
 Wrapper wrapper = Wrapper();
 
+/// Whether [wrapper] is a test double that tests inject and keep across
+/// account loads. Only `test/flutter_test_config.dart` sets it (to
+/// `w is Mock`), so release builds do not link the test library (#177).
+@visibleForTesting
+bool Function(Wrapper wrapper) isInjectedTestWrapper = (_) => false;
+
 /// Installs a fresh [Wrapper] (which also starts without cookies).
 ///
 /// The old instance is retired first: its refresh timer, requests and
@@ -190,7 +195,7 @@ void _replaceWrapper({bool keepMock = false}) {
   // Everything started before this point belongs to a session we left, even
   // when a test keeps its mock wrapper.
   _sessionGeneration++;
-  if (keepMock && wrapper is Mock) return;
+  if (keepMock && isInjectedTestWrapper(wrapper)) return;
   wrapper.retire();
   wrapper = Wrapper();
 }

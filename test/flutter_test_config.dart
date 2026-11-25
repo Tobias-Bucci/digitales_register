@@ -1,6 +1,8 @@
 import 'dart:async';
 
 import 'package:dr/host_platform.dart';
+import 'package:dr/middleware/middleware.dart';
+import 'package:mocktail/mocktail.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 Future<void> testExecutable(FutureOr<void> Function() testMain) async {
@@ -10,5 +12,8 @@ Future<void> testExecutable(FutureOr<void> Function() testMain) async {
   // Linux or macOS host (CI) runs the same code paths. A test that needs
   // another platform sets HostPlatform.debugOverride itself and restores it.
   HostPlatform.debugOverride = HostOperatingSystem.windows;
+  // Tests that inject a mock wrapper keep it across account loads; the app
+  // itself no longer depends on mocktail to tell (#177).
+  isInjectedTestWrapper = (wrapper) => wrapper is Mock;
   await testMain();
 }

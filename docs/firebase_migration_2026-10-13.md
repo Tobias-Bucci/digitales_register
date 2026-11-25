@@ -57,8 +57,9 @@ changes. The official 12.6.0 archive removes the obsolete classpath pins too and
 retains conditional Kotlin plugin support for `android.builtInKotlin=false`, as
 used by this app. Android compilation verified this replacement.
 
-The override is removed. The old source directory is retained as an inactive
-reference, with a notice in its README; it is not used by the resolved app.
+The override is removed. The old source directory was first retained as an
+inactive reference; it was deleted in #177. The app resolves
+`firebase_analytics` from `packages/flutterfire/firebase_analytics`.
 Upstream release notes: https://pub.dev/packages/firebase_analytics/changelog
 
 `firebase_core_platform_interface` remains a necessary **test-only** dependency:
