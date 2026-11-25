@@ -1,3 +1,5 @@
+> Update 2026-11-25: the dialog asks again for an age confirmation ("I am at least 14 years old or my parent or guardian agrees") before an optional purpose is switched on (`_confirmAge` in `lib/ui/privacy_consent_dialog.dart`). The answer is not stored and does not gate collection later; see `docs/PRIVACY_IMPLEMENTATION.md`.
+
 > Update 2026-10-03: privacy notice version **5** removes the age question, age gating and age storage for new decisions. Explicit purpose consent, default-off startup and platform safeguards remain. The redesigned dialog integrates details and customization into its content and emphasizes the allow-all action. Existing decisions require a new explicit choice. Verification: 337 tests passed, including 24 dialog layout cases; analysis found no issues. The report and v4 audit below describe the earlier implementation.
 
 > The previous privacy audit is maintained outside this repository. Data inventory and manual cloud tasks are maintained separately.

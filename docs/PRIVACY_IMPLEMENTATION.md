@@ -1,7 +1,10 @@
-> Current code review, 2026-10-24: notice version **5** has separate explicit
-> diagnostic, usage and academic consent, without an age question or age gate.
-> Legacy age fields are read for compatibility, not authorization; new decisions
-> do not store age. Old-version decisions do not authorize telemetry. Native
+> Current code review, 2026-10-24, updated 2026-11-25: notice version **5** has
+> separate explicit diagnostic, usage and academic consent, without an age gate.
+> Before an optional purpose is switched on, the dialog asks the user to confirm
+> "I am at least 14 years old or my parent or guardian agrees"
+> (`_confirmAge` in `lib/ui/privacy_consent_dialog.dart`); cancelling saves
+> nothing. The answer is neither stored nor checked later. Legacy age fields are
+> read for compatibility, not authorization; new decisions do not store age. Old-version decisions do not authorize telemetry. Native
 > default-off bootstrap and Windows/Linux exclusions remain. The v4/v3 reports
 > below are historical. See [iOS/CI setup](IOS_FIREBASE_SETUP.md).
 

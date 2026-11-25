@@ -41,7 +41,7 @@ https://<school>.digitalesregister.it/v2/...
 | Downloads, attachments, export | saved in the app folder, opened with the system | handed to the browser's downloads (`lib/web_app/browser_download.dart`) |
 | Demo account | stored in a file | in memory, a reload starts it fresh |
 | Design | new or legacy, user's choice | new design only |
-| Logout | removes the password; data only with "delete data on logout" | always also deletes the account's saved register data |
+| Logout | keeps the account and its password, marked as signed out (#142); data only with "delete data on logout"; "Remove account" deletes both | removes the password and always also deletes the account's saved register data |
 
 ## Storage in the browser
 

@@ -2,8 +2,8 @@
 
 Linux is named **Digitales Register** and uses the current shared logo from `assets/index.png`,
 application ID `io.github.tobias_bucci.digitales_register` and binary `digitales_register`.
-The version and build number come from `pubspec.yaml`: **1.17.2+46**.
-Other platform versions and build numbers are unchanged.
+The version and build number come from `pubspec.yaml` (`version: X.Y.Z+N`),
+the same for every platform.
 
 ## Architectures
 
@@ -86,7 +86,7 @@ places and activates the new window on the first monitor.
 For Debian/Ubuntu, install the package for your architecture:
 
 ```bash
-sudo apt install ./Digitales-Register-1.17.2+46-linux-x86_64.deb
+sudo apt install ./Digitales-Register-<version>+<build>-linux-x86_64.deb
 # ARM64: use the corresponding linux-aarch64.deb file instead.
 ```
 
