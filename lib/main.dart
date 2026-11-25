@@ -29,6 +29,7 @@ import 'package:dr/app_language_controller.dart';
 import 'package:dr/app_state.dart';
 import 'package:dr/app_subject_translation_controller.dart';
 import 'package:dr/biometric_app_lock.dart';
+import 'package:dr/bundled_font_licenses.dart';
 import 'package:dr/calendar_sync_service.dart';
 import 'package:dr/container/change_email_container.dart';
 import 'package:dr/container/home_page.dart';
@@ -101,6 +102,7 @@ Future<void> main() async {
   }
   WidgetsFlutterBinding.ensureInitialized();
   installBuildFailurePlaceholder();
+  registerBundledFontLicenses();
   startupTimeline.mark('p1_binding_ready');
 
   navigatorKey = GlobalKey();
