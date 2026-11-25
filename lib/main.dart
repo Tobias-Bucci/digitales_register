@@ -116,6 +116,7 @@ Future<void> main() async {
   await startupTimeline.step('p1_legacy_cleanup', () async {
     await removeLegacyNotificationData();
     await removeLegacyPlainCaches();
+    await removeWidgetSnapshotOutsideAndroid();
   });
   final store = Store<AppState, AppStateBuilder, AppActions>(
     appReducerBuilder.build(),

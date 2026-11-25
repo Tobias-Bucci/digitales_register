@@ -3,6 +3,7 @@ import 'dart:convert';
 
 import 'package:dr/android_widget/android_widget_service.dart';
 import 'package:dr/app_state.dart';
+import 'package:dr/host_platform.dart';
 import 'package:dr/util.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -26,11 +27,17 @@ class RecordingWidgetBridge extends AndroidWidgetPlatformBridge {
 
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
+  final defaultHost = HostPlatform.debugOverride;
   setUp(() {
     SharedPreferences.setMockInitialValues({});
     mockNow = fixtureNow;
+    // The plain snapshot copy exists for the native Android widget only.
+    HostPlatform.debugOverride = HostOperatingSystem.android;
   });
-  tearDown(() => mockNow = null);
+  tearDown(() {
+    mockNow = null;
+    HostPlatform.debugOverride = defaultHost;
+  });
   final loggedIn = AppState((b) => b.loginState
     ..loggedIn = true
     ..username = 'old');
@@ -174,5 +181,57 @@ void main() {
     await expectLater(service.clear(), throwsStateError);
     expect(bridge.planningSnapshots, [null]);
     expect(bridge.snapshots, [null]);
+  });
+  group('the plain snapshot copy exists on Android only (#173)', () {
+    // The web build reports no host platform at all, so it takes the same
+    // path as these desktop and iOS hosts.
+    for (final os in [
+      HostOperatingSystem.windows,
+      HostOperatingSystem.linux,
+      HostOperatingSystem.macOS,
+      HostOperatingSystem.iOS,
+    ]) {
+      test('a flush on ${os.name} writes no plain snapshot', () async {
+        HostPlatform.debugOverride = os;
+        final bridge = RecordingWidgetBridge();
+        final service = AndroidWidgetSnapshotService(bridge: bridge);
+        await service.flush(state: loggedIn);
+        final prefs = await SharedPreferences.getInstance();
+        expect(prefs.containsKey(androidWidgetSnapshotStorageKey), isFalse);
+        // The native side (the iOS app-group file) still gets the content.
+        expect(bridge.planningSnapshots.single, isNotNull);
+      });
+
+      test('the start-up cleanup on ${os.name} removes an old snapshot',
+          () async {
+        HostPlatform.debugOverride = os;
+        SharedPreferences.setMockInitialValues(
+            {androidWidgetSnapshotStorageKey: 'old data', 'other': 'kept'});
+        await removeWidgetSnapshotOutsideAndroid();
+        await removeWidgetSnapshotOutsideAndroid();
+        final prefs = await SharedPreferences.getInstance();
+        expect(prefs.containsKey(androidWidgetSnapshotStorageKey), isFalse);
+        expect(prefs.getString('other'), 'kept');
+      });
+    }
+
+    test('a flush on Android writes the snapshot the widget reads', () async {
+      final service =
+          AndroidWidgetSnapshotService(bridge: RecordingWidgetBridge());
+      await service.flush(state: loggedIn);
+      final payload = (await SharedPreferences.getInstance())
+          .getString(androidWidgetSnapshotStorageKey);
+      expect(jsonDecode(payload!)['meta']['status'], 'ready');
+    });
+
+    test('the start-up cleanup leaves the Android snapshot alone', () async {
+      SharedPreferences.setMockInitialValues(
+          {androidWidgetSnapshotStorageKey: 'widget data'});
+      await removeWidgetSnapshotOutsideAndroid();
+      expect(
+          (await SharedPreferences.getInstance())
+              .getString(androidWidgetSnapshotStorageKey),
+          'widget data');
+    });
   });
 }

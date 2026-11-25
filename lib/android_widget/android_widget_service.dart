@@ -115,6 +115,14 @@ class AndroidWidgetPlatformBridge {
   }
 }
 
+/// Removes the plain widget snapshot that versions before #173 wrote on every
+/// platform. Only the native Android widget reads it, so Android keeps it.
+Future<void> removeWidgetSnapshotOutsideAndroid() async {
+  if (HostPlatform.isAndroid) return;
+  final prefs = await SharedPreferences.getInstance();
+  await prefs.remove(androidWidgetSnapshotStorageKey);
+}
+
 class AndroidWidgetSnapshotService {
   AndroidWidgetSnapshotService({
     AndroidWidgetPlatformBridge? bridge,
@@ -201,9 +209,14 @@ class AndroidWidgetSnapshotService {
       final timer = Stopwatch()..start();
       _trace('refresh-start', resolvedReason,
           'status=${snapshot.meta.status.name}');
-      final prefs = await _preferences();
-      if (!await prefs.setString(androidWidgetSnapshotStorageKey, payload)) {
-        throw StateError('Widget snapshot could not be saved');
+      // Only the native Android widget reads this plain copy, without the
+      // app. iOS has its own app-group file; no other platform keeps one
+      // (#173).
+      if (HostPlatform.isAndroid) {
+        final prefs = await _preferences();
+        if (!await prefs.setString(androidWidgetSnapshotStorageKey, payload)) {
+          throw StateError('Widget snapshot could not be saved');
+        }
       }
       await _bridge.writePlanningSnapshot(payload);
       await _bridge.refreshWidgets();
