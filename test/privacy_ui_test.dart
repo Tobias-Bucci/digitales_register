@@ -54,6 +54,68 @@ void main() {
         en['privacySettings.technicalId.hint'], isNot(contains('diagnostics')));
     expect(en['desktop.keyringUnavailable'], isNot(contains('protected')));
   });
+
+  // #162 items 8-10: the web app's school proxy is disclosed, its "Stay
+  // signed in" is not called secure storage, and only Android and iOS use
+  // Firebase.
+  test('privacy texts disclose the web proxy and the platforms honestly', () {
+    // Words that only the new texts contain, per language.
+    const webApp = {
+      'de': 'Web-App',
+      'en': 'web app',
+      'it': 'web app',
+      'lld': 'web app',
+    };
+    const password = {
+      'de': 'Passwort',
+      'en': 'password',
+      'it': 'password',
+      'lld': 'password',
+    };
+    const browser = {
+      'de': 'Browser',
+      'en': 'browser',
+      'it': 'browser',
+      'lld': 'browser',
+    };
+    const oldFirebaseClaim = {
+      'de': 'Windows und Linux verwenden keine Firebase',
+      'en': 'Windows and Linux use no Firebase',
+      'it': 'Windows e Linux non usano',
+      'lld': 'Windows y Linux ne adora',
+    };
+    for (final language in ['de', 'en', 'it', 'lld']) {
+      final texts =
+          jsonDecode(File('assets/locales/$language.json').readAsStringSync())
+              as Map<String, dynamic>;
+      String text(String key) => texts[key] as String;
+      final necessary = text('privacyConsent.necessary.details');
+      final cloudflare = text('privacyDetails.cloudflare.body');
+      final local = text('privacyDetails.local.body');
+      final limits = text('privacyDetails.limits.body');
+      final notice = text('privacyDetails.notice.body');
+      for (final (name, value) in [
+        ('necessary', necessary),
+        ('cloudflare', cloudflare),
+        ('local', local),
+        ('notice', notice),
+      ]) {
+        expect(value, contains(webApp[language]), reason: '$language $name');
+      }
+      expect(necessary, contains('Cloudflare'), reason: language);
+      expect(necessary, contains(password[language]), reason: language);
+      expect(cloudflare, contains('app.digitalesregister.com'),
+          reason: language);
+      expect(cloudflare, contains('Cloudflare Worker'), reason: language);
+      expect(local, contains(text('login.stayLoggedIn')), reason: language);
+      expect(local, contains(browser[language]), reason: language);
+      expect(limits, isNot(contains(oldFirebaseClaim[language])),
+          reason: language);
+      for (final platform in ['Android', 'iOS', 'macOS']) {
+        expect(limits, contains(platform), reason: '$language $platform');
+      }
+    }
+  });
   testWidgets(
       'details preserve unresolved choice; required-only closes once; settings can reopen',
       (tester) async {
