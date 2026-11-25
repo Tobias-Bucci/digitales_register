@@ -71,5 +71,17 @@ class BundleValidationTests(unittest.TestCase):
             check_bundle(self.bundle, "x64", "1.17.1", "45")
 
 
+class IconNameTests(unittest.TestCase):
+    def test_hicolor_icons_use_the_exact_application_id(self):
+        # The desktop file asks for Icon=<APP_ID>; icon lookup on Linux is
+        # case-sensitive, so a differently cased file name is never found.
+        icons = sorted((ROOT / "linux/icons").glob("*/apps/*.png"))
+        self.assertTrue(icons)
+        for icon in icons:
+            self.assertEqual(icon.name, f"{APP_ID}.png", icon)
+        desktop = (ROOT / "linux/digitales_register.desktop").read_text()
+        self.assertIn(f"Icon={APP_ID}\n", desktop)
+
+
 if __name__ == "__main__":
     unittest.main()
