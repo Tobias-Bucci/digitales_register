@@ -23,6 +23,10 @@ class MemoryAnalyticsStore implements AnalyticsLocalStore {
     if (failWrite) throw StateError('storage write');
     values[key] = value;
   }
+
+  @override
+  Future<void> deleteWithPrefix(String prefix) async =>
+      values.removeWhere((key, _) => key.startsWith(prefix));
 }
 
 class RecordingSink implements AnalyticsSink {
@@ -420,5 +424,103 @@ void main() {
     expect(fresh.decision.isCurrent, true);
     expect(fresh.decision.allOptionalAllowed, true);
     expect(fresh.decision.serialize(), isNot(contains('ageEligibility')));
+  });
+  group('grade fingerprints are deleted with the account or consent (#174)',
+      () {
+    String idOf(String account) =>
+        (jsonDecode(store.values['analyticsIdentityMapV4']!) as Map)[account]
+            as String;
+    Iterable<String> fingerprintsOf(String id) => store.values.keys
+        .where((k) => k.startsWith('analyticsSnapshotV4:$id:'));
+    Iterable<String> allFingerprints() =>
+        store.values.keys.where((k) => k.startsWith('analyticsSnapshotV4:'));
+
+    Future<void> submitFor(String account) async {
+      await service.clearIdentity();
+      await service.identifyUser(account, demo: false, schoolId: 'school_0001');
+      await service.logAcademicSummary(summary);
+    }
+
+    test('removing an account deletes its fingerprints only', () async {
+      await submitFor('A');
+      await submitFor('B');
+      final a = idOf('A');
+      final b = idOf('B');
+      expect(fingerprintsOf(a), isNotEmpty);
+      expect(fingerprintsOf(b), isNotEmpty);
+
+      await service.forgetAccount('A');
+
+      expect(fingerprintsOf(a), isEmpty);
+      expect(fingerprintsOf(b), isNotEmpty);
+      expect(store.values['analyticsIdentityMapV4'], isNot(contains('"A"')));
+    });
+
+    test('removing the open account fences its queued summaries', () async {
+      await service.identifyUser('A', demo: false, schoolId: 'school_0001');
+      final a = idOf('A');
+      sink.blockingEvent = Completer<void>();
+      final pending = service.logAcademicSummary(summary);
+      await Future<void>.delayed(Duration.zero);
+      final forget = service.forgetAccount('A');
+      final late =
+          service.logAcademicSummary({...summary, 'grade_average_tenths': 82});
+      sink.blockingEvent!.complete();
+      await Future.wait([pending, forget, late]);
+      await service.flush();
+      expect(fingerprintsOf(a), isEmpty);
+      expect(service.identityReady, isFalse);
+    });
+
+    for (final withdrawal in ['academic', 'usage', 'required-only']) {
+      test('withdrawing $withdrawal consent deletes every fingerprint',
+          () async {
+        final controller = PrivacyController(
+            store: MemoryStore([]),
+            collection: FakeCollection([]),
+            gate: (_) {},
+            analyticsGate: service.gate,
+            onAcademicStatisticsOff: service.forgetAcademicSnapshots);
+        await controller.chooseGranular(
+            diagnostics: ConsentChoice.denied,
+            usage: ConsentChoice.granted,
+            academic: ConsentChoice.granted);
+        decision = controller.decision;
+        await submitFor('A');
+        await submitFor('B');
+        expect(allFingerprints(), hasLength(2));
+
+        await controller.chooseGranular(
+            diagnostics: ConsentChoice.denied,
+            usage: withdrawal == 'academic'
+                ? ConsentChoice.granted
+                : ConsentChoice.denied,
+            academic: withdrawal == 'usage'
+                ? ConsentChoice.granted
+                : ConsentChoice.denied);
+        decision = controller.decision;
+        await service.flush();
+
+        expect(decision.academicStatsAllowed, isFalse);
+        expect(allFingerprints(), isEmpty);
+        // Nothing comes back while the consent stays withdrawn.
+        await service.logAcademicSummary(summary);
+        await service.flush();
+        expect(allFingerprints(), isEmpty);
+      });
+    }
+
+    test('granting grade statistics again deletes nothing', () async {
+      var withdrawn = 0;
+      final controller = PrivacyController(
+          store: MemoryStore([]),
+          collection: FakeCollection([]),
+          gate: (_) {},
+          onAcademicStatisticsOff: () async => withdrawn++);
+      await controller.choose(TelemetryConsentState.allAllowed);
+      expect(withdrawn, 0);
+      await controller.choose(TelemetryConsentState.requiredOnly);
+      expect(withdrawn, 1);
+    });
   });
 }

@@ -23,7 +23,16 @@ abstract class AnalyticsSink {
 abstract class AnalyticsLocalStore {
   Future<String?> read(String key);
   Future<void> write(String key, String value);
+
+  /// Deletes every entry whose key starts with [prefix].
+  Future<void> deleteWithPrefix(String prefix);
 }
+
+/// The fingerprints of the last grade summaries sent, so the same values are
+/// not sent twice: `analyticsSnapshotV4:<analytics id>:<school>:<year>:<semester>`.
+/// They hold a normalised grade average, so they go with the account and with
+/// the grade-statistics consent (#174).
+const academicSnapshotKeyPrefix = 'analyticsSnapshotV4:';
 
 /// Local provenance only. A late response from another account cannot authorize
 /// an academic contribution, even if the legacy reducer accepts that response.
@@ -62,6 +71,15 @@ class SecureAnalyticsStore implements AnalyticsLocalStore {
   @override
   Future<void> write(String key, String value) async =>
       storage.write(key: await _scopedKey(key), value: value);
+  @override
+  Future<void> deleteWithPrefix(String prefix) async {
+    final scoped = await _scopedKey(prefix);
+    final keys =
+        (await storage.readAll()).keys.where((key) => key.startsWith(scoped));
+    for (final key in keys.toList()) {
+      await storage.delete(key: key);
+    }
+  }
 }
 
 /// The only application event boundary. Invalid input is rejected, not truncated.
@@ -264,21 +282,39 @@ class ProductAnalytics {
   }
 
   /// Deletes the stored identifier of an account that is removed from the
-  /// device, so that adding it again starts with a new one. Ordered behind
-  /// every queued write of the identity map; data uploaded before is not
+  /// device, so that adding it again starts with a new one, and the grade
+  /// fingerprints kept under it (#174). Ordered behind every queued write of
+  /// the identity map and of the fingerprints; data uploaded before is not
   /// affected.
-  Future<void> forgetAccount(String localAccountKey) => _serialize(() async {
-        final raw = await store.read('analyticsIdentityMapV4');
-        if (raw == null) return;
-        final decoded = jsonDecode(raw);
-        if (decoded is! Map<String, dynamic> ||
-            !decoded.containsKey(localAccountKey)) {
-          return;
-        }
-        decoded.remove(localAccountKey);
-        await store.write('analyticsIdentityMapV4', jsonEncode(decoded));
-        _identityChanged();
-      });
+  Future<void> forgetAccount(String localAccountKey) {
+    // The account is going away: nothing queued for it may write again.
+    if (_accountKey == localAccountKey) unawaited(clearIdentity());
+    return _serialize(() async {
+      final raw = await store.read('analyticsIdentityMapV4');
+      if (raw == null) return;
+      final decoded = jsonDecode(raw);
+      if (decoded is! Map<String, dynamic> ||
+          !decoded.containsKey(localAccountKey)) {
+        return;
+      }
+      final id = decoded[localAccountKey];
+      if (id is String && id.isNotEmpty) {
+        _snapshots.removeWhere((key, _) => key.startsWith('$id:'));
+        await store.deleteWithPrefix('$academicSnapshotKeyPrefix$id:');
+      }
+      decoded.remove(localAccountKey);
+      await store.write('analyticsIdentityMapV4', jsonEncode(decoded));
+      _identityChanged();
+    });
+  }
+
+  /// Deletes the grade fingerprints of every account, once grade statistics
+  /// or usage analytics are no longer allowed (#174). Ordered behind every
+  /// queued summary, which checks the consent again before it writes.
+  Future<void> forgetAcademicSnapshots() {
+    _snapshots.clear();
+    return _serialize(() => store.deleteWithPrefix(academicSnapshotKeyPrefix));
+  }
 
   Future<void> clearIdentity() {
     _epoch++;
@@ -393,7 +429,7 @@ class ProductAnalytics {
           '$_identity:$_school:${safe['academic_year']}:${safe['semester']}';
       // Canonical normalized values only. Stored locally; never transmitted.
       final fingerprint = jsonEncode([for (final k in summaryKeys) safe[k]]);
-      final storageKey = 'analyticsSnapshotV4:$key';
+      final storageKey = '$academicSnapshotKeyPrefix$key';
       final previous = _snapshots[key] ?? await store.read(storageKey);
       if (previous == fingerprint ||
           epoch != _epoch ||
@@ -401,7 +437,9 @@ class ProductAnalytics {
         return;
       }
       await sink.event('academic_summary_updated', safe);
-      if (epoch != _epoch || !enabled) return;
+      if (epoch != _epoch || !enabled || !decision().academicStatsAllowed) {
+        return;
+      }
       await store.write(storageKey, fingerprint);
       _snapshots[key] = fingerprint;
     });

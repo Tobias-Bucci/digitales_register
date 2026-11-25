@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:convert';
 import 'package:dr/diagnostics_service.dart';
 import 'package:dr/privacy_log.dart';
@@ -163,12 +164,18 @@ class PrivacyController {
       required this.collection,
       required this.gate,
       this.analyticsGate,
-      this.onApplied});
+      this.onApplied,
+      this.onAcademicStatisticsOff});
   final PrivacyStore store;
   final TelemetryCollection collection;
   final void Function(bool) gate;
   final void Function(bool)? analyticsGate;
   final Future<void> Function(PrivacyDecision)? onApplied;
+
+  /// Started, not awaited, after a choice that does not allow grade
+  /// statistics was saved, to delete what was kept for them on the device
+  /// (#174).
+  final Future<void> Function()? onAcademicStatisticsOff;
   PrivacyDecision decision = const PrivacyDecision();
   bool existingInstallation = false;
   bool busy = false;
@@ -312,6 +319,12 @@ class PrivacyController {
           reportsPurged: purged);
       await store.write(next);
       decision = next;
+      if (!next.academicStatsAllowed) {
+        // Not awaited: deleting the local fingerprints must not hold up the
+        // choice. The analytics queue orders it before any later summary.
+        unawaited(Future.sync(() => onAcademicStatisticsOff?.call())
+            .catchError(_report));
+      }
       if (purged) await _apply(alreadyPurged: true, stopped: stopped);
     } finally {
       busy = false;

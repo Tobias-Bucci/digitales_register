@@ -131,7 +131,10 @@ final LocalDataInventory localDataInventory = LocalDataInventory([
             account.scope.server, account.scope.user!)),
   ),
   // The random identifier usage analytics uses for the account (only there
-  // after consent). The key is the one refreshProductAnalyticsContext uses.
+  // after consent), and the grade fingerprints kept under it
+  // (analyticsSnapshotV4:<id>:*, #174): forgetAccount needs the identifier to
+  // find them, so one entry deletes both. The key is the one
+  // refreshProductAnalyticsContext uses.
   LocalDataEntry(
     id: 'analyticsIdentity',
     category: LocalDataCategory.appOwnedCache,

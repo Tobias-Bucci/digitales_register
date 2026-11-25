@@ -114,7 +114,8 @@ class AnalyticsService {
       onApplied: (_) async {
         await product.applyPrivacyState();
         await refreshContext?.call();
-      });
+      },
+      onAcademicStatisticsOff: () => product.forgetAcademicSnapshots());
   static Future<void> Function()? refreshContext;
   static final ProductAnalytics product = ProductAnalytics(
       sink: _FirebaseAnalyticsSink(),

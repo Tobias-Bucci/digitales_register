@@ -31,6 +31,7 @@ import 'package:dr/class_register_cache.dart';
 import 'package:dr/local_data_inventory.dart';
 import 'package:dr/middleware/middleware.dart';
 import 'package:dr/page_payload_cache.dart';
+import 'package:dr/product_analytics.dart';
 import 'package:dr/study_data/study_data_service.dart';
 import 'package:dr/wrapper.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -391,6 +392,43 @@ void main() {
       expect(jsonDecode((await analytics.read('analyticsIdentityMapV4'))!), {
         jsonEncode([_school, 'anna']): anna,
       });
+    });
+
+    test('deletes its grade fingerprints and keeps the others (#174)',
+        () async {
+      const mine = 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa';
+      const anna = 'bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb';
+      final analytics = AnalyticsService.product.store;
+      await analytics.write(
+          'analyticsIdentityMapV4',
+          jsonEncode({
+            jsonEncode([_school, 'max']): mine,
+            jsonEncode([_school, 'anna']): anna,
+          }));
+      for (final id in [mine, anna]) {
+        for (final semester in ['1', '2']) {
+          await analytics.write(
+              '$academicSnapshotKeyPrefix$id:school_0001:2026_2027:$semester',
+              '[81]');
+        }
+      }
+      await secureStorage.write(
+          key: 'login',
+          value: jsonEncode({'user': 'max', 'pass': 'p', 'url': _school}));
+
+      await store.actions.loginActions.removeCurrentAccount();
+      await AnalyticsService.product.flush();
+
+      for (final semester in ['1', '2']) {
+        expect(
+            await analytics.read('$academicSnapshotKeyPrefix$mine:'
+                'school_0001:2026_2027:$semester'),
+            isNull);
+        expect(
+            await analytics.read('$academicSnapshotKeyPrefix$anna:'
+                'school_0001:2026_2027:$semester'),
+            '[81]');
+      }
     });
   });
 
