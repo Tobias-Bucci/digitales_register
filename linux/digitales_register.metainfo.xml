@@ -26,6 +26,24 @@ Einzelne Funktionen, wie das Eintragen von neuen Absenzen, sind jedoch noch nich
 </p>
   </description>
   <releases>
+    <release version="2.0.0" date="2026-11-26">
+      <description>
+        <p>The biggest update so far: a new compact design (the classic design stays available), a new grades page, one notification center with announcements and polls, more detailed school notifications, reminders for tests, exams and the Mensa, and separate privacy choices that start off.</p>
+        <p xml:lang="de">Das bisher größte Update: ein neues kompaktes Design (das klassische bleibt wählbar), eine neue Notenseite, ein Benachrichtigungscenter mit Mitteilungen und Umfragen, genauere Schulbenachrichtigungen, Erinnerungen an Tests, Schularbeiten und die Mensa sowie eine einzeln wählbare Datenschutz-Auswahl, die anfangs aus ist.</p>
+        <p xml:lang="it">L’aggiornamento più grande finora: un nuovo design compatto (quello classico resta disponibile), una nuova pagina dei voti, un unico centro notifiche con avvisi e sondaggi, notifiche della scuola più dettagliate, promemoria per verifiche, esami e mensa e scelte sulla privacy separate che partono disattivate.</p>
+        <ul>
+          <li>Signing out keeps the account; “Remove account” deletes it with its data</li>
+          <li xml:lang="de">Abmelden behält das Konto; „Konto entfernen“ löscht es mit seinen Daten</li>
+          <li xml:lang="it">Il logout mantiene l’account; «Rimuovi account» lo elimina con i suoi dati</li>
+          <li>Links in messages, assignments and course materials can be opened</li>
+          <li xml:lang="de">Links in Mitteilungen, Aufgaben und Lernmaterialien lassen sich öffnen</li>
+          <li xml:lang="it">I link in comunicazioni, compiti e materiali didattici si possono aprire</li>
+          <li>Calendar, widget and accessibility fixes and a faster start</li>
+          <li xml:lang="de">Korrekturen bei Kalender, Widgets und Barrierefreiheit und ein schnellerer Start</li>
+          <li xml:lang="it">Correzioni a calendario, widget e accessibilità e un avvio più rapido</li>
+        </ul>
+      </description>
+    </release>
     <release version="1.17.4" date="2026-10-27">
       <description>
         <p>Neues Dashboard mit Noten-, Prüfungs- und Absenzenkarten, Lernpläne für Prüfungen, PDF- und CSV-Export, Schulmitteilungen, verbesserte Notenprognose, kuratierte Akzentfarben und eine neue Einführung.</p>

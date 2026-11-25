@@ -28,8 +28,9 @@ One release ships the same commit and version on every platform. Work through
 
 ## Release notes
 
-There is no `fastlane/metadata`; the notes are written once per release and
-copied into each place:
+There is no `fastlane/metadata`; the notes are written once per release in
+`docs/release-notes/<version>.md` (long version, store texts, metainfo text)
+and copied into each place:
 
 - [ ] `linux/digitales_register.metainfo.xml`: a new `<release version=…
       date=…>` with an English `<description>` and `xml:lang="de"`, `"it"`
