@@ -31,6 +31,44 @@ import 'package:shared_preferences/shared_preferences.dart';
 String accountCacheKey(String namespace, AccountScope scope) =>
     '$namespace-v2-${scope.fileId}';
 
+/// The dashboard's grade-deadline overrides (dates the user set) in
+/// SharedPreferences.
+const gradeDeadlineOverridesNamespace = 'gradeDeadlineOverrides';
+
+/// The key of the grade-deadline overrides of [scope]: the hashed account
+/// scope, never the user name or school address (#175).
+String gradeDeadlineOverridesKey(AccountScope scope) =>
+    accountCacheKey(gradeDeadlineOverridesNamespace, scope);
+
+/// The key versions before #175 used:
+/// `gradeDeadlineOverrides:{"username":…,"server_url":…}`.
+String legacyGradeDeadlineOverridesKey(String accountStorageKey) =>
+    '$gradeDeadlineOverridesNamespace:$accountStorageKey';
+
+/// Moves the grade-deadline overrides of one account from [legacyKey] to
+/// [key], then deletes [legacyKey]. A value already under [key] was written
+/// by this version and wins; a value under [legacyKey] that is not a JSON
+/// object could never be read and is only deleted. Running it again changes
+/// nothing.
+Future<void> migrateGradeDeadlineOverrides(
+    {required String legacyKey, required String key}) async {
+  final prefs = await SharedPreferences.getInstance();
+  final legacy = prefs.getString(legacyKey);
+  if (legacy == null) return;
+  if (!prefs.containsKey(key) && _isJsonObject(legacy)) {
+    if (!await prefs.setString(key, legacy)) return;
+  }
+  await prefs.remove(legacyKey);
+}
+
+bool _isJsonObject(String value) {
+  try {
+    return jsonDecode(value) is Map;
+  } on FormatException {
+    return false;
+  }
+}
+
 /// The page caches that versions before #169 kept as plain text in
 /// SharedPreferences, under `<namespace>:<user and school>`.
 const legacyPlainCacheNamespaces = [

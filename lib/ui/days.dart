@@ -37,6 +37,7 @@ import 'package:dr/external_links.dart';
 import 'package:dr/i18n/app_localizations.dart';
 import 'package:dr/main.dart';
 import 'package:dr/middleware/middleware.dart';
+import 'package:dr/page_payload_cache.dart';
 import 'package:dr/reminders/local_reminder_assessments.dart';
 import 'package:dr/school_timeline.dart';
 import 'package:dr/theme/app_palette.dart';
@@ -87,7 +88,6 @@ typedef MarkDeletedHomeworkAsSeenCallback = void Function(Day day);
 typedef OpenCalendarAtCallback = Future<void> Function(DateTime date);
 
 const _localReminderAssessmentHintKey = 'localReminderAssessmentHintShown';
-const _gradeDeadlineOverridesKey = 'gradeDeadlineOverrides';
 
 class DaysWidget extends StatefulWidget {
   final DaysViewModel vm;
@@ -150,8 +150,15 @@ class _DaysWidgetState extends State<DaysWidget> {
   bool _reachedHomeworksUpdateScheduled = false;
 
   Future<void> _loadGradeDeadlineOverrides() async {
-    final raw = (await SharedPreferences.getInstance())
-        .getString(_gradeDeadlinePreferenceStorageKey());
+    final key = _gradeDeadlinePreferenceStorageKey();
+    final legacyKey = _legacyGradeDeadlinePreferenceStorageKey();
+    // The first load of a signed-in account moves its overrides away from
+    // the key with its user name and school address (#175). Only now is the
+    // account known; the old key cannot be mapped back to one reliably.
+    if (legacyKey != null && legacyKey != key) {
+      await migrateGradeDeadlineOverrides(legacyKey: legacyKey, key: key);
+    }
+    final raw = (await SharedPreferences.getInstance()).getString(key);
     if (raw == null) return;
     final decoded = getMap(raw);
     if (decoded == null) return;
@@ -171,9 +178,17 @@ class _DaysWidgetState extends State<DaysWidget> {
 
   String _gradeDeadlinePreferenceStorageKey() {
     try {
-      return userScopedStorageKey(_gradeDeadlineOverridesKey);
+      return gradeDeadlineOverridesKey(currentAccountScope());
     } catch (_) {
-      return _gradeDeadlineOverridesKey;
+      return gradeDeadlineOverridesNamespace;
+    }
+  }
+
+  String? _legacyGradeDeadlinePreferenceStorageKey() {
+    try {
+      return currentLegacyGradeDeadlineOverridesKey();
+    } catch (_) {
+      return null;
     }
   }
 

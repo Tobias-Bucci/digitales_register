@@ -60,6 +60,7 @@ void main() {
       await secureStorage.write(
           key: accountCacheKey(namespace, scope), value: 'cached-data');
     }
+    await prefs.setString(gradeDeadlineOverridesKey(scope), '{"count":1}');
 
     final store = createStore(
       initialState: AppState(),
@@ -79,6 +80,7 @@ void main() {
     ]) {
       expect(prefs.getString('$namespace:$accountStorageKey'), isNull);
     }
+    expect(prefs.getString(gradeDeadlineOverridesKey(scope)), isNull);
     for (final namespace in legacyPlainCacheNamespaces) {
       expect(await secureStorage.read(key: accountCacheKey(namespace, scope)),
           isNull,

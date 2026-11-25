@@ -139,7 +139,9 @@ void main() {
       await secureStorage.write(
           key: key, value: jsonEncode({'payload': <Object?>[]}));
     }
-    await p.setString('gradeDeadlineOverrides:$storageKey', '{"count":1}');
+    await p.setString(gradeDeadlineOverridesKey(scope), '{"count":1}');
+    // A leftover of the key before #175, with user name and school address.
+    await p.setString('gradeDeadlineOverrides:$storageKey', '{"count":2}');
     await p.setString('courseMaterialFileVersions:${scope.fileId}', '{}');
     await p.setString('calendarSyncRecords', '[{"syncKey":"k","eventId":1}]');
     await studyDataService.save(
@@ -274,7 +276,7 @@ void main() {
 
       await expectCachesGone();
       final p = await prefs();
-      expect(p.getString('gradeDeadlineOverrides:$storageKey'), isNotNull);
+      expect(p.getString(gradeDeadlineOverridesKey(scope)), isNotNull);
       expect((await studyDataService.load(scope)).notes,
           {'assessment-1': 'my note'});
       expect(File('${attachments.path}/${scope.fileId}/1_a.pdf').existsSync(),
@@ -299,6 +301,7 @@ void main() {
       await expectCachesGone();
       final p = await prefs();
       expect(p.containsKey('gradeDeadlineOverrides:$storageKey'), isFalse);
+      expect(p.containsKey(gradeDeadlineOverridesKey(scope)), isFalse);
       expect((await studyDataService.load(scope)).isEmpty, isTrue);
       expect(Directory('${attachments.path}/${scope.fileId}').existsSync(),
           isFalse);
@@ -359,6 +362,7 @@ void main() {
       await expectCachesGone();
       final p = await prefs();
       expect(p.containsKey('gradeDeadlineOverrides:$storageKey'), isFalse);
+      expect(p.containsKey(gradeDeadlineOverridesKey(scope)), isFalse);
       expect(
           p.containsKey('courseMaterialFileVersions:${scope.fileId}'), isFalse);
       expect((await secureStorage.read(key: blob)), isNull);
@@ -429,6 +433,63 @@ void main() {
                 'school_0001:2026_2027:$semester'),
             '[81]');
       }
+    });
+  });
+
+  group('the grade-deadline overrides (#175)', () {
+    String legacyKey() => 'gradeDeadlineOverrides:$storageKey';
+    Future<void> migrate() => migrateGradeDeadlineOverrides(
+        legacyKey: legacyKey(), key: gradeDeadlineOverridesKey(scope));
+
+    test('move once from the key with user and school to the hashed key',
+        () async {
+      final p = await prefs();
+      const value = '{"count":1,"deadline-1":"2027-01-20T00:00:00.000"}';
+      await p.setString(legacyKey(), value);
+
+      await migrate();
+      await migrate();
+
+      expect(p.getString(gradeDeadlineOverridesKey(scope)), value);
+      expect(p.containsKey(legacyKey()), isFalse);
+      for (final key in p.getKeys()) {
+        expect(key, isNot(contains('max')), reason: key);
+        expect(key, isNot(contains('school.example')), reason: key);
+      }
+    });
+
+    test('keep the value of this version when both keys exist', () async {
+      final p = await prefs();
+      await p.setString(legacyKey(), '{"count":2}');
+      await p.setString(gradeDeadlineOverridesKey(scope), '{"count":1}');
+
+      await migrate();
+
+      expect(p.getString(gradeDeadlineOverridesKey(scope)), '{"count":1}');
+      expect(p.containsKey(legacyKey()), isFalse);
+    });
+
+    test('drop an old value that could never be read', () async {
+      final p = await prefs();
+      await p.setString(legacyKey(), 'not json');
+
+      await migrate();
+
+      expect(p.containsKey(gradeDeadlineOverridesKey(scope)), isFalse);
+      expect(p.containsKey(legacyKey()), isFalse);
+    });
+
+    test('leave other accounts alone', () async {
+      final p = await prefs();
+      final anna = AccountScope(_school, 'anna');
+      await p.setString(legacyKey(), '{"count":1}');
+      await p.setString(gradeDeadlineOverridesKey(anna), '{"count":2}');
+
+      await migrate();
+
+      expect(p.getString(gradeDeadlineOverridesKey(anna)), '{"count":2}');
+      expect(gradeDeadlineOverridesKey(anna),
+          isNot(gradeDeadlineOverridesKey(scope)));
     });
   });
 

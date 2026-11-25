@@ -22,22 +22,6 @@ Future<void> _removePreference(String key) async {
   await prefs.remove(key);
 }
 
-LocalDataEntry _preferenceEntry(
-  String id,
-  String namespace, {
-  required LocalDataCategory category,
-  required Set<LocalDataTrigger> deletedBy,
-  bool gated = false,
-}) =>
-    LocalDataEntry(
-      id: id,
-      category: category,
-      deletedBy: deletedBy,
-      gatedByNoDataSaving: gated,
-      deleteFor: (account) =>
-          _removePreference('$namespace:${account.storageKey}'),
-    );
-
 /// A page cache in the secure storage (#169). It also removes a plain-text
 /// copy an older version may have left behind.
 LocalDataEntry _pageCacheEntry(String id, String namespace) => LocalDataEntry(
@@ -76,12 +60,17 @@ final LocalDataInventory localDataInventory = LocalDataInventory([
   _pageCacheEntry('classRegisterCache', 'classRegisterLessons'),
   _pageCacheEntry('courseMaterialsCache', 'courseMaterials'),
   // What the user entered or wrote: deleted with the account and when data is
-  // deleted, but not when saving of data is turned off.
-  _preferenceEntry(
-    'gradeDeadlineOverrides',
-    'gradeDeadlineOverrides',
+  // deleted, but not when saving of data is turned off. The key of versions
+  // before #175 (with user name and school address) goes too.
+  LocalDataEntry(
+    id: 'gradeDeadlineOverrides',
     category: LocalDataCategory.userCreated,
     deletedBy: {LocalDataTrigger.removeAccount, LocalDataTrigger.deleteData},
+    deleteFor: (account) async {
+      await _removePreference(gradeDeadlineOverridesKey(account.scope));
+      await _removePreference(
+          legacyGradeDeadlineOverridesKey(account.storageKey));
+    },
   ),
   LocalDataEntry(
     id: 'studyData',

@@ -19,10 +19,12 @@ import 'dart:async';
 import 'dart:convert';
 
 import 'package:built_collection/built_collection.dart';
+import 'package:dr/account_scope.dart';
 import 'package:dr/app_state.dart';
 import 'package:dr/container/days_container.dart';
 import 'package:dr/data.dart';
 import 'package:dr/middleware/middleware.dart';
+import 'package:dr/page_payload_cache.dart';
 import 'package:dr/serializers.dart';
 import 'package:dr/ui/days.dart';
 import 'package:dr/ui/favorite_subject_filter.dart';
@@ -32,6 +34,7 @@ import 'package:dr/utc_date_time.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:mocktail/mocktail.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 import '../../support/fixtures.dart';
 import '../../support/test_harness.dart';
@@ -43,6 +46,47 @@ void main() {
 
   tearDown(() {
     resetTestState();
+  });
+
+  testWidgets(
+      'the first load moves the grade-deadline overrides to the hashed key',
+      (tester) async {
+    final account = MockWrapper();
+    when(() => account.user).thenReturn('max');
+    when(() => account.url).thenReturn(testServerUrl);
+    when(() => account.loginAddress).thenReturn(testLoginAddress);
+    when(() => account.noInternet).thenReturn(false);
+    final legacyKey =
+        'gradeDeadlineOverrides:${getStorageKey('max', testLoginAddress)}';
+    // Real file and storage work: outside the fake time of the test.
+    final prefs = (await tester.runAsync(() async {
+      await bootstrapTestEnvironment(wrapperOverride: account);
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.setString(legacyKey, '{"count":1}');
+      return prefs;
+    }))!;
+
+    await pumpApp(
+      tester,
+      store: createStore(
+        initialState: AppState(
+          (b) => b.dashboardState
+            ..future = false
+            ..allDays = ListBuilder<Day>(<Day>[
+              buildDay(date: UtcDateTime(2020)),
+            ]),
+        ),
+      ),
+      home: DaysContainer(),
+    );
+    await settleFor(tester);
+
+    // No preferences key names the user or the school any more (#175).
+    expect(prefs.containsKey(legacyKey), isFalse);
+    expect(
+        prefs.getString(
+            gradeDeadlineOverridesKey(AccountScope(testServerUrl, 'max'))),
+        '{"count":1}');
   });
 
   testWidgets('home page shows the no internet state', (tester) async {

@@ -114,8 +114,12 @@ String _classRegisterCacheKey([_Session? session]) =>
 String _courseMaterialsCacheKey([_Session? session]) =>
     accountCacheKey('courseMaterials', _cacheScopeFor(session));
 
-String userScopedStorageKey(String namespace) =>
-    '$namespace:${getStorageKey(wrapper.user, wrapper.loginAddress)}';
+/// The key versions before #175 used for the grade-deadline overrides of the
+/// account signed in now, with its user name and school address. Only for
+/// moving them to [gradeDeadlineOverridesKey].
+String currentLegacyGradeDeadlineOverridesKey() =>
+    legacyGradeDeadlineOverridesKey(
+        getStorageKey(wrapper.user, wrapper.loginAddress));
 
 String _homeworkSummaryCacheKey([_Session? session]) =>
     accountCacheKey('homeworkSummary', _cacheScopeFor(session));
