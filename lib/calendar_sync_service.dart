@@ -20,6 +20,7 @@ import 'dart:convert';
 
 import 'package:dr/analytics_schema.dart';
 import 'package:dr/analytics_service.dart';
+import 'package:dr/app_clock.dart';
 import 'package:dr/app_state.dart';
 import 'package:dr/data.dart';
 import 'package:dr/diagnostics_service.dart';
@@ -282,6 +283,14 @@ extension CalendarSyncService on Never {
     bool recreateMissing = false,
   }) async {
     if (!isAndroidPlatform || !state.settingsState.calendarSyncEnabled) {
+      missingEventCount.value = 0;
+      return true;
+    }
+    // The demo's entries are made up, and the sync records belong to the
+    // device, not to an account: reconciling would put demo entries into the
+    // real calendar and delete the events of the real account. Like the
+    // reminders, the demo leaves the device calendar alone.
+    if (state.isDemo || appClock.isDemoMode) {
       missingEventCount.value = 0;
       return true;
     }
