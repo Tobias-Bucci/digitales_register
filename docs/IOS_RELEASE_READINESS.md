@@ -9,7 +9,7 @@ for this document.
 | --- | --- |
 | Home screen name | Register (`CFBundleDisplayName` and `CFBundleName`) |
 | Bundle ID | it.bucci.digitalesregister; widget extension it.bucci.digitalesregister.PlanningWidgets |
-| Version / build | 2.0.0 / 57, sourced from pubspec.yaml through Flutter build variables |
+| Version / build | 2.0.0 / 58, sourced from pubspec.yaml through Flutter build variables |
 | Deployment target | iOS 15.0 for Runner and PlanningWidgets; required by the current Firebase pods |
 | Devices | iPhone and iPad (`TARGETED_DEVICE_FAMILY = "1,2"`) |
 | Signing | Existing team 4838ZPN3B8, automatic signing; account access unverified |
@@ -68,7 +68,7 @@ and entitlements; `python3 tool/test_check_ios_release.py` runs it against the
 current checkout. The default launcher-icon configuration
 also removes iOS alpha so later icon regeneration preserves the opaque background.
 
-On 2026-11-25 the checker passed for version 2.0.0, build 57, and its test
+On 2026-11-26 the checker passed for version 2.0.0, build 58, and its test
 passed (both run on Windows). This covers configuration files only.
 
 ## Not yet verified on a Mac
@@ -96,7 +96,7 @@ passed (both run on Windows). This covers configuration files only.
 3. Open `ios/Runner.xcworkspace` and confirm the existing Apple team has access to
    the registered bundle IDs, the app group and valid signing/provisioning.
    Configure distribution signing through Xcode's Organizer when archiving.
-4. Confirm App Store Connect accepts version **2.0.0** and that build **57** has
+4. Confirm App Store Connect accepts version **2.0.0** and that build **58** has
    not already been uploaded for it. Increase the build number in `pubspec.yaml`
    if already used. The remote App Store record was not accessible during this
    repository check.
