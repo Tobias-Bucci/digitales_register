@@ -246,6 +246,7 @@
   "dashboard.reminder.deleteQuestion": "Delete reminder?",
   "dashboard.deletedEntries": "Deleted entries",
   "dashboard.versions": "Versions",
+  "dashboard.entryHistory": "History",
   "dashboard.neverAsk": "Never ask",
   "dashboard.current": "current",
   "dashboard.changed": "changed",

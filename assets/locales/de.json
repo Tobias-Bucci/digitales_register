@@ -246,6 +246,7 @@
   "dashboard.reminder.deleteQuestion": "Erinnerung löschen?",
   "dashboard.deletedEntries": "Gelöschte Einträge",
   "dashboard.versions": "Versionen",
+  "dashboard.entryHistory": "Verlauf",
   "dashboard.neverAsk": "Nie fragen",
   "dashboard.current": "aktuell",
   "dashboard.changed": "geändert",

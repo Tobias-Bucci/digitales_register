@@ -98,6 +98,7 @@ class DayWidget extends StatelessWidget {
                   key: ValueKey(index),
                   highlightColor: Colors.grey.withValues(alpha: 0.5),
                   child: IconButton(
+                    tooltip: l10n.text('dashboard.deletedEntries'),
                     icon: badge.Badge(
                       badgeContent: Icon(
                         Icons.delete,
@@ -153,6 +154,7 @@ class DayWidget extends StatelessWidget {
               const Spacer(),
               if (vm.showAddReminder)
                 IconButton(
+                  tooltip: l10n.text('dashboard.addEntry'),
                   icon: const Icon(Icons.add),
                   onPressed: vm.noInternet
                       ? null
@@ -418,6 +420,7 @@ class ItemWidget extends StatelessWidget {
                             leading:
                                 !isHistory && !isDeletedView && item.deleteable
                                     ? IconButton(
+                                        tooltip: l10n.text('button.delete'),
                                         icon: const Icon(Icons.close),
                                         onPressed: noInternet
                                             ? null
@@ -435,6 +438,7 @@ class ItemWidget extends StatelessWidget {
                     children: <Widget>[
                       if (canEditReminder)
                         IconButton(
+                          tooltip: l10n.text('dashboard.editEntry'),
                           icon: const Icon(Icons.edit_outlined),
                           onPressed: noInternet
                               ? null
@@ -446,6 +450,7 @@ class ItemWidget extends StatelessWidget {
                           displayLabel != null &&
                           !isSelfCreatedAssessment)
                         IconButton(
+                          tooltip: l10n.text('dashboard.entryHistory'),
                           icon: (isDeletedView
                                       ? item.previousVersion!.previousVersion
                                       : item.previousVersion) !=
@@ -491,6 +496,7 @@ class ItemWidget extends StatelessWidget {
                         )
                       else if (!isHistory && !isDeletedView && item.checkable)
                         Checkbox(
+                          semanticLabel: l10n.text('dashboard.markDone'),
                           visualDensity: VisualDensity.standard,
                           activeColor: Theme.of(context).colorScheme.success,
                           value: item.checked,

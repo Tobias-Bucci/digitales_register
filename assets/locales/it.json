@@ -246,6 +246,7 @@
   "dashboard.reminder.deleteQuestion": "Eliminare il promemoria?",
   "dashboard.deletedEntries": "Voci eliminate",
   "dashboard.versions": "Versioni",
+  "dashboard.entryHistory": "Cronologia",
   "dashboard.neverAsk": "Non chiedere mai",
   "dashboard.current": "attuale",
   "dashboard.changed": "modificato",
