@@ -120,6 +120,51 @@ class _CalendarState extends State<Calendar> with TickerProviderStateMixin {
 
   late List<int> animatingPages;
 
+  /// The page the running animation of this widget turns to.
+  int? _targetPage;
+
+  /// The width the page view was last laid out with.
+  double? _pagerWidth;
+
+  /// Turns to [page] with the page animation.
+  Future<void> _animateToPage(int page) async {
+    _targetPage = page;
+    try {
+      await _controller.animateToPage(
+        page,
+        curve: _animatePageCurve,
+        duration: _animatePageDuration,
+      );
+    } finally {
+      if (_targetPage == page) _targetPage = null;
+    }
+  }
+
+  /// Keeps the week the page animation turns to when the page view changes
+  /// width while it runs.
+  ///
+  /// The animation runs to the pixels of its page at the old width. At the new
+  /// width those pixels are a page hundreds of weeks away, and the calendar
+  /// would store that week: on a wide screen the detail sidebar sliding in
+  /// while "next week" turned landed in 2033 (#180). The page view itself
+  /// keeps its page on a resize, so jump to the target before the next
+  /// animation frame moves it.
+  void _keepTargetPageOnResize(double width) {
+    final previous = _pagerWidth;
+    _pagerWidth = width;
+    if (previous == null || previous == width || _targetPage == null) return;
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      final target = _targetPage;
+      if (!mounted || target == null || !_controller.hasClients) return;
+      _targetPage = null;
+      _controller.jumpToPage(target);
+    });
+  }
+
+  /// Whether [page] is a week the calendar shows (see [calendarMondayRange]).
+  bool _isShownPage(int page) =>
+      calendarMonday(mondayOf(page), today: now) == mondayOf(page);
+
   Future<void> _loadWeek(UtcDateTime monday) async {
     if (!_loadingWeeks.add(monday)) return;
     setState(() {});
@@ -140,17 +185,24 @@ class _CalendarState extends State<Calendar> with TickerProviderStateMixin {
 
   void _pageViewControllerListener() {
     final floor = _controller.page!.floor(), ceil = _controller.page!.ceil();
-    if (!animatingPages.contains(floor)) {
+    if (!animatingPages.contains(floor) && _isShownPage(floor)) {
       unawaited(_loadWeek(mondayOf(floor)));
     }
-    if (ceil != floor && !animatingPages.contains(ceil)) {
+    if (ceil != floor && !animatingPages.contains(ceil) && _isShownPage(ceil)) {
       unawaited(_loadWeek(mondayOf(ceil)));
     }
     animatingPages = [floor, ceil];
   }
 
   void _handlePageChanged(int newPage) {
-    final newMonday = mondayOf(newPage);
+    final newMonday = calendarMonday(mondayOf(newPage), today: now);
+    final page = pageOf(newMonday);
+    if (page != newPage) {
+      // Past the weeks the calendar shows: back to the nearest one it does.
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (mounted && _controller.hasClients) _controller.jumpToPage(page);
+      });
+    }
     if (newMonday != widget.vm.currentMonday) {
       widget.currentMondayCallback(newMonday);
     }
@@ -171,11 +223,7 @@ class _CalendarState extends State<Calendar> with TickerProviderStateMixin {
     );
     final page = pageOf(widget.vm.currentMonday);
     if (page != _controller.page?.round()) {
-      _controller.animateToPage(
-        page,
-        curve: _animatePageCurve,
-        duration: _animatePageDuration,
-      );
+      unawaited(_animateToPage(page));
     }
     if (!tabletMode &&
         oldWidget.vm.selection == null &&
@@ -251,8 +299,7 @@ class _CalendarState extends State<Calendar> with TickerProviderStateMixin {
   }
 
   void _showCurrentWeek() {
-    _controller.animateToPage(pageOf(toMonday(now)),
-        curve: _animatePageCurve, duration: _animatePageDuration);
+    unawaited(_animateToPage(pageOf(toMonday(now))));
   }
 
   @override
@@ -263,18 +310,23 @@ class _CalendarState extends State<Calendar> with TickerProviderStateMixin {
       final availableFavoriteSubjects = _availableFavoriteSubjects();
       final selectedFavoriteSubject =
           _resolvedFavoriteSubject(availableFavoriteSubjects);
-      final pageView = PageView.builder(
-        itemBuilder: (BuildContext context, int index) {
-          return CalendarWeekContainer(
-            monday: mondayOf(index),
-            favoriteSubject: selectedFavoriteSubject,
-            loading: _loadingWeeks.contains(mondayOf(index)) ||
-                !_finishedWeeks.contains(mondayOf(index)),
-            onRetry: () => unawaited(_loadWeek(mondayOf(index))),
+      final pageView = LayoutBuilder(
+        builder: (context, pagerConstraints) {
+          _keepTargetPageOnResize(pagerConstraints.maxWidth);
+          return PageView.builder(
+            itemBuilder: (BuildContext context, int index) {
+              return CalendarWeekContainer(
+                monday: mondayOf(index),
+                favoriteSubject: selectedFavoriteSubject,
+                loading: _loadingWeeks.contains(mondayOf(index)) ||
+                    !_finishedWeeks.contains(mondayOf(index)),
+                onRetry: () => unawaited(_loadWeek(mondayOf(index))),
+              );
+            },
+            controller: _controller,
+            onPageChanged: _handlePageChanged,
           );
         },
-        controller: _controller,
-        onPageChanged: _handlePageChanged,
       );
       if (newDesign) {
         return _buildNew(
@@ -344,12 +396,11 @@ class _CalendarState extends State<Calendar> with TickerProviderStateMixin {
                               child: FadeTransition(
                                 opacity: _chevronOpacityAnimation,
                                 child: TextButton(
-                                  onPressed: () {
-                                    _controller.previousPage(
-                                      curve: _animatePageCurve,
-                                      duration: _animatePageDuration,
-                                    );
-                                  },
+                                  onPressed: () => unawaited(
+                                    _animateToPage(
+                                      _controller.page!.round() - 1,
+                                    ),
+                                  ),
                                   child: const Icon(Icons.chevron_left),
                                 ),
                               ),
@@ -363,10 +414,12 @@ class _CalendarState extends State<Calendar> with TickerProviderStateMixin {
                                       Theme.of(context).textTheme.titleLarge),
                                 ),
                                 onPressed: () async {
+                                  final weeks = calendarMondayRange(now);
                                   final result = await showDatePicker(
                                     context: context,
-                                    firstDate: UtcDateTime(2018),
-                                    lastDate: UtcDateTime(2050),
+                                    firstDate: weeks.first,
+                                    lastDate:
+                                        weeks.last.add(const Duration(days: 4)),
                                     initialDate: widget.vm.currentMonday,
                                     selectableDayPredicate: (day) {
                                       return day.weekday != DateTime.sunday &&
@@ -376,11 +429,7 @@ class _CalendarState extends State<Calendar> with TickerProviderStateMixin {
                                   if (result == null) return;
                                   final date = toMonday(result.makeUtc());
                                   if (date != widget.vm.currentMonday) {
-                                    await _controller.animateToPage(
-                                      pageOf(date),
-                                      curve: _animatePageCurve,
-                                      duration: _animatePageDuration,
-                                    );
+                                    await _animateToPage(pageOf(date));
                                   }
                                 },
                                 child: widget.vm.first != null &&
@@ -400,11 +449,11 @@ class _CalendarState extends State<Calendar> with TickerProviderStateMixin {
                               child: FadeTransition(
                                 opacity: _chevronOpacityAnimation,
                                 child: TextButton(
-                                  onPressed: () {
-                                    _controller.nextPage(
-                                        curve: _animatePageCurve,
-                                        duration: _animatePageDuration);
-                                  },
+                                  onPressed: () => unawaited(
+                                    _animateToPage(
+                                      _controller.page!.round() + 1,
+                                    ),
+                                  ),
                                   child: const Icon(Icons.chevron_right),
                                 ),
                               ),
@@ -498,21 +547,16 @@ class _CalendarState extends State<Calendar> with TickerProviderStateMixin {
     if (_reduceMotion(context)) {
       _controller.jumpToPage(page);
     } else {
-      unawaited(
-        _controller.animateToPage(
-          page,
-          curve: _animatePageCurve,
-          duration: _animatePageDuration,
-        ),
-      );
+      unawaited(_animateToPage(page));
     }
   }
 
   Future<void> _pickWeek(BuildContext context) async {
+    final weeks = calendarMondayRange(now);
     final result = await showDatePicker(
       context: context,
-      firstDate: UtcDateTime(2018),
-      lastDate: UtcDateTime(2050),
+      firstDate: weeks.first,
+      lastDate: weeks.last.add(const Duration(days: 4)),
       initialDate: widget.vm.currentMonday,
       selectableDayPredicate: (day) {
         return day.weekday != DateTime.sunday &&
@@ -682,11 +726,17 @@ class _CalendarState extends State<Calendar> with TickerProviderStateMixin {
   }
 }
 
-int pageOf(UtcDateTime monday) =>
-    monday.difference(UtcDateTime(2010, 1, 3, 0, 0, 0, 0, 1)).inDays ~/ 7;
+/// The Monday of page 0 of the weeks.
+final UtcDateTime _firstPageMonday = UtcDateTime(2010, 1, 4);
 
+/// The page of the week of [date]. Like [toMonday], a Saturday or Sunday
+/// belongs to the following week.
+int pageOf(UtcDateTime date) =>
+    toMonday(date).difference(_firstPageMonday).inDays ~/ 7;
+
+/// The Monday, at UTC midnight, of [page].
 UtcDateTime mondayOf(int page) =>
-    UtcDateTime(2010, 1, 4).add(Duration(days: page * 7));
+    _firstPageMonday.add(Duration(days: page * 7));
 
 class EditNickBar extends StatelessWidget {
   final bool show;

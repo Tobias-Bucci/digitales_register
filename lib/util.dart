@@ -131,6 +131,30 @@ UtcDateTime toMonday(UtcDateTime date) {
   return UtcDateTime(s.year, s.month, s.day);
 }
 
+/// The first and the last Monday the calendar shows: from two school years
+/// before the one of [today] to two school years after it. A school year
+/// starts in September.
+({UtcDateTime first, UtcDateTime last}) calendarMondayRange(
+  UtcDateTime today,
+) {
+  final schoolYear =
+      today.month >= DateTime.september ? today.year : today.year - 1;
+  return (
+    first: toMonday(UtcDateTime(schoolYear - 2, DateTime.september)),
+    last: toMonday(UtcDateTime(schoolYear + 3, DateTime.august, 31)),
+  );
+}
+
+/// The week of [date] as the calendar stores it: its Monday at UTC midnight,
+/// inside [calendarMondayRange] of [today] (#180).
+UtcDateTime calendarMonday(UtcDateTime date, {required UtcDateTime today}) {
+  final monday = toMonday(UtcDateTime.makeUtc(date));
+  final range = calendarMondayRange(today);
+  if (monday.isBefore(range.first)) return range.first;
+  if (monday.isAfter(range.last)) return range.last;
+  return monday;
+}
+
 /// User-facing application time. In the demo account its date comes from the
 /// central simulated clock; for every other account it is the real time.
 UtcDateTime get now => mockNow ?? UtcDateTime.makeUtc(appClock.now);

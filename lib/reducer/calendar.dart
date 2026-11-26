@@ -67,7 +67,8 @@ void _loaded(CalendarState state, Action<CalendarLoadedPayload> action,
 
 void _currentMonday(CalendarState state, Action<UtcDateTime> action,
     CalendarStateBuilder builder) {
-  builder.currentMonday = action.payload;
+  // Whatever a caller passes, the calendar keeps a Monday it can show (#180).
+  builder.currentMonday = calendarMonday(action.payload, today: now);
 }
 
 void _selectedDay(CalendarState state, Action<CalendarSelection?> action,
