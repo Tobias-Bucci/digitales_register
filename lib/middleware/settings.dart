@@ -576,21 +576,23 @@ Future<void> _setLanguage(
     ActionHandler next,
     Action<String> action) async {
   final session = _Session.capture();
+  final previousTargetLanguage =
+      _preferredServerLanguageForApp(api.state.settingsState.languageCode);
   await next(action);
   await appLanguageController.setLanguage(AppLanguage.fromCode(action.payload));
   if (api.state.loginState.loggedIn) {
     final targetLanguage = _preferredServerLanguageForApp(action.payload);
-    if (targetLanguage != null) {
-      try {
-        await session.send(
-          'api/profile/updateLanguage',
-          args: <String, Object?>{
-            'language': targetLanguage,
-          },
-        );
-      } catch (_) {
-        // Keep local language selection even if the server-side sync fails.
+    try {
+      // A failed update keeps the local language selection.
+      if (targetLanguage != null &&
+          await _updateServerLanguage(session, targetLanguage) &&
+          targetLanguage != previousTargetLanguage) {
+        // Ladin and German share the register's German, so switching between
+        // them changes no register text.
+        await _reloadRegisterTexts(api, session);
       }
+    } on StaleSessionException {
+      // The account changed meanwhile; its own sign-in syncs the language.
     }
   }
   // Only with the data of a signed-in account: the start applies the

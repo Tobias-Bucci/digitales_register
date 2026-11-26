@@ -106,15 +106,59 @@ Future<void> _syncServerLanguageToApp({
     return;
   }
 
+  if (await _updateServerLanguage(session, targetLanguage)) {
+    await _reloadRegisterTexts(api, session);
+  }
+}
+
+/// Asks the register to use [language] for the profile. Says whether the
+/// register accepted it; a failure keeps the local app language.
+Future<bool> _updateServerLanguage(_Session session, String language) async {
   try {
-    await session.send(
+    final result = await session.send(
       'api/profile/updateLanguage',
-      args: <String, Object?>{'language': targetLanguage},
+      args: <String, Object?>{'language': language},
     );
+    return result != null && (result is! Map || result['error'] == null);
   } on StaleSessionException {
     rethrow;
   } catch (_) {
     // Best effort only. If the server rejects this, keep the local app language.
+    return false;
+  }
+}
+
+/// Loads the dashboard and the notification list again after the register
+/// language of the profile changed. The register writes their texts in that
+/// language, so what was loaded before the change, or is still loading, shows
+/// the old one (#179).
+Future<void> _reloadRegisterTexts(
+  MiddlewareApi<AppState, AppStateBuilder, AppActions> api,
+  _Session session,
+) async {
+  final keys = <String>[
+    _dashboardCacheKey(api.state.dashboardState.future),
+    _notificationsCacheKey,
+  ];
+  // A load that asked the register before the change answers in the old
+  // language. Joining it would keep those texts, so wait for it to finish.
+  await Future.wait<void>([
+    for (final key in keys)
+      if (_inFlightLoads[key] case final inFlight?)
+        inFlight.catchError((Object _) {}),
+  ]);
+  session.ensureCurrent();
+  keys.forEach(_markRuntimeCacheStale);
+  try {
+    await Future.wait<void>([
+      api.actions.dashboardActions.load(api.state.dashboardState.future),
+      api.actions.notificationsActions.load(),
+    ]);
+  } on StaleSessionException {
+    rethrow;
+  } catch (_) {
+    // The loads report their own failures; the old texts stay until the next
+    // load.
   }
 }
 

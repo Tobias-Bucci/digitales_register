@@ -17,6 +17,7 @@
 
 import 'package:dr/app_state.dart';
 import 'package:dr/i18n/app_language.dart';
+import 'package:dr/school_api_endpoints.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:mocktail/mocktail.dart';
@@ -30,6 +31,15 @@ void main() {
     mockWrapper = MockWrapper();
     when(() => mockWrapper.loginAddress).thenReturn(testLoginAddress);
     when(() => mockWrapper.noInternet).thenReturn(false);
+    // A changed register language loads its texts again (#179).
+    when(
+      () => mockWrapper.send(
+        'api/student/dashboard/dashboard',
+        args: any(named: 'args'),
+      ),
+    ).thenAnswer((_) async => <Object?>[]);
+    when(() => mockWrapper.send(schoolUnreadNotificationsEndpoint))
+        .thenAnswer((_) async => <Object?>[]);
     await bootstrapTestEnvironment(wrapperOverride: mockWrapper);
   });
 
@@ -56,9 +66,9 @@ void main() {
     await pumpApp(tester, store: store, home: const Scaffold());
     await tester.pump();
 
-    await expectLater(
-      store.actions.settingsActions.setLanguage(AppLanguage.it.code),
-      completes,
+    // The reload stores the loaded pages: real file work, outside fake time.
+    await tester.runAsync(
+      () => store.actions.settingsActions.setLanguage(AppLanguage.it.code),
     );
 
     verify(
@@ -67,6 +77,14 @@ void main() {
         args: <String, Object?>{'language': 'it'},
       ),
     ).called(1);
+    // The register now writes its texts in Italian.
+    verify(
+      () => mockWrapper.send(
+        'api/student/dashboard/dashboard',
+        args: any(named: 'args'),
+      ),
+    ).called(1);
+    verify(() => mockWrapper.send(schoolUnreadNotificationsEndpoint)).called(1);
     await tester.pump(const Duration(seconds: 6));
   });
 
@@ -102,6 +120,13 @@ void main() {
         args: <String, Object?>{'language': 'de'},
       ),
     ).called(1);
+    // German and Ladin share the register's German: nothing to load again.
+    verifyNever(
+      () => mockWrapper.send(
+        'api/student/dashboard/dashboard',
+        args: any(named: 'args'),
+      ),
+    );
     await tester.pump(const Duration(seconds: 6));
   });
 }
