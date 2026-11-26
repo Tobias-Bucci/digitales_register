@@ -89,10 +89,20 @@ EventBannerColors eventBannerColors(
   };
 }
 
-/// The first letter of a subject, as in the sketch: "D" for "Deutsch".
-String subjectLetter(String subject) {
-  final name = subject.trim();
-  return name.isEmpty ? '' : name.characters.first.toUpperCase();
+final RegExp _letter = RegExp(r'\p{L}', unicode: true);
+
+/// The first two letters of a subject for its mark: "Ma" for "Mathematik" and
+/// "Mu" for "Musik", so that subjects with the same initial stay apart (#181).
+///
+/// Counts characters as the reader sees them (grapheme clusters), so an
+/// umlaut is never cut apart. A name of one letter, or whose second character
+/// is not a letter, as in "E-Technik", keeps only its first: "E".
+String subjectLetters(String subject) {
+  final characters = subject.trim().characters.take(2).toList();
+  if (characters.isEmpty) return '';
+  final first = characters.first.toUpperCase();
+  if (characters.length < 2 || !_letter.hasMatch(characters[1])) return first;
+  return '$first${characters[1].toLowerCase()}';
 }
 
 /// [percent] in the notation of the language, such as "82,5 %" in German.
@@ -112,7 +122,7 @@ String _eventTitle(AppLocalizations l10n, DashboardEvent event) {
   });
   final subject = event.subject;
   if (subject == null || subject.isEmpty) return title;
-  return '$title • ${subjectLetter(l10n.translateSubjectName(subject))}';
+  return '$title • ${subjectLetters(l10n.translateSubjectName(subject))}';
 }
 
 IconData _eventIcon(DashboardEventKind kind) => switch (kind) {

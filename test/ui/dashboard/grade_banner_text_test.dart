@@ -222,8 +222,8 @@ void main() {
       for (final scale in [1.0, 2.0]) {
         for (final themeMode in [ThemeMode.light, ThemeMode.dark]) {
           for (final (title, subject, kind, grade, hundredths) in [
-            (_eight, 'M', 'Schularbeit', '8', 800),
-            (_four, 'L', 'Test', '4', 400),
+            (_eight, 'Ma', 'Schularbeit', '8', 800),
+            (_four, 'La', 'Test', '4', 400),
           ]) {
             testWidgets('$grade, $layout, text at $scale, ${themeMode.name}',
                 (tester) async {

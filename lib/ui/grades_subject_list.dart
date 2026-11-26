@@ -24,7 +24,7 @@ import 'package:dr/theme/app_palette.dart';
 import 'package:dr/ui/animated_linear_progress_indicator.dart';
 import 'package:dr/ui/compact_day_list.dart' show compactRowHeight;
 import 'package:dr/ui/dashboard_app_header.dart';
-import 'package:dr/ui/dashboard_event_banner.dart' show subjectLetter;
+import 'package:dr/ui/dashboard_event_banner.dart' show subjectLetters;
 import 'package:dr/ui/favorite_subject_filter.dart';
 import 'package:dr/ui/glass_page.dart';
 import 'package:dr/ui/glass_surface.dart';
@@ -538,13 +538,21 @@ class _SubjectMark extends StatelessWidget {
       ),
       child: SizedBox.square(
         dimension: 28,
-        child: Center(
-          child: Text(
-            subjectLetter(name),
-            maxLines: 1,
-            textScaler: TextScaler.noScaling,
-            style: theme.textTheme.labelLarge?.copyWith(
-              fontWeight: FontWeight.w700,
+        child: Padding(
+          // Inside the ring, where two letters still fit the circle.
+          padding: const EdgeInsets.symmetric(horizontal: 4),
+          child: Center(
+            child: FittedBox(
+              fit: BoxFit.scaleDown,
+              child: Text(
+                subjectLetters(name),
+                maxLines: 1,
+                softWrap: false,
+                textScaler: TextScaler.noScaling,
+                style: theme.textTheme.labelLarge?.copyWith(
+                  fontWeight: FontWeight.w700,
+                ),
+              ),
             ),
           ),
         ),

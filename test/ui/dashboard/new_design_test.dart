@@ -214,8 +214,8 @@ void main() {
 
       expect(find.byType(CompactEntryRow), findsNWidgets(2));
       expect(find.byType(ItemWidget), findsNothing);
-      expect(find.text('D'), findsOneWidget);
-      expect(find.text('E'), findsOneWidget);
+      expect(find.text('De'), findsOneWidget);
+      expect(find.text('En'), findsOneWidget);
       final text =
           tester.widget<Text>(find.byKey(const ValueKey('compact-row-text-1')));
       expect(text.textSpan!.toPlainText(), 'Test  Literarische Gattungen');
@@ -988,7 +988,7 @@ void main() {
     testWidgets('shows a grade the way the sketch does', (tester) async {
       await _pumpDashboard(tester, gradeState());
 
-      expect(find.text('Neue Bewertung • G'), findsOneWidget);
+      expect(find.text('Neue Bewertung • Ge'), findsOneWidget);
       expect(find.text('7/8'), findsOneWidget);
       expect(find.text('1. Schularbeit'), findsOneWidget);
       final facts = tester
@@ -1079,7 +1079,7 @@ void main() {
         ]),
       );
 
-      expect(find.text('Neue Beobachtung • M'), findsOneWidget);
+      expect(find.text('Neue Beobachtung • Ma'), findsOneWidget);
     });
 
     test('the kinds of the feed are recognized without case sensitivity', () {

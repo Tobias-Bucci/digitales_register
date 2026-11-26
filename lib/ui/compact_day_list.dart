@@ -530,17 +530,26 @@ class CompactEntryRow extends StatelessWidget {
                               children: [
                                 if (subject != null)
                                   Container(
-                                    width: 22,
+                                    key: ValueKey(
+                                        'compact-row-subject-box-${item.id}'),
+                                    width: 24,
                                     alignment: Alignment.center,
                                     margin: const EdgeInsets.only(right: 8),
-                                    child: Text(
-                                      subjectLetter(subject),
-                                      key: ValueKey(
-                                          'compact-row-subject-${item.id}'),
-                                      style:
-                                          theme.textTheme.titleSmall?.copyWith(
-                                        color: palette.letter,
-                                        fontWeight: FontWeight.w700,
+                                    // Two letters stay on one line and shrink
+                                    // to the slot at large text sizes.
+                                    child: FittedBox(
+                                      fit: BoxFit.scaleDown,
+                                      child: Text(
+                                        subjectLetters(subject),
+                                        key: ValueKey(
+                                            'compact-row-subject-${item.id}'),
+                                        maxLines: 1,
+                                        softWrap: false,
+                                        style: theme.textTheme.titleSmall
+                                            ?.copyWith(
+                                          color: palette.letter,
+                                          fontWeight: FontWeight.w700,
+                                        ),
                                       ),
                                     ),
                                   ),

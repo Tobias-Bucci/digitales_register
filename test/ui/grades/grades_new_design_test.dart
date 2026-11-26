@@ -27,6 +27,7 @@ import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 import '../../support/fixtures.dart';
+import '../../support/fonts.dart';
 import '../../support/test_harness.dart';
 
 const _phone = Size(412, 900);
@@ -221,6 +222,29 @@ void main() {
         ),
         findsOneWidget,
       );
+    });
+
+    // #181: two letters, so that subjects with the same initial differ.
+    testWidgets('the subject marks show two letters inside the ring',
+        (tester) async {
+      await loadRoboto(tester);
+      await _pumpGrades(tester, _gradesState());
+
+      final letters = find.descendant(
+        of: find.byKey(_open('Fach1')),
+        matching: find.text('Fa'),
+      );
+      expect(letters, findsOneWidget);
+      final ring =
+          find.ancestor(of: letters, matching: find.byType(DecoratedBox)).first;
+      expect(tester.getSize(ring), const Size.square(28));
+      final text = tester.getRect(letters);
+      final center = tester.getCenter(ring);
+      // Within the slot inside the 1.5 px ring, centred in the circle.
+      expect(text.width, lessThanOrEqualTo(28 - 2 * 4));
+      expect(text.height, lessThanOrEqualTo(28));
+      expect(text.center.dx, closeTo(center.dx, 0.5));
+      expect(text.center.dy, closeTo(center.dy, 0.5));
     });
 
     testWidgets('leaves out what the settings turn off', (tester) async {

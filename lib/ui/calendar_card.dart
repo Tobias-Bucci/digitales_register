@@ -24,6 +24,7 @@ import 'package:dr/main.dart';
 import 'package:dr/reminders/local_reminder_assessments.dart';
 import 'package:dr/theme/app_palette.dart';
 import 'package:dr/ui/animated_linear_progress_indicator.dart';
+import 'package:dr/ui/dashboard_event_banner.dart' show subjectLetters;
 import 'package:dr/ui/glass_surface.dart';
 import 'package:dr/ui/linkified_text.dart';
 import 'package:dr/utc_date_time.dart';
@@ -201,7 +202,7 @@ class CalendarCard extends StatelessWidget {
             Row(
               children: [
                 CircledLetter(
-                  letter: localizedSubject.characters.first,
+                  letter: subjectLetters(localizedSubject),
                   color: Color(theme.color),
                 ),
                 const SizedBox(width: 8),
@@ -279,13 +280,20 @@ class CircledLetter extends StatelessWidget {
         color: color,
         shape: BoxShape.circle,
       ),
+      // Two letters stay inside the circle, also at large text sizes.
+      padding: const EdgeInsets.all(7),
       child: Center(
-        child: Text(
-          letter,
-          style: TextStyle(
-            color: textColor,
-            fontSize: 24,
-            fontWeight: FontWeight.bold,
+        child: FittedBox(
+          fit: BoxFit.scaleDown,
+          child: Text(
+            letter,
+            maxLines: 1,
+            softWrap: false,
+            style: TextStyle(
+              color: textColor,
+              fontSize: 24,
+              fontWeight: FontWeight.bold,
+            ),
           ),
         ),
       ),
