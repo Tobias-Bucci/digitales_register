@@ -122,24 +122,31 @@ struct PlanningView: View {
   }
 }
 
-struct PlanningWidget: Widget {
-  let schoolBag: Bool
-  var body: some WidgetConfiguration {
-    let title = schoolBag ? text("Schultasche", "Zaino", "School bag") : text("Hausaufgaben", "Compiti", "Homework")
-    return StaticConfiguration(kind: schoolBag ? "SchoolBagWidget" : "PreparationWidget",
-      provider: PlanningProvider(schoolBag: schoolBag)) { entry in
-      PlanningView(entry: entry, title: title)
-    }
-    .configurationDisplayName(Text(title))
-    .description(Text(text("Vorbereitung auf den nächsten Schultag", "Preparazione per il prossimo giorno di scuola", "Prepare for the next school day")))
-    .supportedFamilies([.systemSmall, .systemMedium, .systemLarge])
+private func planningConfiguration(schoolBag: Bool) -> some WidgetConfiguration {
+  let title = schoolBag ? text("Schultasche", "Zaino", "School bag") : text("Hausaufgaben", "Compiti", "Homework")
+  return StaticConfiguration(kind: schoolBag ? "SchoolBagWidget" : "PreparationWidget",
+    provider: PlanningProvider(schoolBag: schoolBag)) { entry in
+    PlanningView(entry: entry, title: title)
   }
+  .configurationDisplayName(Text(title))
+  .description(Text(text("Vorbereitung auf den nächsten Schultag", "Preparazione per il prossimo giorno di scuola", "Prepare for the next school day")))
+  .supportedFamilies([.systemSmall, .systemMedium, .systemLarge])
+}
+
+// WidgetKit instantiates widgets through the protocol's `init()`, so each
+// widget is its own type instead of one type with a stored parameter.
+struct SchoolBagWidget: Widget {
+  var body: some WidgetConfiguration { planningConfiguration(schoolBag: true) }
+}
+
+struct PreparationWidget: Widget {
+  var body: some WidgetConfiguration { planningConfiguration(schoolBag: false) }
 }
 
 @main
 struct PlanningWidgets: WidgetBundle {
   var body: some Widget {
-    PlanningWidget(schoolBag: true)
-    PlanningWidget(schoolBag: false)
+    SchoolBagWidget()
+    PreparationWidget()
   }
 }
