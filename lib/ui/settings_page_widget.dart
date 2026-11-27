@@ -124,6 +124,7 @@ class SettingsPageWidget extends StatefulWidget {
   final Future<void> Function(DemoAssessmentSettings settings)
       onSetDemoAssessmentSettings;
   final Future<void> Function() onClearDemoCache;
+  final Future<void> Function() onTriggerDemoNotifications;
 
   /// A line about older learning notes that belong to no account, if any.
   final Widget? legacyStudyData;
@@ -180,6 +181,7 @@ class SettingsPageWidget extends StatefulWidget {
     required this.onSetSimulatedDate,
     required this.onSetDemoAssessmentSettings,
     required this.onClearDemoCache,
+    required this.onTriggerDemoNotifications,
     this.legacyStudyData,
   });
 
@@ -790,6 +792,23 @@ class _SettingsPageWidgetState extends State<SettingsPageWidget> {
     return _SettingsSectionCard(
       title: l10n.text('settings.demo.section'),
       children: [
+        ListTile(
+          key: const Key('settings-demo-trigger-notifications'),
+          leading: const Icon(Icons.notifications_active_outlined),
+          title: Text(l10n.text('settings.demo.triggerNotifications')),
+          subtitle:
+              Text(l10n.text('settings.demo.triggerNotificationsSubtitle')),
+          onTap: () async {
+            await widget.onTriggerDemoNotifications();
+            if (!mounted) return;
+            ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(
+                content:
+                    Text(l10n.text('settings.demo.notificationsTriggered')),
+              ),
+            );
+          },
+        ),
         ListTile(
           leading: const Icon(Icons.assignment_outlined),
           title: Text(l10n.text('settings.demo.assessments')),

@@ -1,5 +1,8 @@
 import 'package:dr/app_clock.dart';
+import 'package:dr/app_state.dart';
+import 'package:dr/data.dart';
 import 'package:dr/demo.dart';
+import 'package:dr/middleware/middleware.dart';
 import 'package:dr/ui/homework_summary_page.dart';
 import 'package:dr/wrapper.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -227,6 +230,94 @@ void main() {
     expect(
       (await getDemoAssessmentSettings()).range,
       DemoAssessmentRange.fullYear,
+    );
+  });
+  test('triggering demo notifications announces the feed again as new',
+      () async {
+    Future<List<Map<String, Object?>>> unread() async =>
+        (await getDemoResponse('api/notification/unread', null) as List)
+            .cast<Map<String, Object?>>();
+
+    final initial = await unread();
+    expect(initial, isNotEmpty);
+
+    await getDemoResponse('api/notification/markAsRead', <String, Object?>{});
+    expect(await unread(), isEmpty);
+
+    await triggerDemoNotifications();
+    final triggered = await unread();
+    expect(
+      triggered.map((n) => n['id']).toSet(),
+      initial.map((n) => n['id']).toSet(),
+    );
+    expect(triggered.map((n) => n['type']), contains('message'));
+    expect(triggered.map((n) => n['type']), contains('grade'));
+    final sent = triggered.map((n) => n['timeSent']).toSet();
+    expect(sent, hasLength(1));
+    expect(
+      DateTime.parse(sent.single! as String)
+          .isAfter(DateTime.parse(initial.first['timeSent']! as String)),
+      isTrue,
+    );
+  });
+  test('the demo trigger adds, changes and deletes dashboard entries',
+      () async {
+    appClock.setDemoMode(true);
+    addTearDown(() => appClock.setDemoMode(false));
+    await wrapper.login(
+      'demo',
+      'demo',
+      null,
+      '',
+      logout: () {},
+      configLoaded: () {},
+      relogin: () {},
+      addProtocolItem: (_) {},
+    );
+    final store = createStore(
+      initialState: AppState(
+        (b) => b
+          ..loginState.loggedIn = true
+          ..loginState.username = 'demo'
+          ..settingsState.dashboardMarkNewOrChangedEntries = true
+          ..dashboardState.future = true,
+      ),
+      withMiddleware: true,
+    );
+    await store.actions.dashboardActions.load(true);
+    bool flagged(Homework hw) => hw.isNew || hw.isChanged;
+    expect(
+      store.state.dashboardState.allDays!.expand((d) => d.homework).where(
+            flagged,
+          ),
+      isEmpty,
+    );
+
+    await triggerDemoNotifications();
+    clearRuntimeCaches();
+    await store.actions.dashboardActions.refresh();
+
+    final days = store.state.dashboardState.allDays!;
+    final homework = days.expand((d) => d.homework).toList();
+    expect(homework.where((hw) => hw.isNew), hasLength(1));
+    expect(homework.where((hw) => hw.isChanged), hasLength(1));
+    final deleted = days.expand((d) => d.deletedHomework).toList();
+    expect(deleted, hasLength(1));
+    expect(deleted.single.isChanged, isTrue);
+    final types =
+        store.state.notificationState.notifications!.map((n) => n.type).toSet();
+    expect(types, containsAll(<String>['grade', 'absence', 'message']));
+
+    // A second press is another round of changes, not the same one again.
+    await triggerDemoNotifications();
+    clearRuntimeCaches();
+    await store.actions.dashboardActions.refresh();
+    expect(
+      store.state.dashboardState.allDays!
+          .expand((d) => d.deletedHomework)
+          .map((hw) => hw.id)
+          .toSet(),
+      hasLength(2),
     );
   });
 }

@@ -156,6 +156,10 @@ void main() {
       findsNothing,
     );
     expect(find.byKey(const Key('settings-demo-clear-cache')), findsNothing);
+    expect(
+      find.byKey(const Key('settings-demo-trigger-notifications')),
+      findsNothing,
+    );
   });
 
   testWidgets('shows simulated date controls only for the demo guest',
@@ -184,5 +188,10 @@ void main() {
       findsOneWidget,
     );
     expect(find.byKey(const Key('settings-demo-clear-cache')), findsOneWidget);
+    expect(
+      find.byKey(const Key('settings-demo-trigger-notifications')),
+      findsOneWidget,
+    );
+    expect(find.text('Trigger new entries'), findsOneWidget);
   });
 }

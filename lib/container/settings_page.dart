@@ -200,6 +200,13 @@ class SettingsPageContainer extends StatelessWidget {
                 actions.dashboardActions.refresh(),
               ]);
             },
+            onTriggerDemoNotifications: () async {
+              if (!vm.demoMode) return;
+              await triggerDemoNotifications();
+              clearRuntimeCaches();
+              // Loads the dashboard and the feed again, as pulling to refresh.
+              await actions.dashboardActions.refresh();
+            },
             legacyStudyData:
                 vm.demoMode ? null : LegacyStudyDataTile(actions: actions),
           ),

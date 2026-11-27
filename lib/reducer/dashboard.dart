@@ -122,10 +122,14 @@ void _loaded(DashboardState state, Action<DaysLoadedPayload> action,
                   !(oldHw.type == HomeworkType.gradeGroup &&
                       newHw.type == HomeworkType.grade)));
           } else {
-            // preserve client-custom data, but update everything else
+            // preserve client-custom data, but update everything else. An entry
+            // stays new or changed until it is seen, however often the
+            // unchanged dashboard is loaded again in between.
             final mergedHw = newHw.toBuilder()
               ..firstSeen = oldHw.firstSeen
               ..lastNotSeen = oldHw.lastNotSeen
+              ..isNew = oldHw.isNew
+              ..isChanged = oldHw.isChanged
               ..previousVersion = oldHw.previousVersion?.toBuilder();
             mergedHw.gradeGroupSubmissions.map(
               (ggs) => ggs.rebuild(

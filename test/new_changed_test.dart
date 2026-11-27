@@ -110,4 +110,77 @@ void main() {
       ),
     );
   });
+
+  test('new and changed entries stay marked when the same data loads again',
+      () async {
+    mockNow = UtcDateTime(2020, 1, 10);
+    final store = Store<AppState, AppStateBuilder, AppActions>(
+      appReducerBuilder.build(),
+      AppState(
+        (b) => b.dashboardState.allDays.add(
+          Day(
+            (b) => b
+              ..date = UtcDateTime(2020, 1, 5)
+              ..lastRequested = UtcDateTime(2020)
+              ..homework.add(
+                Homework(
+                  (b) => b
+                    ..checkable = false
+                    ..checked = false
+                    ..deleteable = false
+                    ..deleted = false
+                    ..firstSeen = UtcDateTime(2020)
+                    ..id = 1
+                    ..isChanged = false
+                    ..isNew = false
+                    ..label = 'Fach'
+                    ..lastNotSeen = UtcDateTime(2019, 12, 24)
+                    ..subtitle = 'Untertitel'
+                    ..title = 'Test'
+                    ..type = HomeworkType.gradeGroup
+                    ..warning = true,
+                ),
+              ),
+          ),
+        ),
+      ),
+      AppActions(),
+      middleware: middleware(includeErrorMiddleware: false),
+    );
+
+    Map<String, Object?> item(int id, String title, String subtitle) =>
+        <String, Object?>{
+          'id': id,
+          'type': 'gradeGroup',
+          'title': title,
+          'subtitle': subtitle,
+          'label': 'Fach',
+          'warning': true,
+          'checkable': false,
+          'checked': false,
+          'deleteable': false,
+        };
+    DaysLoadedPayload payload() => DaysLoadedPayload(
+          (b) => b
+            ..future = false
+            ..markNewOrChangedEntries = true
+            ..deduplicateEntries = false
+            ..data = <Object>[
+              <String, Object?>{
+                'items': <Object>[
+                  item(1, 'Schularbeit', 'Untertitel'),
+                  item(2, 'Test', 'Neue Prüfung'),
+                ],
+                'date': '2020-01-05',
+              },
+            ],
+        );
+
+    await store.actions.dashboardActions.loaded(payload());
+    await store.actions.dashboardActions.loaded(payload());
+
+    final homework = store.state.dashboardState.allDays!.single.homework;
+    expect(homework.firstWhere((h) => h.id == 1).isChanged, isTrue);
+    expect(homework.firstWhere((h) => h.id == 2).isNew, isTrue);
+  });
 }

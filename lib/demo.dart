@@ -78,6 +78,15 @@ Future<void> setDemoAssessmentSettings(DemoAssessmentSettings settings) async {
 /// Replaces the complete local demo store. It never touches normal accounts.
 Future<void> clearDemoCache() => _demoStore.clear();
 
+/// Simulates the school entering something: the demo dashboard gets one new,
+/// one changed and one deleted assessment, so the next dashboard load reports
+/// "new entries" (the deleted one lands in the bin). The feed also announces
+/// its grades, absence and messages again.
+Future<void> triggerDemoNotifications() async {
+  await _demoStore.ensureLoaded();
+  await _demoStore.triggerNewNotifications();
+}
+
 @visibleForTesting
 Future<void> resetDemoStoreForTest() async {
   await _demoStore.resetForTest();
@@ -329,6 +338,14 @@ class _DemoStore {
           'submissions': <Map<String, dynamic>>[],
         },
       ],
+      // What the demo trigger in the settings has entered, changed or
+      // deleted on the dashboard.
+      'dashboardChanges': <String, dynamic>{
+        'round': 0,
+        'removed': <int>[],
+        'changed': <String, dynamic>{},
+        'added': <Map<String, dynamic>>[],
+      },
       'generalNotifications': <Map<String, dynamic>>[
         <String, dynamic>{
           'id': 4001,
@@ -445,6 +462,82 @@ class _DemoStore {
           : ((_state['assessmentSettings'] as Map?)?['randomSeed'] ?? 202526),
     };
     await _persist();
+  }
+
+  Future<void> triggerNewNotifications() async {
+    _changeDashboard();
+    final current = now;
+    final sent = DateTime(current.year, current.month, current.day,
+            current.hour, current.minute, current.second)
+        .toIso8601String();
+    for (final notification in _generalNotifications) {
+      notification['read'] = false;
+      notification['timeSent'] = sent;
+    }
+    for (final message in _messages) {
+      message['timeRead'] = null;
+      message['timeSent'] = sent;
+    }
+    await _persist();
+  }
+
+  Map<String, dynamic> get _dashboardChanges =>
+      (_state['dashboardChanges'] as Map).cast<String, dynamic>();
+
+  List<int> get _removedDashboardIds =>
+      (_dashboardChanges['removed'] as List).cast<int>();
+
+  Map<String, dynamic> get _changedDashboardTitles =>
+      (_dashboardChanges['changed'] as Map).cast<String, dynamic>();
+
+  List<Map<String, dynamic>> get _addedDashboardItems =>
+      (_dashboardChanges['added'] as List).cast<Map<String, dynamic>>();
+
+  /// One round of what a teacher might do: delete the next assessment,
+  /// change the kind of the one after it and enter a new one.
+  void _changeDashboard() {
+    final round = (_dashboardChanges['round'] as int) + 1;
+    _dashboardChanges['round'] = round;
+    final today = _today();
+    final upcoming = _demoDashboardEvents
+        .where((event) =>
+            event.type == 'gradeGroup' &&
+            !event.date.isBefore(today) &&
+            _showsAssessment(event) &&
+            !_removedDashboardIds.contains(event.id) &&
+            !_changedDashboardTitles.containsKey('${event.id}'))
+        .toList()
+      ..sort((a, b) => a.date.compareTo(b.date));
+    if (upcoming.isNotEmpty) {
+      _removedDashboardIds.add(upcoming.first.id);
+    }
+    if (upcoming.length > 1) {
+      final changed = upcoming[1];
+      _changedDashboardTitles['${changed.id}'] =
+          changed.title == 'Interrogazione'
+              ? 'Verifica scritta'
+              : 'Interrogazione';
+    }
+    final subject = _demoSubjects[round % _demoSubjects.length];
+    // The app marks an entry as new only on a day it already knew, so the new
+    // assessment joins a coming day that has entries.
+    final days = <DateTime>[
+      for (var offset = 1; offset < 18; offset++)
+        if (_dashboardItemsForDate(today.add(Duration(days: offset)))
+            .isNotEmpty)
+          today.add(Duration(days: offset)),
+    ];
+    final date = days.isEmpty
+        ? today.add(const Duration(days: 1))
+        : days[(round - 1) % days.length];
+    _addedDashboardItems.add(<String, dynamic>{
+      'id': 70000 + round,
+      'date': _dateOnly(date),
+      'hour': 2 + round % 4,
+      'title': 'Verifica scritta',
+      'subtitle': subject.firstSemester.first.name,
+      'subject': subject.name,
+    });
   }
 
   Future<void> clear() async {
@@ -662,6 +755,8 @@ class _DemoStore {
       for (final holiday in _veneto2025_26Holidays) ...holiday.days,
       for (var offset = -3; offset < 18; offset++)
         _today().add(Duration(days: offset)),
+      for (final added in _addedDashboardItems)
+        DateTime.parse(added['date'] as String),
     };
     for (final date in dates) {
       generated[_dateOnly(date)] = _dashboardItemsForDate(date);
@@ -1296,19 +1391,37 @@ $weeks  </div>
     for (final event in _demoDashboardEvents.where(
       (entry) =>
           _sameDay(entry.date, date) &&
-          (entry.type != 'gradeGroup' || _showsAssessment(entry)),
+          (entry.type != 'gradeGroup' || _showsAssessment(entry)) &&
+          !_removedDashboardIds.contains(entry.id),
     )) {
       items.add(
         _dashboardItem(
           id: event.id,
           date: event.date,
           hour: event.hour,
-          title: event.title,
+          title:
+              _changedDashboardTitles['${event.id}'] as String? ?? event.title,
           subtitle: event.subtitle,
           label: event.subject,
           type: event.type,
           homework: event.homework ? 1 : 0,
           checkable: event.checkable,
+        ),
+      );
+    }
+
+    for (final added in _addedDashboardItems) {
+      final addedDate = DateTime.parse(added['date'] as String);
+      if (!_sameDay(addedDate, date)) continue;
+      items.add(
+        _dashboardItem(
+          id: added['id'] as int,
+          date: addedDate,
+          hour: added['hour'] as int,
+          title: added['title'] as String,
+          subtitle: added['subtitle'] as String,
+          label: added['subject'] as String?,
+          type: 'gradeGroup',
         ),
       );
     }
