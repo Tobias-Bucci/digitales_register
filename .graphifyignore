@@ -35,6 +35,12 @@ generated_plugin_registrant.*
 generated_plugins.cmake
 GeneratedPluginRegistrant.*
 
+# The iOS bridging header's only line imports GeneratedPluginRegistrant.h,
+# which is excluded above but exists on disk wherever Flutter has run. Graphify
+# then records it as an external node named after its absolute path, which
+# puts the checkout location (including the OS username) into graph.json.
+ios/Runner/Runner-Bridging-Header.h
+
 # Lock files.
 *.lock
 
