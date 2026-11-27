@@ -440,7 +440,7 @@
 				CODE_SIGN_IDENTITY = "Apple Development";
 				CODE_SIGN_STYLE = Automatic;
 				CURRENT_PROJECT_VERSION = "$(FLUTTER_BUILD_NUMBER)";
-				DEVELOPMENT_TEAM = 4838ZPN3B8;
+				DEVELOPMENT_TEAM = J8K4RFDLR7;
 				ENABLE_BITCODE = NO;
 				INFOPLIST_FILE = Runner/Info.plist;
 				IPHONEOS_DEPLOYMENT_TARGET = 15.0;
@@ -583,7 +583,7 @@
 				CODE_SIGN_IDENTITY = "Apple Development";
 				CODE_SIGN_STYLE = Automatic;
 				CURRENT_PROJECT_VERSION = "$(FLUTTER_BUILD_NUMBER)";
-				DEVELOPMENT_TEAM = 4838ZPN3B8;
+				DEVELOPMENT_TEAM = J8K4RFDLR7;
 				ENABLE_BITCODE = NO;
 				INFOPLIST_FILE = Runner/Info.plist;
 				IPHONEOS_DEPLOYMENT_TARGET = 15.0;
@@ -614,7 +614,7 @@
 				CODE_SIGN_IDENTITY = "Apple Development";
 				CODE_SIGN_STYLE = Automatic;
 				CURRENT_PROJECT_VERSION = "$(FLUTTER_BUILD_NUMBER)";
-				DEVELOPMENT_TEAM = 4838ZPN3B8;
+				DEVELOPMENT_TEAM = J8K4RFDLR7;
 				ENABLE_BITCODE = NO;
 				INFOPLIST_FILE = Runner/Info.plist;
 				IPHONEOS_DEPLOYMENT_TARGET = 15.0;
@@ -637,7 +637,7 @@
         F0330000000000000000000F = {isa = XCBuildConfiguration; baseConfigurationReference = 9740EEB31CF90195004384FC; buildSettings = {APPLICATION_EXTENSION_API_ONLY = YES;
             CODE_SIGN_ENTITLEMENTS = PlanningWidgets/PlanningWidgets.entitlements;
             CODE_SIGN_STYLE = Automatic;
-            DEVELOPMENT_TEAM = 4838ZPN3B8;
+            DEVELOPMENT_TEAM = J8K4RFDLR7;
             CURRENT_PROJECT_VERSION = "$(FLUTTER_BUILD_NUMBER)";
             MARKETING_VERSION = "$(FLUTTER_BUILD_NAME)";
             INFOPLIST_FILE = PlanningWidgets/Info.plist;
@@ -652,7 +652,7 @@
         F03300000000000000000010 = {isa = XCBuildConfiguration; baseConfigurationReference = 9740EEB31CF90195004384FC; buildSettings = {APPLICATION_EXTENSION_API_ONLY = YES;
             CODE_SIGN_ENTITLEMENTS = PlanningWidgets/PlanningWidgets.entitlements;
             CODE_SIGN_STYLE = Automatic;
-            DEVELOPMENT_TEAM = 4838ZPN3B8;
+            DEVELOPMENT_TEAM = J8K4RFDLR7;
             CURRENT_PROJECT_VERSION = "$(FLUTTER_BUILD_NUMBER)";
             MARKETING_VERSION = "$(FLUTTER_BUILD_NAME)";
             INFOPLIST_FILE = PlanningWidgets/Info.plist;
@@ -667,7 +667,7 @@
         F03300000000000000000011 = {isa = XCBuildConfiguration; baseConfigurationReference = 9740EEB31CF90195004384FC; buildSettings = {APPLICATION_EXTENSION_API_ONLY = YES;
             CODE_SIGN_ENTITLEMENTS = PlanningWidgets/PlanningWidgets.entitlements;
             CODE_SIGN_STYLE = Automatic;
-            DEVELOPMENT_TEAM = 4838ZPN3B8;
+            DEVELOPMENT_TEAM = J8K4RFDLR7;
             CURRENT_PROJECT_VERSION = "$(FLUTTER_BUILD_NUMBER)";
             MARKETING_VERSION = "$(FLUTTER_BUILD_NAME)";
             INFOPLIST_FILE = PlanningWidgets/Info.plist;

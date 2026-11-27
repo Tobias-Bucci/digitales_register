@@ -12,7 +12,7 @@ for this document.
 | Version / build | 2.0.0 / 58, sourced from pubspec.yaml through Flutter build variables |
 | Deployment target | iOS 15.0 for Runner and PlanningWidgets; required by the current Firebase pods |
 | Devices | iPhone and iPad (`TARGETED_DEVICE_FAMILY = "1,2"`) |
-| Signing | Existing team 4838ZPN3B8, automatic signing; account access unverified |
+| Signing | Team J8K4RFDLR7, automatic signing; App Store profiles for Runner and PlanningWidgets (App Group group.it.bucci.digitalesregister.planning) set up 2026-11-27 |
 | App icons | Existing register artwork, white opaque background, RGB PNGs in every referenced size including 1024 x 1024 |
 | Launch screen | Register logo in light/dark assets at 1x, 2x and 3x; removed obsolete evvolution artwork |
 | Permissions | Face ID and photo library purposes in German, English, Italian and Ladin |
